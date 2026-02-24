@@ -2,10 +2,10 @@ import { Link } from "@tanstack/react-router"
 
 import { useTheme } from "@/components/theme-provider"
 import { cn } from "@/lib/utils"
-import icon from "/assets/images/fastapi-icon.svg"
-import iconLight from "/assets/images/fastapi-icon-light.svg"
-import logo from "/assets/images/fastapi-logo.svg"
-import logoLight from "/assets/images/fastapi-logo-light.svg"
+import icon from "/assets/images/inteplast-icon-02.svg"
+import iconLight from "/assets/images/inteplast-icon-02-light.svg"
+import logo from "/assets/images/inteplast-logo-02.svg"
+import logoLight from "/assets/images/inteplast-logo-02-light.svg"
 
 interface LogoProps {
   variant?: "full" | "icon" | "responsive"
