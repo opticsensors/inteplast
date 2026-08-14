@@ -11,7 +11,7 @@ docker compose up -d db backend prestart
 
 
 ## frontend:
-
+npm run dev
 
 ## close docker:
 docker compose down

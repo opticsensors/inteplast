@@ -5,3 +5,7 @@ node_modules/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# data-explorer: HTML/PNG generados por los visores (~42 MB, se rehacen con ver_todo.py)
+/data-explorer/out/
+__pycache__/
