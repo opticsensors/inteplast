@@ -1,5 +1,5 @@
 import { AxiosError } from "axios"
-import type { ApiError } from "./client"
+import { type ApiError, OpenAPI } from "./client"
 
 function extractErrorMessage(err: ApiError): string {
   if (err instanceof AxiosError) {
@@ -19,6 +19,20 @@ export const handleError = function (
 ) {
   const errorMessage = extractErrorMessage(err)
   this(errorMessage)
+}
+
+/**
+ * URL publica de un fichero subido. Se compone a mano porque un `<img src>` o
+ * un enlace de descarga no pueden pasar por el cliente generado (no llevan la
+ * cabecera Authorization); el endpoint GET /files/{id} es abierto a proposito.
+ */
+export const fileUrl = (fileId: string): string =>
+  `${OpenAPI.BASE}/api/v1/files/${fileId}`
+
+export const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 export const getInitials = (name: string): string => {

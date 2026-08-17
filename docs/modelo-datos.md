@@ -139,6 +139,10 @@ DEPENDENCIA_COTA (n:n)     n_number_origen → n_number_afectado, tipo, texto
 
 ## 5. Lo que el frontend ya construido espera
 
+> 🔑 **El bloque `FEATURE` + `WARNING` + `LESSON_LEARNED` + ficheros de ejemplo ya está
+> implementado** en `backend/` y `frontend/`. Ver [app-web.md](app-web.md). Lo que sigue
+> pendiente es la ingesta: `PROYECTO`, `MUESTREO`, `MEDICION`, `CORRECCION_MOLDE`.
+
 Según `inteplast_PADIH_fase_B.md`, el frontend ya tiene: búsqueda global de features,
 tarjetas con imagen + nombre + descripción + tags, y una modal con secciones desplegables de
 **warnings**, **lessons learned** y **piezas ejemplo** (CAD, piezas de referencia, planos PDF).

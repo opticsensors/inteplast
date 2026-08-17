@@ -82,6 +82,10 @@ services:
     networks:
       - traefik-public
       - default
+    volumes:
+      # Ficheros subidos desde la app (imagenes de features, CAD, planos PDF).
+      # Coincide con UPLOADS_DIR, que es relativo al WORKDIR /app del Dockerfile.
+      - app-uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -167,6 +171,7 @@ services:
       - traefik.http.routers.${STACK_NAME?Variable not set}-frontend-http.middlewares=https-redirect
 volumes:
   app-db-data:
+  app-uploads:
 
 networks:
   traefik-public:

@@ -1,9 +1,10 @@
 import uuid
 from datetime import datetime, timezone
+from enum import Enum
 
 from pydantic import EmailStr
-from sqlalchemy import DateTime
-from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy import ARRAY, DateTime, String
+from sqlmodel import AutoString, Field, Relationship, SQLModel
 
 
 def get_datetime_utc() -> datetime:
@@ -106,6 +107,223 @@ class ItemPublic(ItemBase):
 class ItemsPublic(SQLModel):
     data: list[ItemPublic]
     count: int
+
+
+# ---------------------------------------------------------------------------
+# Ficheros subidos (imagenes de features, CAD, planos PDF)
+# ---------------------------------------------------------------------------
+
+
+# Database model for an uploaded file. The bytes live on disk under
+# settings.UPLOADS_DIR, named after the row id; the row keeps the metadata.
+class StoredFile(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    filename: str = Field(max_length=255)
+    content_type: str = Field(default="application/octet-stream", max_length=255)
+    size: int = 0
+    created_at: datetime | None = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+
+
+class FilePublic(SQLModel):
+    id: uuid.UUID
+    filename: str
+    content_type: str
+    size: int
+    created_at: datetime | None = None
+
+
+# ---------------------------------------------------------------------------
+# Base de conocimiento de features
+# ---------------------------------------------------------------------------
+
+
+# Tipos geometricos comunes con los que se clasifica un feature
+class FeatureCategory(str, Enum):
+    hole = "hole"
+    rib = "rib"
+    thickness = "thickness"
+    boss = "boss"
+    fillet = "fillet"
+    draft = "draft"
+    other = "other"
+
+
+# Un mismo tipo de nota sirve para advertencias y lecciones aprendidas
+class NoteKind(str, Enum):
+    warning = "warning"
+    lesson = "lesson"
+
+
+# Los tres grupos de "piezas ejemplo" del frontend
+class AssetKind(str, Enum):
+    mold = "mold"
+    part = "part"
+    drawing = "drawing"
+
+
+# Shared properties
+class FeatureBase(SQLModel):
+    name: str = Field(min_length=1, max_length=255, index=True)
+    description: str | None = Field(default=None, max_length=2000)
+    category: FeatureCategory | None = Field(
+        default=None, index=True, sa_type=AutoString
+    )
+    tags: list[str] = Field(
+        default_factory=list,
+        sa_type=ARRAY(String),  # type: ignore
+    )
+
+
+# Properties to receive on feature creation
+class FeatureCreate(FeatureBase):
+    image_id: uuid.UUID | None = None
+
+
+# Properties to receive on feature update
+class FeatureUpdate(SQLModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=2000)
+    category: FeatureCategory | None = None
+    tags: list[str] | None = None
+    image_id: uuid.UUID | None = None
+
+
+# Database model, database table inferred from class name
+class Feature(FeatureBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime | None = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    # Quien lo creo. La ficha sobrevive al borrado del usuario: es conocimiento
+    # compartido, no contenido personal.
+    owner_id: uuid.UUID | None = Field(
+        default=None, foreign_key="user.id", ondelete="SET NULL"
+    )
+    image_id: uuid.UUID | None = Field(
+        default=None, foreign_key="storedfile.id", ondelete="SET NULL"
+    )
+    image: StoredFile | None = Relationship()
+    notes: list["FeatureNote"] = Relationship(
+        back_populates="feature",
+        cascade_delete=True,
+        sa_relationship_kwargs={"order_by": "FeatureNote.position"},
+    )
+    assets: list["FeatureAsset"] = Relationship(
+        back_populates="feature",
+        cascade_delete=True,
+        sa_relationship_kwargs={"order_by": "FeatureAsset.position"},
+    )
+
+
+# Advertencia o leccion aprendida asociada a un feature
+class FeatureNoteBase(SQLModel):
+    kind: NoteKind = Field(sa_type=AutoString)
+    title: str = Field(min_length=1, max_length=255)
+    body: str | None = Field(default=None, max_length=20000)
+    position: int = 0
+
+
+class FeatureNoteCreate(FeatureNoteBase):
+    pass
+
+
+class FeatureNoteUpdate(SQLModel):
+    kind: NoteKind | None = None
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    body: str | None = Field(default=None, max_length=20000)
+    position: int | None = None
+
+
+class FeatureNote(FeatureNoteBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime | None = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    feature_id: uuid.UUID = Field(
+        foreign_key="feature.id", nullable=False, ondelete="CASCADE"
+    )
+    feature: Feature | None = Relationship(back_populates="notes")
+
+
+class FeatureNotePublic(FeatureNoteBase):
+    id: uuid.UUID
+    feature_id: uuid.UUID
+    created_at: datetime | None = None
+
+
+# Fichero de ejemplo (molde CAD, pieza de referencia o plano 2D) del feature
+class FeatureAssetBase(SQLModel):
+    kind: AssetKind = Field(sa_type=AutoString)
+    name: str = Field(min_length=1, max_length=255)
+    # "Nombre pieza / numero ID": el codigo de pieza o molde al que pertenece
+    part_ref: str | None = Field(default=None, max_length=255, index=True)
+    position: int = 0
+
+
+class FeatureAssetCreate(FeatureAssetBase):
+    file_id: uuid.UUID | None = None
+
+
+class FeatureAssetUpdate(SQLModel):
+    kind: AssetKind | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    part_ref: str | None = Field(default=None, max_length=255)
+    position: int | None = None
+    file_id: uuid.UUID | None = None
+
+
+class FeatureAsset(FeatureAssetBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime | None = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    feature_id: uuid.UUID = Field(
+        foreign_key="feature.id", nullable=False, ondelete="CASCADE"
+    )
+    file_id: uuid.UUID | None = Field(
+        default=None, foreign_key="storedfile.id", ondelete="SET NULL"
+    )
+    feature: Feature | None = Relationship(back_populates="assets")
+    file: StoredFile | None = Relationship()
+
+
+class FeatureAssetPublic(FeatureAssetBase):
+    id: uuid.UUID
+    feature_id: uuid.UUID
+    created_at: datetime | None = None
+    file: FilePublic | None = None
+
+
+# Lo que se pinta en una tarjeta de resultado
+class FeaturePublic(FeatureBase):
+    id: uuid.UUID
+    created_at: datetime | None = None
+    owner_id: uuid.UUID | None = None
+    image: FilePublic | None = None
+    assets: list[FeatureAssetPublic] = []
+
+
+# Lo que se pinta en la modal de detalle
+class FeatureDetail(FeaturePublic):
+    notes: list[FeatureNotePublic] = []
+
+
+class FeaturesPublic(SQLModel):
+    data: list[FeaturePublic]
+    count: int
+
+
+# Valores disponibles para los filtros del dashboard
+class FeatureFilters(SQLModel):
+    categories: list[FeatureCategory]
+    tags: list[str]
+    molds: list[str]
 
 
 # Generic message

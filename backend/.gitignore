@@ -6,3 +6,6 @@ app.egg-info
 htmlcov
 .cache
 .venv
+
+# Ficheros subidos desde la app en desarrollo local (en Docker van a un volumen)
+uploads/

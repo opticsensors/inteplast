@@ -1,5 +1,6 @@
 import secrets
 import warnings
+from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from pydantic import (
@@ -67,6 +68,16 @@ class Settings(BaseSettings):
             port=self.POSTGRES_PORT,
             path=self.POSTGRES_DB,
         )
+
+    # Donde se guardan los ficheros subidos (imagenes de features, CAD, planos).
+    # Relativo al working dir: "/app/uploads" en Docker, "backend/uploads" en local.
+    UPLOADS_DIR: str = "uploads"
+    MAX_UPLOAD_SIZE_MB: int = 50
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def uploads_path(self) -> Path:
+        return Path(self.UPLOADS_DIR)
 
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False

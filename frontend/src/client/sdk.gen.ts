@@ -3,7 +3,358 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { FeaturesReadFeaturesData, FeaturesReadFeaturesResponse, FeaturesCreateFeatureData, FeaturesCreateFeatureResponse, FeaturesReadFeatureFiltersResponse, FeaturesReadFeatureData, FeaturesReadFeatureResponse, FeaturesUpdateFeatureData, FeaturesUpdateFeatureResponse, FeaturesDeleteFeatureData, FeaturesDeleteFeatureResponse, FeaturesCreateFeatureNoteData, FeaturesCreateFeatureNoteResponse, FeaturesUpdateFeatureNoteData, FeaturesUpdateFeatureNoteResponse, FeaturesDeleteFeatureNoteData, FeaturesDeleteFeatureNoteResponse, FeaturesCreateFeatureAssetData, FeaturesCreateFeatureAssetResponse, FeaturesUpdateFeatureAssetData, FeaturesUpdateFeatureAssetResponse, FeaturesDeleteFeatureAssetData, FeaturesDeleteFeatureAssetResponse, FilesUploadFileData, FilesUploadFileResponse, FilesReadFileData, FilesReadFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+
+export class FeaturesService {
+    /**
+     * Read Features
+     * Buscar features.
+     *
+     * `q` busca a la vez en nombre, descripcion, tags, nombres y codigos de las
+     * piezas ejemplo, y texto de warnings y lessons learned. `category`, `tag` y
+     * `mold` son los filtros adicionales del dashboard.
+     * @param data The data for the request.
+     * @param data.q
+     * @param data.category
+     * @param data.tag
+     * @param data.mold
+     * @param data.skip
+     * @param data.limit
+     * @returns FeaturesPublic Successful Response
+     * @throws ApiError
+     */
+    public static readFeatures(data: FeaturesReadFeaturesData = {}): CancelablePromise<FeaturesReadFeaturesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/features/',
+            query: {
+                q: data.q,
+                category: data.category,
+                tag: data.tag,
+                mold: data.mold,
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Feature
+     * Crear un feature.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns FeaturePublic Successful Response
+     * @throws ApiError
+     */
+    public static createFeature(data: FeaturesCreateFeatureData): CancelablePromise<FeaturesCreateFeatureResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/features/',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Feature Filters
+     * Valores disponibles para los desplegables de filtrado del dashboard.
+     * @returns FeatureFilters Successful Response
+     * @throws ApiError
+     */
+    public static readFeatureFilters(): CancelablePromise<FeaturesReadFeatureFiltersResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/features/filters'
+        });
+    }
+    
+    /**
+     * Read Feature
+     * Ficha completa de un feature: warnings, lessons learned y piezas ejemplo.
+     * @param data The data for the request.
+     * @param data.featureId
+     * @returns FeatureDetail Successful Response
+     * @throws ApiError
+     */
+    public static readFeature(data: FeaturesReadFeatureData): CancelablePromise<FeaturesReadFeatureResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/features/{feature_id}',
+            path: {
+                feature_id: data.featureId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Feature
+     * Editar un feature. Cualquier usuario autenticado puede hacerlo: la base de
+     * conocimiento es colaborativa.
+     * @param data The data for the request.
+     * @param data.featureId
+     * @param data.requestBody
+     * @returns FeaturePublic Successful Response
+     * @throws ApiError
+     */
+    public static updateFeature(data: FeaturesUpdateFeatureData): CancelablePromise<FeaturesUpdateFeatureResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/features/{feature_id}',
+            path: {
+                feature_id: data.featureId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Feature
+     * Borrar un feature con sus warnings, lessons learned y piezas ejemplo.
+     * Solo el autor o un superusuario: es la unica accion irreversible.
+     * @param data The data for the request.
+     * @param data.featureId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteFeature(data: FeaturesDeleteFeatureData): CancelablePromise<FeaturesDeleteFeatureResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/features/{feature_id}',
+            path: {
+                feature_id: data.featureId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Feature Note
+     * Anadir una advertencia (`kind=warning`) o leccion aprendida (`kind=lesson`).
+     * @param data The data for the request.
+     * @param data.featureId
+     * @param data.requestBody
+     * @returns FeatureNotePublic Successful Response
+     * @throws ApiError
+     */
+    public static createFeatureNote(data: FeaturesCreateFeatureNoteData): CancelablePromise<FeaturesCreateFeatureNoteResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/features/{feature_id}/notes',
+            path: {
+                feature_id: data.featureId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Feature Note
+     * Editar una advertencia o leccion aprendida.
+     * @param data The data for the request.
+     * @param data.noteId
+     * @param data.requestBody
+     * @returns FeatureNotePublic Successful Response
+     * @throws ApiError
+     */
+    public static updateFeatureNote(data: FeaturesUpdateFeatureNoteData): CancelablePromise<FeaturesUpdateFeatureNoteResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/features/notes/{note_id}',
+            path: {
+                note_id: data.noteId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Feature Note
+     * Borrar una advertencia o leccion aprendida.
+     * @param data The data for the request.
+     * @param data.noteId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteFeatureNote(data: FeaturesDeleteFeatureNoteData): CancelablePromise<FeaturesDeleteFeatureNoteResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/features/notes/{note_id}',
+            path: {
+                note_id: data.noteId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Feature Asset
+     * Adjuntar una pieza ejemplo. El fichero se sube antes por `/files/` y aqui
+     * se referencia con `file_id`.
+     * @param data The data for the request.
+     * @param data.featureId
+     * @param data.requestBody
+     * @returns FeatureAssetPublic Successful Response
+     * @throws ApiError
+     */
+    public static createFeatureAsset(data: FeaturesCreateFeatureAssetData): CancelablePromise<FeaturesCreateFeatureAssetResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/features/{feature_id}/assets',
+            path: {
+                feature_id: data.featureId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Feature Asset
+     * Editar una pieza ejemplo.
+     * @param data The data for the request.
+     * @param data.assetId
+     * @param data.requestBody
+     * @returns FeatureAssetPublic Successful Response
+     * @throws ApiError
+     */
+    public static updateFeatureAsset(data: FeaturesUpdateFeatureAssetData): CancelablePromise<FeaturesUpdateFeatureAssetResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/features/assets/{asset_id}',
+            path: {
+                asset_id: data.assetId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Feature Asset
+     * Quitar una pieza ejemplo del feature. El fichero subido no se borra.
+     * @param data The data for the request.
+     * @param data.assetId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteFeatureAsset(data: FeaturesDeleteFeatureAssetData): CancelablePromise<FeaturesDeleteFeatureAssetResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/features/assets/{asset_id}',
+            path: {
+                asset_id: data.assetId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class FilesService {
+    /**
+     * Upload File
+     * Subir un fichero (imagen de feature, CAD, plano PDF...).
+     *
+     * Los bytes van al disco (`settings.UPLOADS_DIR`) y la fila solo guarda los
+     * metadatos. El id devuelto es el que se referencia desde el feature o desde
+     * una de sus piezas ejemplo.
+     * @param data The data for the request.
+     * @param data.formData
+     * @returns FilePublic Successful Response
+     * @throws ApiError
+     */
+    public static uploadFile(data: FilesUploadFileData): CancelablePromise<FilesUploadFileResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/files/',
+            formData: data.formData,
+            mediaType: 'multipart/form-data',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read File
+     * Servir un fichero por id.
+     *
+     * Sin autenticacion a proposito: el `<img src>` y los enlaces de descarga del
+     * frontend no pueden mandar la cabecera Authorization. El id es un UUID v4,
+     * que hace de secreto. Si algun dia hay ficheros confidenciales habra que
+     * pasar a URLs firmadas.
+     * @param data The data for the request.
+     * @param data.fileId
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static readFile(data: FilesReadFileData): CancelablePromise<FilesReadFileResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/files/{file_id}',
+            path: {
+                file_id: data.fileId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete File
+     * Borrar un fichero. Las referencias desde features y piezas ejemplo quedan a
+     * NULL (ON DELETE SET NULL), no se borra la ficha.
+     * @param data The data for the request.
+     * @param data.fileId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteFile(data: FilesDeleteFileData): CancelablePromise<FilesDeleteFileResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/files/{file_id}',
+            path: {
+                file_id: data.fileId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
 
 export class ItemsService {
     /**

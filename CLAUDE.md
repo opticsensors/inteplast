@@ -8,7 +8,7 @@ cliente y las notas de Obsidian (ver rutas abajo).
 
 | Carpeta | Qué es |
 |---|---|
-| `backend/` `frontend/` | La **aplicación** (FastAPI + React, sobre el template `full-stack-fastapi-template`) |
+| `backend/` `frontend/` | La **aplicación** (FastAPI + React, sobre el template `full-stack-fastapi-template`). → [docs/app-web.md](docs/app-web.md) |
 | `scripts/` | Shell de **build y test** del template. ⚠️ Nada que ver con los visores |
 | `data-explorer/` | 📊 Los **visores de los datos crudos** de la CMM (Python). → [docs/visores.md](docs/visores.md) |
 | `docs/` | 🔑 El **conocimiento del dominio**: análisis de los datos, modelo de la BD, preguntas abiertas |
@@ -49,6 +49,33 @@ Cliente final: **Robert Bosch** (división BueP). Informes en formato **PPAP / Q
 **Solo se trabaja sobre `3212 Pump Housing`.** Es el proyecto piloto, el más completo, y el
 único con histórico cerrado (metrología + retoques de molde + escaneado STL). Los otros tres
 (`2820`, `3051`, `3197`) están documentados pero **no se tocan** salvo petición explícita.
+
+---
+
+## La aplicación — lo que ya está construido
+
+Sobre la plantilla de FastAPI está implementada la **base de conocimiento de features**: fichas de
+feature con **warnings**, **lessons learned**, **piezas ejemplo** (CAD, planos PDF) y buscador
+global. Es el bloque transversal de [docs/modelo-datos.md](docs/modelo-datos.md).
+
+🔴 **No está la ingesta** (`PROYECTO`, `MUESTREO`, `MEDICION`, `CORRECCION_MOLDE`): eso se
+alimenta de los CSV/XLS/PPTX y es la siguiente fase.
+
+```powershell
+docker compose up -d --build db prestart backend   # backend + BD (aplica migraciones)
+cd frontend; npm run dev                           # http://localhost:5173
+docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bolt Eye del 3212
+```
+
+- 🔑 **Antes de tocar `backend/` o `frontend/`, leer [docs/app-web.md](docs/app-web.md)**: modelo,
+  endpoints, permisos, decisiones y cabos sueltos.
+- 🔴 **`--build` no es opcional tras tocar `backend/`.** El código va dentro de la imagen: sin él,
+  `docker compose up -d` reutiliza el `backend:latest` viejo y arrancas con código antiguo **sin
+  ningún error visible**. Se comprueba con `docker compose exec backend alembic current`.
+- ⚠️ **Cambiar un endpoint o un modelo obliga a regenerar el cliente TypeScript**
+  (`bash scripts/generate-client.sh`), o el frontend se queda desincronizado.
+- La página `/items` es la demo de la plantilla: ya no está en el menú, pero el `Item` sigue en el
+  código. La página real de gestión es `/features`.
 
 ---
 
@@ -217,6 +244,7 @@ hidratación en OneDrive y por dónde empezar.
 
 | Documento | Léelo cuando… |
 |---|---|
+| [docs/app-web.md](docs/app-web.md) | vayas a tocar la **aplicación** (`backend/`, `frontend/`): modelo, endpoints, permisos, cómo levantarla y qué falta |
 | [docs/visores.md](docs/visores.md) | quieras **ver los datos** en vez de leer sobre ellos: qué hace cada visor de `data-explorer/` y qué decisiones lleva dentro |
 | [docs/formatos-parsing.md](docs/formatos-parsing.md) | vayas a **escribir un parser**: esquemas exactos de CSV/XLS/PPTX, columna a columna |
 | [docs/modelo-datos.md](docs/modelo-datos.md) | trabajes en el **esquema de la BD** o en la ingesta |
