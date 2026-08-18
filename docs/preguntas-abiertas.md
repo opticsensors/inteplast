@@ -80,15 +80,36 @@ pin en el agujero del bolt eye a 0,1 mm/s y se registra la fuerza máxima, que d
 `0140S00237` rev. 07, en PDF (`20250523_DRW 0140S00237_07.pdf`).
 
 **Qué no nos cuadra.** Ese PDF **no tiene texto**: dentro hay **una sola imagen JPEG de
-3276×2317 px** y **cero fuentes**. No se puede extraer ni un N-number ni una tolerancia
-automáticamente, y al ampliar se pixela.
+3276×2317 px** y **cero fuentes**. Todo lo que se saque de él es una reconstrucción por OCR, y al
+ampliar se pixela.
 
-**Y sin él no sabemos dónde está cada cota.** Los N-numbers (`N170`, `N117`, `N161`…) **solo
-aparecen en el CSV de la CMM y en el informe Excel**. Lo hemos comprobado: en las nubes de puntos
-(`3212_Cav13.txt`, `3212_PUNTS.txt`) **no hay ni una letra** — son tres columnas de coordenadas y
-nada más — y las gráficas de contorno `PA_*/PB_*` tampoco los mencionan: usan una numeración
-interna suya (`Contorno (21)`, `CONTORN (10)`). El único sitio donde un N-number aparece **junto
-al punto de la pieza al que se refiere** es el plano.
+**Y es el único sitio donde se ve dónde está cada cota.** Los N-numbers **no aparecen en ningún
+otro fichero con su posición**: en las nubes de puntos (`3212_Cav13.txt`, `3212_PUNTS.txt`) **no
+hay ni una letra** — son tres columnas de coordenadas — y las gráficas de contorno `PA_*/PB_*`
+usan una numeración interna suya (`Contorno (21)`, `CONTORN (10)`). El único sitio donde un
+N-number aparece **junto al punto de la pieza al que se refiere** es el plano.
+
+**🆕 Qué hemos podido hacer nosotros (2026-08-18).** Montamos un visor con OCR
+([`ver_plano.py`](../data-explorer/planos/ver_plano.py)) y el resultado acota mucho la petición:
+
+- ✅ **Las notas se leen bien** (1.504 palabras, confianza media 74).
+- ✅ **Confirmado que los N-numbers SÍ están en el plano**, en **globos verdes y sin la `N`**:
+  el racimo del Bolt Eye pone `170`, `170.2` … `170.7` junto a la cota `Ø4 −0,1 (4x)`. Hemos
+  localizado **178 globos**.
+- ❌ **Pero el número de dentro no se puede leer.** Mide ~9 píxeles. Con Tesseract sale basura;
+  con RapidOCR **parece** que sale bien y es peor: auditando 16 lecturas al azar contra la imagen,
+  **solo 6 son correctas (37 %)**, y falla `155`→`156` **con 0,99 de confianza**. Los errores son
+  de un dígito y no hay forma de detectarlos. Lo hemos quitado de nuestras herramientas.
+- ❌ **Los marcos GD&T son ilegibles** (`⌖0,15 A-B` sale como `[1]`, `G97]`), y el símbolo `Ø` se
+  lee como `9`/`@`/`$`.
+
+O sea: **la petición no es un lujo, es la única salida.** Hoy el mapeo `N-number → zona de la
+pieza` solo se puede hacer **a mano, ampliando globo a globo**, sobre 178 globos y para cada una
+de las cuatro piezas. Con el plano en vectorial sería inmediato y exacto.
+
+**Y si el CAD nativo no es posible, nos vale una alternativa más sencilla: el mismo plano
+escaneado a más resolución.** El actual son 3276×2317 px (~198 DPI) y las cifras de los globos
+miden 9 píxeles. A 600 DPI se leerían todas sin problema.
 
 Y además **no es el plano de vuestros informes**: todos los informes, hasta `intern.09` de abril
 de 2025, dicen `Drawing nº Level: 06`. El PDF que tenemos es la **rev. 07, del 23/05/2025** —
@@ -97,8 +118,9 @@ posterior a toda la metrología.
 **Preguntas:**
 
 1. **¿Nos podéis pasar el plano en un formato con texto** — PDF vectorial, **SVG**, DWG o el
-   CATDrawing nativo? Nos vale cualquiera de los cuatro. Con el escaneo actual **no podemos
-   localizar automáticamente ninguna cota**.
+   CATDrawing nativo? Nos vale cualquiera de los cuatro. Con el escaneo actual el mapeo
+   `N-number → zona de la pieza` **hay que hacerlo a mano, globo a globo**: los números están
+   impresos, pero a 9 píxeles ningún OCR los lee.
 2. **¿Nos podéis pasar la rev. 06**, que es la que corresponde a las mediciones?
 
 <details><summary>Contexto interno (no enviar)</summary>
@@ -108,6 +130,13 @@ puede hacer (a) a mano sobre la imagen, (b) por OCR sobre los globos del plano, 
 geométrico: cruzar el nominal del CSV con la nube de puntos, que funciona para las cotas
 circulares pero deja fuera las que no están en la nube (N161/N162/N163) y las no circulares.
 → [3212/4-metrologia.md](3212/4-metrologia.md)*
+
+*Actualización 2026-08-18: la vía (b) queda **descartada, y esta vez con la medida hecha**.
+Tesseract da basura evidente. RapidOCR parecía funcionar (131 N-numbers "leídos") pero al auditar
+16 lecturas al azar contra la imagen solo 6 eran correctas: **37 %**, con fallos de un dígito y
+confianza de 0,99. Se ha quitado de `ver_plano.py`, que ahora solo LOCALIZA los globos y explica
+por qué hay que pedir otro plano. Queda la vía (a), a mano.
+→ [visores.md](visores.md) · [3212/1-pieza-2d-3d.md](3212/1-pieza-2d-3d.md)*
 </details>
 
 ---

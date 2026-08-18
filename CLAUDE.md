@@ -10,7 +10,7 @@ cliente y las notas de Obsidian (ver rutas abajo).
 |---|---|
 | `backend/` `frontend/` | La **aplicación** (FastAPI + React, sobre el template `full-stack-fastapi-template`). → [docs/app-web.md](docs/app-web.md) |
 | `scripts/` | Shell de **build y test** del template. ⚠️ Nada que ver con los visores |
-| `data-explorer/` | 📊 Los **visores de los datos crudos** de la CMM (Python). → [docs/visores.md](docs/visores.md) |
+| `data-explorer/` | 📊 Los **visores de los datos crudos** (Python): `metrologia/` (CMM) y `planos/` (el plano 2D). → [docs/visores.md](docs/visores.md) |
 | `docs/` | 🔑 El **conocimiento del dominio**: análisis de los datos, modelo de la BD, preguntas abiertas |
 | `compose*.yml` `deployment.md` `development.md` | Docker y despliegue |
 
@@ -112,8 +112,28 @@ docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bo
   Trae ya instalado (no hace falta pip): `pandas`, `numpy`, `polars`, `scipy`, `matplotlib`,
   **`plotly` 6.6**, `open3d`, `pyvista`, `vedo`, `pymeshlab`, `libigl`, `opencv`, `scikit-image`,
   **`pdfplumber`**, **`PyMuPDF`**, `pytesseract`, `python-docx`, `lxml`, `torch`, `fastapi`.
+
   → **el STL de 4,9 M triángulos y las nubes de puntos SÍ se pueden procesar aquí.**
   No hay `ezdxf` ni `pythonocc`/OCCT, pero `pip`/`uv` están disponibles.
+
+  ✅ **Y SÍ hay Tesseract** (comprobado el 2026-08-18), v5.5.0, con `eng` y `osd`:
+
+  ```
+  C:\Program Files\Tesseract-OCR\tesseract.exe
+  ```
+
+  🔴 **Tampoco está en el PATH**: `pytesseract` da `TesseractNotFoundError` hasta que se le dice
+  dónde está. Se arregla con `pytesseract.pytesseract.tesseract_cmd = <ruta>` — ya resuelto en
+  `data-explorer/planos/ver_plano.py`, copiar de ahí.
+
+  ⚠️ **Tesseract sirve para texto grande, NO para texto pequeño.** Para cifras de ~9 px (los
+  globos del plano) devuelve basura. Está instalado también `rapidocr-onnxruntime` (2026-08-18),
+  que **parece** mejor pero **acierta solo el 37 % en esas cifras y no lo avisa**: ninguno de los
+  dos sirve ahí.
+
+  🔑 **Regla que salió de eso: antes de dar por buena una extracción automática, auditar una
+  muestra al azar contra la fuente y contar aciertos.** Ni el número de resultados ni la
+  confianza del motor valen como validación.
 
   Sigue siendo válido: para leer `.xls` lo más cómodo es **Excel vía COM desde PowerShell**, y
   para CSV/TXT/PPTX la **Bash tool** (Git Bash tiene `unzip`, `iconv`, `awk`, `find`).
@@ -124,12 +144,13 @@ docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bo
   ```powershell
   $py = "C:\Users\eduard.almar\AppData\Local\Programs\Python\Python311\python.exe"
   $s  = "C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\repos\inteplast\data-explorer"
-  & $py "$s\ver_todo.py"    # genera los tres visores y abre out/index.html
+  & $py "$s\ver_todo.py"    # genera los cuatro visores y abre out/index.html
   ```
 
-  `ver_csv.py` (16 informes de la CMM), `ver_txt.py` (40 nubes de puntos) y `ver_pdf.py` (144
-  gráficas de contorno) generan un índice navegable con una página por fichero. **Úsalos antes
-  de escribir un parser nuevo**: el código de parseo ya resuelto está ahí.
+  `metrologia/ver_csv.py` (16 informes de la CMM), `metrologia/ver_txt.py` (40 nubes de puntos),
+  `metrologia/ver_pdf.py` (144 gráficas de contorno) y `planos/ver_plano.py` (el plano 2D con OCR
+  y buscador) generan un índice navegable con una página por fichero. **Úsalos antes de escribir
+  un parser nuevo**: el código de parseo ya resuelto está ahí.
 - **Los CSV de la CMM son cp1252**, no UTF-8. Sin `iconv -f cp1252` salen `C�lculo de f�rmula`.
 - 🔴 **OneDrive Files On-Demand**: hay ficheros que son *placeholders*. Leer un solo byte dispara
   la descarga completa y en los grandes **da timeout**. **El estado cambia solo**: el 2026-08-13
@@ -198,7 +219,14 @@ for f in $(ls "$D"/slide*.xml | sort -V); do sed 's/<[^>]*>/\n/g' "$f" | grep -v
 7. **Cavidades no empiezan en 1**: el 3212 usa **c13–c16** (molde de 16, se controlan 4).
 8. 🔴 **El plano 2D no tiene texto: es un escaneo.** El PDF es una imagen JPEG de 3276×2317 px
    impresa con *"Microsoft: Print To PDF"*, con **0 fuentes**. `pdftotext` devuelve 1 byte.
-   Extraer cotas del plano solo es posible por OCR o a mano.
+   **Ya hay OCR hecho**: `data-explorer/planos/ver_plano.py` saca 1.504 palabras (confianza media
+   74) y las deja en `out/plano/texto-3212.txt`. Las notas se leen bien; la `Ø` sale como
+   `9`/`@`/`$` (`Ø40,3` → `940.3`) y los marcos GD&T son ilegibles.
+   🔑 **Los N-numbers están en el plano**, en **globos verdes sin la `N`** (`170`, `170.2`… =
+   N170 y sus puntos). Se **localizan** los 178, pero 🔴 **NO se pueden leer**: miden ~9 px.
+   Tesseract da basura; **RapidOCR es peor porque acierta solo el 37 % y falla con 0,99 de
+   confianza** (auditadas 16 lecturas al azar: 6 buenas; `155` por `156`, `103` por `109`).
+   **No volver a intentarlo con este PDF**: la salida es pedir el plano bueno (A4).
 9. 🔴 **El plano que tenemos no es el de los informes.** El PDF es la **rev. 07** (23/05/2025);
    todos los informes —hasta `intern.09` de abril de 2025— referencian la **rev. 06**.
 10. **La carpeta `2- Moldflow` no existe en el 3212** (en 3051/3197 existe pero está vacía).

@@ -35,10 +35,10 @@ Un INDICE con arbol de carpetas (`out/txt-3212.html`) y una PAGINA POR FICHERO e
 
 Uso
 ---
-    python scripts/ver_txt.py                     # genera todo y abre el arbol
-    python scripts/ver_txt.py --max-puntos 12000  # mas detalle, paginas mas pesadas
-    python scripts/ver_txt.py --familia nous      # solo los puntos objetivo
-    python scripts/ver_txt.py --muestreo 01 --cavidad c13
+    python data-explorer/metrologia/ver_txt.py                     # genera todo y abre el arbol
+    python data-explorer/metrologia/ver_txt.py --max-puntos 12000  # mas detalle, paginas mas pesadas
+    python data-explorer/metrologia/ver_txt.py --familia nous      # solo los puntos objetivo
+    python data-explorer/metrologia/ver_txt.py --muestreo 01 --cavidad c13
 """
 
 from __future__ import annotations
@@ -63,7 +63,7 @@ RAIZ = Path(
     r"C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\proyectos"
     r"\11. inteplast\Exemples\3212 Pump Housing\4- Metrologia"
 )
-SALIDA = Path(__file__).resolve().parent / "out"
+SALIDA = Path(__file__).resolve().parent.parent / "out"   # data-explorer/out, compartida
 
 EN_LA_NUBE = 0x400000        # FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS (OneDrive Files On-Demand)
 
@@ -276,7 +276,10 @@ code { background: #f2f4f7; padding: 1px 5px; border-radius: 3px; font-size: 0.9
                  background: #fafbfc; user-select: none; list-style: none; display: flex;
                  align-items: center; gap: 10px; }
 .arbol summary::-webkit-details-marker { display: none; }
-.arbol summary::before { content: "\\25B8"; color: var(--suave); font-size: 12px;
+.arbol summary::before { content: ""; width: 0; height: 0; flex: none;
+                         border-left: 5px solid var(--suave);
+                         border-top: 4px solid transparent;
+                         border-bottom: 4px solid transparent;
                          transition: transform .12s; }
 .arbol details[open] > summary::before { transform: rotate(90deg); }
 .arbol summary:hover { background: #f2f5f9; }
@@ -303,38 +306,39 @@ a.hoja .num { margin-left: auto; color: var(--suave); font-size: 12.5px;
            font-family: ui-monospace, Consolas, monospace; }
 .leyenda { border-left: 3px solid var(--azul); background: #f7f9fc; padding: 12px 16px;
            margin: 18px 0; font-size: 14px; border-radius: 0 6px 6px 0; }
+
+details.info { border: 1px solid var(--linea); border-radius: 10px; margin: 18px 0 26px;
+               background: #fafbfc; }
+details.info > summary { cursor: pointer; padding: 10px 16px 10px 34px; font-size: 14px;
+               font-weight: 600; color: var(--azul); user-select: none; }
+details.info > summary::marker { color: var(--suave); font-size: 12px; }
+details.info > summary:hover { background: #f2f5f9; border-radius: 10px; }
+details.info .info-cuerpo { padding: 0 20px 14px; border-top: 1px solid var(--linea);
+               background: #fff; border-radius: 0 0 10px 10px; }
+details.info .info-cuerpo p { font-size: 14px; margin: 10px 0; }
 """
 
 INTRO = """
-<div class='intro'>
-<h3>Que estas viendo</h3>
-<p>Los <b>puntos que toco la maquina</b>, sin interpretar. Cuando la CMM mide una pieza va
-recorriendola y anotando coordenadas; de ahi salen luego los diametros y las planitudes del
-informe. Estos ficheros son ese paso anterior: <b>solo X, Y, Z en milimetros</b>.</p>
-
-<h3>Que es un &laquo;muestreo&raquo; y una &laquo;cavidad&raquo;</h3>
-<p>Un <b>muestreo</b> es una tanda de piezas sacada del molde y llevada a medir
-(<code>intern.01</code>, <code>intern.03</code>&hellip;). Entre uno y otro <b>se retoco el
-molde</b>. Una <b>cavidad</b> es cada uno de los huecos del molde: de los 16 que tiene se
-controlan cuatro, <b>c13 a c16</b>. Asi que cada carpeta del arbol es <i>una tanda</i> y dentro
-esta <i>cada pieza medida</i> &mdash; <b>una sola pieza por cavidad</b>, no un promedio de
-varias.</p>
-
-<h3>Las tres familias de fichero</h3>
-<p><b>Perfil de cavidad</b> (~17.600 puntos): la pieza entera. Es lo que veras como una nube
-con forma reconocible.<br>
-<b>PUNTS</b> (~12.800 puntos): solo la <b>parte interior</b> de la pieza, entre las alturas 12 y
-28 mm. Es la zona critica, la que se compara contra el contorno teorico en las graficas PA/PB.<br>
-<b>PUNTS_NOUS</b> (150 puntos): <b>no son medidas</b>. Son las coordenadas <b>a donde deberia
-llegar la pieza</b> despues de retocar el molde, y es lo que INTEPLAST le manda al fabricante
-del molde. Son 6 anillos de 25 puntos, a 6 alturas distintas. Hay uno <b>distinto por cavidad y
-por muestreo</b>, o sea que <b>cada hueco del molde se retoca por separado</b>.</p>
-
-<h3>Como se mira</h3>
-<p>Cada pagina trae la <b>nube en 3D</b> (arrastra con el raton para girarla, rueda para acercar)
-y una <b>vista en planta</b> desde arriba, que es donde se aprecia el contorno redondo de la
-pieza. El color es siempre la <b>altura</b>.</p>
-</div>
+<details class='info'><summary>M&aacute;s informaci&oacute;n</summary><div class='info-cuerpo'>
+<p>Los <b>puntos que toco la maquina</b>, sin interpretar: <b>solo X, Y, Z en milimetros</b>. Es
+el paso previo a los diametros y planitudes del informe.</p>
+<p><b>Muestreo</b>: una tanda de piezas llevada a medir (<code>intern.01</code>&hellip;); entre
+una y otra <b>se retoco el molde</b>. <b>Cavidad</b>: cada hueco del molde, se controlan
+<b>c13&ndash;c16</b>. Cada carpeta es una tanda, y dentro hay <b>una sola pieza por cavidad</b>,
+no un promedio.</p>
+<p><b>Tres familias de fichero:</b><br>
+<b>Perfil de cavidad</b> (~17.600 puntos): la pieza entera.<br>
+<b>PUNTS</b> (~12.800): solo el <b>interior</b>, entre 12 y 28 mm de altura &mdash; la zona
+critica que se compara en las graficas PA/PB.<br>
+<b>PUNTS_NOUS</b> (150): <b>no son medidas</b>, son las coordenadas <b>a donde deberia llegar la
+pieza</b> tras retocar el molde. Es lo que INTEPLAST manda al fabricante del molde, y hay uno
+distinto <b>por cavidad y muestreo</b>: cada hueco se retoca por separado.</p>
+<p>Cada pagina trae la <b>nube 3D</b> (arrastra para girar, rueda para acercar) y una <b>vista en
+planta</b>. El color es siempre la <b>altura</b>.</p>
+<p>Los <code>.igs</code> y <code>.dxf</code> de estas mismas carpetas <b>son estos mismos
+puntos otra vez</b> en otro formato (el <code>.igs</code> es el <code>PUNTS.txt</code> con un
+desplazamiento en Z; el <code>.dxf</code>, el perfil de cavidad). No hace falta abrirlos.</p>
+</div></details>
 """
 
 
@@ -505,11 +509,7 @@ def main() -> None:
         "Abre una carpeta y elige un fichero.</div>"
         f"<div class='ruta'>{html.escape(str(args.raiz))}</div>"
         + INTRO
-        + "<div class='aviso'>Los <code>.igs</code> y <code>.dxf</code> que hay en estas mismas "
-        "carpetas <b>son estos mismos puntos otra vez</b>, en otro formato: el <code>.igs</code> "
-        "es el <code>PUNTS.txt</code> con un desplazamiento en Z, y el <code>.dxf</code> es el "
-        "perfil de cavidad. No hace falta abrirlos.</div>"
-        "<h2>Ficheros</h2>"
+        + "<h2>Ficheros</h2>"
         f"<div class='arbol'>{''.join(ramas)}</div>"
     )
     fichero_indice = args.salida / "txt-3212.html"

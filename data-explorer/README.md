@@ -1,14 +1,25 @@
-# `data-explorer/` — visores de los datos crudos de la CMM
+# `data-explorer/` — visores de los datos crudos
 
-Scripts para **ver** lo que hay en `4- Metrologia` en vez de leer descripciones. Generan un
-**índice con árbol de carpetas** y **una página por resultado**.
+Scripts para **ver** los datos en vez de leer descripciones. Generan un **índice con árbol de
+carpetas** y **una página por resultado**.
+
+Están repartidos en dos carpetas según de dónde salga el dato:
+
+```
+data-explorer/
+├── ver_todo.py       punto de entrada: ejecuta los cuatro
+├── metrologia/       lo que dejó la máquina de medición (4- Metrologia)
+├── planos/           el plano 2D del cliente (1-2D y 3D Pieza)
+└── out/              lo generado; es UNA sola carpeta compartida, ignorada en git
+```
 
 | Script | Qué lee | Qué genera |
 |---|---|---|
-| **[`ver_todo.py`](ver_todo.py)** | — | **`out/index.html`**: la pantalla donde se elige, y ejecuta los otros tres |
-| [`ver_csv.py`](ver_csv.py) | Los **16 CSV de cavidad** (los informes de la CMM) | `out/csv-3212.html` + 24 páginas |
-| [`ver_txt.py`](ver_txt.py) | Las **40 nubes de puntos** `.txt` | `out/txt-3212.html` + 44 páginas |
-| [`ver_pdf.py`](ver_pdf.py) | Las **144 gráficas de contorno** en PDF | `out/pdf-3212.html` + 148 páginas + 144 PNG |
+| **[`ver_todo.py`](ver_todo.py)** | — | **`out/index.html`**: la pantalla donde se elige, y ejecuta los otros cuatro |
+| [`metrologia/ver_csv.py`](metrologia/ver_csv.py) | Los **16 CSV de cavidad** (los informes de la CMM) | `out/csv-3212.html` + 24 páginas |
+| [`metrologia/ver_txt.py`](metrologia/ver_txt.py) | Las **40 nubes de puntos** `.txt` | `out/txt-3212.html` + 44 páginas |
+| [`metrologia/ver_pdf.py`](metrologia/ver_pdf.py) | Las **144 gráficas de contorno** en PDF | `out/pdf-3212.html` + 148 páginas + 144 PNG |
+| [`planos/ver_plano.py`](planos/ver_plano.py) | El **plano 2D** (escaneo sin texto) → OCR | `out/plano-3212.html` + el texto extraído |
 
 **Se abre `out/index.html`**, se elige el tipo de dato, se navega por el árbol y al hacer clic en
 un fichero se va a su página.
@@ -30,6 +41,11 @@ out/
 │   ├── intern.01-c13-PA_1.html    ← una página por gráfica de contorno
 │   ├── evo-c13.html               ← la evolución del contorno entre muestreos
 │   └── img/*.png                  ← la página del PDF renderizada
+├── plano/
+│   ├── ocr-3212.json              ← caché del OCR: cada palabra con su caja
+│   ├── globos-3212.json           ← caché de los globos LOCALIZADOS (no leídos)
+│   ├── texto-3212.txt             ← el texto extraído, en orden de lectura
+│   └── img/*.jpg|png              ← el plano, y los marcados de --buscar/--n
 └── vendor/plotly.min.js           ← la librería, compartida por todas las páginas
 ```
 
@@ -61,6 +77,13 @@ $s  = "C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\repos\inteplast\data-
 > `…\Escritorio\proyectos\11. inteplast\Exemples` (ruta absoluta en la cabecera de cada script).
 
 Python 3.11.8 con `pandas`, `numpy` y `plotly` 6.6 ya instalados — no hace falta `pip install`.
+
+⚠️ **`ver_plano.py` usa Tesseract**, que 🔴 **no está en el PATH**: el script lo busca solo en
+`C:\Program Files\Tesseract-OCR\`. Sirve para el texto del plano (notas y cotas).
+
+🔴 **No sirve para los números de dentro de los globos, y RapidOCR tampoco** (acierta el 37 % y
+falla con 0,99 de confianza). Esa parte **se quitó a propósito**: ver
+[`docs/visores.md`](../docs/visores.md). No volver a intentarlo con este PDF.
 
 ### Opciones
 

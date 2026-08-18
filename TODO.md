@@ -1,12 +1,10 @@
 # TODO
 
-- [ ] make a data explorer python script that reads the 2d planos odf and extracts the text/ can locate where a certain text (cota name) in the pdf and mark it
 
-- [ ] borra: Full Stack FastAPI Template - 2026 del pie de pagina de la web, no quiero que este ni ver el texto ni la linia que lo separa de lo de arriba. Tambien tienes que borrar el texto que aparece en la parte de arriba de la pestaña al abrirse y en la pestaña de ADMIN que sale Admin - FastAPI template cuando tendria que decir Admin - inteplast, como el dashborad o las features
+- [ ] lo que me interesaria ver de cada feature es el numero de piezas en las que aparece, por ejemplo, el bolt eye aparece en la pieza 3212, pero debajo se indica todos los ficheros de pieza/molde/planos. Todos estos tienen en comun una cosa: el id de la pieza, esto es: 3212. en un futuro es posible que haya mas piezas, y como usuario me interesa ver rapido y visualmente que piezas son estas. esto por ahora no mpasas, se indican todos estos ficheros y leerlo es confuso, ya que se indican por su nombre el cual no es el mas intuitivo. Como se te ocurre mejorrar esto? habia pensado que agruparas de alguna forma para cada pieza cuantos de estos ficheros se tinene: pieza cad, pieza escaneada, molde, plano 2d,... y que de forma facil el usuario pueda verlo! 
 
-- [ ] Bug: Solapamiento del header con el contenido al hacer scroll
-
-Al hacer scroll hacia abajo en la página, la línea horizontal superior y el icono ubicado en la parte superior derecha se mantienen visibles y terminan solapándose con el contenido de la página, concretamente con los textos del contenido principal.
+antes de cambiar nada del codigo vamos a planear como hacer esto. 
+Dime que opciones sencillas y limpias en la gui se te ocurren para hacer este cambio, hazme preguntas si tienes dudas!
 
 
 ## Seleccionar features sobre el CAD / plano (decidir enfoque)
@@ -52,3 +50,13 @@ N-numbers).
 
 
 # DONE
+
+- [ ] make a data explorer python script that reads the 2d planos odf and extracts the text/ can locate where a certain text (cota name) in the pdf and mark it
+
+- [ ] borra: Full Stack FastAPI Template - 2026 del pie de pagina de la web, no quiero que este ni ver el texto ni la linia que lo separa de lo de arriba. Tambien tienes que borrar el texto que aparece en la parte de arriba de la pestaña al abrirse y en la pestaña de ADMIN que sale Admin - FastAPI template cuando tendria que decir Admin - inteplast, como el dashborad o las features
+
+- [ ] Bug: Solapamiento del header con el contenido al hacer scroll
+
+Al hacer scroll hacia abajo en la página, la línea horizontal superior y el icono ubicado en la parte superior derecha se mantienen visibles y terminan solapándose con el contenido de la página, concretamente con los textos del contenido principal.
+
+- [ ] eliminar cajas de features y admin que aparecen debajo la caja de resultados del dashboard, no quiero que este eso alli, ya se puede ir a features y admin des de la izquierda, es redundante.

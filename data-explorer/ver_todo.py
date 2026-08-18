@@ -1,19 +1,25 @@
 """
-ver_todo.py - Punto de entrada unico. Genera los tres visores y la pantalla inicial.
+ver_todo.py - Punto de entrada unico. Genera los cuatro visores y la pantalla inicial.
 
-Ejecuta `ver_csv.py`, `ver_txt.py` y `ver_pdf.py`, y escribe `out/index.html`: la pantalla
-donde se elige entre los tres tipos de dato que dejo la maquina de medicion.
+Los visores viven en dos carpetas segun de donde salga el dato:
+
+    metrologia/   lo que dejo la maquina de medicion (ver_csv, ver_txt, ver_pdf)
+    planos/       el plano 2D del cliente (ver_plano)
+
+Todos escriben en la MISMA carpeta `out/`, en la raiz de data-explorer, para que los
+enlaces entre paginas sigan siendo relativos y la pantalla inicial sea una sola.
 
     out/index.html        <- SE ABRE ESTO
     ├── csv-3212.html     las cotas medidas y comparadas contra el plano
     ├── txt-3212.html     las nubes de puntos en bruto
-    └── pdf-3212.html     el perfil interior contra el contorno teorico
+    ├── pdf-3212.html     el perfil interior contra el contorno teorico
+    └── plano-3212.html   el plano 2D con su texto localizable
 
 Uso
 ---
-    python scripts/ver_todo.py                 # genera los tres y abre el inicio
-    python scripts/ver_todo.py --solo pdf      # regenera solo uno (y el inicio)
-    python scripts/ver_todo.py --solo csv,txt
+    python data-explorer/ver_todo.py                 # genera los cuatro y abre el inicio
+    python data-explorer/ver_todo.py --solo pdf      # regenera solo uno (y el inicio)
+    python data-explorer/ver_todo.py --solo csv,txt
 """
 
 from __future__ import annotations
@@ -29,25 +35,32 @@ SALIDA = AQUI / "out"
 
 VISORES = {
     "csv": {
-        "script": "ver_csv.py",
+        "script": "metrologia/ver_csv.py",
         "indice": "csv-3212.html",
         "carpeta": "csv",
         "titulo": "Las cotas medidas",
         "gancho": "Lo que la maquina midio y comparo contra el plano",
     },
     "txt": {
-        "script": "ver_txt.py",
+        "script": "metrologia/ver_txt.py",
         "indice": "txt-3212.html",
         "carpeta": "txt",
         "titulo": "Las nubes de puntos",
         "gancho": "Las coordenadas en bruto, antes de convertirse en cotas",
     },
     "pdf": {
-        "script": "ver_pdf.py",
+        "script": "metrologia/ver_pdf.py",
         "indice": "pdf-3212.html",
         "carpeta": "pdf",
         "titulo": "La tolerancia de contorno",
         "gancho": "El perfil interior comparado contra el teorico",
+    },
+    "plano": {
+        "script": "planos/ver_plano.py",
+        "indice": "plano-3212.html",
+        "carpeta": "plano",
+        "titulo": "El plano 2D",
+        "gancho": "El plano del cliente, con su texto buscable y marcable",
     },
 }
 
@@ -59,8 +72,8 @@ body { font-family: -apple-system, "Segoe UI", sans-serif; margin: 0 auto; max-w
 h1 { font-size: 32px; margin: 0 0 34px; letter-spacing: -0.025em; }
 h2 { font-size: 18px; margin: 0 0 16px; font-weight: 600; }
 
-.opciones { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-@media (max-width: 900px) { .opciones { grid-template-columns: 1fr; } }
+.opciones { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 18px; }
+@media (max-width: 620px) { .opciones { grid-template-columns: 1fr; } }
 a.opcion { display: flex; flex-direction: column; text-decoration: none; color: var(--tinta);
            border: 1px solid var(--linea); border-radius: 12px; padding: 24px 22px 26px;
            transition: border-color .12s, box-shadow .12s, transform .12s; background: #fff; }

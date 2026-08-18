@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
-import { createFileRoute, Link } from "@tanstack/react-router"
-import { LayoutList, Search, Users } from "lucide-react"
+import { createFileRoute } from "@tanstack/react-router"
+import { Search } from "lucide-react"
 import { useState } from "react"
 
 import { FeatureCard } from "@/components/Features/FeatureCard"
@@ -13,7 +13,6 @@ import {
 } from "@/components/Features/FeatureSearch"
 import { featuresQueryOptions } from "@/components/Features/queries"
 import PendingFeatures from "@/components/Pending/PendingFeatures"
-import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -34,24 +33,6 @@ export const Route = createFileRoute("/_layout/")({
     ],
   }),
 })
-
-const QUICK_ACCESS = [
-  {
-    icon: LayoutList,
-    title: "Features",
-    description: "Crea, edita o elimina fichas de features.",
-    path: "/features",
-    action: "Gestionar",
-  },
-  {
-    icon: Users,
-    title: "Admin",
-    description: "Gestiona los usuarios y sus permisos de acceso.",
-    path: "/admin",
-    action: "Gestionar",
-    superuserOnly: true,
-  },
-] as const
 
 function Dashboard() {
   const { user: currentUser } = useAuth()
@@ -136,27 +117,6 @@ function Dashboard() {
           )}
         </CardContent>
       </Card>
-
-      {!searching && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {QUICK_ACCESS.filter(
-            (entry) => !("superuserOnly" in entry) || currentUser?.is_superuser,
-          ).map((entry) => (
-            <Card key={entry.path}>
-              <CardHeader>
-                <entry.icon className="size-6 text-muted-foreground" />
-                <CardTitle>{entry.title}</CardTitle>
-                <CardDescription>{entry.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button asChild>
-                  <Link to={entry.path}>{entry.action}</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
 
       <FeatureDetailDialog
         featureId={selectedId}

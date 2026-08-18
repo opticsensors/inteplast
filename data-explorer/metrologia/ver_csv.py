@@ -35,9 +35,9 @@ Un INDICE con arbol de carpetas (`out/csv-3212.html`) y una PAGINA POR RESULTADO
 
 Uso
 ---
-    python scripts/ver_csv.py                  # genera todo y abre el arbol
-    python scripts/ver_csv.py --no-abrir
-    python scripts/ver_csv.py --corregir-signo # invierte el error de signo de B2/B4
+    python data-explorer/metrologia/ver_csv.py                  # genera todo y abre el arbol
+    python data-explorer/metrologia/ver_csv.py --no-abrir
+    python data-explorer/metrologia/ver_csv.py --corregir-signo # invierte el error de signo de B2/B4
 """
 
 from __future__ import annotations
@@ -61,7 +61,7 @@ RAIZ = Path(
     r"C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\proyectos"
     r"\11. inteplast\Exemples\3212 Pump Housing\4- Metrologia"
 )
-SALIDA = Path(__file__).resolve().parent / "out"
+SALIDA = Path(__file__).resolve().parent.parent / "out"   # data-explorer/out, compartida
 
 ENCODING = "cp1252"          # los CSV de la CMM NO son utf-8
 LIMITE_FRAC = 3.0            # el grafico corta en +-3 x tolerancia; el hover da el valor real
@@ -465,7 +465,10 @@ code { background: #f2f4f7; padding: 1px 5px; border-radius: 3px; font-size: 0.9
                  background: #fafbfc; user-select: none; list-style: none; display: flex;
                  align-items: center; gap: 10px; }
 .arbol summary::-webkit-details-marker { display: none; }
-.arbol summary::before { content: "\\25B8"; color: var(--suave); font-size: 12px;
+.arbol summary::before { content: ""; width: 0; height: 0; flex: none;
+                         border-left: 5px solid var(--suave);
+                         border-top: 4px solid transparent;
+                         border-bottom: 4px solid transparent;
                          transition: transform .12s; }
 .arbol details[open] > summary::before { transform: rotate(90deg); }
 .arbol summary:hover { background: #f2f5f9; }
@@ -498,6 +501,16 @@ td.txt { text-align: left; }
 tr.nok { background: #ffeceb; }
 details.crudo { margin: 20px 0; }
 details.crudo summary { cursor: pointer; font-size: 13.5px; color: var(--azul); }
+
+details.info { border: 1px solid var(--linea); border-radius: 10px; margin: 18px 0 26px;
+               background: #fafbfc; }
+details.info > summary { cursor: pointer; padding: 10px 16px 10px 34px; font-size: 14px;
+               font-weight: 600; color: var(--azul); user-select: none; }
+details.info > summary::marker { color: var(--suave); font-size: 12px; }
+details.info > summary:hover { background: #f2f5f9; border-radius: 10px; }
+details.info .info-cuerpo { padding: 0 20px 14px; border-top: 1px solid var(--linea);
+               background: #fff; border-radius: 0 0 10px 10px; }
+details.info .info-cuerpo p { font-size: 14px; margin: 10px 0; }
 """
 
 
@@ -556,45 +569,31 @@ LEYENDA_BANDA = (
 )
 
 INTRO = """
-<div class='intro'>
-<h3>Que es un &laquo;muestreo&raquo;</h3>
-<p>Cada cierto tiempo se saca una tanda de piezas del molde y se lleva al laboratorio a medir.
-Eso es un muestreo: <code>intern.01</code>, <code>intern.03</code>&hellip; El 3212 tiene nueve,
-pero <b>solo cuatro se midieron con la maquina 3D</b>, y son los que ves aqui: el
-<b>01, 03, 05 y 08</b>. Entre uno y otro <b>se retoco el molde</b>, asi que la secuencia es la
+<details class='info'><summary>M&aacute;s informaci&oacute;n</summary><div class='info-cuerpo'>
+<p><b>Muestreo</b> (<code>intern.01</code>, <code>.03</code>&hellip;): una tanda de piezas sacada
+del molde y llevada a medir. El 3212 tiene nueve, pero <b>solo cuatro se midieron en 3D</b>
+&mdash; 01, 03, 05 y 08. <b>Entre uno y otro se retoco el molde</b>, asi que la secuencia es la
 historia de como fue mejorando la pieza.</p>
-
-<h3>Que es una &laquo;cavidad&raquo;</h3>
-<p>El molde tiene 16 huecos y saca 16 piezas por inyectada. De esos 16 se controlan cuatro:
-<b>c13, c14, c15 y c16</b>. Por eso hay un fichero por cavidad y muestreo:
-<code>intern.05 / c14</code> son las medidas de la pieza que salio del hueco 14 en esa tanda.</p>
-
-<h3>Que hay dentro de cada fichero</h3>
-<p><b>211 mediciones.</b> La maquina recorre la pieza siguiendo un programa y va anotando:
-un diametro aqui, una planitud alla, la posicion de aquel agujero&hellip; De cada una guarda
-<b>lo que pedia el plano</b> (el valor nominal y cuanto se puede desviar) y <b>lo que se midio
-de verdad</b>. Si la diferencia se pasa de lo permitido, esa medicion es un <b>NOK</b>.</p>
-
-<h3>Por que se pueden comparar entre si</h3>
-<p>Porque <b>el programa de la maquina no se toco en 15 meses</b>. En los cuatro muestreos midio
-exactamente las mismas 211 cosas y en el mismo orden. Eso significa que <b>la medicion numero 57
-del primer muestreo y la numero 57 del ultimo son el mismo punto de la misma zona de la
-pieza</b>: basta restarlas para saber si el retoque del molde funciono. Es lo que hacen las dos
+<p><b>Cavidad</b>: cada hueco del molde. De los 16 que tiene se controlan cuatro,
+<b>c13&ndash;c16</b>. Un fichero por cavidad y muestreo: <code>intern.05 / c14</code> es la pieza
+que salio del hueco 14 en esa tanda.</p>
+<p><b>Cada fichero trae 211 mediciones</b>: de cada una, lo que pedia el plano (nominal y
+tolerancia) y lo que se midio. Si se pasa de lo permitido, es un <b>NOK</b>.</p>
+<p><b>Se pueden comparar entre si</b> porque el programa de la maquina no se toco en 15 meses:
+midio las mismas 211 cosas en el mismo orden. La medicion n&ordm;&nbsp;57 de un muestreo y la 57
+de otro son el mismo punto, asi que restarlas dice <b>si el retoque funciono</b>. Eso son las dos
 ultimas carpetas del arbol.</p>
-</div>
+<p><b>Dos rarezas del fichero que no son piezas malas.</b> (1) Los bolts <b>B2 y B4</b>
+exportan <code>Posicion Z</code> con el <b>signo invertido</b> (el plano pide +31 y la maquina
+escribe -30,990: la desviacion sale -61,99). Pasa en los cuatro muestreos, es la convencion del
+export; con <code>--corregir-signo</code> se invierte. (2) La cabecera <code>N170 BOLT 1 MIN/MAX
+H=5.0 mm</code> sale <b>repetida dentro del bloque del BOLT 2</b> (copiar-pegar de la plantilla):
+para saber que es cada fila, mirar el <b>ID de elemento CMM</b> (11-14 = altura 1,5&nbsp;mm
+&middot; 15-18 = altura 5,0&nbsp;mm &middot; 31-34 = posicion), no el titulo.</p>
+</div></details>
 """
 
-AVISO_RAREZAS = (
-    "<div class='aviso'><b>Dos rarezas del fichero que no son piezas malas.</b><br>"
-    "1. Los bolts <b>B2 y B4</b> exportan <code>Posicion Z</code> con el <b>signo invertido</b> "
-    "(el plano pide +31 y la maquina escribe -30,990, con lo que la desviacion sale -61,99). "
-    "Pasa en los cuatro muestreos: es la convencion de signo del export. Se avisa en el hover; "
-    "con <code>--corregir-signo</code> se invierte.<br>"
-    "2. La cabecera <code>N170 BOLT 1 MIN/MAX H=5.0 mm</code> aparece <b>repetida dentro del "
-    "bloque del BOLT 2</b> (un copiar-pegar de la plantilla). Para saber que es cada fila hay "
-    "que mirar el <b>ID de elemento CMM</b> (11-14 = altura 1,5 mm &middot; 15-18 = altura "
-    "5,0 mm &middot; 31-34 = posicion), no el titulo.</div>"
-)
+AVISO_RAREZAS = ""   # ahora va dentro del desplegable de INTRO
 
 
 def main() -> None:

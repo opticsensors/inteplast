@@ -21,6 +21,10 @@ Es **el documento fuente de todos los N-numbers, las tolerancias GD&T y los warn
 De aquí salen `N170 Ø4−0,1`, `N117 ⌖0,15 A/B`, `N178 planitud 0,10`, la nota del ángulo de
 desmoldeo y la nota de *"no líneas de soldadura en la zona del agujero"*.
 
+> 🔑 Confirmado el 2026-08-18: los N-numbers **están impresos aquí**, en globos verdes y sin la
+> `N` (ver más abajo). Es el único sitio donde un N-number aparece **junto al punto de la pieza
+> al que se refiere**.
+
 ### 🔴 Es un ESCANEO. No tiene texto.
 
 Verificado el 2026-08-11:
@@ -46,16 +50,55 @@ Es **poco para OCR fiable de cotas pequeñas** con símbolos GD&T (⌖, Ø, ⊥,
 
 ### Cómo leerlo
 
-- **A ojo**: abrirlo en cualquier visor. Es lo que se ha hecho hasta ahora.
-- **Extraer la imagen** para OCR o para recortar zonas del feature:
-  ```bash
-  pdfimages -j "20250523_DRW 0140S00237_07.pdf" plano   # si pdfimages está disponible
-  # alternativa: pdftoppm -r 300 -png <pdf> plano
+- 📊 **Con el visor: [`data-explorer/planos/ver_plano.py`](../../data-explorer/planos/ver_plano.py)**.
+  Es lo que hay que usar. Abre el plano en una página, se teclea una cota y **la marca sobre la
+  imagen**, con zoom y arrastre. → [visores.md](../visores.md)
+  ```powershell
+  & $py "…\data-explorer\planoser_plano.py"
+  & $py "…\data-explorer\planoser_plano.py" --buscar "40,3"
   ```
-  *(En este equipo `pdftotext` sí está; `pdfinfo` y `qpdf` no.)*
-- **Automáticamente: no se puede.** Ver la pregunta abierta A4 en
-  [preguntas-abiertas.md](../preguntas-abiertas.md) — hay que pedir el CATDrawing/DWG nativo o
-  un PDF exportado desde el CAD.
+- **El texto ya está extraído** en `data-explorer/out/plano/texto-3212.txt` (se regenera solo).
+- **A ojo**: abrirlo en cualquier visor.
+
+### 🆕 Sí se puede extraer texto — con matices (2026-08-18)
+
+La nota anterior decía *"automáticamente: no se puede"*. **Es más matizado que eso**, medido
+sobre el fichero real con Tesseract 5.5:
+
+| Qué | Resultado |
+|---|---|
+| **Notas de texto** | **Muy bien.** `BOSCH`, `PRESSURE TEST WATER`, `MEASURED AT HEIGHT`, `INSCRIPTION ACCORDING`… con confianza 96 |
+| **Total** | **1.504 palabras** con confianza ≥ 30, media 74, en ~35 s (imagen ampliada 2×, `--psm 11`) |
+| **Cotas** | Salen, pero **la `Ø` se lee como otro carácter**: `Ø40,3` → `940.3`, `Ø35,2` → `935.2`, `Ø40,0` → `$40,0`. Se compensa normalizando al buscar |
+| **Marcos GD&T** | ❌ Ilegibles: `⌖0,15 A-B` sale como `[1]`, `1A]`, `G97]`. Ningún OCR genérico los lee |
+| **Texto rotado** | ❌ No aporta: a 270° salen 192 palabras de confianza alta y **ninguna de 4+ letras**. Son las líneas del dibujo leídas como `=` y `|` |
+
+Sigue en pie pedir el CAD nativo (pregunta **A4** en
+[preguntas-abiertas.md](../preguntas-abiertas.md)): esto es una reconstrucción, no la fuente.
+
+### 🔑 Los N-numbers SÍ están en el plano: en globos verdes, sin la `N`
+
+Esto resuelve la parte de A4 que decía que sin el CAD *"no sabemos dónde está cada cota"*.
+
+El plano numera las características con **globos verdes con una flecha a la zona de la pieza**, y
+**sin el prefijo `N`**. El racimo del Bolt Eye pone `170`, `170.2` … `170.7`, justo al lado de la
+cota `Ø4 −0,1 (4x)`: es **N170 y sus siete puntos de medida**. Coinciden con los N-numbers del
+CSV de la CMM (`N113`, `N117`, `N155`, `N165`, `N170`, `N283`…). Hay además una **familia azul**
+(`161.x`), que parece otra clase de anotación.
+
+**Se han localizado 178 globos** por color (173 verdes, 5 azules). El visor los pinta, para
+saber **dónde** mirar.
+
+🔴 **Pero el número de dentro NO se puede leer.** Miden ~9 px. Probado con **Tesseract 5.5**
+(basura evidente: `1733`, `39`, `85`, con ×6/×10, canal R, Otsu, aislado de dígitos, HoughCircles
+y `--psm 6/7/8/11`) y con **RapidOCR**, que es **peor porque se equivoca en silencio**: auditadas
+16 lecturas al azar contra la imagen, **6 correctas — 37 %**. Lee `155` donde pone `156` **con
+0,99 de confianza**, `103` por `109`, `234` por `294`. Los fallos son de un dígito y la confianza
+no los delata. → [visores.md](../visores.md)
+
+**Se quitó del visor**: un 37 % con errores indetectables es peor que nada, porque produce
+N-numbers inventados con pinta de buenos. Hoy la única vía es **leerlos a ojo con el zoom** (a 8×
+se leen bien) y, sobre todo, **pedir el plano en condiciones**.
 
 ### ⚠️ Este plano no es el de los informes
 
@@ -118,10 +161,12 @@ Esta es exactamente la limitación que motiva las propuestas de `inteplast_datos
 | Dato | Destino en el modelo |
 |---|---|
 | N-numbers, nominales y tolerancias | `MEDICION.nominal` / `tol+` / `tol−` — **hoy vienen del XLS/CSV, no del plano** |
+| **Posición de cada N-number sobre la pieza** | los globos verdes: se localizan (178) pero se leen a ojo con el visor |
 | Notas del plano (desmoldeo, líneas de soldadura) | `WARNING` del feature |
 | Nº de plano y nivel de revisión | `PROYECTO.nº_plano`, `.nivel_plano` |
 | El PDF completo | `PROYECTO.FICHEROS.plano_2d` → descargable desde el frontend |
 | El STEP | `PROYECTO.FICHEROS.pieza` → descargable; sección *"piezas de referencia"* |
 
-**Prioridad de ingesta: baja.** El plano no es parseable y el STEP no tiene features. Ambos se
-guardan como **fichero adjunto descargable**, no como datos estructurados.
+**Prioridad de ingesta: baja.** El STEP no tiene features, y del plano solo se saca una
+reconstrucción por OCR (útil para buscar, no para ingerir como dato). Ambos se guardan como
+**fichero adjunto descargable**, no como datos estructurados.

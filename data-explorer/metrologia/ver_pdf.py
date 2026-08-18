@@ -36,9 +36,9 @@ Que genera
 
 Uso
 ---
-    python scripts/ver_pdf.py
-    python scripts/ver_pdf.py --muestreo 01 --cavidad c13
-    python scripts/ver_pdf.py --zoom 2.0        # render mas grande (y mas pesado)
+    python data-explorer/metrologia/ver_pdf.py
+    python data-explorer/metrologia/ver_pdf.py --muestreo 01 --cavidad c13
+    python data-explorer/metrologia/ver_pdf.py --zoom 2.0        # render mas grande (y mas pesado)
 """
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ RAIZ = Path(
     r"C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\proyectos"
     r"\11. inteplast\Exemples\3212 Pump Housing\4- Metrologia"
 )
-SALIDA = Path(__file__).resolve().parent / "out"
+SALIDA = Path(__file__).resolve().parent.parent / "out"   # data-explorer/out, compartida
 
 # Lote y contexto de cada muestreo. De la hoja HISTORY de los .xls.
 # Las fechas se dejan fuera de la interfaz: los muestreos ya se ordenan por numero.
@@ -295,7 +295,10 @@ code { background: #f2f4f7; padding: 1px 5px; border-radius: 3px; font-size: 0.9
                  background: #fafbfc; user-select: none; list-style: none; display: flex;
                  align-items: center; gap: 10px; }
 .arbol summary::-webkit-details-marker { display: none; }
-.arbol summary::before { content: "\\25B8"; color: var(--suave); font-size: 12px;
+.arbol summary::before { content: ""; width: 0; height: 0; flex: none;
+                         border-left: 5px solid var(--suave);
+                         border-top: 4px solid transparent;
+                         border-bottom: 4px solid transparent;
                          transition: transform .12s; }
 .arbol details[open] > summary::before { transform: rotate(90deg); }
 .arbol summary:hover { background: #f2f5f9; }
@@ -337,32 +340,33 @@ table.datos td.et { text-align: left; }
              transform: translateX(-50%); white-space: nowrap; }
 .barra .pie { position: absolute; top: 34px; font-size: 11px; color: var(--suave);
               transform: translateX(-50%); }
+
+details.info { border: 1px solid var(--linea); border-radius: 10px; margin: 18px 0 26px;
+               background: #fafbfc; }
+details.info > summary { cursor: pointer; padding: 10px 16px 10px 34px; font-size: 14px;
+               font-weight: 600; color: var(--azul); user-select: none; }
+details.info > summary::marker { color: var(--suave); font-size: 12px; }
+details.info > summary:hover { background: #f2f5f9; border-radius: 10px; }
+details.info .info-cuerpo { padding: 0 20px 14px; border-top: 1px solid var(--linea);
+               background: #fff; border-radius: 0 0 10px 10px; }
+details.info .info-cuerpo p { font-size: 14px; margin: 10px 0; }
 """
 
 INTRO = """
-<div class='intro'>
-<h3>Que estas viendo</h3>
-<p>Ademas de medir cotas sueltas (diametros, posiciones&hellip;), la maquina <b>recorre el perfil
-interior de la pieza y lo compara contra el contorno teorico</b>. Estas graficas son el resultado
-de esa comparacion, y <b>ese dato no esta en ningun otro fichero</b>: ni en los <code>.csv</code>,
-que no miden perfiles completos, ni en las nubes de puntos, porque para comparar haria falta el
-contorno nominal y ese no lo tenemos.</p>
-
-<h3>Que hay en cada carpeta de cavidad</h3>
-<p><b>12 graficas: dos perfiles por seis contornos medidos.</b><br>
-<b>PERFIL_A</b> (<code>PA_1</code> a <code>PA_6</code>) recorre la zona alta del interior;
-<b>PERFIL_B</b> (<code>PB_1</code> a <code>PB_6</code>), la zona baja. Los seis de cada perfil son
-recorridos distintos de esa misma zona.</p>
-
-<h3>Como se lee cada grafica</h3>
-<p>La linea del grafico es <b>cuanto se aleja la pieza real del perfil teorico</b> a lo largo del
-recorrido. La tolerancia es <b>&plusmn;0,025 mm</b>: mientras la linea se mantenga dentro de esa
-banda, bien. De cada grafica se sacan cuatro numeros que resumen lo importante:</p>
-<p><b>Desviacion maxima</b> (inferior y superior): lo mas lejos que llego la pieza del teorico,
-por dentro y por fuera.<br>
-<b>Infraccion de tolerancia</b> (inferior y superior): <b>cuanto se paso del limite permitido</b>.
-Si es <code>0,000</code>, no se paso: esa parte esta bien.</p>
-</div>
+<details class='info'><summary>M&aacute;s informaci&oacute;n</summary><div class='info-cuerpo'>
+<p>La maquina, ademas de medir cotas sueltas, <b>recorre el perfil interior de la pieza y lo
+compara contra el contorno teorico</b>. Estas graficas son esa comparacion, y <b>ese dato no esta
+en ningun otro fichero</b>: los <code>.csv</code> no miden perfiles completos, y desde las nubes
+de puntos no se puede recalcular porque el contorno nominal no lo tenemos.</p>
+<p><b>12 graficas por cavidad</b>: <b>PERFIL_A</b> (<code>PA_1</code>&ndash;<code>PA_6</code>)
+recorre la zona alta del interior y <b>PERFIL_B</b> (<code>PB_1</code>&ndash;<code>PB_6</code>) la
+baja; los seis de cada uno son recorridos distintos de esa misma zona.</p>
+<p><b>Como se lee:</b> la linea es <b>cuanto se aleja la pieza real del perfil teorico</b>. La
+tolerancia es <b>&plusmn;0,025 mm</b>: dentro de la banda, bien. De cada grafica se sacan cuatro
+numeros &mdash; la <b>desviacion maxima</b> (lo mas lejos que llego, por dentro y por fuera) y la
+<b>infraccion de tolerancia</b> (cuanto se paso del limite; si es <code>0,000</code>, no se
+paso).</p>
+</div></details>
 """
 
 

@@ -4,6 +4,12 @@ We are using this template for backend fastapi and frontend react:
 https://github.com/fastapi/full-stack-fastapi-template
 
 
+# Data explorer
+
+```powershell
+py -3.11 .\data-explorer\ver_todo.py
+```
+
 # Docker 
 
 ```powershell
