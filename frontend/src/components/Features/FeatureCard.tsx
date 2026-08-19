@@ -50,10 +50,14 @@ export function FeatureThumbnail({
   feature,
   className,
   style,
+  fit = "cover",
 }: {
   feature: FeaturePublic
   className?: string
   style?: CSSProperties
+  /** En la tarjeta se recorta para que cuadre; en la ficha, no: la geometria
+   *  es lo que se va a mirar y cortarla por los bordes seria absurdo. */
+  fit?: "cover" | "contain"
 }) {
   return (
     <div
@@ -67,7 +71,10 @@ export function FeatureThumbnail({
         <img
           src={fileUrl(feature.image.id)}
           alt={feature.name}
-          className="size-full object-cover"
+          className={cn(
+            "size-full",
+            fit === "cover" ? "object-cover" : "object-contain",
+          )}
         />
       ) : (
         <ImageIcon className="size-8 text-muted-foreground" />

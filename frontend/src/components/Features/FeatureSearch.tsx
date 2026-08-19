@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { CATEGORY_LABELS } from "./constants"
+import { CATEGORIES, CATEGORY_LABELS } from "./constants"
 import { partLabel } from "./parts"
 import { featureFiltersQueryOptions } from "./queries"
 
@@ -31,6 +31,65 @@ export const EMPTY_SEARCH: FeatureSearchState = {
 
 export const isSearchActive = (state: FeatureSearchState) =>
   Boolean(state.q || state.category || state.tag || state.partId)
+
+/**
+ * La busqueda tambien vive en la URL (`/?q=bolt&part=<id>`). Asi el boton de
+ * atras del navegador devuelve los resultados al volver de la ficha, y una
+ * busqueda se puede compartir o guardar en favoritos.
+ */
+export interface FeatureSearchParams {
+  q?: string
+  category?: FeatureCategory
+  tag?: string
+  part?: string
+}
+
+/**
+ * Nadie garantiza lo que llega en la URL: lo que no cuadre, fuera.
+ *
+ * 🔴 El router pasa cada valor por `JSON.parse`, asi que `?q=3212` llega aqui
+ * como el **numero** 3212 — y buscar codigos de pieza es justo el caso normal.
+ * Por eso se convierte a texto en vez de exigir `typeof === "string"`.
+ */
+export const validateFeatureSearch = (
+  search: Record<string, unknown>,
+): FeatureSearchParams => {
+  const text = (value: unknown) =>
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+      ? String(value) || undefined
+      : undefined
+  const category = text(search.category)
+
+  return {
+    q: text(search.q),
+    category: CATEGORIES.includes(category as FeatureCategory)
+      ? (category as FeatureCategory)
+      : undefined,
+    tag: text(search.tag),
+    part: text(search.part),
+  }
+}
+
+export const toSearchState = (
+  params: FeatureSearchParams,
+): FeatureSearchState => ({
+  q: params.q ?? "",
+  category: params.category ?? null,
+  tag: params.tag ?? null,
+  partId: params.part ?? null,
+})
+
+/** Los vacios se omiten para no arrastrar un `?q=&tag=` por toda la app. */
+export const toSearchParams = (
+  state: FeatureSearchState,
+): FeatureSearchParams => ({
+  q: state.q || undefined,
+  category: state.category ?? undefined,
+  tag: state.tag ?? undefined,
+  part: state.partId ?? undefined,
+})
 
 const ALL = "all"
 

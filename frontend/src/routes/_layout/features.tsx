@@ -1,16 +1,17 @@
 import { useQuery } from "@tanstack/react-query"
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Plus, Search } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import { FeatureActionsMenu } from "@/components/Features/FeatureActionsMenu"
 import { FeatureCard } from "@/components/Features/FeatureCard"
-import { FeatureFormDialog } from "@/components/Features/FeatureFormDialog"
 import {
-  EMPTY_SEARCH,
   FeatureSearch,
   type FeatureSearchState,
   isSearchActive,
+  toSearchParams,
+  toSearchState,
+  validateFeatureSearch,
 } from "@/components/Features/FeatureSearch"
 import { featuresQueryOptions } from "@/components/Features/queries"
 import PendingFeatures from "@/components/Pending/PendingFeatures"
@@ -19,6 +20,7 @@ import useDebounce from "@/hooks/useDebounce"
 
 export const Route = createFileRoute("/_layout/features")({
   component: Features,
+  validateSearch: validateFeatureSearch,
   head: () => ({
     meta: [
       {
@@ -29,9 +31,44 @@ export const Route = createFileRoute("/_layout/features")({
 })
 
 function Features() {
-  const [search, setSearch] = useState<FeatureSearchState>(EMPTY_SEARCH)
-  const [form, setForm] = useState<{ featureId: string | null } | null>(null)
+  const navigate = useNavigate()
+  const params = Route.useSearch()
+  const [search, setSearch] = useState<FeatureSearchState>(() =>
+    toSearchState(params),
+  )
   const debouncedQuery = useDebounce(search.q)
+
+  // La ficha con `gestion` enseña sus botones de Editar y Borrar: aqui se
+  // viene a mantener la base, no solo a consultarla.
+  const openFeature = (featureId: string) =>
+    navigate({
+      to: "/features/$featureId",
+      params: { featureId },
+      search: { gestion: true },
+    })
+
+  // El `⋯` es el atajo: entra en la ficha ya en modo edicion.
+  const editFeature = (featureId: string) =>
+    navigate({
+      to: "/features/$featureId",
+      params: { featureId },
+      search: { gestion: true, editar: true },
+    })
+
+  // Igual que en el dashboard: la busqueda vive en la URL para sobrevivir al
+  // viaje de ida y vuelta a la ficha del feature.
+  useEffect(() => {
+    navigate({
+      to: "/features",
+      search: toSearchParams({
+        q: debouncedQuery,
+        category: search.category,
+        tag: search.tag,
+        partId: search.partId,
+      }),
+      replace: true,
+    })
+  }, [navigate, debouncedQuery, search.category, search.tag, search.partId])
 
   const { data, isPending } = useQuery(
     featuresQueryOptions({
@@ -53,7 +90,7 @@ function Features() {
             Crea y mantiene las fichas de la base de conocimiento.
           </p>
         </div>
-        <Button onClick={() => setForm({ featureId: null })}>
+        <Button onClick={() => navigate({ to: "/features/nuevo" })}>
           <Plus className="mr-2" />
           Anadir feature
         </Button>
@@ -85,24 +122,18 @@ function Features() {
             <FeatureCard
               key={feature.id}
               feature={feature}
-              onSelect={() => setForm({ featureId: feature.id })}
+              // Clicar una tarjeta lleva a la ficha, aqui y en el dashboard.
+              // El menu de la derecha es el atajo para no entrar en ella.
+              onSelect={() => openFeature(feature.id)}
               actions={
                 <FeatureActionsMenu
                   featureId={feature.id}
-                  onEdit={() => setForm({ featureId: feature.id })}
+                  onEdit={() => editFeature(feature.id)}
                 />
               }
             />
           ))}
         </div>
-      )}
-
-      {form && (
-        <FeatureFormDialog
-          featureId={form.featureId}
-          open
-          onOpenChange={(open) => !open && setForm(null)}
-        />
       )}
     </div>
   )

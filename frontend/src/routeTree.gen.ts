@@ -19,6 +19,8 @@ import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutFeaturesRouteImport } from './routes/_layout/features'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
+import { Route as LayoutFeaturesNuevoRouteImport } from './routes/_layout/features_.nuevo'
+import { Route as LayoutFeaturesFeatureIdRouteImport } from './routes/_layout/features_.$featureId'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -69,6 +71,16 @@ const LayoutAdminRoute = LayoutAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutFeaturesNuevoRoute = LayoutFeaturesNuevoRouteImport.update({
+  id: '/features_/nuevo',
+  path: '/features/nuevo',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutFeaturesFeatureIdRoute = LayoutFeaturesFeatureIdRouteImport.update({
+  id: '/features_/$featureId',
+  path: '/features/$featureId',
+  getParentRoute: () => LayoutRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
@@ -80,6 +92,8 @@ export interface FileRoutesByFullPath {
   '/features': typeof LayoutFeaturesRoute
   '/items': typeof LayoutItemsRoute
   '/settings': typeof LayoutSettingsRoute
+  '/features/$featureId': typeof LayoutFeaturesFeatureIdRoute
+  '/features/nuevo': typeof LayoutFeaturesNuevoRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -91,6 +105,8 @@ export interface FileRoutesByTo {
   '/items': typeof LayoutItemsRoute
   '/settings': typeof LayoutSettingsRoute
   '/': typeof LayoutIndexRoute
+  '/features/$featureId': typeof LayoutFeaturesFeatureIdRoute
+  '/features/nuevo': typeof LayoutFeaturesNuevoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -104,6 +120,8 @@ export interface FileRoutesById {
   '/_layout/items': typeof LayoutItemsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/_layout/features_/$featureId': typeof LayoutFeaturesFeatureIdRoute
+  '/_layout/features_/nuevo': typeof LayoutFeaturesNuevoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -117,6 +135,8 @@ export interface FileRouteTypes {
     | '/features'
     | '/items'
     | '/settings'
+    | '/features/$featureId'
+    | '/features/nuevo'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -128,6 +148,8 @@ export interface FileRouteTypes {
     | '/items'
     | '/settings'
     | '/'
+    | '/features/$featureId'
+    | '/features/nuevo'
   id:
     | '__root__'
     | '/_layout'
@@ -140,6 +162,8 @@ export interface FileRouteTypes {
     | '/_layout/items'
     | '/_layout/settings'
     | '/_layout/'
+    | '/_layout/features_/$featureId'
+    | '/_layout/features_/nuevo'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -222,6 +246,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/features_/nuevo': {
+      id: '/_layout/features_/nuevo'
+      path: '/features/nuevo'
+      fullPath: '/features/nuevo'
+      preLoaderRoute: typeof LayoutFeaturesNuevoRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/features_/$featureId': {
+      id: '/_layout/features_/$featureId'
+      path: '/features/$featureId'
+      fullPath: '/features/$featureId'
+      preLoaderRoute: typeof LayoutFeaturesFeatureIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
   }
 }
 
@@ -231,6 +269,8 @@ interface LayoutRouteChildren {
   LayoutItemsRoute: typeof LayoutItemsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
+  LayoutFeaturesFeatureIdRoute: typeof LayoutFeaturesFeatureIdRoute
+  LayoutFeaturesNuevoRoute: typeof LayoutFeaturesNuevoRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
@@ -239,6 +279,8 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutItemsRoute: LayoutItemsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
+  LayoutFeaturesFeatureIdRoute: LayoutFeaturesFeatureIdRoute,
+  LayoutFeaturesNuevoRoute: LayoutFeaturesNuevoRoute,
 }
 
 const LayoutRouteWithChildren =

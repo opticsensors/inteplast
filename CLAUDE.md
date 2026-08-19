@@ -81,7 +81,8 @@ docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bo
 - ⚠️ **Cambiar un endpoint o un modelo obliga a regenerar el cliente TypeScript**
   (`bash scripts/generate-client.sh`), o el frontend se queda desincronizado.
 - La página `/items` es la demo de la plantilla: ya no está en el menú, pero el `Item` sigue en el
-  código. La página real de gestión es `/features`.
+  código. La página real de gestión es `/features`, y la **ficha del feature es `/features/{id}`**
+  — desde el 2026-08-19 es una página con URL propia, no una modal.
 
 ---
 

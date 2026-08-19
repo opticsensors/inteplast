@@ -114,6 +114,9 @@ export function PartSelect({
     <Select
       value={value ?? ""}
       onValueChange={(next) => {
+        // 🔴 Radix emite "" el solo dentro de un <form> (ver FeatureForm):
+        // sin este corte, editar un adjunto se quedaba sin pieza.
+        if (!next) return
         if (next === NEW) {
           setCreating(true)
           return

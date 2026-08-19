@@ -21,9 +21,15 @@ import { handleError } from "@/utils"
 interface DeleteFeatureProps {
   featureId: string
   onSuccess: () => void
+  /** `menu` = entrada del `⋯` de la tarjeta; `button` = boton suelto de la ficha. */
+  trigger?: "menu" | "button"
 }
 
-const DeleteFeature = ({ featureId, onSuccess }: DeleteFeatureProps) => {
+const DeleteFeature = ({
+  featureId,
+  onSuccess,
+  trigger = "menu",
+}: DeleteFeatureProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -43,14 +49,26 @@ const DeleteFeature = ({ featureId, onSuccess }: DeleteFeatureProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DropdownMenuItem
-        variant="destructive"
-        onSelect={(e) => e.preventDefault()}
-        onClick={() => setIsOpen(true)}
-      >
-        <Trash2 />
-        Borrar
-      </DropdownMenuItem>
+      {trigger === "menu" ? (
+        <DropdownMenuItem
+          variant="destructive"
+          onSelect={(e) => e.preventDefault()}
+          onClick={() => setIsOpen(true)}
+        >
+          <Trash2 />
+          Borrar
+        </DropdownMenuItem>
+      ) : (
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-destructive"
+          onClick={() => setIsOpen(true)}
+        >
+          <Trash2 className="mr-2" />
+          Borrar
+        </Button>
+      )}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Borrar feature</DialogTitle>

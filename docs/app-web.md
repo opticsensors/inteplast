@@ -156,22 +156,24 @@ La plantilla solo tiene dos roles (usuario y superusuario) y no se han añadido 
 
 | Ruta | Fichero | Qué es |
 |---|---|---|
-| `/` | `routes/_layout/index.tsx` | **Dashboard**: buscador global + filtros, tarjetas de resultado, modal de detalle, accesos rápidos y recientes |
-| `/features` | `routes/_layout/features.tsx` | **Gestión** (la página «Ítems» de la fase B): mismas tarjetas con editar y borrar |
+| `/` | `routes/_layout/index.tsx` | **Dashboard**: buscador global + filtros y tarjetas de resultado. La búsqueda va en la URL (`/?q=3212`) |
+| `/features/{id}` | `routes/_layout/features_.$featureId.tsx` | 🔑 **La ficha del feature**: cabecera con la imagen a la izquierda e identidad a la derecha (nombre, descripción, categoría, tags, piezas), y debajo a todo el ancho warnings, lessons y la matriz. **Se edita aquí mismo** (ver abajo) |
+| `/features` | `routes/_layout/features.tsx` | **Gestión** (la página «Ítems» de la fase B): mismas tarjetas, con *Añadir feature* y el menú `⋯` de atajo |
+| `/features/nuevo` | `routes/_layout/features_.nuevo.tsx` | **Alta**. Al guardar los datos básicos salta a la ficha en modo edición, que es donde se le cuelgan notas y ficheros |
 | `/admin` | `routes/_layout/admin.tsx` | Usuarios y permisos. **Sin tocar**, es el de la plantilla |
 
 Componentes en `components/Features/`:
 
 | Fichero | Qué |
 |---|---|
-| `FeatureSearch.tsx` | Buscador + tres desplegables (molde, categoría, tag) poblados desde `/features/filters` |
+| `FeatureSearch.tsx` | Buscador + tres desplegables (molde, categoría, tag) poblados desde `/features/filters`, y los ayudantes que traducen ese estado a los *search params* de la URL |
 | `FeatureCard.tsx` | La tarjeta: imagen, nombre, descripción, tags y el resumen *«2 piezas · 3197, 3212»* |
 | `PartAssetMatrix.tsx` | 🔑 **La matriz pieza × tipo de fichero** de la ficha: una fila por pieza, una columna por tipo |
 | `parts.ts` | La unión *piezas declaradas + piezas con ficheros* y el reparto en filas. Es la lógica de la matriz |
 | `PartSelect.tsx` | Desplegable de piezas con alta al vuelo (código + nombre) |
-| `FeatureDetailDialog.tsx` | La modal de solo lectura, con las secciones desplegables |
-| `FeatureFormDialog.tsx` | Alta y edición: warnings, lessons, **Piezas** y **Ficheros por pieza** |
-| `NoteDialog.tsx` `AssetDialog.tsx` | Las modales de segundo nivel |
+| `FeatureForm.tsx` | El formulario de alta y edición (datos básicos + warnings, lessons, **Piezas** y **Ficheros por pieza**). Lo montan `/features/nuevo` y la propia ficha en modo edición. 🔑 **Repite el reparto de la ficha** —foto a la izquierda, datos a la derecha, secciones debajo— con una casilla en el sitio de cada dato, para que entrar y salir de edición no mueva nada de sitio |
+| `FeatureNotFound.tsx` | La pantalla de «feature no encontrado» de la ficha |
+| `NoteDialog.tsx` `AssetDialog.tsx` | Las modales de segundo nivel. **Son las únicas modales que quedan** (más la de confirmar el borrado) |
 | `constants.ts` | Las etiquetas en castellano de categorías y tipos, y el icono de cada tipo |
 | `queries.ts` | Las query keys. Todo cuelga de `["features"]`: invalidar esa raíz refresca todo |
 
@@ -191,14 +193,82 @@ propósito**:
 
 El segundo estado es el que convierte la matriz en un **checklist de lo que falta**.
 
-### Dos cosas del frontend que hay que saber
+### La ficha es una página, no una modal (2026-08-19)
 
-1. **Al crear un feature, la modal no se cierra.** Los warnings, lessons y adjuntos necesitan que
-   el feature exista para colgarse de él, así que al guardar por primera vez la modal pasa a modo
-   edición y aparecen esas secciones. Los datos básicos se guardan con el botón; las notas y los
-   adjuntos se guardan solos desde sus propias modales.
+Hasta el 2026-08-19 la ficha era una modal de 672 px. Ahora es la página `/features/{id}`, y la
+modal se ha borrado. El motivo no es estético:
 
-2. **El editor de texto enriquecido es markdown reducido**, no TipTap: `**negrita**`,
+- **La ficha es el destino de la herramienta**, no una vista previa. Con URL propia se puede
+  enviar por Teams, guardar en favoritos y enlazar desde estos `docs/`.
+- La **cabecera repite la lectura de la tarjeta del buscador** —imagen a la izquierda, identidad
+  a la derecha— para que el salto del resultado a la ficha no obligue a releer nada. Debajo, a
+  todo el ancho, lo que hay que saber para diseñar: warnings, lessons y la matriz.
+- **Cabe lo que viene.** La matriz pieza × tipo ya se salía en la modal; los muestreos y las
+  correcciones de molde de la siguiente fase no habrían entrado de ninguna manera.
+- **El formulario tampoco es una modal.** Era una modal con warnings, lessons, piezas y cinco
+  tipos de fichero dentro de 672 px, que además abría modales encima de la modal. Ahora el alta
+  es `/features/nuevo` y la edición ocurre **dentro de la propia ficha**. Solo quedan las modales
+  de segundo nivel (`NoteDialog`, `AssetDialog`) y la de confirmar el borrado.
+
+🔑 **Clicar una tarjeta lleva a la ficha en las dos páginas** (dashboard y gestión). Antes, en
+`/features` clicar abría el formulario de edición: la misma tarjeta hacía dos cosas distintas.
+
+🔑 **La ficha tiene tres caras, y todas son la misma página** — solo cambia un *search param*:
+
+| Desde | URL | Qué enseña |
+|---|---|---|
+| Dashboard | `/features/{id}` | Solo lectura. Se consulta, no se toca |
+| Gestión | `?gestion=true` | Lo mismo + *Editar* y *Borrar* arriba, **sin pasar por el `⋯`** |
+| *Editar* | `?gestion=true&editar=true` | **El mismo contenido, en el mismo sitio, editable** |
+
+*Editar* no navega a ninguna parte ni cambia el reparto de la página: el nombre sigue siendo el
+nombre —ahora en una casilla—, la foto sigue a la izquierda —ahora se puede soltar otra encima—,
+y las secciones siguen debajo, con sus botones de añadir y borrar. Los dos botones de arriba a la
+derecha pasan a ser *Cancelar* y *Guardar*, que devuelven la página a lectura. Ahí es además
+donde tienen que estar: lo único que se guarda a mano es la cabecera, porque las notas y los
+ficheros se guardan solos desde sus propias modales. El modo vive en la URL y no en un `useState` por dos motivos:
+el `⋯` de la lista puede entrar directo a editar, y recargar (F5) no te echa del modo edición.
+`validateSearch` los declara **opcionales**, o el dashboard no podría enlazar la ficha sin
+pasarlos (TanStack exige en los enlaces todo search param que el validador declare obligatorio).
+
+**No hay botón *Volver*** en ninguna de las tres: para eso están el botón del navegador y el menú
+lateral. El único que queda es el de «Feature no encontrado», donde no hay nada más donde pulsar.
+
+🔑 **La búsqueda vive en la URL** (`validateSearch` en las dos rutas). Sin eso, volver de la ficha
+con el botón *atrás* devolvía el buscador vacío — que es el precio que se paga por cambiar una
+modal por una página, y por eso se pagó de entrada. El input sigue siendo estado local y se
+refleja en la URL con `replace: true` tras el *debounce*, para no dejar una entrada de historial
+por tecla.
+
+🔴 **Ojo con los *search params* del router**: TanStack pasa cada valor por `JSON.parse` y, al
+escribir, entrecomilla lo que parezca JSON para conservar el tipo. Buscar `3212` daba
+`/?q=%223212%22` — justo el caso más común aquí, un código de pieza. En `main.tsx` se le pasa
+`stringifySearch: stringifySearchWith(JSON.stringify)` (sin parser) para que el texto viaje tal
+cual, y `validateFeatureSearch` convierte a texto lo que vuelva como número.
+
+### Tres cosas del frontend que hay que saber
+
+1. **Al crear un feature, `/features/nuevo` salta a su ficha en modo edición.** Los warnings,
+   lessons y adjuntos necesitan que el feature exista para colgarse de él, así que el alta solo
+   pide los datos básicos y al guardar te deja en la ficha ya editable, con esas secciones. Los
+   datos básicos se guardan con el botón; las notas y los adjuntos se guardan solos desde sus
+   propias modales.
+
+2. 🔴 **Radix `Select` dentro de un `<form>` dispara `onValueChange("")` él solo** mientras su
+   lista no se haya abierto. En el formulario del feature eso **borraba la categoría**: el
+   desplegable enseñaba *Sin categoría* aunque el feature fuera `hole`, y al guardar el `PUT`
+   salía con `category: ""` → **422 «Something went wrong!»**. Venía de la modal original, no del
+   cambio a páginas. El corte está en `FeatureForm.tsx` y en `PartSelect.tsx`:
+
+   ```tsx
+   onValueChange={(next) => next && field.onChange(next)}
+   ```
+
+   Un cambio de verdad nunca trae cadena vacía: el «Sin categoría» del desplegable vale `"none"`.
+   ⚠️ Si se añade otro `Select` **controlado con `value=`** dentro de un formulario, hace falta
+   el mismo corte.
+
+3. **El editor de texto enriquecido es markdown reducido**, no TipTap: `**negrita**`,
    `*cursiva*`, `` `código` `` y listas con guion, con una barra de botones que los inserta. Es
    deliberado — cero dependencias nuevas y cero HTML que sanear. El campo del backend es texto
    libre, así que sustituirlo por un editor completo el día que haga falta es un cambio

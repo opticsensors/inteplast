@@ -1,10 +1,18 @@
 # TODO
 
+- [ ]
 
-- [ ] lo que me interesaria ver de cada feature es el numero de piezas en las que aparece, por ejemplo, el bolt eye aparece en la pieza 3212, pero debajo se indica todos los ficheros de pieza/molde/planos. Todos estos tienen en comun una cosa: el id de la pieza, esto es: 3212. en un futuro es posible que haya mas piezas, y como usuario me interesa ver rapido y visualmente que piezas son estas. esto por ahora no mpasas, se indican todos estos ficheros y leerlo es confuso, ya que se indican por su nombre el cual no es el mas intuitivo. Como se te ocurre mejorrar esto? habia pensado que agruparas de alguna forma para cada pieza cuantos de estos ficheros se tinene: pieza cad, pieza escaneada, molde, plano 2d,... y que de forma facil el usuario pueda verlo! 
+- [ ] la tabla siguiente que hay en la gui: 
+Pieza	Molde	CAD	Escaneo	Plano	Moldflow
+3212
+Pump Housing
+vamos a planear antes de cambiar nada del codigo.
 
-antes de cambiar nada del codigo vamos a planear como hacer esto. 
-Dime que opciones sencillas y limpias en la gui se te ocurren para hacer este cambio, hazme preguntas si tienes dudas!
+La tabla de piezas ejemplo de, por ejemplo, el feature bolt eye o de cualquier otro feature, no me acaba de gustar cómo está diseñado. Es un poco fuera de lugar, ¿no? En comparación con todo lo demás, en mi opinión. No solo esto, sino que los iconos que aparecen en cada celda no pegan mucho, además no los puedo clicar, no acabo de ver el sentido de esto. La idea es que el usuario los pueda clicar y se abra el programa pertinente que permite abrirlos. Esto no sé si puedes hacerlo. Y también quiero que cambies el diseño, y para cambiar el diseño, en vez de una tabla, quiero que pongas esos desplegables, igual que están en piezas de ejemplo, y los subdesplegables dentro del desplegable piezas de ejemplo.
+
+Los subdesplegables tienen que ser, en este caso, el nombre de la pieza, como es el caso de 3212 Pump Housing. Y al clicar este subdesplegable, dentro tienen que aparecer en una lista o bullet point o alguna forma que tú creas que quede bien, los nombres de, bueno, los ficheros, nombres, lo que sea, correspondientes al molde, CAD, escaneo, plano y mold flow. ¿Cómo lo ves?
+
+
 
 
 ## Seleccionar features sobre el CAD / plano (decidir enfoque)
@@ -60,3 +68,19 @@ N-numbers).
 Al hacer scroll hacia abajo en la página, la línea horizontal superior y el icono ubicado en la parte superior derecha se mantienen visibles y terminan solapándose con el contenido de la página, concretamente con los textos del contenido principal.
 
 - [ ] eliminar cajas de features y admin que aparecen debajo la caja de resultados del dashboard, no quiero que este eso alli, ya se puede ir a features y admin des de la izquierda, es redundante.
+
+- [ ] lo que me interesaria ver de cada feature es el numero de piezas en las que aparece, por ejemplo, el bolt eye aparece en la pieza 3212, pero debajo se indica todos los ficheros de pieza/molde/planos. Todos estos tienen en comun una cosa: el id de la pieza, esto es: 3212. en un futuro es posible que haya mas piezas, y como usuario me interesa ver rapido y visualmente que piezas son estas. esto por ahora no mpasas, se indican todos estos ficheros y leerlo es confuso, ya que se indican por su nombre el cual no es el mas intuitivo. Como se te ocurre mejorrar esto? habia pensado que agruparas de alguna forma para cada pieza cuantos de estos ficheros se tinene: pieza cad, pieza escaneada, molde, plano 2d,... y que de forma facil el usuario pueda verlo! 
+
+antes de cambiar nada del codigo vamos a planear como hacer esto. 
+Dime que opciones sencillas y limpias en la gui se te ocurren para hacer este cambio, hazme preguntas si tienes dudas!
+
+
+- [ ] En el dashboard, mientras, en el dashboard se muestran varias features y yo lo que quiero es que cuando yo clico una de esas features, que se abra una ventana, la foto de la feature que aparece en esta ventana aparezca un poco más grande, porque de momento aparece muy pequeña en comparación el resto de la ventana. Entonces quiero que lo adaptes como tú creas al tamaño un poco más grande.
+
+- [ ] Revisa si tiene más sentido que, al hacer clic en un feature de los resultados, se abra una página propia en lugar del modal actual. La idea es que el feature tenga más protagonismo y la experiencia se sienta más natural dentro de la web.
+
+Valora cuál de las dos opciones ofrece una mejor UX y, si consideras que la página independiente es mejor, adapta la implementación actual para conseguirlo sin complicar innecesariamente el resto de la aplicación.
+
+- [ ] Reorganiza el layout de la página del feature para que la información tenga una jerarquía más clara. Mantén la imagen a la izquierda y coloca a la derecha el título, la descripción, la categoría, los tags y el nombre de la pieza, intentando que esta información quede compacta y bien agrupada.
+
+La organización debería ser similar a la de la tarjeta que aparece en los resultados al buscar ese feature, ya que ahí la distribución funciona bien: imagen a la izquierda y la información a la derecha. Usa una estructura parecida, reajustando libremente tamaños de imagen, textos y espacios para adaptarla a la página completa. Debajo de esta sección principal deberían quedar los Lessons Learned, Warnings y Example Pieces como contenido secundario.

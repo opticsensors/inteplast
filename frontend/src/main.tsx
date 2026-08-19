@@ -4,7 +4,11 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query"
-import { createRouter, RouterProvider } from "@tanstack/react-router"
+import {
+  createRouter,
+  RouterProvider,
+  stringifySearchWith,
+} from "@tanstack/react-router"
 import { StrictMode } from "react"
 import ReactDOM from "react-dom/client"
 import { ApiError, OpenAPI } from "./client"
@@ -66,7 +70,17 @@ const queryClient = new QueryClient({
   }),
 })
 
-const router = createRouter({ routeTree })
+/**
+ * Sin esto, el router entrecomilla en la URL cualquier texto que parezca JSON
+ * para conservar el tipo al volver: buscar `3212` daba `/?q=%223212%22`. Y un
+ * codigo de pieza es justo lo que mas se busca aqui. Pasando `JSON.stringify`
+ * sin parser, las cadenas viajan tal cual (`/?q=3212`) y al leerlas vuelven
+ * como numero — de eso se encarga `validateFeatureSearch`.
+ */
+const router = createRouter({
+  routeTree,
+  stringifySearch: stringifySearchWith(JSON.stringify),
+})
 declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router

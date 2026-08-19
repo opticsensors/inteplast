@@ -1,15 +1,16 @@
 import { useQuery } from "@tanstack/react-query"
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Search } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import { FeatureCard } from "@/components/Features/FeatureCard"
-import { FeatureDetailDialog } from "@/components/Features/FeatureDetailDialog"
 import {
-  EMPTY_SEARCH,
   FeatureSearch,
   type FeatureSearchState,
   isSearchActive,
+  toSearchParams,
+  toSearchState,
+  validateFeatureSearch,
 } from "@/components/Features/FeatureSearch"
 import { featuresQueryOptions } from "@/components/Features/queries"
 import PendingFeatures from "@/components/Pending/PendingFeatures"
@@ -25,6 +26,7 @@ import useDebounce from "@/hooks/useDebounce"
 
 export const Route = createFileRoute("/_layout/")({
   component: Dashboard,
+  validateSearch: validateFeatureSearch,
   head: () => ({
     meta: [
       {
@@ -36,9 +38,28 @@ export const Route = createFileRoute("/_layout/")({
 
 function Dashboard() {
   const { user: currentUser } = useAuth()
-  const [search, setSearch] = useState<FeatureSearchState>(EMPTY_SEARCH)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const navigate = useNavigate()
+  // La URL manda al montar: asi volver desde la ficha devuelve los resultados
+  const params = Route.useSearch()
+  const [search, setSearch] = useState<FeatureSearchState>(() =>
+    toSearchState(params),
+  )
   const debouncedQuery = useDebounce(search.q)
+
+  // ...y el estado se refleja de vuelta en la URL. `replace` para no dejar una
+  // entrada de historial por cada tecla pulsada.
+  useEffect(() => {
+    navigate({
+      to: "/",
+      search: toSearchParams({
+        q: debouncedQuery,
+        category: search.category,
+        tag: search.tag,
+        partId: search.partId,
+      }),
+      replace: true,
+    })
+  }, [navigate, debouncedQuery, search.category, search.tag, search.partId])
 
   const searching = isSearchActive(search)
   const { data, isFetching } = useQuery(
@@ -110,18 +131,18 @@ function Dashboard() {
                 <FeatureCard
                   key={feature.id}
                   feature={feature}
-                  onSelect={() => setSelectedId(feature.id)}
+                  onSelect={() =>
+                    navigate({
+                      to: "/features/$featureId",
+                      params: { featureId: feature.id },
+                    })
+                  }
                 />
               ))}
             </div>
           )}
         </CardContent>
       </Card>
-
-      <FeatureDetailDialog
-        featureId={selectedId}
-        onOpenChange={(open) => !open && setSelectedId(null)}
-      />
     </div>
   )
 }

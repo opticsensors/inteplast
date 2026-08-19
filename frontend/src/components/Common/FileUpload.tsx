@@ -15,6 +15,8 @@ interface FileUploadProps {
   variant?: "image" | "file"
   accept?: string
   className?: string
+  /** Tamaño del cuadro de imagen. La ficha lo iguala al de su foto. */
+  boxClassName?: string
 }
 
 /**
@@ -27,6 +29,7 @@ export function FileUpload({
   variant = "file",
   accept,
   className,
+  boxClassName,
 }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -80,6 +83,7 @@ export function FileUpload({
             "flex size-28 items-center justify-center overflow-hidden rounded-md border-2 border-dashed transition-colors",
             isDragging ? "border-primary bg-accent" : "border-input",
             "hover:border-primary hover:bg-accent/50",
+            boxClassName,
           )}
         >
           {mutation.isPending ? (
