@@ -38,7 +38,7 @@ function Features() {
       q: debouncedQuery || null,
       category: search.category,
       tag: search.tag,
-      mold: search.mold,
+      partId: search.partId,
     }),
   )
 

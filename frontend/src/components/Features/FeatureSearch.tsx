@@ -12,24 +12,25 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { CATEGORY_LABELS } from "./constants"
+import { partLabel } from "./parts"
 import { featureFiltersQueryOptions } from "./queries"
 
 export interface FeatureSearchState {
   q: string
   category: FeatureCategory | null
   tag: string | null
-  mold: string | null
+  partId: string | null
 }
 
 export const EMPTY_SEARCH: FeatureSearchState = {
   q: "",
   category: null,
   tag: null,
-  mold: null,
+  partId: null,
 }
 
 export const isSearchActive = (state: FeatureSearchState) =>
-  Boolean(state.q || state.category || state.tag || state.mold)
+  Boolean(state.q || state.category || state.tag || state.partId)
 
 const ALL = "all"
 
@@ -38,7 +39,7 @@ interface FeatureSearchProps {
   onChange: (value: FeatureSearchState) => void
 }
 
-/** Buscador global + filtros por molde, categoria y tag. */
+/** Buscador global + filtros por pieza, categoria y tag. */
 export function FeatureSearch({ value, onChange }: FeatureSearchProps) {
   // Solo se ofrecen los valores que existen en la base de datos
   const { data: filters } = useQuery(featureFiltersQueryOptions())
@@ -53,7 +54,7 @@ export function FeatureSearch({ value, onChange }: FeatureSearchProps) {
         <Input
           value={value.q}
           onChange={(event) => set({ q: event.target.value })}
-          placeholder="Feature name / moldes / codigos / tags..."
+          placeholder="Feature / pieza / codigo / tag..."
           className="pl-9"
         />
         {isSearchActive(value) && (
@@ -71,17 +72,17 @@ export function FeatureSearch({ value, onChange }: FeatureSearchProps) {
 
       <div className="grid gap-2 sm:grid-cols-3">
         <Select
-          value={value.mold ?? ALL}
-          onValueChange={(next) => set({ mold: next === ALL ? null : next })}
+          value={value.partId ?? ALL}
+          onValueChange={(next) => set({ partId: next === ALL ? null : next })}
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Molde" />
+            <SelectValue placeholder="Pieza" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={ALL}>Todos los moldes</SelectItem>
-            {(filters?.molds ?? []).map((mold) => (
-              <SelectItem key={mold} value={mold}>
-                {mold}
+            <SelectItem value={ALL}>Todas las piezas</SelectItem>
+            {(filters?.parts ?? []).map((part) => (
+              <SelectItem key={part.id} value={part.id}>
+                {partLabel(part)}
               </SelectItem>
             ))}
           </SelectContent>

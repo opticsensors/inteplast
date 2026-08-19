@@ -34,19 +34,21 @@ import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import { ASSET_KIND_SINGULAR } from "./constants"
+import { PartSelect } from "./PartSelect"
 
 const formSchema = z.object({
   name: z.string().min(1, { message: "El nombre es obligatorio" }),
-  part_ref: z.string(),
 })
 
 type FormData = z.infer<typeof formSchema>
 
 /** Extensiones tipicas por tipo de adjunto, solo como ayuda del selector. */
 const ACCEPT: Record<AssetKind, string> = {
-  mold: ".step,.stp,.igs,.iges,.stl,.catpart,.sldprt",
-  part: ".step,.stp,.igs,.iges,.stl,.catpart,.sldprt",
+  mold: ".step,.stp,.igs,.iges,.catpart,.sldprt",
+  part: ".step,.stp,.igs,.iges,.catpart,.sldprt",
+  scan: ".stl,.ply,.obj,.txt",
   drawing: ".pdf",
+  moldflow: ".mfr,.mpi,.zip",
 }
 
 interface AssetDialogProps {
@@ -69,17 +71,19 @@ export function AssetDialog({
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [file, setFile] = useState<FilePublic | null>(null)
+  const [partId, setPartId] = useState<string | null>(null)
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     mode: "onBlur",
-    defaultValues: { name: "", part_ref: "" },
+    defaultValues: { name: "" },
   })
 
   useEffect(() => {
     if (open) {
-      form.reset({ name: asset?.name ?? "", part_ref: asset?.part_ref ?? "" })
+      form.reset({ name: asset?.name ?? "" })
       setFile(asset?.file ?? null)
+      setPartId(asset?.part?.id ?? null)
     }
   }, [open, asset, form])
 
@@ -87,7 +91,7 @@ export function AssetDialog({
     mutationFn: (data: FormData) => {
       const body = {
         name: data.name,
-        part_ref: data.part_ref || null,
+        part_id: partId,
         file_id: file?.id ?? null,
       }
       return asset
@@ -139,19 +143,10 @@ export function AssetDialog({
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="part_ref"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Pieza / numero ID</FormLabel>
-                    <FormControl>
-                      <Input placeholder="3212 Pump Housing" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="space-y-2">
+                <Label>Pieza</Label>
+                <PartSelect value={partId} onChange={setPartId} allowEmpty />
+              </div>
               <div className="space-y-2">
                 <Label>Fichero</Label>
                 <FileUpload

@@ -1,11 +1,10 @@
 import { useQuery } from "@tanstack/react-query"
-import { Download, Lightbulb, Package2, TriangleAlert } from "lucide-react"
+import { Lightbulb, Package2, TriangleAlert } from "lucide-react"
 
-import type { AssetKind, FeatureAssetPublic, NoteKind } from "@/client"
+import type { NoteKind } from "@/client"
 import { CollapsibleSection } from "@/components/Common/CollapsibleSection"
 import { RichTextView } from "@/components/Common/RichText"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
@@ -14,38 +13,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
-import { fileUrl } from "@/utils"
-import { ASSET_KIND_LABELS, ASSET_KINDS, CATEGORY_LABELS } from "./constants"
-import { ASSET_ICONS, FeatureThumbnail } from "./FeatureCard"
+import { CATEGORY_LABELS } from "./constants"
+import { FeatureThumbnail } from "./FeatureCard"
+import { PartAssetMatrix } from "./PartAssetMatrix"
 import { featureQueryOptions } from "./queries"
-
-function AssetRow({ asset }: { asset: FeatureAssetPublic }) {
-  const Icon = ASSET_ICONS[asset.kind]
-  return (
-    <div className="flex items-center gap-2 rounded-md border px-2 py-1.5 text-sm">
-      <Icon className="size-4 shrink-0 text-muted-foreground" />
-      <span className="truncate">{asset.name}</span>
-      {asset.part_ref && (
-        <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-          {asset.part_ref}
-        </span>
-      )}
-      {asset.file && (
-        <Button variant="ghost" size="icon" className="size-7 shrink-0" asChild>
-          <a
-            href={fileUrl(asset.file.id)}
-            download={asset.file.filename}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <Download className="size-3.5" />
-            <span className="sr-only">Descargar {asset.name}</span>
-          </a>
-        </Button>
-      )}
-    </div>
-  )
-}
 
 interface FeatureDetailDialogProps {
   featureId: string | null
@@ -64,8 +35,6 @@ export function FeatureDetailDialog({
 
   const notesOf = (kind: NoteKind) =>
     (feature?.notes ?? []).filter((note) => note.kind === kind)
-  const assetsOf = (kind: AssetKind) =>
-    (feature?.assets ?? []).filter((asset) => asset.kind === kind)
 
   return (
     <Dialog open={Boolean(featureId)} onOpenChange={onOpenChange}>
@@ -80,7 +49,10 @@ export function FeatureDetailDialog({
           <>
             <DialogHeader>
               <div className="flex items-start gap-3">
-                <FeatureThumbnail feature={feature} className="size-20" />
+                <FeatureThumbnail
+                  feature={feature}
+                  className="size-28 sm:size-32"
+                />
                 <div className="min-w-0 flex-1 space-y-1 text-left">
                   <DialogTitle>{feature.name}</DialogTitle>
                   <DialogDescription>
@@ -149,24 +121,7 @@ export function FeatureDetailDialog({
                 title="Piezas ejemplo"
                 icon={<Package2 className="size-4 text-muted-foreground" />}
               >
-                {(feature.assets ?? []).length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Sin piezas de referencia adjuntas.
-                  </p>
-                ) : (
-                  ASSET_KINDS.filter((kind) => assetsOf(kind).length > 0).map(
-                    (kind) => (
-                      <CollapsibleSection
-                        key={kind}
-                        title={ASSET_KIND_LABELS[kind]}
-                      >
-                        {assetsOf(kind).map((asset) => (
-                          <AssetRow key={asset.id} asset={asset} />
-                        ))}
-                      </CollapsibleSection>
-                    ),
-                  )
-                )}
+                <PartAssetMatrix feature={feature} />
               </CollapsibleSection>
             </div>
           </>

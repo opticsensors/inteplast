@@ -11,8 +11,28 @@ import {
 import { handleError } from "@/utils"
 import useCustomToast from "./useCustomToast"
 
+/**
+ * Hay token y no esta caducado.
+ *
+ * No comprueba la firma —eso solo lo puede hacer el backend—, pero si cierra el
+ * callejon sin salida: antes bastaba con que existiese la cadena para que
+ * `/login` te rebotase a `/`, asi que con un token inservible no habia forma de
+ * volver a la pantalla de acceso sin borrar el localStorage a mano.
+ */
 const isLoggedIn = () => {
-  return localStorage.getItem("access_token") !== null
+  const token = localStorage.getItem("access_token")
+  if (!token) return false
+
+  const payload = token.split(".")[1]
+  if (!payload) return false
+  try {
+    const { exp } = JSON.parse(
+      atob(payload.replace(/-/g, "+").replace(/_/g, "/")),
+    )
+    return typeof exp !== "number" || exp * 1000 > Date.now()
+  } catch {
+    return false
+  }
 }
 
 const useAuth = () => {

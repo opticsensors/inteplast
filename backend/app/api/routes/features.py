@@ -23,6 +23,7 @@ from app.models import (
     FeaturesPublic,
     FeatureUpdate,
     Message,
+    Part,
 )
 
 router = APIRouter(prefix="/features", tags=["features"])
@@ -47,23 +48,23 @@ def read_features(
     q: str | None = None,
     category: FeatureCategory | None = None,
     tag: str | None = None,
-    mold: str | None = None,
+    part_id: uuid.UUID | None = None,
     skip: int = 0,
     limit: int = 100,
 ) -> Any:
     """
     Buscar features.
 
-    `q` busca a la vez en nombre, descripcion, tags, nombres y codigos de las
-    piezas ejemplo, y texto de warnings y lessons learned. `category`, `tag` y
-    `mold` son los filtros adicionales del dashboard.
+    `q` busca a la vez en nombre, descripcion, tags, codigo y nombre de las
+    piezas, nombres de los adjuntos, y texto de warnings y lessons learned.
+    `category`, `tag` y `part_id` son los filtros adicionales del dashboard.
     """
     features, count = crud.search_features(
         session=session,
         q=q,
         category=category,
         tag=tag,
-        mold=mold,
+        part_id=part_id,
         skip=skip,
         limit=limit,
     )
@@ -201,7 +202,59 @@ def delete_feature_note(
 
 
 # ---------------------------------------------------------------------------
-# Piezas ejemplo (moldes CAD, piezas de referencia, planos 2D)
+# Piezas en las que aparece el feature
+# ---------------------------------------------------------------------------
+
+
+@router.post("/{feature_id}/parts/{part_id}", response_model=FeatureDetail)
+def link_feature_part(
+    session: SessionDep,
+    _current_user: CurrentUser,
+    feature_id: uuid.UUID,
+    part_id: uuid.UUID,
+) -> Any:
+    """
+    Declarar que el feature existe en esa pieza, tenga ficheros o no.
+
+    Adjuntar un fichero a una pieza ya la hace aparecer en la ficha; esto es
+    para las piezas de las que todavia no hay nada subido.
+    """
+    feature = get_feature_or_404(session, feature_id)
+    part = session.get(Part, part_id)
+    if not part:
+        raise HTTPException(status_code=404, detail="Part not found")
+    if part not in feature.parts:
+        feature.parts.append(part)
+        session.add(feature)
+        session.commit()
+        session.refresh(feature)
+    return FeatureDetail.model_validate(feature)
+
+
+@router.delete("/{feature_id}/parts/{part_id}")
+def unlink_feature_part(
+    session: SessionDep,
+    _current_user: CurrentUser,
+    feature_id: uuid.UUID,
+    part_id: uuid.UUID,
+) -> Message:
+    """
+    Quitar la declaracion. Los adjuntos de esa pieza no se tocan: si los hay, la
+    pieza sigue saliendo en la ficha porque tiene ficheros.
+    """
+    feature = get_feature_or_404(session, feature_id)
+    part = session.get(Part, part_id)
+    if not part:
+        raise HTTPException(status_code=404, detail="Part not found")
+    if part in feature.parts:
+        feature.parts.remove(part)
+        session.add(feature)
+        session.commit()
+    return Message(message="Part unlinked successfully")
+
+
+# ---------------------------------------------------------------------------
+# Piezas ejemplo (los ficheros: molde, CAD, escaneo, plano 2D, Moldflow)
 # ---------------------------------------------------------------------------
 
 
@@ -214,10 +267,12 @@ def create_feature_asset(
     asset_in: FeatureAssetCreate,
 ) -> Any:
     """
-    Adjuntar una pieza ejemplo. El fichero se sube antes por `/files/` y aqui
-    se referencia con `file_id`.
+    Adjuntar el fichero de una pieza. El fichero se sube antes por `/files/` y
+    aqui se referencia con `file_id`.
     """
     get_feature_or_404(session, feature_id)
+    if asset_in.part_id and not session.get(Part, asset_in.part_id):
+        raise HTTPException(status_code=404, detail="Part not found")
     asset = crud.create_feature_asset(
         session=session, asset_in=asset_in, feature_id=feature_id
     )
@@ -233,11 +288,13 @@ def update_feature_asset(
     asset_in: FeatureAssetUpdate,
 ) -> Any:
     """
-    Editar una pieza ejemplo.
+    Editar un fichero adjunto.
     """
     asset = session.get(FeatureAsset, asset_id)
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
+    if asset_in.part_id and not session.get(Part, asset_in.part_id):
+        raise HTTPException(status_code=404, detail="Part not found")
     asset.sqlmodel_update(asset_in.model_dump(exclude_unset=True))
     session.add(asset)
     session.commit()
@@ -250,7 +307,7 @@ def delete_feature_asset(
     session: SessionDep, _current_user: CurrentUser, asset_id: uuid.UUID
 ) -> Message:
     """
-    Quitar una pieza ejemplo del feature. El fichero subido no se borra.
+    Quitar un fichero adjunto del feature. El fichero subido no se borra.
     """
     asset = session.get(FeatureAsset, asset_id)
     if not asset:

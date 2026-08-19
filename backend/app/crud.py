@@ -15,8 +15,12 @@ from app.models import (
     FeatureFilters,
     FeatureNote,
     FeatureNoteCreate,
+    FeaturePartLink,
     Item,
     ItemCreate,
+    Part,
+    PartCreate,
+    PartPublic,
     User,
     UserCreate,
     UserUpdate,
@@ -99,20 +103,39 @@ def create_feature(
     return db_feature
 
 
+def _features_with_part(part_id: uuid.UUID) -> ColumnElement[bool]:
+    """Features ligados a una pieza, por adjunto o por declaracion explicita."""
+    return or_(
+        col(Feature.id).in_(
+            select(FeatureAsset.feature_id).where(col(FeatureAsset.part_id) == part_id)
+        ),
+        col(Feature.id).in_(
+            select(FeaturePartLink.feature_id).where(
+                col(FeaturePartLink.part_id) == part_id
+            )
+        ),
+    )
+
+
 def _search_conditions(
     *,
     q: str | None,
     category: FeatureCategory | None,
     tag: str | None,
-    mold: str | None,
+    part_id: uuid.UUID | None,
 ) -> list[ColumnElement[bool]]:
     """Filtros del buscador del dashboard, combinados con AND."""
     conditions: list[ColumnElement[bool]] = []
 
     if q:
         like = f"%{q}%"
+        # Piezas cuyo codigo o nombre casa con la busqueda: es lo que permite
+        # encontrar el Bolt Eye escribiendo "3212" o "Pump Housing".
+        matching_parts = select(Part.id).where(
+            or_(col(Part.code).ilike(like), col(Part.name).ilike(like))
+        )
         # Busqueda global: nombre, descripcion, tags, y tambien el contenido
-        # relacionado (moldes, codigos de pieza, warnings y lessons learned).
+        # relacionado (piezas, adjuntos, warnings y lessons learned).
         conditions.append(
             or_(
                 col(Feature.name).ilike(like),
@@ -122,8 +145,13 @@ def _search_conditions(
                     select(FeatureAsset.feature_id).where(
                         or_(
                             col(FeatureAsset.name).ilike(like),
-                            col(FeatureAsset.part_ref).ilike(like),
+                            col(FeatureAsset.part_id).in_(matching_parts),
                         )
+                    )
+                ),
+                col(Feature.id).in_(
+                    select(FeaturePartLink.feature_id).where(
+                        col(FeaturePartLink.part_id).in_(matching_parts)
                     )
                 ),
                 col(Feature.id).in_(
@@ -143,14 +171,8 @@ def _search_conditions(
     if tag:
         conditions.append(col(Feature.tags).any(tag))  # type: ignore[arg-type]
 
-    if mold:
-        conditions.append(
-            col(Feature.id).in_(
-                select(FeatureAsset.feature_id).where(
-                    col(FeatureAsset.part_ref) == mold
-                )
-            )
-        )
+    if part_id:
+        conditions.append(_features_with_part(part_id))
 
     return conditions
 
@@ -161,16 +183,21 @@ def search_features(
     q: str | None = None,
     category: FeatureCategory | None = None,
     tag: str | None = None,
-    mold: str | None = None,
+    part_id: uuid.UUID | None = None,
     skip: int = 0,
     limit: int = 100,
 ) -> tuple[list[Feature], int]:
-    conditions = _search_conditions(q=q, category=category, tag=tag, mold=mold)
+    conditions = _search_conditions(q=q, category=category, tag=tag, part_id=part_id)
 
     count_statement = select(func.count()).select_from(Feature)
     statement = (
         select(Feature)
-        .options(selectinload(Feature.assets), selectinload(Feature.image))  # type: ignore[arg-type]
+        .options(
+            selectinload(Feature.assets).selectinload(FeatureAsset.part),  # type: ignore[arg-type]
+            selectinload(Feature.assets).selectinload(FeatureAsset.file),  # type: ignore[arg-type]
+            selectinload(Feature.parts),  # type: ignore[arg-type]
+            selectinload(Feature.image),  # type: ignore[arg-type]
+        )
         .order_by(col(Feature.created_at).desc())
         .offset(skip)
         .limit(limit)
@@ -192,18 +219,45 @@ def get_feature_filters(*, session: Session) -> FeatureFilters:
     tags = sorted(
         {tag for tags in session.exec(select(Feature.tags)).all() for tag in tags}
     )
-    molds = sorted(
-        {
-            ref
-            for ref in session.exec(
-                select(FeatureAsset.part_ref).where(
-                    col(FeatureAsset.part_ref).isnot(None)
-                )
-            ).all()
-            if ref
-        }
+    # Solo las piezas que algun feature usa: una pieza sin features seria una
+    # opcion de filtro que no devuelve nada.
+    used = select(FeatureAsset.part_id).where(col(FeatureAsset.part_id).isnot(None))
+    linked = select(FeaturePartLink.part_id)
+    parts = session.exec(
+        select(Part)
+        .where(or_(col(Part.id).in_(used), col(Part.id).in_(linked)))
+        .order_by(col(Part.code))
+    ).all()
+    return FeatureFilters(
+        categories=categories,
+        tags=tags,
+        parts=[PartPublic.model_validate(part) for part in parts],
     )
-    return FeatureFilters(categories=categories, tags=tags, molds=molds)
+
+
+# ---------------------------------------------------------------------------
+# Piezas (= proyectos)
+# ---------------------------------------------------------------------------
+
+
+def get_part_by_code(*, session: Session, code: str) -> Part | None:
+    return session.exec(select(Part).where(Part.code == code)).first()
+
+
+def get_parts(*, session: Session, skip: int = 0, limit: int = 100) -> list[Part]:
+    return list(
+        session.exec(
+            select(Part).order_by(col(Part.code)).offset(skip).limit(limit)
+        ).all()
+    )
+
+
+def create_part(*, session: Session, part_in: PartCreate) -> Part:
+    db_part = Part.model_validate(part_in)
+    session.add(db_part)
+    session.commit()
+    session.refresh(db_part)
+    return db_part
 
 
 def create_feature_note(

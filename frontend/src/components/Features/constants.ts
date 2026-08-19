@@ -1,3 +1,5 @@
+import { Box, FileText, Package, ScanLine, Waves } from "lucide-react"
+
 import type { AssetKind, FeatureCategory, NoteKind } from "@/client"
 
 /** Tipos geometricos comunes con los que se clasifica un feature. */
@@ -13,20 +15,44 @@ export const CATEGORY_LABELS: Record<FeatureCategory, string> = {
 
 export const CATEGORIES = Object.keys(CATEGORY_LABELS) as FeatureCategory[]
 
-/** Los tres grupos de la seccion "Piezas ejemplo". */
+/**
+ * Los cinco ficheros que puede aportar una pieza. El orden es el de las
+ * columnas de la matriz: primero el molde y la pieza, luego los documentos.
+ */
 export const ASSET_KIND_LABELS: Record<AssetKind, string> = {
-  mold: "Moldes",
-  part: "Pieza ref.",
+  mold: "Molde",
+  part: "Pieza CAD",
+  scan: "Pieza escaneada",
   drawing: "Plano 2D",
+  moldflow: "Moldflow",
+}
+
+/** Cabecera de la matriz: tiene que caber en una columna estrecha. */
+export const ASSET_KIND_SHORT: Record<AssetKind, string> = {
+  mold: "Molde",
+  part: "CAD",
+  scan: "Escaneo",
+  drawing: "Plano",
+  moldflow: "Moldflow",
 }
 
 export const ASSET_KIND_SINGULAR: Record<AssetKind, string> = {
   mold: "molde",
-  part: "pieza ref.",
+  part: "pieza CAD",
+  scan: "pieza escaneada",
   drawing: "plano 2D",
+  moldflow: "estudio Moldflow",
 }
 
 export const ASSET_KINDS = Object.keys(ASSET_KIND_LABELS) as AssetKind[]
+
+export const ASSET_ICONS: Record<AssetKind, typeof Box> = {
+  mold: Box,
+  part: Package,
+  scan: ScanLine,
+  drawing: FileText,
+  moldflow: Waves,
+}
 
 export const NOTE_KIND_LABELS: Record<NoteKind, string> = {
   warning: "Warnings",

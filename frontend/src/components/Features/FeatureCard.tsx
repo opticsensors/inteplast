@@ -1,4 +1,4 @@
-import { Box, FileText, ImageIcon, Package } from "lucide-react"
+import { ImageIcon, Package2 } from "lucide-react"
 import {
   type CSSProperties,
   type ReactNode,
@@ -7,35 +7,42 @@ import {
   useState,
 } from "react"
 
-import type { AssetKind, FeaturePublic } from "@/client"
+import type { FeaturePublic } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { fileUrl } from "@/utils"
-import { ASSET_KIND_LABELS, CATEGORY_LABELS } from "./constants"
+import { CATEGORY_LABELS } from "./constants"
+import { featureParts, partLabel } from "./parts"
 
-export const ASSET_ICONS: Record<AssetKind, typeof Box> = {
-  mold: Box,
-  part: Package,
-  drawing: FileText,
-}
+/** Cuantos codigos de pieza caben en la tarjeta antes de resumir. */
+const MAX_CODES = 4
 
-const ASSET_BADGE_STYLES: Record<AssetKind, string> = {
-  mold: "border-emerald-500/40 text-emerald-600 dark:text-emerald-400",
-  part: "border-sky-500/40 text-sky-600 dark:text-sky-400",
-  drawing: "border-red-500/40 text-red-600 dark:text-red-400",
-}
+/**
+ * En cuantas piezas aparece el feature. Antes aqui salia un badge por fichero
+ * con su nombre y era ilegible: cuatro badges que ponian todos "3212 algo".
+ */
+function PartSummary({ feature }: { feature: FeaturePublic }) {
+  const parts = featureParts(feature)
+  if (parts.length === 0) return null
 
-export function AssetBadge({ kind, name }: { kind: AssetKind; name: string }) {
-  const Icon = ASSET_ICONS[kind]
+  const shown = parts.slice(0, MAX_CODES)
+  const rest = parts.length - shown.length
+
   return (
-    <Badge
-      variant="outline"
-      className={cn("gap-1 rounded-md", ASSET_BADGE_STYLES[kind])}
-      title={ASSET_KIND_LABELS[kind]}
-    >
-      <Icon className="size-3" />
-      <span className="max-w-40 truncate">{name}</span>
-    </Badge>
+    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-muted-foreground">
+      <Package2 className="size-3.5 shrink-0" />
+      <span>
+        {parts.length} pieza{parts.length === 1 ? "" : "s"}
+      </span>
+      <span aria-hidden>·</span>
+      {shown.map((part, index) => (
+        <span key={part.id} className="font-mono" title={partLabel(part)}>
+          {part.code}
+          {index < shown.length - 1 || rest > 0 ? "," : ""}
+        </span>
+      ))}
+      {rest > 0 && <span>+{rest} mas</span>}
+    </div>
   )
 }
 
@@ -105,9 +112,8 @@ interface FeatureCardProps {
   actions?: ReactNode
 }
 
-/** Tarjeta de resultado: imagen, nombre, descripcion, tags y adjuntos. */
+/** Tarjeta de resultado: imagen, nombre, descripcion, tags y piezas. */
 export function FeatureCard({ feature, onSelect, actions }: FeatureCardProps) {
-  const assets = feature.assets ?? []
   const tags = feature.tags ?? []
   const { ref: textRef, height: thumbSide } = useTextHeight()
 
@@ -155,13 +161,7 @@ export function FeatureCard({ feature, onSelect, actions }: FeatureCardProps) {
             </Badge>
           ))}
         </div>
-        {assets.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1">
-            {assets.map((asset) => (
-              <AssetBadge key={asset.id} kind={asset.kind} name={asset.name} />
-            ))}
-          </div>
-        )}
+        <PartSummary feature={feature} />
       </div>
     </div>
   )

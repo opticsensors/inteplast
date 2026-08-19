@@ -9,6 +9,7 @@ from tests.utils.feature import (
     create_random_asset,
     create_random_feature,
     create_random_note,
+    create_random_part,
 )
 from tests.utils.utils import random_lower_string
 
@@ -61,20 +62,64 @@ def test_read_feature_not_found(
 def test_read_features_search_by_related_content(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
-    """La busqueda global tambien encuentra por codigo de pieza de un adjunto."""
+    """La busqueda global tambien encuentra por el codigo de la pieza."""
     feature = create_random_feature(db)
-    part_ref = random_lower_string()
-    create_random_asset(db, feature, part_ref=part_ref)
+    part = create_random_part(db)
+    create_random_asset(db, feature, part=part)
 
     response = client.get(
         f"{settings.API_V1_STR}/features/",
         headers=superuser_token_headers,
-        params={"q": part_ref},
+        params={"q": part.code},
     )
     assert response.status_code == 200
     content = response.json()
     assert content["count"] == 1
     assert content["data"][0]["id"] == str(feature.id)
+
+
+def test_read_features_filter_by_part(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    """El filtro por pieza coge tanto los adjuntos como la pieza declarada."""
+    part = create_random_part(db)
+    with_asset = create_random_feature(db)
+    create_random_asset(db, with_asset, part=part)
+    declared = create_random_feature(db)
+    create_random_feature(db)
+
+    response = client.post(
+        f"{settings.API_V1_STR}/features/{declared.id}/parts/{part.id}",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    assert [p["code"] for p in response.json()["parts"]] == [part.code]
+
+    response = client.get(
+        f"{settings.API_V1_STR}/features/",
+        headers=superuser_token_headers,
+        params={"part_id": str(part.id)},
+    )
+    assert response.status_code == 200
+    content = response.json()
+    assert content["count"] == 2
+    assert {item["id"] for item in content["data"]} == {
+        str(with_asset.id),
+        str(declared.id),
+    }
+
+    response = client.delete(
+        f"{settings.API_V1_STR}/features/{declared.id}/parts/{part.id}",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+
+    response = client.get(
+        f"{settings.API_V1_STR}/features/",
+        headers=superuser_token_headers,
+        params={"part_id": str(part.id)},
+    )
+    assert response.json()["count"] == 1
 
 
 def test_read_features_filter_by_tag(
@@ -99,9 +144,11 @@ def test_read_feature_filters(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
     tag = random_lower_string()
-    part_ref = random_lower_string()
     feature = create_random_feature(db, tags=[tag])
-    create_random_asset(db, feature, kind=AssetKind.mold, part_ref=part_ref)
+    part = create_random_part(db)
+    create_random_asset(db, feature, kind=AssetKind.mold, part=part)
+    # Una pieza que no usa ningun feature no debe salir en los desplegables
+    unused = create_random_part(db)
 
     response = client.get(
         f"{settings.API_V1_STR}/features/filters", headers=superuser_token_headers
@@ -109,7 +156,9 @@ def test_read_feature_filters(
     assert response.status_code == 200
     content = response.json()
     assert tag in content["tags"]
-    assert part_ref in content["molds"]
+    codes = [item["code"] for item in content["parts"]]
+    assert part.code in codes
+    assert unused.code not in codes
     assert "hole" in content["categories"]
 
 
@@ -186,23 +235,35 @@ def test_create_and_update_asset(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
     feature = create_random_feature(db)
+    # Codigos aleatorios: un codigo fijo chocaria con el del seed si la BD de
+    # desarrollo ya tiene datos, y la violacion de unicidad tumba la sesion.
+    part = create_random_part(db)
+    other = create_random_part(db)
     response = client.post(
         f"{settings.API_V1_STR}/features/{feature.id}/assets",
         headers=superuser_token_headers,
-        json={"kind": "drawing", "name": "plano rev 07", "part_ref": "3212"},
+        json={"kind": "drawing", "name": "plano rev 07", "part_id": str(part.id)},
     )
     assert response.status_code == 200
     asset = response.json()
     assert asset["kind"] == "drawing"
     assert asset["file"] is None
+    assert asset["part"]["code"] == part.code
 
     response = client.put(
         f"{settings.API_V1_STR}/features/assets/{asset['id']}",
         headers=superuser_token_headers,
-        json={"part_ref": "3197"},
+        json={"part_id": str(other.id)},
     )
     assert response.status_code == 200
-    assert response.json()["part_ref"] == "3197"
+    assert response.json()["part"]["code"] == other.code
+
+    response = client.post(
+        f"{settings.API_V1_STR}/features/{feature.id}/assets",
+        headers=superuser_token_headers,
+        json={"kind": "scan", "name": "stl", "part_id": str(uuid.uuid4())},
+    )
+    assert response.status_code == 404
 
 
 def test_upload_and_read_file(

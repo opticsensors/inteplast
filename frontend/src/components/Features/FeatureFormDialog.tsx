@@ -55,6 +55,7 @@ import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import { AssetDialog } from "./AssetDialog"
 import {
+  ASSET_ICONS,
   ASSET_KIND_LABELS,
   ASSET_KIND_SINGULAR,
   ASSET_KINDS,
@@ -62,8 +63,9 @@ import {
   CATEGORY_LABELS,
   NOTE_KIND_SINGULAR,
 } from "./constants"
-import { ASSET_ICONS } from "./FeatureCard"
 import { NoteDialog } from "./NoteDialog"
+import { PartSelect } from "./PartSelect"
+import { featureParts } from "./parts"
 import { featureQueryOptions } from "./queries"
 
 const NO_CATEGORY = "none"
@@ -244,10 +246,29 @@ export function FeatureFormDialog({
     },
   })
 
+  const linkPart = useMutation({
+    mutationFn: (partId: string) =>
+      FeaturesService.linkFeaturePart({ featureId: activeId ?? "", partId }),
+    onError: handleError.bind(showErrorToast),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["features"] })
+    },
+  })
+
+  const unlinkPart = useMutation({
+    mutationFn: (partId: string) =>
+      FeaturesService.unlinkFeaturePart({ featureId: activeId ?? "", partId }),
+    onError: handleError.bind(showErrorToast),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["features"] })
+    },
+  })
+
   const notesOf = (kind: NoteKind) =>
     (feature?.notes ?? []).filter((note) => note.kind === kind)
   const assetsOf = (kind: AssetKind) =>
     (feature?.assets ?? []).filter((asset) => asset.kind === kind)
+  const parts = feature ? featureParts(feature) : []
 
   const noteSection = (kind: NoteKind, icon: React.ReactNode) => (
     <CollapsibleSection
@@ -415,7 +436,63 @@ export function FeatureFormDialog({
                 <Lightbulb className="size-4 text-yellow-500" />,
               )}
               <CollapsibleSection
-                title="Piezas ejemplo"
+                title="Piezas"
+                icon={<Package2 className="size-4 text-muted-foreground" />}
+              >
+                {parts.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Ninguna todavia. Anade una aqui para dejar constancia de que
+                    el feature existe en esa pieza, aunque no subas ficheros.
+                  </p>
+                )}
+                {parts.map((part) => {
+                  const declared = (feature?.parts ?? []).some(
+                    (item) => item.id === part.id,
+                  )
+                  const files = (feature?.assets ?? []).filter(
+                    (asset) => asset.part?.id === part.id,
+                  ).length
+                  return (
+                    <div
+                      key={part.id}
+                      className="flex items-center gap-2 rounded-md border px-2 py-1 text-sm"
+                    >
+                      <span className="font-mono font-semibold">
+                        {part.code}
+                      </span>
+                      <span className="truncate text-muted-foreground">
+                        {part.name}
+                      </span>
+                      <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                        {files === 0
+                          ? "sin ficheros"
+                          : `${files} fichero${files === 1 ? "" : "s"}`}
+                      </span>
+                      {declared && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 shrink-0 text-destructive"
+                          title="Quitar la pieza. Sus ficheros no se borran, y si los hay la pieza se sigue viendo."
+                          onClick={() => unlinkPart.mutate(part.id)}
+                        >
+                          <Trash2 className="size-3.5" />
+                          <span className="sr-only">Quitar {part.code}</span>
+                        </Button>
+                      )}
+                    </div>
+                  )
+                })}
+                <PartSelect
+                  value={null}
+                  onChange={(partId) => partId && linkPart.mutate(partId)}
+                  placeholder="Anadir una pieza..."
+                />
+              </CollapsibleSection>
+
+              <CollapsibleSection
+                title="Ficheros por pieza"
                 icon={<Package2 className="size-4 text-muted-foreground" />}
               >
                 {ASSET_KINDS.map((kind) => {
@@ -432,9 +509,9 @@ export function FeatureFormDialog({
                         >
                           <Icon className="size-3.5 shrink-0 text-muted-foreground" />
                           <span className="truncate">{asset.name}</span>
-                          {asset.part_ref && (
-                            <span className="truncate text-xs text-muted-foreground">
-                              {asset.part_ref}
+                          {asset.part && (
+                            <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                              {asset.part.code}
                             </span>
                           )}
                           <RowActions

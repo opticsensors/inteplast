@@ -18,6 +18,7 @@ from app.models import (
     FeatureCategory,
     FeatureNote,
     NoteKind,
+    Part,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -83,11 +84,13 @@ BOLT_EYE_LESSONS = [
     ),
 ]
 
+# Los ficheros del 3212, uno por tipo. Ver docs/3212/README.md.
 BOLT_EYE_ASSETS = [
-    (AssetKind.mold, "3212 molde (STEP)", "3212 Pump Housing"),
-    (AssetKind.part, "3212 pieza (STP)", "3212 Pump Housing"),
-    (AssetKind.part, "3212 pieza real escaneada (STL)", "3212 lote 315346"),
-    (AssetKind.drawing, "3212 plano 2D rev. 07", "3212 Pump Housing"),
+    (AssetKind.mold, "Molde 3212 (STEP, 247 MB)"),
+    (AssetKind.part, "Pieza 3212 (STP)"),
+    (AssetKind.scan, "Escaneo de la pieza real (STL, lote 315346)"),
+    (AssetKind.drawing, "Plano 2D rev. 07 (PDF)"),
+    (AssetKind.moldflow, "Estudio Moldflow (MFR)"),
 ]
 
 
@@ -131,15 +134,26 @@ def seed(session: Session) -> None:
                 position=position,
             )
         )
+    part = session.exec(select(Part).where(Part.code == "3212")).first()
+    if not part:
+        part = Part(code="3212", name="Pump Housing")
+        session.add(part)
+        session.commit()
+        session.refresh(part)
+
+    # El feature esta declarado en la pieza aunque no haya ficheros subidos.
+    feature.parts.append(part)
+    session.add(feature)
+
     # Sin fichero adjunto: los CAD del cliente no se copian al repo. Se suben
     # desde la propia aplicacion cuando haga falta.
-    for position, (kind, name, part_ref) in enumerate(BOLT_EYE_ASSETS):
+    for position, (kind, name) in enumerate(BOLT_EYE_ASSETS):
         session.add(
             FeatureAsset(
                 feature_id=feature.id,
                 kind=kind,
                 name=name,
-                part_ref=part_ref,
+                part_id=part.id,
                 position=position,
             )
         )

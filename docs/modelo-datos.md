@@ -140,7 +140,12 @@ DEPENDENCIA_COTA (n:n)     n_number_origen → n_number_afectado, tipo, texto
 ## 5. Lo que el frontend ya construido espera
 
 > 🔑 **El bloque `FEATURE` + `WARNING` + `LESSON_LEARNED` + ficheros de ejemplo ya está
-> implementado** en `backend/` y `frontend/`. Ver [app-web.md](app-web.md). Lo que sigue
+> implementado** en `backend/` y `frontend/`. Ver [app-web.md](app-web.md).
+>
+> Desde el **2026-08-18** también existen los dos primeros trozos de este esquema:
+> **`PROYECTO`** (como tabla `Part`: código + nombre, y los ficheros cuelgan de ella) e
+> **`INSTANCIA_EN_PROYECTO`** (como tabla `FeaturePartLink`, todavía sin N-numbers ni
+> tolerancias — solo dice qué feature aparece en qué pieza). Lo que sigue
 > pendiente es la ingesta: `PROYECTO`, `MUESTREO`, `MEDICION`, `CORRECCION_MOLDE`.
 
 Según `inteplast_PADIH_fase_B.md`, el frontend ya tiene: búsqueda global de features,

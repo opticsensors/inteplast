@@ -55,11 +55,17 @@ Cliente final: **Robert Bosch** (división BueP). Informes en formato **PPAP / Q
 ## La aplicación — lo que ya está construido
 
 Sobre la plantilla de FastAPI está implementada la **base de conocimiento de features**: fichas de
-feature con **warnings**, **lessons learned**, **piezas ejemplo** (CAD, planos PDF) y buscador
-global. Es el bloque transversal de [docs/modelo-datos.md](docs/modelo-datos.md).
+feature con **warnings**, **lessons learned**, **ficheros de ejemplo** (molde, CAD, escaneo, plano
+2D, Moldflow) y buscador global. Es el bloque transversal de
+[docs/modelo-datos.md](docs/modelo-datos.md).
 
-🔴 **No está la ingesta** (`PROYECTO`, `MUESTREO`, `MEDICION`, `CORRECCION_MOLDE`): eso se
-alimenta de los CSV/XLS/PPTX y es la siguiente fase.
+🔑 **Los ficheros se agrupan por PIEZA, no por tipo.** La tabla `Part` (código `3212` + nombre) es
+el embrión del `PROYECTO`, y la ficha del feature enseña una **matriz pieza × tipo de fichero**.
+Un feature puede además estar **declarado** en una pieza sin tener ningún fichero subido todavía
+(`FeaturePartLink`, embrión de `INSTANCIA_EN_PROYECTO`).
+
+🔴 **No está la ingesta** (`MUESTREO`, `MEDICION`, `CORRECCION_MOLDE`): eso se alimenta de los
+CSV/XLS/PPTX y es la siguiente fase.
 
 ```powershell
 docker compose up -d --build db prestart backend   # backend + BD (aplica migraciones)
@@ -163,6 +169,19 @@ docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bo
   $a = [int](Get-Item -LiteralPath $ruta).Attributes
   if ($a -band 0x400000) { "EN LA NUBE - no leer" } else { "LOCAL - seguro" }
   ```
+- 🔴 **Los tests del backend NUNCA contra la BD `app`.** El `conftest.py` de la plantilla la
+  **vacía al terminar** (`Item`, `Feature`, `Part`, `StoredFile`, `User`), y de paso te tira la
+  sesión del navegador: el superusuario se recrea con otro `id` y el token que tienes guardado
+  deja de valer. Van contra `app_test`, y hay que copiarlos al contenedor porque la imagen no los
+  lleva — receta completa en [docs/app-web.md](docs/app-web.md#-los-tests-siempre-contra-app_test):
+
+  ```powershell
+  docker compose exec -T backend rm -rf /app/backend/tests
+  docker cp backend/tests inteplast-backend-1:/app/backend/tests
+  docker compose exec -T -e POSTGRES_DB=app_test backend python -m pytest tests -q
+  ```
+
+  Si aun así se vacía la BD: `docker compose exec backend python -m app.seed_features` la repuebla.
 - **Ficheros temporales** → siempre al scratchpad de la sesión, nunca al repo ni a `/tmp`.
 - Los scripts de PowerShell largos: escribirlos a fichero con `Write` y ejecutarlos con `&`,
   no meterlos inline (el quoting se rompe).

@@ -18,15 +18,48 @@ OpenAPI.TOKEN = async () => {
   return localStorage.getItem("access_token") || ""
 }
 
+const isAuthError = (error: Error) =>
+  error instanceof ApiError && [401, 403].includes(error.status)
+
+const logOutAndRedirect = () => {
+  localStorage.removeItem("access_token")
+  window.location.href = "/login"
+}
+
 const handleApiError = (error: Error) => {
-  if (error instanceof ApiError && [401, 403].includes(error.status)) {
-    localStorage.removeItem("access_token")
-    window.location.href = "/login"
+  if (isAuthError(error)) {
+    logOutAndRedirect()
   }
 }
+
+/**
+ * Si la consulta del usuario actual falla, el token no sirve, diga lo que diga
+ * el backend. Sin esta red de seguridad basta un codigo de error inesperado
+ * para dejar la aplicacion en un limbo: sesion iniciada, usuario desconocido,
+ * menu incompleto y ningun sitio donde pulsar para salir.
+ */
+const handleQueryError = (
+  error: Error,
+  query: { queryKey: readonly unknown[] },
+) => {
+  if (query.queryKey[0] === "currentUser") {
+    logOutAndRedirect()
+    return
+  }
+  handleApiError(error)
+}
+
 const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Reintentar un 401/403 no lo va a arreglar, y con los reintentos por
+      // defecto la pantalla se queda vacia 7 segundos antes de mandarte al
+      // login. Con credenciales malas, a la primera.
+      retry: (failureCount, error) => !isAuthError(error) && failureCount < 3,
+    },
+  },
   queryCache: new QueryCache({
-    onError: handleApiError,
+    onError: handleQueryError,
   }),
   mutationCache: new MutationCache({
     onError: handleApiError,

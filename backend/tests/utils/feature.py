@@ -11,6 +11,8 @@ from app.models import (
     FeatureNote,
     FeatureNoteCreate,
     NoteKind,
+    Part,
+    PartCreate,
 )
 from tests.utils.utils import random_lower_string
 
@@ -40,17 +42,27 @@ def create_random_note(
     return crud.create_feature_note(session=db, note_in=note_in, feature_id=feature.id)
 
 
+def create_random_part(
+    db: Session, *, code: str | None = None, name: str | None = None
+) -> Part:
+    part_in = PartCreate(
+        code=code or random_lower_string(),
+        name=name if name is not None else random_lower_string(),
+    )
+    return crud.create_part(session=db, part_in=part_in)
+
+
 def create_random_asset(
     db: Session,
     feature: Feature,
     *,
     kind: AssetKind = AssetKind.mold,
-    part_ref: str | None = None,
+    part: Part | None = None,
 ) -> FeatureAsset:
     asset_in = FeatureAssetCreate(
         kind=kind,
         name=random_lower_string(),
-        part_ref=part_ref or random_lower_string(),
+        part_id=part.id if part else None,
     )
     return crud.create_feature_asset(
         session=db, asset_in=asset_in, feature_id=feature.id

@@ -3,21 +3,21 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { FeaturesReadFeaturesData, FeaturesReadFeaturesResponse, FeaturesCreateFeatureData, FeaturesCreateFeatureResponse, FeaturesReadFeatureFiltersResponse, FeaturesReadFeatureData, FeaturesReadFeatureResponse, FeaturesUpdateFeatureData, FeaturesUpdateFeatureResponse, FeaturesDeleteFeatureData, FeaturesDeleteFeatureResponse, FeaturesCreateFeatureNoteData, FeaturesCreateFeatureNoteResponse, FeaturesUpdateFeatureNoteData, FeaturesUpdateFeatureNoteResponse, FeaturesDeleteFeatureNoteData, FeaturesDeleteFeatureNoteResponse, FeaturesCreateFeatureAssetData, FeaturesCreateFeatureAssetResponse, FeaturesUpdateFeatureAssetData, FeaturesUpdateFeatureAssetResponse, FeaturesDeleteFeatureAssetData, FeaturesDeleteFeatureAssetResponse, FilesUploadFileData, FilesUploadFileResponse, FilesReadFileData, FilesReadFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { FeaturesReadFeaturesData, FeaturesReadFeaturesResponse, FeaturesCreateFeatureData, FeaturesCreateFeatureResponse, FeaturesReadFeatureFiltersResponse, FeaturesReadFeatureData, FeaturesReadFeatureResponse, FeaturesUpdateFeatureData, FeaturesUpdateFeatureResponse, FeaturesDeleteFeatureData, FeaturesDeleteFeatureResponse, FeaturesCreateFeatureNoteData, FeaturesCreateFeatureNoteResponse, FeaturesUpdateFeatureNoteData, FeaturesUpdateFeatureNoteResponse, FeaturesDeleteFeatureNoteData, FeaturesDeleteFeatureNoteResponse, FeaturesLinkFeaturePartData, FeaturesLinkFeaturePartResponse, FeaturesUnlinkFeaturePartData, FeaturesUnlinkFeaturePartResponse, FeaturesCreateFeatureAssetData, FeaturesCreateFeatureAssetResponse, FeaturesUpdateFeatureAssetData, FeaturesUpdateFeatureAssetResponse, FeaturesDeleteFeatureAssetData, FeaturesDeleteFeatureAssetResponse, FilesUploadFileData, FilesUploadFileResponse, FilesReadFileData, FilesReadFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PartsReadPartsData, PartsReadPartsResponse, PartsCreatePartData, PartsCreatePartResponse, PartsUpdatePartData, PartsUpdatePartResponse, PartsDeletePartData, PartsDeletePartResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class FeaturesService {
     /**
      * Read Features
      * Buscar features.
      *
-     * `q` busca a la vez en nombre, descripcion, tags, nombres y codigos de las
-     * piezas ejemplo, y texto de warnings y lessons learned. `category`, `tag` y
-     * `mold` son los filtros adicionales del dashboard.
+     * `q` busca a la vez en nombre, descripcion, tags, codigo y nombre de las
+     * piezas, nombres de los adjuntos, y texto de warnings y lessons learned.
+     * `category`, `tag` y `part_id` son los filtros adicionales del dashboard.
      * @param data The data for the request.
      * @param data.q
      * @param data.category
      * @param data.tag
-     * @param data.mold
+     * @param data.partId
      * @param data.skip
      * @param data.limit
      * @returns FeaturesPublic Successful Response
@@ -31,7 +31,7 @@ export class FeaturesService {
                 q: data.q,
                 category: data.category,
                 tag: data.tag,
-                mold: data.mold,
+                part_id: data.partId,
                 skip: data.skip,
                 limit: data.limit
             },
@@ -212,9 +212,59 @@ export class FeaturesService {
     }
     
     /**
+     * Link Feature Part
+     * Declarar que el feature existe en esa pieza, tenga ficheros o no.
+     *
+     * Adjuntar un fichero a una pieza ya la hace aparecer en la ficha; esto es
+     * para las piezas de las que todavia no hay nada subido.
+     * @param data The data for the request.
+     * @param data.featureId
+     * @param data.partId
+     * @returns FeatureDetail Successful Response
+     * @throws ApiError
+     */
+    public static linkFeaturePart(data: FeaturesLinkFeaturePartData): CancelablePromise<FeaturesLinkFeaturePartResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/features/{feature_id}/parts/{part_id}',
+            path: {
+                feature_id: data.featureId,
+                part_id: data.partId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Unlink Feature Part
+     * Quitar la declaracion. Los adjuntos de esa pieza no se tocan: si los hay, la
+     * pieza sigue saliendo en la ficha porque tiene ficheros.
+     * @param data The data for the request.
+     * @param data.featureId
+     * @param data.partId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static unlinkFeaturePart(data: FeaturesUnlinkFeaturePartData): CancelablePromise<FeaturesUnlinkFeaturePartResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/features/{feature_id}/parts/{part_id}',
+            path: {
+                feature_id: data.featureId,
+                part_id: data.partId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
      * Create Feature Asset
-     * Adjuntar una pieza ejemplo. El fichero se sube antes por `/files/` y aqui
-     * se referencia con `file_id`.
+     * Adjuntar el fichero de una pieza. El fichero se sube antes por `/files/` y
+     * aqui se referencia con `file_id`.
      * @param data The data for the request.
      * @param data.featureId
      * @param data.requestBody
@@ -238,7 +288,7 @@ export class FeaturesService {
     
     /**
      * Update Feature Asset
-     * Editar una pieza ejemplo.
+     * Editar un fichero adjunto.
      * @param data The data for the request.
      * @param data.assetId
      * @param data.requestBody
@@ -262,7 +312,7 @@ export class FeaturesService {
     
     /**
      * Delete Feature Asset
-     * Quitar una pieza ejemplo del feature. El fichero subido no se borra.
+     * Quitar un fichero adjunto del feature. El fichero subido no se borra.
      * @param data The data for the request.
      * @param data.assetId
      * @returns Message Successful Response
@@ -556,6 +606,101 @@ export class LoginService {
             url: '/api/v1/password-recovery-html-content/{email}',
             path: {
                 email: data.email
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class PartsService {
+    /**
+     * Read Parts
+     * Todas las piezas (= proyectos), ordenadas por codigo. Es lo que puebla el
+     * desplegable al adjuntar un fichero.
+     * @param data The data for the request.
+     * @param data.skip
+     * @param data.limit
+     * @returns PartsPublic Successful Response
+     * @throws ApiError
+     */
+    public static readParts(data: PartsReadPartsData = {}): CancelablePromise<PartsReadPartsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/parts/',
+            query: {
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Part
+     * Dar de alta una pieza. El codigo es unico: es la clave con la que se agrupan
+     * los ficheros de todos los features.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns PartPublic Successful Response
+     * @throws ApiError
+     */
+    public static createPart(data: PartsCreatePartData): CancelablePromise<PartsCreatePartResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/parts/',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Part
+     * Editar el codigo o el nombre de una pieza.
+     * @param data The data for the request.
+     * @param data.partId
+     * @param data.requestBody
+     * @returns PartPublic Successful Response
+     * @throws ApiError
+     */
+    public static updatePart(data: PartsUpdatePartData): CancelablePromise<PartsUpdatePartResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/parts/{part_id}',
+            path: {
+                part_id: data.partId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Part
+     * Borrar una pieza. Solo superusuario: la comparten todos los features.
+     *
+     * Los adjuntos no se borran, se quedan sin pieza (`part_id` a NULL) y la vista
+     * los agrupa aparte.
+     * @param data The data for the request.
+     * @param data.partId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deletePart(data: PartsDeletePartData): CancelablePromise<PartsDeletePartResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/parts/{part_id}',
+            path: {
+                part_id: data.partId
             },
             errors: {
                 422: 'Validation Error'

@@ -46,7 +46,7 @@ function Dashboard() {
       q: debouncedQuery || null,
       category: search.category,
       tag: search.tag,
-      mold: search.mold,
+      partId: search.partId,
       // Sin busqueda el dashboard solo enseña los ultimos features creados
       limit: searching ? 50 : 5,
     }),
@@ -70,8 +70,8 @@ function Dashboard() {
         <CardHeader>
           <CardTitle>Resultados</CardTitle>
           <CardDescription>
-            La busqueda mira tambien dentro de moldes, codigos de pieza,
-            warnings y lessons learned.
+            La busqueda mira tambien dentro de las piezas, los ficheros
+            adjuntos, los warnings y las lessons learned.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

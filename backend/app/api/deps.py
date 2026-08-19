@@ -40,7 +40,17 @@ def get_current_user(session: SessionDep, token: TokenDep) -> User:
         )
     user = session.get(User, token_data.sub)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        # El token es valido pero su usuario ya no existe: pasa en cuanto se
+        # resetea la base de datos, porque el superusuario se recrea con un id
+        # nuevo. Es un fallo de autenticacion, no un recurso que falte, y tiene
+        # que ser 401 para que el cliente tire el token: con el 404 de antes el
+        # frontend no se enteraba y se quedaba en un dashboard vacio, sin
+        # usuario, sin menu y sin manera de cerrar sesion.
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return user

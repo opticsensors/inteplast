@@ -2,7 +2,7 @@
 
 export const AssetKindSchema = {
     type: 'string',
-    enum: ['mold', 'part', 'drawing'],
+    enum: ['mold', 'part', 'scan', 'drawing', 'moldflow'],
     title: 'AssetKind'
 } as const;
 
@@ -87,22 +87,22 @@ export const FeatureAssetCreateSchema = {
             minLength: 1,
             title: 'Name'
         },
-        part_ref: {
+        position: {
+            type: 'integer',
+            title: 'Position',
+            default: 0
+        },
+        part_id: {
             anyOf: [
                 {
                     type: 'string',
-                    maxLength: 255
+                    format: 'uuid'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Part Ref'
-        },
-        position: {
-            type: 'integer',
-            title: 'Position',
-            default: 0
+            title: 'Part Id'
         },
         file_id: {
             anyOf: [
@@ -133,18 +133,6 @@ export const FeatureAssetPublicSchema = {
             minLength: 1,
             title: 'Name'
         },
-        part_ref: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Part Ref'
-        },
         position: {
             type: 'integer',
             title: 'Position',
@@ -171,6 +159,16 @@ export const FeatureAssetPublicSchema = {
                 }
             ],
             title: 'Created At'
+        },
+        part: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/PartPublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         },
         file: {
             anyOf: [
@@ -213,18 +211,6 @@ export const FeatureAssetUpdateSchema = {
             ],
             title: 'Name'
         },
-        part_ref: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Part Ref'
-        },
         position: {
             anyOf: [
                 {
@@ -235,6 +221,18 @@ export const FeatureAssetUpdateSchema = {
                 }
             ],
             title: 'Position'
+        },
+        part_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Part Id'
         },
         file_id: {
             anyOf: [
@@ -398,6 +396,14 @@ export const FeatureDetailSchema = {
             title: 'Assets',
             default: []
         },
+        parts: {
+            items: {
+                '$ref': '#/components/schemas/PartPublic'
+            },
+            type: 'array',
+            title: 'Parts',
+            default: []
+        },
         notes: {
             items: {
                 '$ref': '#/components/schemas/FeatureNotePublic'
@@ -428,16 +434,16 @@ export const FeatureFiltersSchema = {
             type: 'array',
             title: 'Tags'
         },
-        molds: {
+        parts: {
             items: {
-                type: 'string'
+                '$ref': '#/components/schemas/PartPublic'
             },
             type: 'array',
-            title: 'Molds'
+            title: 'Parts'
         }
     },
     type: 'object',
-    required: ['categories', 'tags', 'molds'],
+    required: ['categories', 'tags', 'parts'],
     title: 'FeatureFilters'
 } as const;
 
@@ -666,6 +672,14 @@ export const FeaturePublicSchema = {
             },
             type: 'array',
             title: 'Assets',
+            default: []
+        },
+        parts: {
+            items: {
+                '$ref': '#/components/schemas/PartPublic'
+            },
+            type: 'array',
+            title: 'Parts',
             default: []
         }
     },
@@ -971,6 +985,126 @@ export const NoteKindSchema = {
     type: 'string',
     enum: ['warning', 'lesson'],
     title: 'NoteKind'
+} as const;
+
+export const PartCreateSchema = {
+    properties: {
+        code: {
+            type: 'string',
+            maxLength: 64,
+            minLength: 1,
+            title: 'Code'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        }
+    },
+    type: 'object',
+    required: ['code'],
+    title: 'PartCreate'
+} as const;
+
+export const PartPublicSchema = {
+    properties: {
+        code: {
+            type: 'string',
+            maxLength: 64,
+            minLength: 1,
+            title: 'Code'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        created_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Created At'
+        }
+    },
+    type: 'object',
+    required: ['code', 'id'],
+    title: 'PartPublic'
+} as const;
+
+export const PartUpdateSchema = {
+    properties: {
+        code: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 64,
+                    minLength: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Code'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        }
+    },
+    type: 'object',
+    title: 'PartUpdate'
+} as const;
+
+export const PartsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/PartPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'PartsPublic'
 } as const;
 
 export const PrivateUserCreateSchema = {
@@ -1291,6 +1425,13 @@ export const ValidationErrorSchema = {
         type: {
             type: 'string',
             title: 'Error Type'
+        },
+        input: {
+            title: 'Input'
+        },
+        ctx: {
+            type: 'object',
+            title: 'Context'
         }
     },
     type: 'object',

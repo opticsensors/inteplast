@@ -157,11 +157,69 @@ class NoteKind(str, Enum):
     lesson = "lesson"
 
 
-# Los tres grupos de "piezas ejemplo" del frontend
+# Los tipos de fichero que una pieza puede aportar en "piezas ejemplo"
 class AssetKind(str, Enum):
     mold = "mold"
     part = "part"
+    scan = "scan"
     drawing = "drawing"
+    moldflow = "moldflow"
+
+
+# ---------------------------------------------------------------------------
+# Pieza = proyecto = molde. Embrion del PROYECTO de docs/modelo-datos.md: el
+# numero de 4 digitos (3212) que prefija todos los ficheros del proyecto.
+# ---------------------------------------------------------------------------
+
+
+class PartBase(SQLModel):
+    code: str = Field(min_length=1, max_length=64, unique=True, index=True)
+    name: str | None = Field(default=None, max_length=255)
+
+
+class PartCreate(PartBase):
+    pass
+
+
+class PartUpdate(SQLModel):
+    code: str | None = Field(default=None, min_length=1, max_length=64)
+    name: str | None = Field(default=None, max_length=255)
+
+
+class FeaturePartLink(SQLModel, table=True):
+    """Feature presente en una pieza, tenga o no ficheros adjuntos.
+
+    Embrion de INSTANCIA_EN_PROYECTO (docs/modelo-datos.md): aqui colgaran los
+    N-numbers y las tolerancias con que cada pieza materializa el feature.
+    """
+
+    feature_id: uuid.UUID = Field(
+        foreign_key="feature.id", primary_key=True, ondelete="CASCADE"
+    )
+    part_id: uuid.UUID = Field(
+        foreign_key="part.id", primary_key=True, ondelete="CASCADE"
+    )
+
+
+class Part(PartBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    created_at: datetime | None = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+    features: list["Feature"] = Relationship(
+        back_populates="parts", link_model=FeaturePartLink
+    )
+
+
+class PartPublic(PartBase):
+    id: uuid.UUID
+    created_at: datetime | None = None
+
+
+class PartsPublic(SQLModel):
+    data: list[PartPublic]
+    count: int
 
 
 # Shared properties
@@ -217,6 +275,13 @@ class Feature(FeatureBase, table=True):
         cascade_delete=True,
         sa_relationship_kwargs={"order_by": "FeatureAsset.position"},
     )
+    # Piezas en las que el feature esta declarado, tengan ficheros o no. Las
+    # que si los tienen salen igualmente por `assets`; la vista une las dos.
+    parts: list["Part"] = Relationship(
+        back_populates="features",
+        link_model=FeaturePartLink,
+        sa_relationship_kwargs={"order_by": "Part.code"},
+    )
 
 
 # Advertencia o leccion aprendida asociada a un feature
@@ -256,24 +321,23 @@ class FeatureNotePublic(FeatureNoteBase):
     created_at: datetime | None = None
 
 
-# Fichero de ejemplo (molde CAD, pieza de referencia o plano 2D) del feature
+# Fichero de ejemplo (molde, CAD, escaneo, plano 2D, Moldflow) de una pieza
 class FeatureAssetBase(SQLModel):
     kind: AssetKind = Field(sa_type=AutoString)
     name: str = Field(min_length=1, max_length=255)
-    # "Nombre pieza / numero ID": el codigo de pieza o molde al que pertenece
-    part_ref: str | None = Field(default=None, max_length=255, index=True)
     position: int = 0
 
 
 class FeatureAssetCreate(FeatureAssetBase):
+    part_id: uuid.UUID | None = None
     file_id: uuid.UUID | None = None
 
 
 class FeatureAssetUpdate(SQLModel):
     kind: AssetKind | None = None
     name: str | None = Field(default=None, min_length=1, max_length=255)
-    part_ref: str | None = Field(default=None, max_length=255)
     position: int | None = None
+    part_id: uuid.UUID | None = None
     file_id: uuid.UUID | None = None
 
 
@@ -286,10 +350,15 @@ class FeatureAsset(FeatureAssetBase, table=True):
     feature_id: uuid.UUID = Field(
         foreign_key="feature.id", nullable=False, ondelete="CASCADE"
     )
+    # Borrar la pieza no borra el adjunto: cae al grupo "sin pieza"
+    part_id: uuid.UUID | None = Field(
+        default=None, foreign_key="part.id", index=True, ondelete="SET NULL"
+    )
     file_id: uuid.UUID | None = Field(
         default=None, foreign_key="storedfile.id", ondelete="SET NULL"
     )
     feature: Feature | None = Relationship(back_populates="assets")
+    part: Part | None = Relationship()
     file: StoredFile | None = Relationship()
 
 
@@ -297,6 +366,7 @@ class FeatureAssetPublic(FeatureAssetBase):
     id: uuid.UUID
     feature_id: uuid.UUID
     created_at: datetime | None = None
+    part: PartPublic | None = None
     file: FilePublic | None = None
 
 
@@ -307,6 +377,7 @@ class FeaturePublic(FeatureBase):
     owner_id: uuid.UUID | None = None
     image: FilePublic | None = None
     assets: list[FeatureAssetPublic] = []
+    parts: list[PartPublic] = []
 
 
 # Lo que se pinta en la modal de detalle
@@ -323,7 +394,7 @@ class FeaturesPublic(SQLModel):
 class FeatureFilters(SQLModel):
     categories: list[FeatureCategory]
     tags: list[str]
-    molds: list[str]
+    parts: list[PartPublic]
 
 
 # Generic message
