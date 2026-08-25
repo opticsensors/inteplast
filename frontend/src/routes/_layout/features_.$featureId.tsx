@@ -9,7 +9,7 @@ import { CATEGORY_LABELS } from "@/components/Features/constants"
 import { FeatureThumbnail } from "@/components/Features/FeatureCard"
 import { FeatureForm } from "@/components/Features/FeatureForm"
 import { FeatureNotFound } from "@/components/Features/FeatureNotFound"
-import { PartAssetMatrix } from "@/components/Features/PartAssetMatrix"
+import { PartAssetList } from "@/components/Features/PartAssetList"
 import { featureParts } from "@/components/Features/parts"
 import { featureQueryOptions } from "@/components/Features/queries"
 import { Badge } from "@/components/ui/badge"
@@ -22,9 +22,7 @@ export const Route = createFileRoute("/_layout/features_/$featureId")({
   component: FeatureDetail,
   // Opcionales a proposito: el dashboard enlaza la ficha sin pasar nada, y
   // TanStack obliga a pasar en cada enlace todo lo que el validador declare.
-  validateSearch: (
-    search: Record<string, unknown>,
-  ): { editar?: true } => ({
+  validateSearch: (search: Record<string, unknown>): { editar?: true } => ({
     ...(flag(search.editar) ? { editar: true as const } : {}),
   }),
   head: () => ({
@@ -227,7 +225,7 @@ function FeatureDetail() {
           title="Piezas ejemplo"
           icon={<Package2 className="size-4 text-muted-foreground" />}
         >
-          <PartAssetMatrix feature={feature} />
+          <PartAssetList feature={feature} />
         </CollapsibleSection>
       </div>
     </div>

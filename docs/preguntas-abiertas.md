@@ -241,6 +241,33 @@ funcionando.
 
 ---
 
+### A10 · ¿Desde donde va a leer los ficheros el servidor? *(para informatica, no para calidad)*
+
+> ⚠️ Esta pregunta **no es de metrologia**: va dirigida a quien lleve los sistemas, no al
+> interlocutor habitual. Si hace falta, se le pide que la reenvie.
+
+**Recordatorio.** La base de conocimiento que estamos construyendo acabara corriendo en un
+servidor vuestro. Los ficheros pesados de cada proyecto —en el `3212 Pump Housing`, el molde en
+STEP de **247 MB**, el escaneo STL de **236 MB** y el estudio Moldflow de **184 MB**— **no se van
+a copiar dentro de la aplicacion**: la idea es que sigan donde ya estan y que la aplicacion los
+lea de ahi. Asi no hay dos copias de vuestro archivo CAD ni nada que sincronizar.
+
+**Preguntas:**
+
+1. **¿Hay una carpeta de red desde la que el servidor pueda leer el arbol de proyectos**
+   (`3212 Pump Housing/1-2D y 3D Pieza/...`), **en solo lectura**?
+2. **¿Esa ruta va a ser estable**, o las carpetas se reorganizan cada cierto tiempo? *(si se
+   mueven, se rompen todas las referencias a la vez)*
+3. Mientras desarrollamos desde Eurecat, **¿podriamos tener acceso**, o trabajamos con una copia
+   de muestra de unos pocos ficheros?
+
+*Por que nos importa para la BD (esto no se lo mandes):* de la respuesta depende si los adjuntos
+se guardan como fichero subido o como referencia a una ruta, y es un cambio de modelo que sale
+barato ahora y caro cuando haya datos cargados. Ver el bloque «Donde viven los ficheros» de
+[../TODO.md](../TODO.md).
+
+---
+
 ## ✅ RESUELTAS con los datos (no hace falta preguntar)
 
 ### R10 · ¿Hubo una tercera corrección de molde? *(era A1)*

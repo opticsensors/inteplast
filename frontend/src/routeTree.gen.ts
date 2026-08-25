@@ -21,6 +21,7 @@ import { Route as LayoutFeaturesRouteImport } from './routes/_layout/features'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as LayoutFeaturesNuevoRouteImport } from './routes/_layout/features_.nuevo'
 import { Route as LayoutFeaturesFeatureIdRouteImport } from './routes/_layout/features_.$featureId'
+import { Route as LayoutFeaturesFeatureIdFicheroAssetIdRouteImport } from './routes/_layout/features_.$featureId_.fichero.$assetId'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -81,6 +82,12 @@ const LayoutFeaturesFeatureIdRoute = LayoutFeaturesFeatureIdRouteImport.update({
   path: '/features/$featureId',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutFeaturesFeatureIdFicheroAssetIdRoute =
+  LayoutFeaturesFeatureIdFicheroAssetIdRouteImport.update({
+    id: '/features_/$featureId_/fichero/$assetId',
+    path: '/features/$featureId/fichero/$assetId',
+    getParentRoute: () => LayoutRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof LayoutSettingsRoute
   '/features/$featureId': typeof LayoutFeaturesFeatureIdRoute
   '/features/nuevo': typeof LayoutFeaturesNuevoRoute
+  '/features/$featureId/fichero/$assetId': typeof LayoutFeaturesFeatureIdFicheroAssetIdRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -107,6 +115,7 @@ export interface FileRoutesByTo {
   '/': typeof LayoutIndexRoute
   '/features/$featureId': typeof LayoutFeaturesFeatureIdRoute
   '/features/nuevo': typeof LayoutFeaturesNuevoRoute
+  '/features/$featureId/fichero/$assetId': typeof LayoutFeaturesFeatureIdFicheroAssetIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,6 +131,7 @@ export interface FileRoutesById {
   '/_layout/': typeof LayoutIndexRoute
   '/_layout/features_/$featureId': typeof LayoutFeaturesFeatureIdRoute
   '/_layout/features_/nuevo': typeof LayoutFeaturesNuevoRoute
+  '/_layout/features_/$featureId_/fichero/$assetId': typeof LayoutFeaturesFeatureIdFicheroAssetIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/features/$featureId'
     | '/features/nuevo'
+    | '/features/$featureId/fichero/$assetId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/'
     | '/features/$featureId'
     | '/features/nuevo'
+    | '/features/$featureId/fichero/$assetId'
   id:
     | '__root__'
     | '/_layout'
@@ -164,6 +176,7 @@ export interface FileRouteTypes {
     | '/_layout/'
     | '/_layout/features_/$featureId'
     | '/_layout/features_/nuevo'
+    | '/_layout/features_/$featureId_/fichero/$assetId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -260,6 +273,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutFeaturesFeatureIdRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/features_/$featureId_/fichero/$assetId': {
+      id: '/_layout/features_/$featureId_/fichero/$assetId'
+      path: '/features/$featureId/fichero/$assetId'
+      fullPath: '/features/$featureId/fichero/$assetId'
+      preLoaderRoute: typeof LayoutFeaturesFeatureIdFicheroAssetIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
   }
 }
 
@@ -271,6 +291,7 @@ interface LayoutRouteChildren {
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutFeaturesFeatureIdRoute: typeof LayoutFeaturesFeatureIdRoute
   LayoutFeaturesNuevoRoute: typeof LayoutFeaturesNuevoRoute
+  LayoutFeaturesFeatureIdFicheroAssetIdRoute: typeof LayoutFeaturesFeatureIdFicheroAssetIdRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
@@ -281,6 +302,8 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutFeaturesFeatureIdRoute: LayoutFeaturesFeatureIdRoute,
   LayoutFeaturesNuevoRoute: LayoutFeaturesNuevoRoute,
+  LayoutFeaturesFeatureIdFicheroAssetIdRoute:
+    LayoutFeaturesFeatureIdFicheroAssetIdRoute,
 }
 
 const LayoutRouteWithChildren =

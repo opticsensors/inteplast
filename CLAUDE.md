@@ -60,7 +60,8 @@ feature con **warnings**, **lessons learned**, **ficheros de ejemplo** (molde, C
 [docs/modelo-datos.md](docs/modelo-datos.md).
 
 🔑 **Los ficheros se agrupan por PIEZA, no por tipo.** La tabla `Part` (código `3212` + nombre) es
-el embrión del `PROYECTO`, y la ficha del feature enseña una **matriz pieza × tipo de fichero**.
+el embrión del `PROYECTO`, y la ficha del feature enseña **un desplegable por pieza con sus
+ficheros dentro** (desde el 2026-08-25; antes era una matriz pieza × tipo).
 Un feature puede además estar **declarado** en una pieza sin tener ningún fichero subido todavía
 (`FeaturePartLink`, embrión de `INSTANCIA_EN_PROYECTO`).
 

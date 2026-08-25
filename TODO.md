@@ -108,22 +108,54 @@ cada PC lo resolveria, pero es otro proyecto y pasa por IT.
               necesita Moldflow Communicator
 ```
 
-**Pendiente de decidir antes de implementar**
+**✅ HECHO el 2026-08-25** (queda documentado en `docs/app-web.md`, seccion «Los ficheros,
+agrupados por pieza»)
 
-- [ ] ¿Fase 1 (lista por pieza + visor de PDF/imagen, sin dependencias) y fase 2 (visor 3D)
-      **juntas o separadas**? Recomendacion: juntas, porque separarlas obliga a rehacer la fila
-      dos veces.
-- [ ] ¿Limite del visor 3D en **50 MB**? Por encima, descarga y explicacion en la fila.
-- [ ] ¿Se alinea el **formulario de edicion** (hoy por tipo) con la ficha (por pieza)? Ojo: el
-      boton «Anadir fichero» vive hoy dentro de cada tipo, habria que replantearlo.
-- [ ] `three.js` y `occt-import-js` con **`import()` dinamico**, para que el WASM (varios MB) solo
-      se descargue cuando alguien abre un 3D, no al entrar en la app.
-- [ ] Para ver esto funcionando hace falta **subir ficheros de verdad**: el plano PDF (1,42 MB) y
-      el STEP de la pieza (10,06 MB), los dos LOCAL y seguros segun
-      `docs/3212/1-pieza-2d-3d.md`. ¿Los mete el seed o se suben a mano desde la app?
-- [ ] Al terminar: actualizar `docs/app-web.md` (tabla de componentes, seccion «Las tres casillas
-      de la matriz», los cabos sueltos) y la linea 63 de `CLAUDE.md`, que habla de la «matriz
-      pieza x tipo de fichero».
+- [x] `PartAssetList.tsx` sustituye a `PartAssetMatrix.tsx`, que se ha borrado. Desplegable por
+      pieza, fila por fichero, contador de subidos en la cabecera de cada pieza.
+- [x] **El MISMO componente en la ficha y en el formulario** (`editable`). El formulario tenia dos
+      secciones —«Piezas» y «Ficheros por pieza», esta ultima agrupada por tipo— y ahora es una
+      sola, «Piezas ejemplo», igual que la ficha.
+- [x] `AssetDialog` gana un **selector de tipo**: al agrupar por pieza, el boton es uno solo
+      («Anadir fichero») y el tipo se elige dentro. Y la pieza viene puesta de la que lo abrio.
+- [x] **Pagina del fichero**, `/features/{featureId}/fichero/{assetId}`: visor de PDF e imagen,
+      visor 3D, boton de descargar, migas al feature y —cuando no hay visor— que programa hace
+      falta.
+- [x] **Visor 3D** `ModelViewer.tsx`: three.js para STL/GLB/OBJ/PLY y `occt-import-js`
+      (OpenCascade en WASM) para STEP/IGES/BREP, teselando **en el navegador**. Con `import()`
+      dinamico: en el build salen como chunks aparte, quien no abre un 3D no se los descarga.
+- [x] `viewers.ts` decide por extension y tamano que ofrece cada fila, con el limite en **50 MB**.
+
+**✅ HECHO tambien el 2026-08-25: editar es escribir encima**
+
+> Encargo: «no quiero que salga el titulo con un boton de editar al lado; que sea editable como la
+> descripcion, el titulo, la categoria y los tags. El desplegable clicable, que muestre los
+> detalles y sea editable, sin boton de editar, solo boton de borrar. En piezas ejemplo igual: si
+> el usuario clica el icono aparece un desplegable para elegir el tipo, el nombre editable en
+> linea, y un boton de subir o cambiar fichero».
+
+- [x] **Se han borrado `NoteDialog.tsx` y `AssetDialog.tsx`.** No queda ninguna modal de contenido
+      en la aplicacion; solo la de confirmar el borrado de un feature.
+- [x] `NoteList.tsx`: titulo editable en la fila, desplegable con el cuerpo dentro (el mismo
+      `RichTextEditor` de siempre) y solo boton de borrar.
+- [x] `AssetEditRow.tsx`: el icono abre un desplegable con **el tipo y la pieza**, el nombre se
+      escribe en linea y hay *Subir* / *Cambiar* fichero.
+- [x] **Autoguardado** 0,7 s despues de la ultima tecla, campo a campo (`exclude_unset` en el
+      backend hace que un PATCH parcial no pise lo demas). Sin boton de guardar: en esta pagina lo
+      unico que se guarda a mano sigue siendo la cabecera del feature.
+- [x] *Anadir* crea la fila en el momento y la deja lista para escribir encima. Al subir un
+      fichero en una fila recien creada, el nombre y el tipo se rellenan solos con lo que dice el
+      fichero (menos `.step`/`.stp`, que pueden ser molde o pieza).
+
+**Pendiente**
+
+- [ ] 🔴 **Probarlo con ficheros de verdad.** No hay ninguno subido: el seed crea los cinco
+      adjuntos del Bolt Eye sin fichero. Subir a mano desde *Editar* el plano PDF (1,42 MB) y el
+      STEP de la pieza (10,06 MB) —los dos LOCAL y seguros segun `docs/3212/1-pieza-2d-3d.md`— y
+      comprobar que el PDF se ve y que el STEP tesela y encuadra bien.
+- [ ] Que el **seed** los suba solo, si se decide que merece la pena para el entorno de desarrollo.
+- [ ] El escaneo (236 MB) y el molde (247 MB) no se pueden ni subir: **dependen del bloque
+      siguiente** (referencia + derivado ligero).
 
 ---
 
@@ -209,18 +241,36 @@ Consecuencias, que son las que mandan en el diseno:
 - [ ] Si un dia alguien reorganiza las carpetas de INTEPLAST, **todas las referencias se rompen a
       la vez**. Guardar tambien nombre y tamano permite al menos detectarlo y avisar.
 
-**Pendiente de decidir / preguntar**
+**🔑 Decidido el 2026-08-25 (respuestas del usuario)**
 
-- [ ] ¿En que unidad y con que raiz van a vivir los ficheros en el servidor de INTEPLAST? (**esto
-      es una pregunta para INTEPLAST**: si se les pregunta, moverla a
-      `docs/preguntas-abiertas.md` con la evidencia).
-- [ ] ¿El servidor de desarrollo de Eurecat tendra algun acceso, o se trabaja con una muestra
-      local?
-- [ ] ¿Se sube el limite de 50 MB para casos sueltos, o todo lo que pase de ahi va por referencia
-      por definicion?
-- [ ] ¿Los derivados ligeros se generan a mano con un script de `data-explorer/` y se suben, o se
-      automatizan en el backend? (automatizarlo exige meter `open3d`/`pymeshlab` en la imagen
-      Docker: pesa mucho, y para STEP haria falta OCCT, que no esta).
+- [ ] 🔴 **La carpeta de datos NO va al repo.** Ni la de desarrollo. Son datos de Bosch via
+      INTEPLAST y el repo esta en GitHub; solo el 3212 son ~678 MB; y Git guarda cada version de
+      cada binario. Lo que va al repo es **el nombre de una variable**, no la carpeta.
+- [ ] **En desarrollo**: `ASSETS_ROOT` apuntando a una **muestra pequena** (el plano de 1,4 MB, el
+      STEP de 10 MB y poco mas) en una carpeta local **fuera de OneDrive y fuera del repo**. Montar
+      directamente `...\Exemples` en Docker tambien vale, pero los ficheros «en la nube» de
+      OneDrive se hidratan al leerlos y pueden dar timeout. El `.env` de este repo **esta en Git**:
+      la ruta de cada maquina va en una variable propia, con un valor por defecto inofensivo.
+- [ ] **Los derivados ligeros los genera la aplicacion sola**, no un script que alguien lanza. La
+      primera vez que se pide *Ver en 3D* de un fichero sin derivado: se genera, se guarda y a
+      partir de ahi es instantaneo para todos. Con la huella (sha256) del original, si el original
+      cambia se regenera solo.
+      🔑 **Y el STEP de la pieza ni siquiera necesita derivado**: lo tesela el navegador del que
+      mira (ya implementado, `ModelViewer.tsx`). El derivado hace falta **solo para el escaneo de
+      236 MB**, que es un fichero y una vez.
+- [ ] Para eso el backend necesita una libreria de mallas en la imagen: **elegir una ligera**
+      (`trimesh` + un decimador pequeno), **no** `open3d` ni `pymeshlab`, que pesan cientos de MB.
+      Para el molde en STEP haria falta OCCT en el servidor: se deja fuera, el molde se descarga.
+- [ ] El limite de 50 MB **se queda como esta**: deja de ser el problema en cuanto lo gordo va por
+      referencia, y sigue siendo un buen guardarrail para lo que se sube a mano.
+
+**Pendiente de preguntar**
+
+- [ ] 🔴 **Donde van a vivir los ficheros en el servidor de INTEPLAST** → preguntado como **A10**
+      en [docs/preguntas-abiertas.md](docs/preguntas-abiertas.md). Va dirigida a **quien lleve
+      informatica**, no al interlocutor de calidad. Mientras no conteste: se sigue con
+      `ASSETS_ROOT` configurable, que es lo que hace que la respuesta no cambie ni el codigo ni la
+      BD.
 
 ## Seleccionar features sobre el CAD / plano (decidir enfoque)
 

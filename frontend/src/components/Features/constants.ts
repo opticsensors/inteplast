@@ -16,8 +16,8 @@ export const CATEGORY_LABELS: Record<FeatureCategory, string> = {
 export const CATEGORIES = Object.keys(CATEGORY_LABELS) as FeatureCategory[]
 
 /**
- * Los cinco ficheros que puede aportar una pieza. El orden es el de las
- * columnas de la matriz: primero el molde y la pieza, luego los documentos.
+ * Los cinco ficheros que puede aportar una pieza. El orden es el de las filas
+ * dentro de cada pieza: primero el molde y la pieza, luego los documentos.
  */
 export const ASSET_KIND_LABELS: Record<AssetKind, string> = {
   mold: "Molde",
@@ -27,7 +27,7 @@ export const ASSET_KIND_LABELS: Record<AssetKind, string> = {
   moldflow: "Moldflow",
 }
 
-/** Cabecera de la matriz: tiene que caber en una columna estrecha. */
+/** Etiqueta de la fila en la lista de ficheros: va en una columna estrecha. */
 export const ASSET_KIND_SHORT: Record<AssetKind, string> = {
   mold: "Molde",
   part: "CAD",
