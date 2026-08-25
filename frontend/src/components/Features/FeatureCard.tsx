@@ -115,7 +115,7 @@ function useTextHeight() {
 interface FeatureCardProps {
   feature: FeaturePublic
   onSelect?: (feature: FeaturePublic) => void
-  /** Menu de acciones de la pagina de gestion. */
+  /** Botones de Editar y Borrar de la pagina de gestion. */
   actions?: ReactNode
 }
 
@@ -131,8 +131,8 @@ export function FeatureCard({ feature, onSelect, actions }: FeatureCardProps) {
         onSelect && "hover:border-primary/50 hover:bg-accent/50",
       )}
     >
-      {/* Boton que cubre la tarjeta, para que el menu de acciones pueda ser
-          otro boton sin anidarlos. */}
+      {/* Boton que cubre la tarjeta, para que los botones de accion puedan
+          ser botones sin anidarlos dentro de este. */}
       {onSelect && (
         <button
           type="button"

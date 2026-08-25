@@ -158,7 +158,7 @@ La plantilla solo tiene dos roles (usuario y superusuario) y no se han añadido 
 |---|---|---|
 | `/` | `routes/_layout/index.tsx` | **Dashboard**: buscador global + filtros y tarjetas de resultado. La búsqueda va en la URL (`/?q=3212`) |
 | `/features/{id}` | `routes/_layout/features_.$featureId.tsx` | 🔑 **La ficha del feature**: cabecera con la imagen a la izquierda e identidad a la derecha (nombre, descripción, categoría, tags, piezas), y debajo a todo el ancho warnings, lessons y la matriz. **Se edita aquí mismo** (ver abajo) |
-| `/features` | `routes/_layout/features.tsx` | **Gestión** (la página «Ítems» de la fase B): mismas tarjetas, con *Añadir feature* y el menú `⋯` de atajo |
+| `/features` | `routes/_layout/features.tsx` | **Gestión** (la página «Ítems» de la fase B): mismas tarjetas, con *Añadir feature* y, en cada una, *Editar* y *Borrar* |
 | `/features/nuevo` | `routes/_layout/features_.nuevo.tsx` | **Alta**. Al guardar los datos básicos salta a la ficha en modo edición, que es donde se le cuelgan notas y ficheros |
 | `/admin` | `routes/_layout/admin.tsx` | Usuarios y permisos. **Sin tocar**, es el de la plantilla |
 
@@ -173,6 +173,7 @@ Componentes en `components/Features/`:
 | `PartSelect.tsx` | Desplegable de piezas con alta al vuelo (código + nombre) |
 | `FeatureForm.tsx` | El formulario de alta y edición (datos básicos + warnings, lessons, **Piezas** y **Ficheros por pieza**). Lo montan `/features/nuevo` y la propia ficha en modo edición. 🔑 **Repite el reparto de la ficha** —foto a la izquierda, datos a la derecha, secciones debajo— con una casilla en el sitio de cada dato, para que entrar y salir de edición no mueva nada de sitio |
 | `FeatureNotFound.tsx` | La pantalla de «feature no encontrado» de la ficha |
+| `FeatureActions.tsx` | Los botones *Editar* y *Borrar* de la tarjeta de gestión |
 | `NoteDialog.tsx` `AssetDialog.tsx` | Las modales de segundo nivel. **Son las únicas modales que quedan** (más la de confirmar el borrado) |
 | `constants.ts` | Las etiquetas en castellano de categorías y tipos, y el icono de cada tipo |
 | `queries.ts` | Las query keys. Todo cuelga de `["features"]`: invalidar esa raíz refresca todo |
@@ -210,28 +211,32 @@ modal se ha borrado. El motivo no es estético:
   es `/features/nuevo` y la edición ocurre **dentro de la propia ficha**. Solo quedan las modales
   de segundo nivel (`NoteDialog`, `AssetDialog`) y la de confirmar el borrado.
 
-🔑 **Clicar una tarjeta lleva a la ficha en las dos páginas** (dashboard y gestión). Antes, en
-`/features` clicar abría el formulario de edición: la misma tarjeta hacía dos cosas distintas.
+🔑 **Cada página tiene su tarjeta** (2026-08-24). En el **dashboard** la tarjeta se clica y
+lleva a la ficha: se viene a consultar. En **gestión** la tarjeta **no se clica** — lleva sus dos
+botones, *Editar* y *Borrar*, y no hay otro sitio al que ir. Antes clicarla llevaba a la ficha en
+modo `gestion`: la misma ficha de solo lectura del dashboard, con esos mismos dos botones arriba
+a la derecha. Un paso de más para nada, y el menú `⋯` de la tarjeta eran otros dos clics para
+elegir entre dos cosas. **Ese modo `gestion` se ha borrado**, botones y *search param* incluidos.
 
-🔑 **La ficha tiene tres caras, y todas son la misma página** — solo cambia un *search param*:
+🔑 **La ficha tiene dos caras, y las dos son la misma página** — solo cambia un *search param*:
 
 | Desde | URL | Qué enseña |
 |---|---|---|
 | Dashboard | `/features/{id}` | Solo lectura. Se consulta, no se toca |
-| Gestión | `?gestion=true` | Lo mismo + *Editar* y *Borrar* arriba, **sin pasar por el `⋯`** |
-| *Editar* | `?gestion=true&editar=true` | **El mismo contenido, en el mismo sitio, editable** |
+| *Editar* de la lista | `?editar=true` | **El mismo contenido, en el mismo sitio, editable** |
 
-*Editar* no navega a ninguna parte ni cambia el reparto de la página: el nombre sigue siendo el
-nombre —ahora en una casilla—, la foto sigue a la izquierda —ahora se puede soltar otra encima—,
-y las secciones siguen debajo, con sus botones de añadir y borrar. Los dos botones de arriba a la
-derecha pasan a ser *Cancelar* y *Guardar*, que devuelven la página a lectura. Ahí es además
-donde tienen que estar: lo único que se guarda a mano es la cabecera, porque las notas y los
-ficheros se guardan solos desde sus propias modales. El modo vive en la URL y no en un `useState` por dos motivos:
-el `⋯` de la lista puede entrar directo a editar, y recargar (F5) no te echa del modo edición.
-`validateSearch` los declara **opcionales**, o el dashboard no podría enlazar la ficha sin
-pasarlos (TanStack exige en los enlaces todo search param que el validador declare obligatorio).
+*Editar* no cambia el reparto de la página: el nombre sigue siendo el nombre —ahora en una
+casilla—, la foto sigue a la izquierda —ahora se puede soltar otra encima—, y las secciones
+siguen debajo, con sus botones de añadir y borrar. Arriba a la derecha están *Cancelar* y
+*Guardar*, y ahí es donde tienen que estar: lo único que se guarda a mano es la cabecera, porque
+las notas y los ficheros se guardan solos desde sus propias modales. **Los dos devuelven a
+`/features`**, que es de donde se venía: dejar la ficha en solo lectura sería un callejón sin
+salida, porque ahí ya no hay botón de editar. El modo vive en la URL y no en un `useState` por
+dos motivos: el *Editar* de la lista entra directo a él, y recargar (F5) no te echa de la
+edición. `validateSearch` lo declara **opcional**, o el dashboard no podría enlazar la ficha sin
+pasarlo (TanStack exige en los enlaces todo search param que el validador declare obligatorio).
 
-**No hay botón *Volver*** en ninguna de las tres: para eso están el botón del navegador y el menú
+**No hay botón *Volver*** en ninguna de las dos: para eso están el botón del navegador y el menú
 lateral. El único que queda es el de «Feature no encontrado», donde no hay nada más donde pulsar.
 
 🔑 **La búsqueda vive en la URL** (`validateSearch` en las dos rutas). Sin eso, volver de la ficha

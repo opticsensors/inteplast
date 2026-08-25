@@ -1,12 +1,11 @@
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { Lightbulb, Package2, Pencil, TriangleAlert } from "lucide-react"
+import { Lightbulb, Package2, TriangleAlert } from "lucide-react"
 
 import { ApiError, type NoteKind } from "@/client"
 import { CollapsibleSection } from "@/components/Common/CollapsibleSection"
 import { RichTextView } from "@/components/Common/RichText"
 import { CATEGORY_LABELS } from "@/components/Features/constants"
-import DeleteFeature from "@/components/Features/DeleteFeature"
 import { FeatureThumbnail } from "@/components/Features/FeatureCard"
 import { FeatureForm } from "@/components/Features/FeatureForm"
 import { FeatureNotFound } from "@/components/Features/FeatureNotFound"
@@ -14,7 +13,6 @@ import { PartAssetMatrix } from "@/components/Features/PartAssetMatrix"
 import { featureParts } from "@/components/Features/parts"
 import { featureQueryOptions } from "@/components/Features/queries"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { fileUrl } from "@/utils"
 
@@ -26,8 +24,7 @@ export const Route = createFileRoute("/_layout/features_/$featureId")({
   // TanStack obliga a pasar en cada enlace todo lo que el validador declare.
   validateSearch: (
     search: Record<string, unknown>,
-  ): { gestion?: true; editar?: true } => ({
-    ...(flag(search.gestion) ? { gestion: true as const } : {}),
+  ): { editar?: true } => ({
     ...(flag(search.editar) ? { editar: true as const } : {}),
   }),
   head: () => ({
@@ -44,30 +41,27 @@ const isNotFound = (error: Error) =>
   error instanceof ApiError && error.status === 404
 
 /**
- * La ficha del feature. Una sola pagina con tres caras, marcadas en la URL:
+ * La ficha del feature. Una sola pagina con dos caras, marcadas en la URL:
  *
  * | URL | Cara |
  * |---|---|
  * | `/features/{id}` | solo lectura: se llega desde el dashboard, se consulta |
- * | `?gestion=true` | lo mismo + *Editar* y *Borrar* arriba |
- * | `?gestion=true&editar=true` | **el contenido, editable aqui mismo** |
+ * | `?editar=true` | **el mismo contenido, editable aqui mismo** |
  *
- * Editar no lleva a ninguna parte: cambia esta misma pagina. El estado vive en
- * la URL y no en un `useState` para que el menu `⋯` de la lista pueda entrar
- * directo a editar, y para que recargar no te eche del modo edicion.
+ * Editar no cambia el reparto de la pagina: cada dato pasa a ser su casilla en
+ * el sitio donde estaba. El modo vive en la URL y no en un `useState` para que
+ * el boton *Editar* de la lista pueda entrar directo, y para que recargar no
+ * te eche del modo edicion.
  */
 function FeatureDetail() {
   const { featureId } = Route.useParams()
-  const { gestion, editar } = Route.useSearch()
+  const { editar } = Route.useSearch()
   const navigate = useNavigate()
 
-  const setMode = (next: { editar?: true }) =>
-    navigate({
-      to: "/features/$featureId",
-      params: { featureId },
-      search: { gestion: true, ...next },
-      replace: true,
-    })
+  // Al editar se llega desde la lista, y a la lista se vuelve al guardar o al
+  // cancelar: dejar aqui la ficha en solo lectura seria un callejon sin salida
+  // —desde el dashboard no hay boton de editar— y no es de donde se venia.
+  const toList = () => navigate({ to: "/features" })
 
   const {
     data: feature,
@@ -104,14 +98,13 @@ function FeatureDetail() {
 
   // Editando: la MISMA pagina y el MISMO reparto —foto a la izquierda, datos
   // a la derecha, secciones debajo—, solo que cada dato es ahora su casilla.
-  // No se navega a ningun sitio.
-  if (gestion && editar) {
+  if (editar) {
     return (
       <FeatureForm
         featureId={feature.id}
         onCreated={() => undefined}
-        onSaved={() => setMode({})}
-        onCancel={() => setMode({})}
+        onSaved={toList}
+        onCancel={toList}
       />
     )
   }
@@ -121,24 +114,6 @@ function FeatureDetail() {
 
   return (
     <div className="flex flex-col gap-6">
-      {gestion && (
-        <div className="flex items-center justify-end gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setMode({ editar: true })}
-          >
-            <Pencil className="mr-2" />
-            Editar
-          </Button>
-          <DeleteFeature
-            featureId={feature.id}
-            trigger="button"
-            onSuccess={() => navigate({ to: "/features" })}
-          />
-        </div>
-      )}
-
       {/* Identidad del feature: la misma lectura que la tarjeta del buscador
           —imagen a la izquierda, todo lo que dice QUE es a la derecha— pero a
           tamaño de pagina. Lo que hay que saber para diseñar va debajo. */}

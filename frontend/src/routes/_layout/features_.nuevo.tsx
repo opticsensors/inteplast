@@ -35,7 +35,7 @@ function NewFeature() {
           navigate({
             to: "/features/$featureId",
             params: { featureId },
-            search: { gestion: true, editar: true },
+            search: { editar: true },
           })
         }
         onSaved={toList}

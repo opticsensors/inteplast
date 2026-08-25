@@ -3,7 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Plus, Search } from "lucide-react"
 import { useEffect, useState } from "react"
 
-import { FeatureActionsMenu } from "@/components/Features/FeatureActionsMenu"
+import { FeatureActions } from "@/components/Features/FeatureActions"
 import { FeatureCard } from "@/components/Features/FeatureCard"
 import {
   FeatureSearch,
@@ -38,21 +38,13 @@ function Features() {
   )
   const debouncedQuery = useDebounce(search.q)
 
-  // La ficha con `gestion` enseña sus botones de Editar y Borrar: aqui se
-  // viene a mantener la base, no solo a consultarla.
-  const openFeature = (featureId: string) =>
-    navigate({
-      to: "/features/$featureId",
-      params: { featureId },
-      search: { gestion: true },
-    })
-
-  // El `⋯` es el atajo: entra en la ficha ya en modo edicion.
+  // Aqui se viene a mantener la base, no a consultarla: el unico destino de
+  // una tarjeta es su formulario. Consultar la ficha es cosa del dashboard.
   const editFeature = (featureId: string) =>
     navigate({
       to: "/features/$featureId",
       params: { featureId },
-      search: { gestion: true, editar: true },
+      search: { editar: true },
     })
 
   // Igual que en el dashboard: la busqueda vive en la URL para sobrevivir al
@@ -122,11 +114,11 @@ function Features() {
             <FeatureCard
               key={feature.id}
               feature={feature}
-              // Clicar una tarjeta lleva a la ficha, aqui y en el dashboard.
-              // El menu de la derecha es el atajo para no entrar en ella.
-              onSelect={() => openFeature(feature.id)}
+              // La tarjeta no se clica: lo unico que se puede pulsar son sus
+              // dos botones. Clicarla llevaba a una ficha de solo lectura con
+              // estos mismos dos botones arriba, un paso de mas para nada.
               actions={
-                <FeatureActionsMenu
+                <FeatureActions
                   featureId={feature.id}
                   onEdit={() => editFeature(feature.id)}
                 />

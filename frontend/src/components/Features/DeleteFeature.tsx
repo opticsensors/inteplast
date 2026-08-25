@@ -13,23 +13,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
 interface DeleteFeatureProps {
   featureId: string
-  onSuccess: () => void
-  /** `menu` = entrada del `⋯` de la tarjeta; `button` = boton suelto de la ficha. */
-  trigger?: "menu" | "button"
+  /** Que hacer despues de borrar. En la lista no hay nada que hacer: invalidar
+   *  `["features"]` ya quita la tarjeta. */
+  onSuccess?: () => void
 }
 
-const DeleteFeature = ({
-  featureId,
-  onSuccess,
-  trigger = "menu",
-}: DeleteFeatureProps) => {
+const DeleteFeature = ({ featureId, onSuccess }: DeleteFeatureProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -39,7 +34,7 @@ const DeleteFeature = ({
     onSuccess: () => {
       showSuccessToast("Feature borrado")
       setIsOpen(false)
-      onSuccess()
+      onSuccess?.()
     },
     onError: handleError.bind(showErrorToast),
     onSettled: () => {
@@ -49,26 +44,15 @@ const DeleteFeature = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      {trigger === "menu" ? (
-        <DropdownMenuItem
-          variant="destructive"
-          onSelect={(e) => e.preventDefault()}
-          onClick={() => setIsOpen(true)}
-        >
-          <Trash2 />
-          Borrar
-        </DropdownMenuItem>
-      ) : (
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-destructive"
-          onClick={() => setIsOpen(true)}
-        >
-          <Trash2 className="mr-2" />
-          Borrar
-        </Button>
-      )}
+      <Button
+        variant="outline"
+        size="sm"
+        className="text-destructive"
+        onClick={() => setIsOpen(true)}
+      >
+        <Trash2 className="mr-2" />
+        Borrar
+      </Button>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Borrar feature</DialogTitle>
