@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { FeaturesReadFeaturesData, FeaturesReadFeaturesResponse, FeaturesCreateFeatureData, FeaturesCreateFeatureResponse, FeaturesReadFeatureFiltersResponse, FeaturesReadFeatureData, FeaturesReadFeatureResponse, FeaturesUpdateFeatureData, FeaturesUpdateFeatureResponse, FeaturesDeleteFeatureData, FeaturesDeleteFeatureResponse, FeaturesCreateFeatureNoteData, FeaturesCreateFeatureNoteResponse, FeaturesUpdateFeatureNoteData, FeaturesUpdateFeatureNoteResponse, FeaturesDeleteFeatureNoteData, FeaturesDeleteFeatureNoteResponse, FeaturesLinkFeaturePartData, FeaturesLinkFeaturePartResponse, FeaturesUnlinkFeaturePartData, FeaturesUnlinkFeaturePartResponse, FeaturesCreateFeatureAssetData, FeaturesCreateFeatureAssetResponse, FeaturesUpdateFeatureAssetData, FeaturesUpdateFeatureAssetResponse, FeaturesDeleteFeatureAssetData, FeaturesDeleteFeatureAssetResponse, FilesUploadFileData, FilesUploadFileResponse, FilesCreateFileAccessUrlData, FilesCreateFileAccessUrlResponse, FilesReadFileData, FilesReadFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PartsReadPartsData, PartsReadPartsResponse, PartsCreatePartData, PartsCreatePartResponse, PartsUpdatePartData, PartsUpdatePartResponse, PartsDeletePartData, PartsDeletePartResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { FeaturesReadFeaturesData, FeaturesReadFeaturesResponse, FeaturesCreateFeatureData, FeaturesCreateFeatureResponse, FeaturesReadFeatureFiltersResponse, FeaturesReadFeatureData, FeaturesReadFeatureResponse, FeaturesUpdateFeatureData, FeaturesUpdateFeatureResponse, FeaturesDeleteFeatureData, FeaturesDeleteFeatureResponse, FeaturesCreateFeatureNoteData, FeaturesCreateFeatureNoteResponse, FeaturesUpdateFeatureNoteData, FeaturesUpdateFeatureNoteResponse, FeaturesDeleteFeatureNoteData, FeaturesDeleteFeatureNoteResponse, FeaturesLinkFeaturePartData, FeaturesLinkFeaturePartResponse, FeaturesUnlinkFeaturePartData, FeaturesUnlinkFeaturePartResponse, FeaturesCreateFeatureAssetData, FeaturesCreateFeatureAssetResponse, FeaturesUpdateFeatureAssetData, FeaturesUpdateFeatureAssetResponse, FeaturesDeleteFeatureAssetData, FeaturesDeleteFeatureAssetResponse, FilesListSourceData, FilesListSourceResponse, FilesReferenceFileData, FilesReferenceFileResponse, FilesRelinkFileData, FilesRelinkFileResponse, FilesFileStatusData, FilesFileStatusResponse, FilesUploadFileData, FilesUploadFileResponse, FilesCreateFileAccessUrlData, FilesCreateFileAccessUrlResponse, FilesPreparePreviewData, FilesPreparePreviewResponse, FilesReadPreviewData, FilesReadPreviewResponse, FilesReadFileData, FilesReadFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PartsReadPartsData, PartsReadPartsResponse, PartsCreatePartData, PartsCreatePartResponse, PartsUpdatePartData, PartsUpdatePartResponse, PartsDeletePartData, PartsDeletePartResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class FeaturesService {
     /**
@@ -40,7 +40,7 @@ export class FeaturesService {
             }
         });
     }
-    
+
     /**
      * Create Feature
      * Crear un feature.
@@ -60,7 +60,7 @@ export class FeaturesService {
             }
         });
     }
-    
+
     /**
      * Read Feature Filters
      * Valores disponibles para los desplegables de filtrado del dashboard.
@@ -73,7 +73,7 @@ export class FeaturesService {
             url: '/api/v1/features/filters'
         });
     }
-    
+
     /**
      * Read Feature
      * Ficha completa de un feature: warnings, lessons learned y piezas ejemplo.
@@ -94,7 +94,7 @@ export class FeaturesService {
             }
         });
     }
-    
+
     /**
      * Update Feature
      * Editar un feature. Cualquier usuario autenticado puede hacerlo: la base de
@@ -119,7 +119,7 @@ export class FeaturesService {
             }
         });
     }
-    
+
     /**
      * Delete Feature
      * Borrar un feature con sus warnings, lessons learned y piezas ejemplo.
@@ -141,7 +141,7 @@ export class FeaturesService {
             }
         });
     }
-    
+
     /**
      * Create Feature Note
      * Anadir una advertencia (`kind=warning`) o leccion aprendida (`kind=lesson`).
@@ -165,7 +165,7 @@ export class FeaturesService {
             }
         });
     }
-    
+
     /**
      * Update Feature Note
      * Editar una advertencia o leccion aprendida.
@@ -189,7 +189,7 @@ export class FeaturesService {
             }
         });
     }
-    
+
     /**
      * Delete Feature Note
      * Borrar una advertencia o leccion aprendida.
@@ -210,7 +210,7 @@ export class FeaturesService {
             }
         });
     }
-    
+
     /**
      * Link Feature Part
      * Declarar que el feature existe en esa pieza, tenga ficheros o no.
@@ -236,7 +236,7 @@ export class FeaturesService {
             }
         });
     }
-    
+
     /**
      * Unlink Feature Part
      * Quitar la declaracion. Los adjuntos de esa pieza no se tocan: si los hay, la
@@ -260,7 +260,7 @@ export class FeaturesService {
             }
         });
     }
-    
+
     /**
      * Create Feature Asset
      * Adjuntar el fichero de una pieza. El fichero se sube antes por `/files/` y
@@ -285,7 +285,7 @@ export class FeaturesService {
             }
         });
     }
-    
+
     /**
      * Update Feature Asset
      * Editar un fichero adjunto.
@@ -309,7 +309,7 @@ export class FeaturesService {
             }
         });
     }
-    
+
     /**
      * Delete Feature Asset
      * Quitar un fichero adjunto del feature. El fichero subido no se borra.
@@ -334,6 +334,95 @@ export class FeaturesService {
 
 export class FilesService {
     /**
+     * List Source
+     * Browse one directory in the configured source, without reading file bytes.
+     * @param data The data for the request.
+     * @param data.path
+     * @param data.skip
+     * @param data.limit
+     * @returns SourceListing Successful Response
+     * @throws ApiError
+     */
+    public static listSource(data: FilesListSourceData = {}): CancelablePromise<FilesListSourceResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/files/source',
+            query: {
+                path: data.path,
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Reference File
+     * Register a local original once. Never copy or modify its bytes.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns FilePublic Successful Response
+     * @throws ApiError
+     */
+    public static referenceFile(data: FilesReferenceFileData): CancelablePromise<FilesReferenceFileResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/files/reference',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Relink File
+     * Explicitly replace a location/revision while preserving the document UUID.
+     * @param data The data for the request.
+     * @param data.fileId
+     * @param data.requestBody
+     * @returns FilePublic Successful Response
+     * @throws ApiError
+     */
+    public static relinkFile(data: FilesRelinkFileData): CancelablePromise<FilesRelinkFileResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/files/{file_id}/reference',
+            path: {
+                file_id: data.fileId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * File Status
+     * @param data The data for the request.
+     * @param data.fileId
+     * @returns FileStatus Successful Response
+     * @throws ApiError
+     */
+    public static fileStatus(data: FilesFileStatusData): CancelablePromise<FilesFileStatusResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/files/{file_id}/status',
+            path: {
+                file_id: data.fileId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
      * Upload File
      * Subir un fichero (imagen de feature, CAD, plano PDF...).
      *
@@ -356,7 +445,7 @@ export class FilesService {
             }
         });
     }
-    
+
     /**
      * Create File Access Url
      * Issue a short-lived link for an image, viewer or browser download.
@@ -375,6 +464,55 @@ export class FilesService {
             },
             query: {
                 download: data.download
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Prepare Preview
+     * Idempotently queue a web GLB, or return a signed link to its cached result.
+     * @param data The data for the request.
+     * @param data.fileId
+     * @param data.retry
+     * @returns FilePreviewPublic Successful Response
+     * @throws ApiError
+     */
+    public static preparePreview(data: FilesPreparePreviewData): CancelablePromise<FilesPreparePreviewResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/files/{file_id}/preview',
+            path: {
+                file_id: data.fileId
+            },
+            query: {
+                retry: data.retry
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Read Preview
+     * @param data The data for the request.
+     * @param data.fileId
+     * @param data.token
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static readPreview(data: FilesReadPreviewData): CancelablePromise<FilesReadPreviewResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/files/{file_id}/preview',
+            path: {
+                file_id: data.fileId
+            },
+            query: {
+                token: data.token
             },
             errors: {
                 422: 'Validation Error'
@@ -410,7 +548,7 @@ export class FilesService {
             }
         });
     }
-    
+
     /**
      * Delete File
      * Borrar un fichero. Las referencias desde features y piezas ejemplo quedan a
@@ -457,7 +595,7 @@ export class ItemsService {
             }
         });
     }
-    
+
     /**
      * Create Item
      * Create new item.
@@ -477,7 +615,7 @@ export class ItemsService {
             }
         });
     }
-    
+
     /**
      * Read Item
      * Get item by ID.
@@ -498,7 +636,7 @@ export class ItemsService {
             }
         });
     }
-    
+
     /**
      * Update Item
      * Update an item.
@@ -522,7 +660,7 @@ export class ItemsService {
             }
         });
     }
-    
+
     /**
      * Delete Item
      * Delete an item.
@@ -565,7 +703,7 @@ export class LoginService {
             }
         });
     }
-    
+
     /**
      * Test Token
      * Test access token
@@ -578,7 +716,7 @@ export class LoginService {
             url: '/api/v1/login/test-token'
         });
     }
-    
+
     /**
      * Recover Password
      * Password Recovery
@@ -599,7 +737,7 @@ export class LoginService {
             }
         });
     }
-    
+
     /**
      * Reset Password
      * Reset password
@@ -619,7 +757,7 @@ export class LoginService {
             }
         });
     }
-    
+
     /**
      * Recover Password Html Content
      * HTML Content for Password Recovery
@@ -666,7 +804,7 @@ export class PartsService {
             }
         });
     }
-    
+
     /**
      * Create Part
      * Dar de alta una pieza. El codigo es unico: es la clave con la que se agrupan
@@ -687,7 +825,7 @@ export class PartsService {
             }
         });
     }
-    
+
     /**
      * Update Part
      * Editar el codigo o el nombre de una pieza.
@@ -711,7 +849,7 @@ export class PartsService {
             }
         });
     }
-    
+
     /**
      * Delete Part
      * Borrar una pieza. Solo superusuario: la comparten todos los features.
@@ -782,7 +920,7 @@ export class UsersService {
             }
         });
     }
-    
+
     /**
      * Create User
      * Create new user.
@@ -802,7 +940,7 @@ export class UsersService {
             }
         });
     }
-    
+
     /**
      * Read User Me
      * Get current user.
@@ -815,7 +953,7 @@ export class UsersService {
             url: '/api/v1/users/me'
         });
     }
-    
+
     /**
      * Delete User Me
      * Delete own user.
@@ -828,7 +966,7 @@ export class UsersService {
             url: '/api/v1/users/me'
         });
     }
-    
+
     /**
      * Update User Me
      * Update own user.
@@ -848,7 +986,7 @@ export class UsersService {
             }
         });
     }
-    
+
     /**
      * Update Password Me
      * Update own password.
@@ -868,7 +1006,7 @@ export class UsersService {
             }
         });
     }
-    
+
     /**
      * Register User
      * Create new user without the need to be logged in.
@@ -888,7 +1026,7 @@ export class UsersService {
             }
         });
     }
-    
+
     /**
      * Read User By Id
      * Get a specific user by id.
@@ -909,7 +1047,7 @@ export class UsersService {
             }
         });
     }
-    
+
     /**
      * Update User
      * Update a user.
@@ -933,7 +1071,7 @@ export class UsersService {
             }
         });
     }
-    
+
     /**
      * Delete User
      * Delete a user.
@@ -977,7 +1115,7 @@ export class UtilsService {
             }
         });
     }
-    
+
     /**
      * Health Check
      * @returns boolean Successful Response

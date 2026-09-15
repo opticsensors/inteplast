@@ -122,6 +122,9 @@ services:
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - SENTRY_DSN=${SENTRY_DSN}
+      - PREVIEW_WORKER_ENABLED=${PREVIEW_WORKER_ENABLED:-true}
+      - PREVIEW_TIMEOUT_SECONDS=${PREVIEW_TIMEOUT_SECONDS:-900}
+      - PREVIEW_MEMORY_MB=${PREVIEW_MEMORY_MB:-8192}
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/utils/health-check/"]

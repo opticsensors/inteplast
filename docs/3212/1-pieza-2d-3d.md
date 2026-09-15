@@ -50,8 +50,11 @@ Es **poco para OCR fiable de cotas pequeñas** con símbolos GD&T (⌖, Ø, ⊥,
 
 ### Cómo leerlo
 
+- **En la aplicación**: Bolt Eye → Piezas ejemplo → 3212 → Plano 2D rev. 07. El original
+  está vinculado en la instalación local y se puede ampliar, abrir en otra pestaña y descargar.
+  La resolución sigue siendo la del escaneo. Ver [ficheros externos](../ficheros-externos.md).
 - 📊 **Con el visor: [`data-explorer/planos/ver_plano.py`](../../data-explorer/planos/ver_plano.py)**.
-  Es lo que hay que usar. Abre el plano en una página, se teclea una cota y **la marca sobre la
+  Para buscar texto exploratoriamente. Abre el plano en una página, se teclea una cota y **la marca sobre la
   imagen**, con zoom y arrastre. → [visores.md](../visores.md)
   ```powershell
   & $py "…\data-explorer\planos\ver_plano.py"
@@ -150,7 +153,9 @@ Esta es exactamente la limitación que motiva las propuestas de `inteplast_datos
   head -c 2000 "…/20200204_3 130 516 987_AllCATPart.stp"
   grep -c CYLINDRICAL_SURFACE "…/…stp"
   ```
-- **Visualizar**: cualquier CAD o visor STEP. 10 MB se abre sin problema.
+- **Visualizar en la aplicación**: Bolt Eye → Piezas ejemplo → 3212 → Pieza 3212 (STP).
+  Vinculado y comprobado con giro, zoom, encuadre y descarga el 2026-09-15. También se puede
+  abrir con un CAD/visor STEP instalado.
 - **Programáticamente**: `pythonocc` / OCCT. ⚠️ Hay Python 3.11 (fuera del PATH, ver
   [CLAUDE.md](../../CLAUDE.md)) pero **OCCT no está instalado**: habría que añadirlo.
 
@@ -169,4 +174,4 @@ Esta es exactamente la limitación que motiva las propuestas de `inteplast_datos
 
 **Prioridad de ingesta: baja.** El STEP no tiene features, y del plano solo se saca una
 reconstrucción por OCR (útil para buscar, no para ingerir como dato). Ambos se guardan como
-**fichero adjunto descargable**, no como datos estructurados.
+**referencia a un original descargable** en la aplicación, no como datos estructurados.

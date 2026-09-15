@@ -9,7 +9,7 @@ cliente y las notas de Obsidian (ver rutas abajo).
 | Carpeta | Qué es |
 |---|---|
 | `backend/` `frontend/` | La **aplicación** (FastAPI + React, sobre el template `full-stack-fastapi-template`). → [docs/app-web.md](docs/app-web.md) |
-| `scripts/` | Shell de **build y test** del template. ⚠️ Nada que ver con los visores |
+| `scripts/` | Lanzadores de **Compose, build y tests**. ⚠️ Nada que ver con los visores de datos |
 | `data-explorer/` | 📊 Los **visores de los datos crudos** (Python): `metrologia/` (CMM) y `planos/` (el plano 2D). → [docs/visores.md](docs/visores.md) |
 | `docs/` | 🔑 El **conocimiento del dominio**: análisis de los datos, modelo de la BD, preguntas abiertas |
 | `compose*.yml` `deployment.md` `development.md` | Docker y despliegue |
@@ -70,14 +70,14 @@ Un feature puede además estar **declarado** en una pieza sin tener ningún fich
 CSV/XLS/PPTX y es la siguiente fase.
 
 ```powershell
-docker compose up -d --build db prestart backend   # backend + BD (aplica migraciones)
+.\scripts\compose.ps1 up -d --build db prestart backend   # backend + BD (aplica migraciones)
 cd frontend; npm run dev                           # http://localhost:5173
-docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bolt Eye del 3212
+.\scripts\compose.ps1 exec backend python -m app.seed_features   # carga de ejemplo: Bolt Eye del 3212
 ```
 
 - 🔑 **Antes de tocar `backend/` o `frontend/`, leer [docs/app-web.md](docs/app-web.md)**: modelo,
   endpoints, permisos, decisiones y cabos sueltos.
-- 🔴 **Tras tocar `backend/`, reconstruir con `--build` o mantener `docker compose watch backend`
+- 🔴 **Tras tocar `backend/`, reconstruir con `--build` o mantener `.\scripts\compose.ps1 watch backend`
   activo.** `up -d` por sí solo reutiliza la imagen y no sincroniza el código local. Alembic
   `current` comprueba la revisión de la BD, **no** que el código de los endpoints esté actualizado.
 - ⚠️ **Cambiar un endpoint o un modelo obliga a regenerar el cliente TypeScript**
@@ -91,6 +91,14 @@ docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bo
 - **Acceso:** altas desde Admin por defecto; el UUID de un fichero ya no es un permiso de
   lectura. El frontend obtiene enlaces firmados temporales con autenticación.
 - **Revisión del 2026-09-15:** cambios y pruebas en [docs/revision-2026-09-15.md](docs/revision-2026-09-15.md).
+- **Archivos externos (2026-09-15):** el PDF y el STEP del 3212 están vinculados y comprobados
+  en la instalación local. `StoredFile.id` identifica tanto subidas como referencias; el
+  adaptador local lee originales sin copiarlos, con montaje Docker de solo lectura.
+  `.env.local` contiene la configuración personal y queda fuera de Git; usar `scripts/compose.ps1`
+  o `bash scripts/compose.sh` para conservarla al reiniciar/reconstruir. Graph, revisiones
+  históricas e ingesta siguen pendientes. Escaneo y molde grandes usan GLB automáticos en
+  caché; ver [docs/vistas-3d.md](docs/vistas-3d.md) y [docs/ficheros-externos.md](docs/ficheros-externos.md).
+  **La pregunta A10 sobre acceso a originales es prioridad 1 de la reunión con INTEPLAST.**
 
 ---
 
@@ -172,7 +180,8 @@ docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bo
   había **195 de los 239 ficheros de `4- Metrologia` en la nube** (el 2026-08-11 estaban todos
   locales). Se salvan los 9 `.xls` y los 16 CSV de cavidad — o sea, **toda la ingesta tabular se
   puede hacer sin riesgo**; lo geométrico (`.igs`, `.dxf`, `.txt`, PDF) hay que hidratarlo, pero
-  son 1–3 MB por fichero. El `.step` de 247 MB sigue en la nube; el `.mfr` y el `.stl`, locales.
+  son 1–3 MB por fichero. El `.step` del molde se hidrató expresamente el 15/09/2026 para
+  generar su vista web; el estado de cualquier archivo puede volver a cambiar.
   **No fiarse de ninguna tabla: comprobar el atributo antes de abrir nada:**
   ```powershell
   $a = [int](Get-Item -LiteralPath $ruta).Attributes
@@ -303,6 +312,7 @@ hidratación en OneDrive y por dónde empezar.
 | Documento | Léelo cuando… |
 |---|---|
 | [docs/app-web.md](docs/app-web.md) | vayas a tocar la **aplicación** (`backend/`, `frontend/`): modelo, endpoints, permisos, cómo levantarla y qué falta |
+| [docs/ficheros-externos.md](docs/ficheros-externos.md) | vayas a vincular originales, configurar la carpeta local, revisar los visores o preparar Graph |
 | [docs/visores.md](docs/visores.md) | quieras **ver los datos** en vez de leer sobre ellos: qué hace cada visor de `data-explorer/` y qué decisiones lleva dentro |
 | [docs/formatos-parsing.md](docs/formatos-parsing.md) | vayas a **escribir un parser**: esquemas exactos de CSV/XLS/PPTX, columna a columna |
 | [docs/modelo-datos.md](docs/modelo-datos.md) | trabajes en el **esquema de la BD** o en la ingesta |

@@ -3,6 +3,10 @@ FROM python:3.10
 ENV PYTHONUNBUFFERED=1
 ENV UPLOADS_DIR=/app/uploads
 
+# OCP/VTK wheels link OpenGL even though tessellation runs without a display.
+RUN apt-get update && apt-get install -y --no-install-recommends libgl1 libxrender1 libsm6 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install uv
 # Ref: https://docs.astral.sh/uv/guides/integration/docker/#installing-uv
 COPY --from=ghcr.io/astral-sh/uv:0.9.26 /uv /uvx /bin/

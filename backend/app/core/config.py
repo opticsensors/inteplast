@@ -7,6 +7,7 @@ from pydantic import (
     AnyUrl,
     BeforeValidator,
     EmailStr,
+    Field,
     HttpUrl,
     PostgresDsn,
     computed_field,
@@ -76,6 +77,13 @@ class Settings(BaseSettings):
     UPLOADS_DIR: str = "uploads"
     MAX_UPLOAD_SIZE_MB: int = 50
     FILE_ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    PREVIEW_WORKER_ENABLED: bool = True
+    PREVIEW_TIMEOUT_SECONDS: int = Field(default=900, ge=10, le=3600)
+    PREVIEW_MEMORY_MB: int = Field(default=8192, ge=1024, le=32768)
+    # Optional read-only external source. Its key identifies the dataset, not the PC path.
+    ASSETS_ROOT: str | None = None
+    ASSETS_SOURCE_ID: str = "local-assets"
+    ASSETS_SOURCE_NAME: str = "Archivos de referencia"
 
     @computed_field  # type: ignore[prop-decorator]
     @property

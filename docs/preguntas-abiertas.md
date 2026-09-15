@@ -9,6 +9,11 @@
 
 ## 🔴 ABIERTAS — hay que preguntar a INTEPLAST
 
+**Prioridad 1 para la próxima reunión: [A10 — acceso a los originales](#a10-acceso-originales).**
+Eduard cree que están en OneDrive/SharePoint/Teams de empresa; todavía no está confirmado ni
+tenemos acceso. Conseguir un contacto de informática y una biblioteca/carpeta de prueba.
+El desarrollo continúa mientras tanto con la carpeta local del 3212 en solo lectura.
+
 > ⚠️ **Cómo se escriben estas preguntas.** El interlocutor de INTEPLAST no se acuerda de lo que
 > hizo — estos datos son de 2024 y 2025 — y tiene poca paciencia para leer. Cada pregunta va en
 > tres bloques cortos: **Recordatorio** (el ancla: fichero, fecha, diapositiva, su propia frase
@@ -253,6 +258,7 @@ funcionando.
 
 ---
 
+<a id="a10-acceso-originales"></a>
 ### A10 · ¿Desde donde va a leer los ficheros el servidor? *(para informatica, no para calidad)*
 
 > ⚠️ Esta pregunta **no es de metrologia**: va dirigida a quien lleve los sistemas, no al
@@ -266,17 +272,37 @@ lea de ahi. Asi no hay dos copias de vuestro archivo CAD ni nada que sincronizar
 
 **Preguntas:**
 
-1. **¿Hay una carpeta de red desde la que el servidor pueda leer el arbol de proyectos**
-   (`3212 Pump Housing/1-2D y 3D Pieza/...`), **en solo lectura**?
-2. **¿Esa ruta va a ser estable**, o las carpetas se reorganizan cada cierto tiempo? *(si se
-   mueven, se rompen todas las referencias a la vez)*
-3. Mientras desarrollamos desde Eurecat, **¿podriamos tener acceso**, o trabajamos con una copia
-   de muestra de unos pocos ficheros?
+1. **¿Dónde están los originales: OneDrive, una biblioteca de SharePoint o un equipo de Teams?**
+   Necesitamos el enlace a la ubicación del 3212 y saber quién la administra.
+2. **¿Quién de informática puede preparar un acceso de solo lectura para la aplicación y
+   las pruebas desde Eurecat mediante Microsoft Graph?** Empezar con una carpeta/biblioteca
+   acotada; concretar quién registra la aplicación y autoriza los permisos.
+3. **¿Todos los usuarios de esta aplicación podrán leer esos mismos archivos, o hay
+   restricciones por persona/proyecto?** Esto determina cómo aplicar sus permisos.
+4. **¿Cómo guardáis las revisiones y reorganizáis los archivos?** Distinguir renombrado dentro
+   de la misma biblioteca, traslados entre bibliotecas y copias nuevas; confirmar si debemos
+   mostrar siempre la última revisión o conservar una revisión concreta para cada muestreo.
 
-*Por que nos importa para la BD (esto no se lo mandes):* de la respuesta depende si los adjuntos
-se guardan como fichero subido o como referencia a una ruta, y es un cambio de modelo que sale
-barato ahora y caro cuando haya datos cargados. Ver el bloque «Donde viven los ficheros» de
-[../TODO.md](../TODO.md).
+*Contexto interno (no enviar):* ya está implementada la referencia local con un UUID de
+documento independiente de su ubicación. Los visores PDF/3D están comprobados con los dos
+originales del 3212. Conectar Graph requerirá implementar su acceso e identificar los archivos
+de INTEPLAST; no basta con sustituir la ruta local. La integración con EURECAT, si se prueba,
+no concede acceso al entorno de INTEPLAST. Ver [ficheros-externos.md](ficheros-externos.md).
+
+---
+
+### A11 · ¿Podéis facilitar una exportación del molde 3212 compatible con el visor?
+
+**Para el responsable del CAD del molde.** Al preparar la vista web de `3- 3D Molde/3212.step`,
+OpenCascade necesita reparar numerosas caras en memoria y algunas siguen sin poder mallarse.
+La aplicación muestra una **Vista parcial** y conserva la descarga íntegra del fichero recibido.
+
+**Pedir:** una exportación STEP validada desde el CAD de origen y la revisión/fecha del molde
+que representa. Conviene comprobarla con el conversor antes de sustituir el vínculo y guardar
+la nueva entrega como una revisión distinta. Se está comprobando compatibilidad de exportación;
+la vista web por sí sola no permite concluir que falten superficies en el CAD original.
+
+→ [Vista ligera y límites](vistas-3d.md), [fichero del molde](3212/3-molde-3d.md).
 
 ---
 

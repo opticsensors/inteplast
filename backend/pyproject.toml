@@ -2,7 +2,7 @@
 name = "app"
 version = "0.1.0"
 description = ""
-requires-python = ">=3.10,<4.0"
+requires-python = ">=3.10,<3.14"
 dependencies = [
     "fastapi[standard]<1.0.0,>=0.114.2",
     "python-multipart<1.0.0,>=0.0.7",
@@ -19,6 +19,9 @@ dependencies = [
     "sentry-sdk[fastapi]>=2.0.0,<3.0.0",
     "pyjwt<3.0.0,>=2.8.0",
     "pwdlib[argon2,bcrypt]>=0.3.0",
+    "cadquery-ocp==7.9.3.1.1",
+    "trimesh==5.1.0",
+    "fast-simplification==0.2.0",
 ]
 
 [dependency-groups]
@@ -37,6 +40,14 @@ build-backend = "hatchling.build"
 [tool.mypy]
 strict = true
 exclude = ["venv", ".venv", "alembic"]
+
+[[tool.mypy.overrides]]
+module = ["OCP.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["app.preview_converter"]
+disallow_untyped_calls = false
 
 [tool.ruff]
 target-version = "py310"

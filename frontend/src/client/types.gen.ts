@@ -127,13 +127,32 @@ export type FileAccessPublic = {
     expires_at: string;
 };
 
+export type FilePreviewPublic = {
+    state: 'queued' | 'processing' | 'ready' | 'error';
+    message?: (string | null);
+    url?: (string | null);
+};
+
+export type state = 'queued' | 'processing' | 'ready' | 'error';
+
 export type FilePublic = {
     id: string;
     filename: string;
     content_type: string;
     size: number;
     created_at?: (string | null);
+    source?: string;
+    version?: (string | null);
+    revision?: (string | null);
 };
+
+export type FileStatus = {
+    state: 'available' | 'missing' | 'changed' | 'unavailable';
+    message: string;
+    path?: (string | null);
+};
+
+export type state2 = 'available' | 'missing' | 'changed' | 'unavailable';
 
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
@@ -160,6 +179,11 @@ export type ItemsPublic = {
 export type ItemUpdate = {
     title?: string;
     description?: (string | null);
+};
+
+export type LocalFileReference = {
+    path: string;
+    revision?: (string | null);
 };
 
 export type Message = {
@@ -200,6 +224,27 @@ export type PrivateUserCreate = {
     password: string;
     full_name: string;
     is_verified?: boolean;
+};
+
+export type RelinkFileReference = {
+    path: string;
+    revision?: (string | null);
+    expected_version: string;
+};
+
+export type SourceEntry = {
+    name: string;
+    path: string;
+    directory: boolean;
+    size?: (number | null);
+};
+
+export type SourceListing = {
+    configured: boolean;
+    name: string;
+    path: string;
+    entries: Array<SourceEntry>;
+    count: number;
 };
 
 export type Token = {
@@ -355,6 +400,33 @@ export type FeaturesDeleteFeatureAssetData = {
 
 export type FeaturesDeleteFeatureAssetResponse = (Message);
 
+export type FilesListSourceData = {
+    limit?: number;
+    path?: string;
+    skip?: number;
+};
+
+export type FilesListSourceResponse = (SourceListing);
+
+export type FilesReferenceFileData = {
+    requestBody: LocalFileReference;
+};
+
+export type FilesReferenceFileResponse = (FilePublic);
+
+export type FilesRelinkFileData = {
+    fileId: string;
+    requestBody: RelinkFileReference;
+};
+
+export type FilesRelinkFileResponse = (FilePublic);
+
+export type FilesFileStatusData = {
+    fileId: string;
+};
+
+export type FilesFileStatusResponse = (FileStatus);
+
 export type FilesUploadFileData = {
     formData: Body_files_upload_file;
 };
@@ -367,6 +439,20 @@ export type FilesCreateFileAccessUrlData = {
 };
 
 export type FilesCreateFileAccessUrlResponse = (FileAccessPublic);
+
+export type FilesPreparePreviewData = {
+    fileId: string;
+    retry?: boolean;
+};
+
+export type FilesPreparePreviewResponse = (FilePreviewPublic);
+
+export type FilesReadPreviewData = {
+    fileId: string;
+    token?: (string | null);
+};
+
+export type FilesReadPreviewResponse = (unknown);
 
 export type FilesReadFileData = {
     download?: boolean;

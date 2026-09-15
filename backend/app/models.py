@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 from enum import Enum
+from typing import Literal
 
 from pydantic import EmailStr
 from sqlalchemy import ARRAY, DateTime, String
@@ -114,13 +115,20 @@ class ItemsPublic(SQLModel):
 # ---------------------------------------------------------------------------
 
 
-# Database model for an uploaded file. The bytes live on disk under
-# settings.UPLOADS_DIR, named after the row id; the row keeps the metadata.
+# Stable document identity. Legacy table name retained to preserve all existing FKs.
+# Location is resolved by app.file_sources, never by a viewer or feature.
 class StoredFile(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     filename: str = Field(max_length=255)
     content_type: str = Field(default="application/octet-stream", max_length=255)
     size: int = 0
+    source: str = Field(default="upload", max_length=32)
+    source_key: str | None = Field(default=None, max_length=100)
+    source_path: str | None = Field(default=None, max_length=2048)
+    source_version: str | None = Field(default=None, max_length=100)
+    version: uuid.UUID | None = None
+    revision: str | None = Field(default=None, max_length=100)
+    reference_key: str | None = Field(default=None, max_length=64, unique=True)
     created_at: datetime | None = Field(
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),  # type: ignore
@@ -133,11 +141,68 @@ class FilePublic(SQLModel):
     content_type: str
     size: int
     created_at: datetime | None = None
+    source: str = "upload"
+    version: uuid.UUID | None = None
+    revision: str | None = None
+
+
+class LocalFileReference(SQLModel):
+    path: str = Field(min_length=1, max_length=2048)
+    revision: str | None = Field(default=None, max_length=100)
+
+
+class RelinkFileReference(LocalFileReference):
+    expected_version: uuid.UUID
+
+
+class SourceEntry(SQLModel):
+    name: str
+    path: str
+    directory: bool
+    size: int | None = None
+
+
+class SourceListing(SQLModel):
+    configured: bool
+    name: str
+    path: str
+    entries: list[SourceEntry]
+    count: int
+
+
+class FileStatus(SQLModel):
+    state: Literal["available", "missing", "changed", "unavailable"]
+    message: str
+    path: str | None = None
 
 
 class FileAccessPublic(SQLModel):
     url: str
     expires_at: datetime
+
+
+class FilePreview(SQLModel, table=True):
+    """One replaceable, disposable web representation per original document."""
+
+    file_id: uuid.UUID = Field(
+        primary_key=True, foreign_key="storedfile.id", ondelete="CASCADE"
+    )
+    cache_key: str = Field(max_length=64)
+    state: str = Field(default="queued", max_length=16, index=True)
+    message: str | None = Field(default=None, max_length=255)
+    size: int = 0
+    triangles: int = 0
+    source_sha256: str | None = Field(default=None, max_length=64)
+    created_at: datetime = Field(
+        default_factory=get_datetime_utc,
+        sa_type=DateTime(timezone=True),  # type: ignore
+    )
+
+
+class FilePreviewPublic(SQLModel):
+    state: Literal["queued", "processing", "ready", "error"]
+    message: str | None = None
+    url: str | None = None
 
 
 # ---------------------------------------------------------------------------

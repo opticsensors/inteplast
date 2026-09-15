@@ -18,6 +18,10 @@ ficheros de ejemplo. Es lo que consume el frontend descrito en la fase B y lo qu
 Y desde el **2026-08-18**, la **pieza como entidad propia** (`Part`): los ficheros ya no cuelgan
 del feature sueltos, cuelgan de la pieza a la que pertenecen. Es el embrión de `PROYECTO`.
 
+Desde el **2026-09-15**, una ficha puede **vincular originales externos** sin subirlos. El PDF y
+el STEP del 3212 están conectados y comprobados en la instalación local. Configuración, límites
+de revisión y futura conexión Graph en [ficheros-externos.md](ficheros-externos.md).
+
 🔴 **Lo que NO está**: la parte de ingesta (`MUESTREO`, `MEDICION`, `CORRECCION_MOLDE`,
 `DEPENDENCIA_COTA`). Esas tablas se alimentan de los CSV/XLS/PPTX y son la siguiente fase.
 
@@ -26,8 +30,10 @@ del feature sueltos, cuelgan de la pieza a la que pertenecen. Es el embrión de 
 ## Modelo de datos (`backend/app/models.py`)
 
 ```
-StoredFile                    metadatos de un fichero subido; los bytes van al disco
+StoredFile                    identidad común de un documento subido o referenciado
   id, filename, content_type, size, created_at
+  source = upload | local, source_key, source_path, source_version
+  version (UUID del vínculo), revision (etiqueta), reference_key (deduplicación)
 
 Part                          la pieza = el proyecto = el molde  → embrión de PROYECTO
   id, code ("3212", UNIQUE), name ("Pump Housing")
@@ -52,12 +58,12 @@ Ahora hay dos caminos —a propósito— para que una pieza salga en la ficha de
 
 | Camino | Para qué |
 |---|---|
-| **Tiene un fichero** (`FeatureAsset.part_id`) | El caso normal: subes el molde del 3212 y el 3212 aparece |
-| **Está declarada** (`FeaturePartLink`) | *«el Bolt Eye también está en el 3197»* aunque no haya todavía ni un CAD subido |
+| **Tiene un fichero** (`FeatureAsset.part_id`) | El caso normal: vinculas el molde del 3212 y el 3212 aparece |
+| **Está declarada** (`FeaturePartLink`) | *«el Bolt Eye también está en el 3197»* aunque no haya todavía ni un CAD vinculado |
 
 La vista hace la **unión de los dos** (`frontend/src/components/Features/parts.ts`). Una pieza
 declarada sin ficheros sale con la fila entera vacía, que es justo lo que hace visible **lo que
-falta por subir**.
+falta por vincular**.
 
 Decisiones que conviene conocer antes de tocarlo:
 
@@ -73,15 +79,26 @@ Decisiones que conviene conocer antes de tocarlo:
 | `FeaturePartLink` es una tabla de unión **sin campos propios** | Hoy solo dice *«este feature está en esta pieza»*. Cuando llegue la ingesta, aquí cuelgan los N-numbers y las tolerancias y pasa a ser `INSTANCIA_EN_PROYECTO` |
 | Borrar una pieza es **solo de superusuario** | Es compartida por todos los features; no tiene autor al que atribuirla |
 
-### Ficheros subidos
+### Ficheros subidos y originales externos
 
-Los bytes se guardan en disco, en `settings.UPLOADS_DIR`. El Dockerfile fija **`/app/uploads`**
+`FeatureAsset.file_id` sigue apuntando a un documento independiente de su origen. Para
+`source=local`, el backend resuelve una ruta relativa dentro de `ASSETS_ROOT`, montado en
+solo lectura; vincular solo guarda metadatos. Si cambia su fecha/tamaño, exige revisar y volver
+a vincular. El UUID se conserva, y cambia `version` para invalidar enlaces anteriores.
+No hay historial de bytes ni detección automática de renombrados locales. Ver
+[contrato de archivos](ficheros-externos.md#modelo-y-api).
+
+Para `source=upload`, los bytes se guardan en disco, en `settings.UPLOADS_DIR`. El Dockerfile fija **`/app/uploads`**
 como ruta absoluta; el WORKDIR es `/app/backend`. En local el valor por defecto `uploads` es
 relativo al directorio de trabajo, normalmente `backend/uploads`. El fichero se llama como el
 `id` de la fila; el nombre original y el mime-type viven en la base de datos.
 
 En Docker hay un volumen `app-uploads` montado en `/app/uploads` (`compose.yml`), así que los
 ficheros sobreviven a un `docker compose down`.
+
+La tabla `FilePreview` guarda la cola y el estado del GLB derivado de cada documento. Los
+bytes de las vistas ligeras viven bajo `/app/uploads/previews`; usan el mismo volumen,
+pero se pueden regenerar. Ver [vistas-3d.md](vistas-3d.md).
 
 Corregido el 2026-09-15: antes se escribía en `/app/backend/uploads`, fuera del volumen.
 Antes de recrear una instalación antigua, comprobar esa ruta y rescatar cualquier fichero;
@@ -138,9 +155,13 @@ Todo bajo `/api/v1`. Documentación interactiva en `http://localhost:8000/docs`.
 | `PUT` | `/parts/{id}` | Editar código o nombre. El código es único: choque → `409` |
 | `DELETE` | `/parts/{id}` | Borrar una pieza. **Solo superusuario** |
 | `POST` | `/files/` | Subir un fichero (multipart) → devuelve el `id` que se referencia |
+| `GET` | `/files/source` | Listar una carpeta del origen configurado; `path`, `skip`, `limit` |
+| `POST` | `/files/reference` | Registrar/reutilizar un original local sin copiarlo |
+| `PUT` | `/files/{id}/reference` | Volver a vincular con control de versión; conserva el UUID |
+| `GET` | `/files/{id}/status` | Disponible, ausente, cambiado o inaccesible |
 | `GET` | `/files/{id}/access-url` | Obtener enlace temporal autenticado; `download=true` fuerza descarga |
 | `GET` | `/files/{id}` | Servirlo con bearer o enlace firmado válido |
-| `DELETE` | `/files/{id}` | Borrarlo |
+| `DELETE` | `/files/{id}` | Borrar el registro; no borra el original externo |
 
 **La búsqueda `q` es global**: mira en el nombre, la descripción, los tags, el **código y el
 nombre de las piezas** (por adjunto y por declaración), el nombre de los adjuntos, y el título y
@@ -183,15 +204,19 @@ Componentes en `components/Features/`:
 | `FeatureSearch.tsx` | Buscador + tres desplegables (molde, categoría, tag) poblados desde `/features/filters`, y los ayudantes que traducen ese estado a los *search params* de la URL |
 | `FeatureCard.tsx` | La tarjeta: imagen, nombre, descripción, tags y el resumen *«2 piezas · 3197, 3212»* |
 | `PartAssetList.tsx` | 🔑 **Los ficheros agrupados por pieza**: un desplegable por pieza y dentro una fila por fichero. **El mismo componente sirve la ficha y el formulario** (`editable`) |
-| `viewers.ts` | Qué se puede ver en el navegador y qué no: extensión → visor, programa necesario, y el límite de 50 MB |
+| `viewers.ts` | Extensión → visor, carga directa hasta 50 MiB y GLB automático para STL/STEP grandes |
 | `ModelViewer.tsx` | El visor 3D (three.js + OpenCascade en WASM). Se carga con `import()` dinámico: no pesa nada hasta que alguien abre un 3D |
+| `modelControls.ts` | Giro libre en pantalla, desplazamiento y zoom 3D, sin bloqueo en los polos ni inercia al soltar |
+| `PdfViewer.tsx` | PDF.js en canvas: rueda sobre el cursor, arrastre del plano, encuadre y cambio de página |
 | `parts.ts` | La unión *piezas declaradas + piezas con ficheros* y el reparto por pieza y tipo. Es la lógica de la lista |
 | `PartSelect.tsx` | Desplegable de piezas con alta al vuelo (código + nombre) |
 | `FeatureForm.tsx` | El formulario de alta y edición (datos básicos + warnings, lessons, **Piezas** y **Ficheros por pieza**). Lo montan `/features/nuevo` y la propia ficha en modo edición. 🔑 **Repite el reparto de la ficha** —foto a la izquierda, datos a la derecha, secciones debajo— con una casilla en el sitio de cada dato, para que entrar y salir de edición no mueva nada de sitio |
 | `FeatureNotFound.tsx` | La pantalla de «feature no encontrado» de la ficha |
 | `FeatureActions.tsx` | Los botones *Editar* y *Borrar* de la tarjeta de gestión |
 | `NoteList.tsx` | Warnings y lessons **en modo edición**: título editable en su sitio, desplegable con el cuerpo dentro y autoguardado |
-| `AssetEditRow.tsx` | La fila de un fichero **en modo edición**: tipo y pieza en el desplegable del icono, nombre editable en línea, *Subir* / *Cambiar* |
+| `AssetEditRow.tsx` | Fila **en edición**: tipo/pieza, nombre, subida y vínculo a un archivo existente |
+| `SourceFilePicker.tsx` | Diálogo de selección de originales; vincular o volver a vincular con revisión opcional |
+| `DocumentStatus.tsx` | Estado del original y aviso de archivo ausente/cambiado/inaccesible |
 | `constants.ts` | Las etiquetas en castellano de categorías y tipos, y el icono de cada tipo |
 | `queries.ts` | Las query keys. Todo cuelga de `["features"]`: invalidar esa raíz refresca todo |
 
@@ -207,22 +232,31 @@ Warnings y Lessons: un **desplegable por pieza** (`3212 · Pump Housing`) y dent
 fichero**.
 
 **El checklist de lo que falta no se pierde**: lo dan el contador de cada pieza
-(*«5 ficheros · 2 subidos»*) y las filas que dicen *«sin fichero subido»*.
+(*«5 ficheros · 2 vinculados»*) y las filas que dicen *«sin archivo vinculado»*.
 
 🔑 **Cada fila promete lo que va a pasar antes de que la cliques**, que es lo que la tabla no hacía
 (los iconos no se podían clicar y nadie sabía por qué):
 
 | Se ve | Significa | Al clicar |
 |---|---|---|
-| Nombre subrayable + fichero y tamaño | Hay fichero y **se puede ver aquí** | La página del fichero, con el visor |
-| Igual, pero en gris debajo *«necesita Moldflow Communicator»* o *«demasiado grande para el visor»* | Hay fichero pero **la aplicación no ofrece un visor para él** | Nada: solo queda el botón de descargar |
-| *«sin fichero subido»* en cursiva | El adjunto está declarado pero **nadie ha subido el fichero**. Es el caso del seed | Nada |
+| Nombre legible del adjunto y tamaño | Hay fichero y **se puede ver aquí** | La página del fichero, con el visor |
+| Igual, pero en gris debajo *«necesita Moldflow Communicator»* o *«demasiado grande para el visor»* | Hay fichero pero **la aplicación no ofrece un visor para él** | Página de detalles, estado y descarga |
+| *«sin archivo vinculado»* en cursiva | El adjunto está declarado pero no tiene archivo. Es el caso inicial del seed | Vincular desde Editar |
+
+La fila no repite el nombre original del archivo ni «Archivo vinculado». La cabecera del visor
+también omite tipo, nombre interno, ruta y revisión técnica. Esos metadatos siguen en la BD.
+Solo se muestran avisos de disponibilidad cuando requieren una acción. Si falta el original
+o ha cambiado, **Volver a vincular** permite corregir la ubicación/revisión. El selector es un
+diálogo; los visores siguen en su página. Al volver se conserva el desplegado por pieza en la
+sesión del navegador y se restaura el scroll de la ruta.
 
 Lo decide `viewers.ts` a partir del tipo MIME, la extensión y el tamaño: los PDF con tipo
 `application/pdf` y las imágenes JPEG, PNG, GIF, WebP, AVIF y BMP se pintan en la página.
 La imagen de cabecera admite esos mismos formatos, tanto al seleccionar como al arrastrar;
 SVG y otros tipos no admitidos se ofrecen como archivos descargables. STL, GLB, OBJ, PLY,
-STEP e IGES van al visor 3D si pesan menos de **50 MB**; el resto —`.mfr` de Moldflow,
+STEP e IGES van directamente al visor 3D hasta **50 MiB**. Los STL y STEP/STP mayores usan
+un [GLB generado en el servidor](vistas-3d.md); otros formatos grandes solo se descargan.
+Los formatos sin visor —`.mfr` de Moldflow,
 `.sldprt`, `.CATPart`— solo se descargan.
 
 La aplicación no integra protocolos ni componentes de escritorio para abrir CAD local.
@@ -232,18 +266,42 @@ en el equipo del usuario.
 
 ### El visor 3D
 
+Interacción ajustada el **2026-09-15** a petición del usuario: arrastre izquierdo para girar
+libremente en el sentido de la pantalla, rueda para zoom, derecho/central para desplazar y
+**Encuadrar** para recuperar la vista inicial. Se usa `TrackballControls` con el eje Z configurado
+antes de inicializar el control y sin inercia al soltar. Se elimina el contador de triángulos
+y el texto de instrucciones. La versión anterior cambiaba `camera.up` después de construir
+`OrbitControls`; ese control había calculado su eje con otro valor y limitaba el paso por los polos.
+
 `ModelViewer.tsx`, con **three.js** para lo que ya son triángulos (STL, GLB, OBJ, PLY) y
 **`occt-import-js`** —OpenCascade compilado a WebAssembly, lo que usa Online 3D Viewer— para lo que
 es B-rep con NURBS y hay que teselar (STEP, IGES, BREP).
 
-🔑 **Tesela el navegador del que mira, no el servidor.** El STEP de la pieza del 3212 son 10 MB y
+El navegador tesela los CAD pequeños. El STEP de la pieza del 3212 son 10 MB y
 tarda unos segundos. Y los dos paquetes van en `import()` dinámico: en el build salen como chunks
 aparte (`three.module`, `occt-import-js`, `ModelViewer`), así que **quien no abre un 3D no se
 descarga three.js**.
 
-🔴 **Sin probar con ficheros reales**: cuando se escribió esto no había ningún fichero subido en la
-base (el seed crea los cinco adjuntos del Bolt Eye sin fichero). Compila y hace el build; falta
-verlo con el STEP de 10 MB delante.
+**Comprobado con el STEP real del 3212 el 2026-09-15:** 83.132 triángulos, giro, zoom,
+encuadre, descarga idéntica al original y salida/vuelta desde la ficha. El PDF real también
+se visualiza y amplía; su resolución original limita los detalles pequeños. Ver la
+[verificación](ficheros-externos.md#verificación-con-el-3212). El escaneo y el molde grandes
+usan `WebModelViewer.tsx`, que consulta la cola y entrega a `ModelViewer` únicamente su GLB.
+El enlace de descarga continúa apuntando al original. Implementación y límites en
+[vistas-3d.md](vistas-3d.md).
+
+### El visor de planos PDF
+
+`PdfViewer.tsx` sustituye el iframe nativo por un canvas de PDF.js. La rueda amplía alrededor del
+cursor y el arrastre izquierdo mueve el plano en cualquier dirección sin desplazar la página
+web. Los controles visibles son acercar, alejar y encuadrar; los de página aparecen solo si el
+PDF tiene varias. Admite flechas y +/-/0 desde el teclado. El renderizador y su worker se sirven
+desde la propia aplicación y se cargan solo al abrir un PDF; no se envía el plano a otro servicio.
+
+El original sigue disponible mediante **Descargar** y **Abrir en pestaña**. El canvas se vuelve
+a renderizar al ampliar, manteniendo la imagen anterior mientras tanto, con un límite de
+16 megapíxeles para controlar memoria. El PDF escaneado del 3212 conserva su resolución de origen.
+No se han añadido OCR, anotaciones ni selección de texto al canvas.
 
 ### La ficha es una página, no una modal (2026-08-19)
 
@@ -315,7 +373,7 @@ lista pero se escribía en otro sitio. Ahora **se escribe donde se lee**:
 | | Antes | Ahora |
 |---|---|---|
 | Warning / lesson | Fila con el título + lápiz → modal con título y cuerpo | **Título editable en la fila** y desplegable con el cuerpo dentro, editable ahí mismo |
-| Fichero de una pieza | Fila con el nombre + lápiz → modal con tipo, pieza y fichero | **Icono → desplegable** con el tipo y la pieza, **nombre editable en línea**, botón *Subir* / *Cambiar* |
+| Fichero de una pieza | Fila con el nombre + lápiz → modal con tipo, pieza y fichero | **Icono → desplegable**, nombre en línea, subida o **Vincular archivo existente** |
 | Añadir | Modal vacía que hay que rellenar y confirmar | Crea la fila en el momento, abierta y con el texto seleccionado para escribir encima |
 
 **Solo queda el botón de borrar**, que es la única acción que no se puede expresar escribiendo.
@@ -368,18 +426,21 @@ guardados pendientes. La cabecera se sigue guardando mediante su botón.
 ## Cómo se levanta
 
 ```powershell
-docker compose up -d --build db prestart backend   # aplica las migraciones al arrancar
+.\scripts\compose.ps1 up -d --build db prestart backend   # aplica las migraciones al arrancar
 cd frontend; npm run dev                           # http://localhost:5173
 ```
 
-🔴 **Sin `docker compose watch backend`, hay que usar `--build` después de tocar `backend/`.** El Dockerfile copia el código
+El lanzador carga también `.env.local` si existe y mantiene el montaje de originales. En Bash,
+usar `bash scripts/compose.sh`. Configuración en [ficheros-externos.md](ficheros-externos.md).
+
+🔴 **Sin `.\scripts\compose.ps1 watch backend`, hay que usar `--build` después de tocar `backend/`.** El Dockerfile copia el código
 dentro de la imagen; si ya existe un `backend:latest`, `docker compose up -d` a secas **lo
 reutiliza tal cual** y arrancas con el código viejo — sin errores, simplemente faltan los
 endpoints. Cómo se detecta:
 
 ```powershell
-docker compose exec backend alembic current
-docker compose exec backend alembic heads     # current debe coincidir con heads
+.\scripts\compose.ps1 exec backend alembic current
+.\scripts\compose.ps1 exec backend alembic heads     # current debe coincidir con heads
 ```
 
 El frontend no tiene este problema: Vite sirve desde el disco.
@@ -390,13 +451,14 @@ Hay una carga opcional con el **Bolt Eye del 3212**: sus 8 warnings y 2 lessons 
 de [modelo-datos.md](modelo-datos.md) y [3212/historial-molde.md](3212/historial-molde.md).
 
 ```powershell
-docker compose exec backend python -m app.seed_features
+.\scripts\compose.ps1 exec backend python -m app.seed_features
 ```
 
 Es idempotente: si el feature ya existe no toca nada. La creación completa usa una transacción:
 un fallo revierte el ejemplo entero y permite reintentar. Crea la pieza **3212 Pump Housing**, la
 declara en el feature y le cuelga los cinco adjuntos, uno por tipo. Los adjuntos se crean **sin
-fichero** — los CAD del cliente no se copian al repo, se suben desde la aplicación.
+fichero**: los originales se vinculan después desde la aplicación. El seed no depende de rutas
+personales. En desarrollo están vinculados el PDF, CAD, escaneo y molde del 3212.
 
 ### Regenerar el cliente TypeScript
 
@@ -408,6 +470,8 @@ bash scripts/generate-client.sh
 
 Requiere `uv` y npm. Exporta OpenAPI sin conectar a la BD, incluye las rutas exclusivas de tests
 para su SDK y genera `frontend/src/client`. El JSON intermedio queda ignorado por Git.
+Si `uv` no está disponible en el PATH, usar la alternativa Docker de
+[development.md](../development.md#regenerar-la-api-typescript).
 
 ### Comprobaciones
 
@@ -448,6 +512,6 @@ La cobertura HTML se genera dentro del stack de tests y desaparece al limpiarlo.
 | **Ordenar warnings y adjuntos arrastrando** | El campo `position` ya está en la BD y se respeta al leer, pero la UI todavía no deja reordenar |
 | **Imagen con la zona marcada en rojo** | Se sube ya hecha desde el CAD. La herramienta de anotación dentro de la app que menciona la fase B no está |
 | **Vincular un feature con sus N-numbers y sus cotas** | La tabla ya existe (`FeaturePartLink`), pero está vacía de contenido: solo dice *feature ↔ pieza*. Añadirle los N-numbers y las tolerancias la convierte en el `INSTANCIA_EN_PROYECTO` de [modelo-datos.md](modelo-datos.md) |
-| **Los ficheros de más de 50 MB no caben** | `MAX_UPLOAD_SIZE_MB = 50`: el molde (247 MB), el escaneo (236 MB) y el Moldflow (184 MB) **no se pueden subir**. La salida es referenciarlos donde ya están en vez de copiarlos — está planeado en [TODO.md](../TODO.md), no implementado |
-| **El visor 3D no se ha probado con ficheros reales** | Compila y se empaqueta bien, pero hasta que no se suba un STEP o un STL no se sabe si tesela y encuadra como debe |
+| **Vistas ligeras de escaneo y molde** | Implementadas: cola persistente, GLB en caché, original intacto y descarga íntegra; ver [vistas-3d.md](vistas-3d.md) |
+| **Conexión Microsoft 365** | Adaptador local implementado. Confirmar ubicación/permisos con IT (A10, prioridad 1) y desarrollar Graph con IDs estables; los visores usan el UUID interno del documento |
 | **La ficha de una pieza** | Hoy `Part` solo tiene código y nombre; el desplegable permite crear y seleccionar, no editar piezas existentes. La API sí permite editarlas. No hay página propia de pieza |

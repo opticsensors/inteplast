@@ -74,8 +74,11 @@ services:
           action: sync
           target: /app/backend
           ignore:
-            - ./backend/.venv
             - .venv
+            - tests/
+            - htmlcov/
+            - .ruff_cache/
+            - .mypy_cache/
         - path: ./backend/pyproject.toml
           action: rebuild
     # TODO: remove once coverage is done locally

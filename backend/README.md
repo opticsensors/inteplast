@@ -8,12 +8,12 @@ modelos o endpoints; allí se describen la base de conocimiento y los permisos.
 Desde la raíz:
 
 ```powershell
-docker compose up -d --build db prestart backend mailcatcher
+.\scripts\compose.ps1 up -d --build db prestart backend mailcatcher
 ```
 
 API: http://localhost:8000/docs. `prestart` aplica Alembic y crea el administrador inicial.
 El código de la imagen vive en `/app/backend/app`; el directorio de trabajo es `/app/backend`.
-`docker compose watch backend` sincroniza cambios locales. Sin `watch`, reconstruir con `--build`.
+`.\scripts\compose.ps1 watch backend` sincroniza cambios locales. Sin `watch`, reconstruir con `--build`.
 
 También se puede ejecutar Python localmente: `uv sync --package app` desde la raíz instala el
 workspace en `.venv`. Desde `backend/`, activar `../.venv/bin/activate` (Bash) o
@@ -50,8 +50,8 @@ en solo lectura. No copiar ni ejecutar los tests dentro del contenedor de trabaj
 ## Migraciones
 
 ```powershell
-docker compose exec backend alembic current
-docker compose exec backend alembic heads
+.\scripts\compose.ps1 exec backend alembic current
+.\scripts\compose.ps1 exec backend alembic heads
 ```
 
 La revisión actual debe coincidir con `heads`; no depender de un identificador pegado en una guía.
@@ -67,6 +67,12 @@ Revisar el contenido generado, versionarlo y reconstruir el backend. El prestart
 
 ## Ficheros y acceso
 
+`StoredFile` representa subidas y referencias locales mediante un mismo UUID. El adaptador
+de [file_sources.py](app/file_sources.py) resuelve los bytes; el montaje opcional de originales
+es de solo lectura. Configuración, migración, API, límites de revisión y Graph pendiente en
+[archivos externos](../docs/ficheros-externos.md). Usar el lanzador Compose conserva `.env.local`
+al reconstruir. En Bash, el equivalente es `bash scripts/compose.sh` desde la raíz.
+
 `UPLOADS_DIR=/app/uploads` en Docker; volumen persistente `app-uploads`. No guardar bytes en
 `/app/backend/uploads` dentro del contenedor. En local, el valor por defecto es `uploads`.
 Antes de actualizar una instalación antigua, comprobar si hay bytes en la ruta antigua y
@@ -77,6 +83,11 @@ Los ficheros requieren autenticación o una URL firmada temporal obtenida con au
 conocer un UUID no permite descargarlos. El token de fichero no sirve como token de sesión.
 
 ## Cliente y plantillas
+
+Los STL/STEP grandes usan una cola persistente `FilePreview` y un conversor nativo aislado.
+El GLB se guarda bajo `UPLOADS_DIR/previews`; el original sigue en su origen de solo lectura.
+Migración `b73c69e5fa41`, límites, recuperación y dependencias de Docker en
+[vistas 3D ligeras](../docs/vistas-3d.md). Python compatible: 3.10–3.13.
 
 Regenerar el cliente tras cambiar la API: `bash scripts/generate-client.sh` desde la raíz.
 Las plantillas de correo están en `app/email-templates/src` (MJML) y `build` (HTML utilizado en

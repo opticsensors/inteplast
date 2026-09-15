@@ -79,6 +79,8 @@ const queryClient = new QueryClient({
  */
 const router = createRouter({
   routeTree,
+  scrollRestoration: true,
+  getScrollRestorationKey: (location) => location.pathname,
   stringifySearch: stringifySearchWith(JSON.stringify),
 })
 declare module "@tanstack/react-router" {

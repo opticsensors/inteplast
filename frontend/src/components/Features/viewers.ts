@@ -9,8 +9,11 @@ import type { FilePublic } from "@/client"
  */
 export type ViewerKind = "pdf" | "image" | "mesh" | "brep" | null
 
-/** Por encima de esto no se ofrece visor: se ofrece la descarga y se explica. */
+/** Native browser loading limit; large STL/STEP use a server-generated GLB. */
 export const VIEWER_MAX_MB = 50
+
+export const usesWebPreview = (file: FilePublic) =>
+  isTooBig(file) && ["stl", "step", "stp"].includes(extensionOf(file.filename))
 
 /** Same raster MIME types that the backend serves inline; SVG is a download. */
 export const RASTER_IMAGE_TYPES = [
@@ -101,9 +104,11 @@ export function fileAction(file: FilePublic | null | undefined): {
       reason: app ? `necesita ${app}` : "no se puede previsualizar",
     }
   }
-  // El molde del 3212 son 247 MB de ensamblaje completo: teselarlo en el
-  // navegador no termina. Mas vale decirlo que dejar la pestana colgada.
-  if ((viewer === "mesh" || viewer === "brep") && isTooBig(file)) {
+  if (
+    (viewer === "mesh" || viewer === "brep") &&
+    isTooBig(file) &&
+    !usesWebPreview(file)
+  ) {
     return {
       action: "download",
       viewer: null,

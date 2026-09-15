@@ -1,20 +1,27 @@
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
 import { Download, ExternalLink, FileQuestion } from "lucide-react"
 import { lazy, Suspense } from "react"
 
 import { ApiError } from "@/client"
-import { ASSET_KIND_LABELS } from "@/components/Features/constants"
 import { FeatureNotFound } from "@/components/Features/FeatureNotFound"
 import { featureQueryOptions } from "@/components/Features/queries"
-import { fileAction } from "@/components/Features/viewers"
+import { SourceFilePicker } from "@/components/Features/SourceFilePicker"
+import { fileAction, usesWebPreview } from "@/components/Features/viewers"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useFileAccess } from "@/hooks/useFileAccess"
-import { formatFileSize } from "@/utils"
+import {
+  fileErrorMessage,
+  useDocumentStatus,
+  useFileAccess,
+} from "@/hooks/useFileAccess"
 
 /** El visor 3D arrastra three.js y OpenCascade: solo se descarga si hace falta. */
 const ModelViewer = lazy(() => import("@/components/Features/ModelViewer"))
+const WebModelViewer = lazy(
+  () => import("@/components/Features/WebModelViewer"),
+)
+const PdfViewer = lazy(() => import("@/components/Features/PdfViewer"))
 
 export const Route = createFileRoute(
   "/_layout/features_/$featureId_/fichero/$assetId",
@@ -56,16 +63,17 @@ function EmptyState({
  * querer hacer con un adjunto:
  *
  * - **Verlo**: el plano PDF y las imagenes se pintan aqui; el 3D (STL, GLB,
- *   STEP, IGES) se abre en el visor, que tesela en el propio navegador.
+ *   STEP, IGES) se abre en el visor; STL/STEP grandes usan un GLB del servidor.
  * - **Bajarlo**: siempre, sea cual sea el formato.
  * - **Saber que necesita**: cuando no hay visor posible —Moldflow, SolidWorks,
- *   CATIA, o un ensamblaje de 247 MB— la pagina lo dice con palabras.
+ *   CATIA— la pagina lo dice con palabras.
  *
  * La aplicacion no integra el Explorador de Windows ni lanzadores de programas
  * locales; el usuario abre la descarga con la aplicacion que tenga asociada.
  */
 function AssetDetail() {
   const { featureId, assetId } = Route.useParams()
+  const queryClient = useQueryClient()
 
   const {
     data: feature,
@@ -77,6 +85,7 @@ function AssetDetail() {
   })
   const asset = (feature?.assets ?? []).find((item) => item.id === assetId)
   const access = useFileAccess(asset?.file?.id)
+  const status = useDocumentStatus(asset?.file)
 
   if (isPending) {
     return (
@@ -108,6 +117,9 @@ function AssetDetail() {
 
   const file = asset.file
   const { action, viewer, reason } = fileAction(file)
+  const unavailable =
+    file?.source === "local" &&
+    (status.isError || (status.data && status.data.state !== "available"))
 
   return (
     <div className="flex flex-col gap-4">
@@ -132,15 +144,21 @@ function AssetDetail() {
             )}
           </p>
           <h1 className="text-2xl font-bold tracking-tight">{asset.name}</h1>
-          <p className="text-sm text-muted-foreground">
-            {ASSET_KIND_LABELS[asset.kind]}
-            {file && ` · ${file.filename} · ${formatFileSize(file.size)}`}
-          </p>
         </div>
 
         {file && (
           <div className="flex shrink-0 items-center gap-2">
-            {viewer === "pdf" && (
+            {file.source === "local" && (
+              <SourceFilePicker
+                document={file}
+                onLinked={async () => {
+                  await queryClient.invalidateQueries({
+                    queryKey: ["features"],
+                  })
+                }}
+              />
+            )}
+            {viewer === "pdf" && access.url && !unavailable && (
               <Button variant="outline" size="sm" asChild>
                 <a
                   href={access.url}
@@ -153,22 +171,51 @@ function AssetDetail() {
                 </a>
               </Button>
             )}
-            <Button size="sm" asChild>
-              <a href={access.downloadUrl} download={file.filename}>
-                <Download className="mr-2" />
-                Descargar
-              </a>
-            </Button>
+            {access.downloadUrl && !unavailable && (
+              <Button size="sm" asChild>
+                <a href={access.downloadUrl} download={file.filename}>
+                  <Download className="mr-2" />
+                  Descargar
+                </a>
+              </Button>
+            )}
           </div>
         )}
       </div>
 
       {!file ? (
-        <EmptyState title="Sin fichero subido">
+        <EmptyState title="Sin archivo vinculado">
           <p>
-            El adjunto esta declarado en la ficha, pero nadie ha subido todavia
-            el fichero. Se sube desde <em>Editar</em>, en la ficha del feature.
+            El adjunto está declarado en la ficha. Puedes vincular un archivo
+            existente desde <em>Editar</em>, en la ficha del feature.
           </p>
+        </EmptyState>
+      ) : unavailable ? (
+        <EmptyState
+          title={
+            status.data?.state === "changed"
+              ? "El original ha cambiado"
+              : "Archivo no disponible"
+          }
+        >
+          <p>
+            {status.isError
+              ? fileErrorMessage(status.error)
+              : status.data?.message}
+          </p>
+          <Button
+            onClick={() => {
+              void status.refetch()
+              void access.refetch()
+            }}
+          >
+            Comprobar de nuevo
+          </Button>
+        </EmptyState>
+      ) : access.isError ? (
+        <EmptyState title="No se ha podido abrir el archivo">
+          <p>{fileErrorMessage(access.error)}</p>
+          <Button onClick={() => void access.refetch()}>Reintentar</Button>
         </EmptyState>
       ) : action === "download" ? (
         <EmptyState title="Este formato no se puede ver en el navegador">
@@ -178,24 +225,18 @@ function AssetDetail() {
             con el programa que tenga asociado.
           </p>
         </EmptyState>
-      ) : access.isError ? (
-        <EmptyState title="No se ha podido autorizar el fichero">
-          <Button
-            onClick={() => {
-              void access.refetch()
-            }}
-          >
-            Reintentar
-          </Button>
-        </EmptyState>
       ) : !access.url ? (
         <Skeleton className="h-[70vh] w-full rounded-lg" />
       ) : viewer === "pdf" ? (
-        <iframe
-          src={access.url}
-          title={asset.name}
-          className="h-[75vh] w-full rounded-lg border"
-        />
+        <Suspense
+          fallback={<Skeleton className="h-[75vh] w-full rounded-lg" />}
+        >
+          <PdfViewer
+            key={`${file.id}:${file.version}`}
+            file={file}
+            title={asset.name}
+          />
+        </Suspense>
       ) : viewer === "image" ? (
         <div className="flex justify-center rounded-lg border bg-muted/30 p-4">
           <img
@@ -208,7 +249,11 @@ function AssetDetail() {
         <Suspense
           fallback={<Skeleton className="h-[70vh] w-full rounded-lg" />}
         >
-          <ModelViewer file={file} />
+          {usesWebPreview(file) ? (
+            <WebModelViewer key={`${file.id}:${file.version}`} file={file} />
+          ) : (
+            <ModelViewer key={`${file.id}:${file.version}`} file={file} />
+          )}
         </Suspense>
       )}
     </div>

@@ -64,6 +64,96 @@ async function mount(t) {
   return { page, network }
 }
 
+test("linking an original preserves the header and uploads no bytes", async (t) => {
+  const { page, network } = await mount(t)
+  await page.getByPlaceholder("Nombre del feature").fill("Unsaved header")
+  await page
+    .getByRole("button", { name: "Vincular archivo existente", exact: true })
+    .click()
+  await page.getByRole("button", { name: "drawings", exact: true }).click()
+  await page.getByRole("button", { name: /drawing.pdf/ }).click()
+  await page.getByLabel("Revisión del documento (opcional)").fill("07")
+  await page.getByRole("button", { name: "Vincular", exact: true }).click()
+  await page.waitForFunction(
+    () => window.review.feature.assets[0].file?.id === "document-one",
+  )
+  assert.equal(
+    await page.getByPlaceholder("Nombre del feature").inputValue(),
+    "Unsaved header",
+  )
+  assert.deepEqual(await page.evaluate(() => window.review.uploadRequests), [])
+  assert.deepEqual(await page.evaluate(() => window.review.referenceRequests), [
+    { path: "drawings/drawing.pdf", revision: "07" },
+  ])
+  assert.deepEqual(network, [])
+})
+
+test("failed source selection can be cancelled without trapping navigation", async (t) => {
+  const { page } = await mount(t)
+  await page.evaluate(() => {
+    window.review.failReferences = true
+  })
+  await page
+    .getByRole("button", { name: "Vincular archivo existente", exact: true })
+    .click()
+  await page.getByRole("button", { name: "drawings", exact: true }).click()
+  await page.getByRole("button", { name: /drawing.pdf/ }).click()
+  await page.getByRole("button", { name: "Vincular", exact: true }).click()
+  await page.getByRole("alert").getByText("Source unavailable").waitFor()
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Cancelar", exact: true })
+    .click()
+  await page.getByRole("link", { name: "Otra pagina", exact: true }).click()
+  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
+})
+
+test("missing original can be relinked with its document identity intact", async (t) => {
+  const { page } = await mount(t)
+  await page.evaluate(async () => {
+    window.review.fileState = "missing"
+    window.review.feature.assets[0].file = {
+      id: "existing-document",
+      filename: "old.pdf",
+      size: 128,
+      content_type: "application/pdf",
+      source: "local",
+      version: "old-version",
+      revision: "06",
+    }
+    await window.review.refetch()
+  })
+  await page
+    .getByText("Archivo no encontrado. Puedes volver a vincularlo.", {
+      exact: false,
+    })
+    .waitFor()
+  await page
+    .getByRole("button", { name: "Volver a vincular", exact: true })
+    .click()
+  await page.getByRole("button", { name: "drawings", exact: true }).click()
+  await page.getByRole("button", { name: /drawing.pdf/ }).click()
+  await page.getByLabel("Revisión del documento (opcional)").fill("07")
+  await page
+    .getByRole("button", { name: "Actualizar referencia", exact: true })
+    .click()
+  await page.waitForFunction(
+    () => window.review.feature.assets[0].file.version === "version-two",
+  )
+  assert.equal(
+    await page.evaluate(() => window.review.feature.assets[0].file.id),
+    "existing-document",
+  )
+  assert.deepEqual(await page.evaluate(() => window.review.relinkRequests), [
+    {
+      fileId: "existing-document",
+      path: "drawings/drawing.pdf",
+      revision: "07",
+      expected_version: "old-version",
+    },
+  ])
+})
+
 test("note refresh preserves dirty header fields", async (t) => {
   const { page } = await mount(t)
   await page.getByPlaceholder("Nombre del feature").fill("Pending header")
@@ -358,6 +448,6 @@ test("file list offers previews only for inline raster and PDF MIME types", asyn
       0,
     )
   }
-  await page.getByTitle("Descargar illustration.svg", { exact: true }).waitFor()
-  await page.getByTitle("Descargar drawing.pdf", { exact: true }).waitFor()
+  await page.getByTitle("Descargar SVG", { exact: true }).waitFor()
+  await page.getByTitle("Descargar Unverified PDF", { exact: true }).waitFor()
 })

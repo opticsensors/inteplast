@@ -32,6 +32,7 @@ services:
     environment:
       ENVIRONMENT: local
       ENABLE_TEST_ROUTES: "true"
+      PREVIEW_WORKER_ENABLED: "false"
       ALLOW_PUBLIC_SIGNUP: "false"
       PROJECT_NAME: INTEPLAST tests
       SECRET_KEY: isolated-test-signing-key-not-for-deployment

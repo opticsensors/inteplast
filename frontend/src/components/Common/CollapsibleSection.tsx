@@ -10,6 +10,7 @@ interface CollapsibleSectionProps {
   actions?: ReactNode
   defaultOpen?: boolean
   keepMounted?: boolean
+  storageKey?: string
   children: ReactNode
   className?: string
 }
@@ -21,17 +22,35 @@ export function CollapsibleSection({
   actions,
   defaultOpen = true,
   keepMounted = false,
+  storageKey,
   children,
   className,
 }: CollapsibleSectionProps) {
-  const [isOpen, setIsOpen] = useState(defaultOpen)
+  const [isOpen, setIsOpen] = useState(() => {
+    try {
+      const saved = storageKey ? sessionStorage.getItem(storageKey) : null
+      return saved === null ? defaultOpen : saved === "true"
+    } catch {
+      return defaultOpen
+    }
+  })
 
   return (
     <div className={cn("rounded-lg border", className)}>
       <div className="flex items-center gap-2 px-3 py-2">
         <button
           type="button"
-          onClick={() => setIsOpen((open) => !open)}
+          onClick={() =>
+            setIsOpen((open) => {
+              try {
+                if (storageKey)
+                  sessionStorage.setItem(storageKey, String(!open))
+              } catch {
+                /* Storage may be disabled. */
+              }
+              return !open
+            })
+          }
           aria-expanded={isOpen}
           className="flex flex-1 items-center gap-2 text-left text-sm font-medium"
         >

@@ -15,6 +15,7 @@ import useCustomToast from "@/hooks/useCustomToast"
 import { formatFileSize, handleError } from "@/utils"
 import { AssetEditRow, NEW_ASSET_NAME } from "./AssetEditRow"
 import { ASSET_ICONS, ASSET_KIND_SHORT, ASSET_KINDS } from "./constants"
+import { DocumentStatus } from "./DocumentStatus"
 import { featureParts, type PartRow, partRows } from "./parts"
 import { fileAction } from "./viewers"
 
@@ -48,15 +49,12 @@ function AssetRow({
       </span>
       <span className="min-w-0 flex-1 truncate">{asset.name}</span>
       {file ? (
-        <span
-          className="hidden shrink-0 text-xs text-muted-foreground sm:inline"
-          title={file.filename}
-        >
-          {file.filename} · {formatFileSize(file.size)}
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {formatFileSize(file.size)}
         </span>
       ) : (
         <span className="shrink-0 text-xs italic text-muted-foreground">
-          sin fichero subido
+          sin archivo vinculado
         </span>
       )}
     </>
@@ -65,12 +63,16 @@ function AssetRow({
   return (
     <div className="rounded-md border">
       <div className="flex items-center gap-2 px-2 py-1.5 text-sm">
-        {file && action === "view" ? (
+        {file ? (
           <Link
             to="/features/$featureId/fichero/$assetId"
             params={{ featureId, assetId: asset.id }}
             className="flex min-w-0 flex-1 items-center gap-2 hover:underline"
-            title={`Ver ${asset.name}`}
+            title={
+              action === "view"
+                ? `Ver ${asset.name}`
+                : `Detalles de ${asset.name}`
+            }
           >
             {body}
           </Link>
@@ -84,7 +86,7 @@ function AssetRow({
             variant="ghost"
             size="icon"
             className="size-7 shrink-0"
-            title={`Descargar ${file.filename}`}
+            title={`Descargar ${asset.name}`}
           >
             <FileLink fileId={file.id} downloadFile download={file.filename}>
               <Download className="size-3.5" />
@@ -93,6 +95,8 @@ function AssetRow({
           </Button>
         )}
       </div>
+
+      <DocumentStatus file={file} />
 
       {reason && (
         <p className="px-2 pb-1.5 pl-8 text-xs text-muted-foreground">
@@ -161,6 +165,7 @@ function PartGroup({
   return (
     <CollapsibleSection
       keepMounted={editable}
+      storageKey={`feature-piece:${feature.id}:${row.part?.id ?? "unassigned"}`}
       defaultOpen={defaultOpen}
       title={
         row.part ? (
@@ -179,7 +184,7 @@ function PartGroup({
         <div className="flex shrink-0 items-center gap-1">
           <span className="text-xs text-muted-foreground">
             {assets.length} fichero{assets.length === 1 ? "" : "s"} · {uploaded}{" "}
-            subido{uploaded === 1 ? "" : "s"}
+            vinculado{uploaded === 1 ? "" : "s"}
           </span>
           {editable && declared && row.part && (
             <Button
@@ -238,11 +243,11 @@ function PartGroup({
  * por tres motivos: era lo unico con forma de tabla en toda la ficha, en la
  * casilla no cabe el nombre del fichero —que es lo que se quiere leer—, y con
  * varias piezas se iba en horizontal. El checklist de lo que falta no se
- * pierde: lo dan el contador de cada pieza y las filas «sin fichero subido».
+ * pierde: lo dan el contador de cada pieza y las filas «sin archivo vinculado».
  *
  * 🔑 El MISMO componente sirve la ficha (lectura) y el formulario (edicion).
  * En edicion cada fila se escribe encima —tipo, nombre y fichero— sin botones
- * de editar y sin modales.
+ * de editar. El selector de originales externos usa un dialogo.
  */
 export function PartAssetList({
   feature,
@@ -276,7 +281,7 @@ export function PartAssetList({
     <div className="space-y-2">
       <p className="text-xs text-muted-foreground">
         {pieces} pieza{pieces === 1 ? "" : "s"} · {assets.length} fichero
-        {assets.length === 1 ? "" : "s"} · {uploaded} subido
+        {assets.length === 1 ? "" : "s"} · {uploaded} vinculado
         {uploaded === 1 ? "" : "s"}
       </p>
       {rows.map((row) => (

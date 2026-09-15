@@ -24,7 +24,9 @@ import useCustomToast from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
 import { formatFileSize, handleError } from "@/utils"
 import { ASSET_ICONS, ASSET_KIND_LABELS, ASSET_KINDS } from "./constants"
+import { DocumentStatus } from "./DocumentStatus"
 import { SaveStatus } from "./SaveStatus"
+import { SourceFilePicker } from "./SourceFilePicker"
 import { useAutosave } from "./useAutosave"
 import { usePendingTask } from "./usePendingTask"
 
@@ -213,11 +215,8 @@ export function AssetEditRow({
 
         {file ? (
           <>
-            <span
-              className="hidden shrink-0 text-xs text-muted-foreground sm:inline"
-              title={file.filename}
-            >
-              {file.filename} · {formatFileSize(file.size)}
+            <span className="shrink-0 text-xs text-muted-foreground">
+              {formatFileSize(file.size)}
             </span>
             <Button
               type="button"
@@ -284,6 +283,33 @@ export function AssetEditRow({
           }}
         />
       </div>
+      <div className="flex flex-wrap items-center gap-2 py-1">
+        <SourceFilePicker
+          disabled={fileUpload.pending || metadata.pending}
+          onLinked={async (linked) => {
+            const patch: FeatureAssetUpdate = { file_id: linked.id }
+            if (name === NEW_ASSET_NAME) {
+              autosave.change({ name: linked.filename.replace(/\.[^.]+$/, "") })
+              const guessed = KIND_BY_EXTENSION[extensionOf(linked.filename)]
+              if (guessed) patch.kind = guessed
+            }
+            if (!(await metadata.run(patch)))
+              throw new Error(
+                "No se ha podido guardar el adjunto. Reintenta el guardado de la fila.",
+              )
+          }}
+        />
+        {file?.source === "local" && (
+          <SourceFilePicker
+            document={file}
+            disabled={fileUpload.pending || metadata.pending}
+            onLinked={async () => {
+              await queryClient.invalidateQueries({ queryKey: ["features"] })
+            }}
+          />
+        )}
+      </div>
+      <DocumentStatus file={file} />
       <SaveStatus
         error={autosave.error}
         saving={autosave.saving}

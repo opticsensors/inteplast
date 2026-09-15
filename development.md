@@ -6,13 +6,18 @@ Desde la raíz, con Docker Desktop arrancado:
 
 ```powershell
 npm.cmd ci
-docker compose up -d --build db prestart backend mailcatcher
+.\scripts\compose.ps1 up -d --build db prestart backend mailcatcher
 npm.cmd run dev
 ```
 
 El frontend usa Vite local. El backend y PostgreSQL corren en Docker. Para sincronización y
-recarga automática del backend, ejecutar `docker compose watch backend`; `up` por sí solo
+recarga automática del backend, ejecutar `.\scripts\compose.ps1 watch backend`; `up` por sí solo
 no sincroniza el código. El WORKDIR del backend es `/app/backend`.
+
+El lanzador carga `.env` y `.env.local` si existe; en Bash usar `bash scripts/compose.sh`.
+La configuración opcional conecta los originales en solo lectura mediante `compose.assets.yml`.
+Ver [archivos externos](docs/ficheros-externos.md). Usar el lanzador para todos los comandos de
+la aplicación conserva ese montaje. Los lanzadores de tests mantienen su configuración aislada.
 
 `compose.override.yml` añade puertos y configuración local. Usar los nombres de servicio:
 arrancar todo el Compose también incluye servicios que no hacen falta para trabajar.
@@ -24,8 +29,8 @@ de ejemplo a otros equipos. Producción usa el proxy HTTPS del Compose principal
 | Frontend Vite | http://localhost:5173 |
 | API / Swagger | http://localhost:8000/docs |
 | Mailcatcher (si se arranca) | http://localhost:1080 |
-| Adminer (opcional: `docker compose up -d adminer`) | http://localhost:8080 |
-| Traefik (opcional: `docker compose up -d proxy`) | http://localhost:8090 |
+| Adminer (opcional: `.\scripts\compose.ps1 up -d adminer`) | http://localhost:8080 |
+| Traefik (opcional: `.\scripts\compose.ps1 up -d proxy`) | http://localhost:8090 |
 
 Mailcatcher captura el correo local. No se inicia automáticamente al arrancar solo `backend`;
 incluirlo como servicio si se van a probar recuperación de contraseña o altas desde Admin.
@@ -35,7 +40,7 @@ incluirlo como servicio si se van a probar recuperación de contraseña o altas 
 PostgreSQL sigue siendo necesario. `uv` gestiona un workspace con `.venv` en la **raíz**:
 
 ```powershell
-docker compose up -d db mailcatcher
+.\scripts\compose.ps1 up -d db mailcatcher
 uv sync --package app
 cd backend
 ..\.venv\Scripts\Activate.ps1
@@ -54,6 +59,8 @@ administrador inicial; son necesarios en una BD nueva porque aquí no se ejecuta
 ## Configuración y datos
 
 `.env` contiene valores de desarrollo y está versionado. No guardar credenciales reales en él.
+`.env.local`, ignorado por Git, contiene la ruta personal del origen y su identificador estable;
+la plantilla es `.env.local.example`. No confundirlo con `frontend/.env` ni guardarlo en Git.
 Para despliegue, usar variables del entorno o un fichero excluido, por ejemplo `.env.production`;
 ver [deployment.md](deployment.md). Las variables del shell prevalecen en la interpolación de Compose.
 
@@ -119,3 +126,17 @@ bash scripts/generate-client.sh
 Requiere `uv`, Node.js y las dependencias instaladas con `npm ci`. Exporta OpenAPI sin abrir la BD,
 genera `frontend/src/client` e incluye las rutas exclusivas de tests para su aprovisionamiento.
 `frontend/openapi.json` es un intermedio ignorado. Versionar los cambios del cliente generado.
+
+Si `uv` no está en el PATH pero el backend Docker ya está reconstruido, alternativa PowerShell
+desde la raíz (solo exporta el esquema, sin conectar a la BD):
+
+```powershell
+$schema = .\scripts\compose.ps1 exec -T -e ENABLE_TEST_ROUTES=true -e ENVIRONMENT=local -e POSTGRES_DB=app_test backend python -c 'import json; from app.main import app; print(json.dumps(app.openapi()))'
+if ($LASTEXITCODE -ne 0) { throw 'OpenAPI export failed' }
+[IO.File]::WriteAllText((Join-Path (Get-Location) 'frontend/openapi.json'), ($schema -join "`n"), (New-Object Text.UTF8Encoding $false))
+npm.cmd run generate-client --workspace frontend
+```
+
+Esas variables afectan únicamente al proceso que exporta OpenAPI; no habilitan las rutas de
+tests en el servidor en ejecución. Evitar la redirección `>` de PowerShell 5 para este JSON:
+puede producir UTF-16 en lugar de UTF-8.

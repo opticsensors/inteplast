@@ -4,11 +4,11 @@ React + TypeScript, Vite, TanStack Router/Query and Tailwind CSS. Read [the appl
 
 ## Local development
 
-Use Node.js 22 or later. Run these commands from the repository root:
+Use Node.js 22.13+ on the 22.x branch, or Node.js 24+, as required by PDF.js. Run these commands from the repository root:
 
 ```bash
 npm ci
-docker compose up -d --build db prestart backend
+bash scripts/compose.sh up -d --build db prestart backend
 npm run dev --workspace frontend
 ```
 
@@ -27,11 +27,39 @@ Accounts are provisioned by an administrator. The login and `/signup` pages dire
 
 ## Protected files
 
+**Vincular archivo existente** selects an original from the configured read-only source.
+**Volver a vincular** updates a local document's location/revision while retaining its UUID;
+the dialog explains that every feature using that document is affected. Missing, changed and
+unavailable originals display recovery actions. See [external files](../docs/ficheros-externos.md)
+for setup and the real 3212 PDF/STEP verification. Graph is a future adapter.
+
+The file viewer remains a dedicated page. The picker uses a dialog. Part sections retain their
+folding state in session storage, and navigation restores scroll by pathname.
+
+File rows display the human-readable asset name and size. Viewer headers omit internal
+filenames, paths and revision metadata. Available originals have no status footer; actionable
+missing/changed/unavailable messages remain. Metadata is retained for linking and downloads.
+
+`PdfViewer.tsx` uses PDF.js with a locally bundled module worker, loaded only when opening a
+PDF. Wheel zoom keeps the point under the cursor fixed; left drag pans the sheet. Plus/minus,
+fit and page navigation are available as buttons. Arrow keys pan; +/- zoom and 0 fits. Rendering
+uses a temporary canvas so zoom does not blank the sheet, with a 16-megapixel backing limit.
+The original PDF remains downloadable; no server-side image copy is created. `nginx.conf`
+explicitly serves `.mjs` as JavaScript for the module worker.
+
+`modelControls.ts` uses TrackballControls: left drag rotates in screen space, right/middle drag
+pans, and the wheel zooms. Camera up is configured before constructing the controller. Rotation
+has no fixed-up pole and stops on release. The triangle counter and gesture footer are omitted.
+
 Images, previews and downloads obtain a short-lived URL from the authenticated `/files/{id}/access-url` endpoint. A plain file UUID is not sufficient to read bytes. Links request authorization metadata without downloading the file contents. Download links ask the server for attachment disposition, including when frontend and API use different origins.
 
 Header images accept JPEG, PNG, GIF, WebP, AVIF and BMP. SVG and other unsupported image types remain downloadable attachments. PDF previews require the `application/pdf` MIME type; the viewer follows what the server can display inline.
 
 3D loading stays lazy. The viewer supports mesh and CAD formats described in [the application guide](../docs/app-web.md); it does not run a desktop CAD application.
+
+Large STL/STEP originals use `WebModelViewer`: it polls the authenticated preview queue and
+passes only the cached GLB to `ModelViewer`. Leaving the page stops polling while the server
+continues conversion. Download still returns the original. See [web previews](../docs/vistas-3d.md).
 
 ## Generated API client
 
@@ -52,7 +80,7 @@ npm exec --workspace frontend -- tsc -p tsconfig.build.json --noEmit
 npm run test:components --workspace frontend
 ```
 
-The component regressions bundle the real React editors and router with an in-memory API. Playwright runs headless with all outbound browser requests blocked. They cover header preservation, folding, refetches, ordered saves, failures, navigation, uploads and file authorization links. Install the Playwright browser once if necessary with `npm exec --workspace frontend -- playwright install chromium`.
+The component regressions bundle the real React editors and router with an in-memory API. Playwright runs headless with external browser requests blocked. They cover header preservation, folding, refetches, ordered saves, failures, navigation, uploads, external references/relinking and file authorization links. Viewer tests serve a synthetic two-page PDF and the local PDF.js worker, and exercise cursor-anchored zoom, drag/release, page changes, reopening, rotation direction and repeated pole crossings. Install the Playwright browser once if necessary with `npm exec --workspace frontend -- playwright install chromium`.
 
 For end-to-end tests, use the dedicated disposable stack:
 

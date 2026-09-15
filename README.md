@@ -8,34 +8,41 @@ La ingesta de mediciones y correcciones de molde todavía no está implementada.
 
 - [CLAUDE.md](CLAUDE.md): contexto, rutas y reglas del proyecto.
 - [Aplicación](docs/app-web.md): modelo, API, permisos y comportamiento.
+- [Archivos externos y visores](docs/ficheros-externos.md): vincular originales sin copiarlos,
+  configuración local y futura integración con OneDrive.
+- [Vistas 3D ligeras](docs/vistas-3d.md): GLB automáticos del escaneo y el molde, con caché.
 - [Datos del 3212](docs/3212/README.md) y [visores](data-explorer/README.md).
 - [Desarrollo](development.md), [backend](backend/README.md), [frontend](frontend/README.md).
 - [Despliegue](deployment.md) y [correcciones de la revisión](docs/revision-2026-09-15.md).
 
 ## Arranque local (PowerShell)
 
-Requisitos: Docker Desktop en ejecución y Node.js 22 con npm. Desde la raíz:
+Requisitos: Docker Desktop en ejecución y Node.js 22.13 o posterior de la rama 22 (o Node 24+),
+con npm. Desde la raíz:
 
 ```powershell
 npm.cmd ci
-docker compose up -d --build db prestart backend mailcatcher
+.\scripts\compose.ps1 up -d --build db prestart backend mailcatcher
 npm.cmd run dev
 ```
 
 Frontend: http://localhost:5173. API: http://localhost:8000/docs.
 `prestart` termina con código 0 después de aplicar migraciones y crear el administrador inicial.
 Las credenciales locales de ejemplo están en `.env`; los usuarios los crea el administrador.
+El lanzador carga también `.env.local` si existe. La carpeta externa se configura siguiendo
+la [guía de archivos](docs/ficheros-externos.md); PDF, CAD, escaneo y molde del Bolt Eye están vinculados
+en la instalación local de desarrollo. Un seed nuevo sigue creando filas sin archivo.
 
 Para sincronizar automáticamente cambios del backend, usar en otra terminal:
 
 ```powershell
-docker compose watch backend
+.\scripts\compose.ps1 watch backend
 ```
 
 Sin `watch`, los cambios del backend requieren `--build`. Para cargar el ejemplo opcional:
 
 ```powershell
-docker compose exec backend python -m app.seed_features
+.\scripts\compose.ps1 exec backend python -m app.seed_features
 ```
 
 ## Comprobaciones
@@ -63,7 +70,7 @@ de leer ficheros: un placeholder puede disparar una descarga completa.
 ## Parar la aplicación
 
 ```powershell
-docker compose down
+.\scripts\compose.ps1 down
 ```
 
 Este comando conserva la BD y las subidas. No añadir `-v`: eliminaría los volúmenes persistentes.

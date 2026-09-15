@@ -4,29 +4,17 @@ import type * as THREE_NS from "three"
 
 import { type FilePublic, FilesService } from "@/client"
 import { absoluteFileUrl } from "@/hooks/useFileAccess"
+import { createModelControls } from "./modelControls"
 
 type Three = typeof THREE_NS
 
 type Status =
   | { phase: "loading"; step: string }
-  | { phase: "ready"; triangles: number }
+  | { phase: "ready" }
   | { phase: "error"; message: string }
 
 const extensionOf = (filename: string) =>
   filename.slice(filename.lastIndexOf(".") + 1).toLowerCase()
-
-/** Cuenta triangulos de todo lo que cuelgue del objeto, solo para informar. */
-function countTriangles(object: THREE_NS.Object3D): number {
-  let total = 0
-  object.traverse((child) => {
-    const geometry = (child as THREE_NS.Mesh).geometry
-    if (!geometry?.attributes?.position) return
-    total += geometry.index
-      ? geometry.index.count / 3
-      : geometry.attributes.position.count / 3
-  })
-  return Math.round(total)
-}
 
 /**
  * Malla ya teselada (STL, PLY, OBJ, glTF): el fichero trae los triangulos
@@ -144,10 +132,15 @@ async function loadBrep(
  * que three.js y el WASM de OpenCascade **solo se descargan cuando alguien
  * abre un 3D**, nunca al entrar en la aplicacion.
  *
- * El limite de tamano lo decide `viewers.ts` antes de llegar aqui: el molde de
- * 247 MB del 3212 no pasa por este componente.
+ * Large STL/STEP originals arrive as a cached GLB through previewUrl.
  */
-export default function ModelViewer({ file }: { file: FilePublic }) {
+export default function ModelViewer({
+  file,
+  previewUrl,
+}: {
+  file: FilePublic
+  previewUrl?: string
+}) {
   const containerRef = useRef<HTMLDivElement>(null)
   const resetRef = useRef<() => void>(() => undefined)
   const [status, setStatus] = useState<Status>({
@@ -160,6 +153,7 @@ export default function ModelViewer({ file }: { file: FilePublic }) {
     if (!container) return
 
     let disposed = false
+    const abort = new AbortController()
     let dispose: () => void = () => {}
 
     const run = async () => {
@@ -168,10 +162,12 @@ export default function ModelViewer({ file }: { file: FilePublic }) {
         if (disposed) return
 
         setStatus({ phase: "loading", step: "Descargando el fichero..." })
-        const access = await FilesService.createFileAccessUrl({
-          fileId: file.id,
+        const url =
+          previewUrl ??
+          (await FilesService.createFileAccessUrl({ fileId: file.id })).url
+        const response = await fetch(absoluteFileUrl(url), {
+          signal: abort.signal,
         })
-        const response = await fetch(absoluteFileUrl(access.url))
         if (!response.ok) {
           throw new Error(`no se ha podido descargar (HTTP ${response.status})`)
         }
@@ -179,18 +175,30 @@ export default function ModelViewer({ file }: { file: FilePublic }) {
         if (disposed) return
 
         setStatus({ phase: "loading", step: "Preparando la geometria..." })
-        const extension = extensionOf(file.filename)
+        const extension = previewUrl ? "glb" : extensionOf(file.filename)
         const object = ["step", "stp", "igs", "iges", "brep"].includes(
           extension,
         )
           ? await loadBrep(three, extension, buffer)
           : await loadMesh(three, extension, buffer)
         if (disposed) return
-
-        const { OrbitControls } = await import(
-          "three/examples/jsm/controls/OrbitControls.js"
-        )
-        if (disposed) return
+        if (
+          previewUrl &&
+          ["step", "stp"].includes(extensionOf(file.filename))
+        ) {
+          // The reducer welds CAD face boundaries. Flat lighting keeps planar
+          // plates and sharp corners from looking rounded across those joins.
+          object.traverse((child) => {
+            if (!(child instanceof three.Mesh)) return
+            const materials = Array.isArray(child.material)
+              ? child.material
+              : [child.material]
+            for (const material of materials) {
+              material.flatShading = true
+              material.needsUpdate = true
+            }
+          })
+        }
 
         // Centrar la pieza en el origen: los CAD vienen con las coordenadas
         // del sitio donde estaban en el molde, no alrededor del cero.
@@ -218,17 +226,13 @@ export default function ModelViewer({ file }: { file: FilePublic }) {
         renderer.setPixelRatio(window.devicePixelRatio)
         container.appendChild(renderer.domElement)
 
-        const controls = new OrbitControls(camera, renderer.domElement)
-        controls.enableDamping = true
-
-        const reset = () => {
-          camera.position.set(size, -size, size * 0.8)
-          camera.up.set(0, 0, 1)
-          controls.target.set(0, 0, 0)
-          controls.update()
-        }
-        reset()
-        resetRef.current = reset
+        const controller = createModelControls(
+          camera,
+          renderer.domElement,
+          size,
+        )
+        const { controls } = controller
+        resetRef.current = () => controls.reset()
 
         const resize = () => {
           const { clientWidth, clientHeight } = container
@@ -236,6 +240,7 @@ export default function ModelViewer({ file }: { file: FilePublic }) {
           renderer.setSize(clientWidth, clientHeight)
           camera.aspect = clientWidth / clientHeight
           camera.updateProjectionMatrix()
+          controls.handleResize()
         }
         resize()
         const observer = new ResizeObserver(resize)
@@ -247,12 +252,12 @@ export default function ModelViewer({ file }: { file: FilePublic }) {
           renderer.render(scene, camera)
         })
 
-        setStatus({ phase: "ready", triangles: countTriangles(object) })
+        setStatus({ phase: "ready" })
 
         dispose = () => {
           renderer.setAnimationLoop(null)
           observer.disconnect()
-          controls.dispose()
+          controller.dispose()
           object.traverse((child) => {
             const mesh = child as THREE_NS.Mesh
             mesh.geometry?.dispose()
@@ -279,9 +284,10 @@ export default function ModelViewer({ file }: { file: FilePublic }) {
 
     return () => {
       disposed = true
+      abort.abort()
       dispose()
     }
-  }, [file.id, file.filename])
+  }, [file.id, file.filename, previewUrl])
 
   return (
     <div className="relative h-[70vh] w-full overflow-hidden rounded-lg border bg-muted/30">
@@ -305,20 +311,14 @@ export default function ModelViewer({ file }: { file: FilePublic }) {
       )}
 
       {status.phase === "ready" && (
-        <>
-          <p className="absolute bottom-2 left-3 text-xs text-muted-foreground">
-            {status.triangles.toLocaleString("es-ES")} triangulos · arrastra
-            para girar, rueda para acercar
-          </p>
-          <button
-            type="button"
-            onClick={() => resetRef.current()}
-            className="absolute right-2 top-2 flex items-center gap-1 rounded-md border bg-background/80 px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
-          >
-            <RotateCcw className="size-3.5" />
-            Encuadrar
-          </button>
-        </>
+        <button
+          type="button"
+          onClick={() => resetRef.current()}
+          className="absolute right-2 top-2 flex items-center gap-1 rounded-md border bg-background/80 px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <RotateCcw className="size-3.5" />
+          Encuadrar
+        </button>
       )}
     </div>
   )

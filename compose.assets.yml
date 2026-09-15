@@ -1,0 +1,14 @@
+# Optional external originals. Never combine this file with compose.test.yml.
+services:
+  backend:
+    environment:
+      ASSETS_ROOT: /external-assets
+      ASSETS_SOURCE_ID: ${ASSETS_SOURCE_ID:?Set a stable name for this dataset}
+      ASSETS_SOURCE_NAME: ${ASSETS_SOURCE_NAME:-Archivos de referencia}
+    volumes:
+      - type: bind
+        source: ${ASSETS_HOST_PATH:?Set the host folder outside the repository}
+        target: /external-assets
+        read_only: true
+        bind:
+          create_host_path: false

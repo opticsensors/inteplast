@@ -9,8 +9,8 @@ Los pasos siguientes se ejecutan en el servidor preparado por el responsable del
 - Docker Engine y Docker Compose instalados.
 - DNS para `api`, `dashboard` y, si se utilizan, `traefik` y `adminer` bajo el dominio elegido.
 - Acceso al servidor y almacenamiento para la BD y las subidas; política de copias de ambos.
-- Ficheros del cliente fuera del repositorio. La referencia a un archivo externo grande sigue
-  pendiente de implementación; hoy la aplicación admite subidas de hasta 50 MB.
+- Ficheros del cliente fuera del repositorio. Se admiten subidas de hasta 50 MB y referencias
+  a originales accesibles al backend. La integración Microsoft Graph sigue pendiente.
 
 ## Configuración
 
@@ -73,10 +73,28 @@ Especificar `-f compose.yml` excluye el override local. Los Dockerfiles del fron
 `npm ci` y el `package-lock.json` versionado. El administrador crea usuarios desde `/admin`.
 Los ficheros se sirven con autenticación o enlaces firmados temporales; el UUID solo no da acceso.
 
+Para un origen local accesible desde el servidor, añadir `-f compose.assets.yml` a **cada**
+comando de la aplicación y configurar `ASSETS_HOST_PATH`, `ASSETS_SOURCE_ID` y
+`ASSETS_SOURCE_NAME` en `.env.production`. El montaje es de solo lectura. No usar los lanzadores
+locales `scripts/compose.*` en producción: cargan `.env.local` y el override de desarrollo.
+Ver [archivos externos](docs/ficheros-externos.md). El acceso a los originales de INTEPLAST debe
+acordarse antes del despliegue; una ruta del ordenador de desarrollo no es una conexión Graph.
+
 ## Persistencia y actualización desde la versión anterior
 
 La BD usa `app-db-data`; los ficheros usan `app-uploads`, montado en `/app/uploads`.
 El Dockerfile fija esa ruta absoluta para `UPLOADS_DIR`.
+Las referencias externas se conservan en la BD, pero sus bytes permanecen en el almacenamiento
+de origen y necesitan su propia política de copias. Conservar también la configuración del
+origen. La migración `a62f58d4e930` mantiene los UUID de subidas anteriores y añade sus metadatos
+de origen; hacer backup antes de migrar. Su downgrade se bloquea si existen referencias externas.
+
+La migración `b73c69e5fa41` añade la cola `FilePreview`. Los GLB derivados se guardan en
+`app-uploads/previews` y se pueden regenerar: no sustituyen la copia de los originales.
+El backend incorpora OCP/VTK y bibliotecas gráficas nativas, aunque no utiliza una pantalla.
+Reserva recursos para una conversión a la vez (límite predeterminado de 8 GiB de memoria
+virtual y 15 minutos) y comparte el volumen si se ejecutan varias instancias. Configuración
+y límites en [vistas 3D ligeras](docs/vistas-3d.md).
 
 **Antes de recrear un backend antiguo**, comprobar si existen ficheros en
 `/app/backend/uploads`. La versión anterior escribía ahí por error, fuera del volumen.

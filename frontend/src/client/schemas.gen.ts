@@ -736,6 +736,41 @@ export const FileAccessPublicSchema = {
     title: 'FileAccessPublic'
 } as const;
 
+export const FilePreviewPublicSchema = {
+    properties: {
+        state: {
+            type: 'string',
+            enum: ['queued', 'processing', 'ready', 'error'],
+            title: 'State'
+        },
+        message: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Message'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        }
+    },
+    type: 'object',
+    required: ['state'],
+    title: 'FilePreviewPublic'
+} as const;
+
 export const FilePublicSchema = {
     properties: {
         id: {
@@ -766,11 +801,67 @@ export const FilePublicSchema = {
                 }
             ],
             title: 'Created At'
+        },
+        source: {
+            type: 'string',
+            title: 'Source',
+            default: 'upload'
+        },
+        version: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Version'
+        },
+        revision: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Revision'
         }
     },
     type: 'object',
     required: ['id', 'filename', 'content_type', 'size'],
     title: 'FilePublic'
+} as const;
+
+export const FileStatusSchema = {
+    properties: {
+        state: {
+            type: 'string',
+            enum: ['available', 'missing', 'changed', 'unavailable'],
+            title: 'State'
+        },
+        message: {
+            type: 'string',
+            title: 'Message'
+        },
+        path: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Path'
+        }
+    },
+    type: 'object',
+    required: ['state', 'message'],
+    title: 'FileStatus'
 } as const;
 
 export const HTTPValidationErrorSchema = {
@@ -903,6 +994,32 @@ export const ItemsPublicSchema = {
     type: 'object',
     required: ['data', 'count'],
     title: 'ItemsPublic'
+} as const;
+
+export const LocalFileReferenceSchema = {
+    properties: {
+        path: {
+            type: 'string',
+            maxLength: 2048,
+            minLength: 1,
+            title: 'Path'
+        },
+        revision: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 100
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Revision'
+        }
+    },
+    type: 'object',
+    required: ['path'],
+    title: 'LocalFileReference'
 } as const;
 
 export const MessageSchema = {
@@ -1077,6 +1194,99 @@ export const PrivateUserCreateSchema = {
     type: 'object',
     required: ['email', 'password', 'full_name'],
     title: 'PrivateUserCreate'
+} as const;
+
+export const RelinkFileReferenceSchema = {
+    properties: {
+        path: {
+            type: 'string',
+            maxLength: 2048,
+            minLength: 1,
+            title: 'Path'
+        },
+        revision: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 100
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Revision'
+        },
+        expected_version: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Expected Version'
+        }
+    },
+    type: 'object',
+    required: ['path', 'expected_version'],
+    title: 'RelinkFileReference'
+} as const;
+
+export const SourceEntrySchema = {
+    properties: {
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        path: {
+            type: 'string',
+            title: 'Path'
+        },
+        directory: {
+            type: 'boolean',
+            title: 'Directory'
+        },
+        size: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Size'
+        }
+    },
+    type: 'object',
+    required: ['name', 'path', 'directory'],
+    title: 'SourceEntry'
+} as const;
+
+export const SourceListingSchema = {
+    properties: {
+        configured: {
+            type: 'boolean',
+            title: 'Configured'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        path: {
+            type: 'string',
+            title: 'Path'
+        },
+        entries: {
+            items: {
+                '$ref': '#/components/schemas/SourceEntry'
+            },
+            type: 'array',
+            title: 'Entries'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['configured', 'name', 'path', 'entries', 'count'],
+    title: 'SourceListing'
 } as const;
 
 export const TokenSchema = {

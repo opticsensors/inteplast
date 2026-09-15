@@ -7,8 +7,9 @@
 └── 3212-315346-c13.stl        247.145.084 bytes
 ```
 
-Es el **único fichero grande del proyecto que se puede leer de verdad**: el `.step` del molde
-estaba en la nube en la inspección y el `.mfr` es propietario. Este es una malla de triángulos abierta y estándar.
+Es una malla de triángulos abierta y estándar. En la inspección inicial el STEP del molde
+seguía en la nube; se hidrató el 15/09/2026 para añadir también su vista web. El MFR requiere
+su programa específico.
 
 ---
 
@@ -109,10 +110,10 @@ los números coincidan exactamente con `intern.03`.
 | Uso | Viabilidad |
 |---|---|
 | **Referencia + metadatos** (lote, cavidad, nº triángulos) | ✅ Trivial → `PIEZA_REAL` |
-| Descarga desde el frontend | Posible por streaming; el límite actual de subida de 50 MB impide cargarlo. La referencia externa está pendiente. |
-| Previsualización 3D en el navegador | ⚠️ Solo con un derivado decimado (glTF) |
+| Descarga desde el frontend | Vinculado al Bolt Eye por referencia local; descarga íntegra sin subida duplicada |
+| Previsualización 3D en el navegador | GLB generado automáticamente en el servidor y guardado en caché |
 | Análisis geométrico automático | ✅ Alto valor y **viable ya**: hay Python 3.11 con `open3d`, `pyvista`, `pymeshlab` y `libigl` |
-| **Derivado decimado** (glTF para el navegador) | ✅ `open3d` / `pymeshlab` lo hacen en unas líneas |
+| **Derivado decimado** (GLB para el navegador) | Implementado con `trimesh` + `fast-simplification`; objetivo de 300.000 triángulos. [Detalles](../vistas-3d.md) |
 
 Encaja como `PIEZA_REAL (lote, cavidad, escaneado.stl)` colgando de `PROYECTO`, y alimenta la
 sección *"piezas de referencia"* del frontend → ver [modelo-datos.md](../modelo-datos.md).

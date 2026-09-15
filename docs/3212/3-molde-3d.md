@@ -1,22 +1,23 @@
 # `3- 3D Molde` — geometría del molde
 
-**1 fichero · 246,7 MB · 🔴 EN LA NUBE (no hidratado)**
+**1 fichero · 258.699.834 bytes (246,7 MiB) · hidratado expresamente el 15/09/2026**
 
 ```
 3- 3D Molde/
-└── 3212.step        246,72 MB   ← ensamblaje COMPLETO del molde
+└── 3212.step        246,72 MiB  ← ensamblaje del molde
 ```
 
 ---
 
-## 🔴 Antes de tocarlo: está en la nube
+## Disponibilidad local
 
-Comprobado el 2026-08-11: el fichero tiene el atributo `FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS`
-(`0x400000`). Es un **placeholder de OneDrive Files On-Demand**.
+El 2026-08-11 y al inicio de la tarea del 15/09 era un placeholder de OneDrive
+(`FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS`). El 15/09 se solicitó expresamente conservar **solo
+este fichero** en el dispositivo, se esperó a su descarga y se comprobó el atributo `0x80420`
+antes de leerlo. No se descargaron recursivamente otras carpetas.
 
-> **Leer un solo byte dispara la descarga de los 247 MB completos.** No hay forma de leer solo
-> la cabecera. Cualquier `head`, `grep` o `Get-Content` sobre él bloqueará la sesión varios
-> minutos o dará timeout.
+> **Si vuelve a quedar solo en la nube**, leerlo puede disparar la descarga completa.
+> Comprobar antes los atributos de disponibilidad. Actualmente está descargado y se puede leer.
 
 ```powershell
 # Comprobación obligatoria antes de abrirlo:
@@ -27,9 +28,9 @@ if ($a -band 0x400000) { "EN LA NUBE - no leer" } else { "LOCAL - seguro" }
 Si de verdad hace falta: hidratarlo desde el Explorador (clic derecho → *Conservar siempre en
 este dispositivo*), esperar a que baje, y entonces leerlo.
 
-**Por eso su contenido no está verificado**, a diferencia del resto de carpetas de este
-proyecto. Lo que sigue se infiere del nombre, del tamaño y de los ficheros equivalentes en
-3051 y 3197.
+Las descripciones funcionales de componentes que siguen proceden de la inferencia inicial
+por nombre/tamaño y ficheros equivalentes. La vista web permite ahora inspeccionar la geometría;
+no identifica automáticamente la función de cada componente ni la revisión del molde.
 
 ---
 
@@ -49,12 +50,14 @@ Comparación entre proyectos:
 ⚠️ **El nombre del 3212 no lleva el número de molde.** En el 3197 sí (`M1176`). En todo el
 proyecto 3212 no aparece el número de molde en ningún fichero.
 
-Formato esperado: STEP AP203/AP214, texto plano ISO-10303-21 — igual que el sólido de la pieza,
-pero con miles de `PRODUCT` (uno por componente del ensamblaje).
+**Cabecera y entidades verificadas el 15/09/2026:** STEP con esquema `automotive_design`
+(AP214), 5.265 entidades `PRODUCT`, 62.387 `ADVANCED_FACE`, 5.267 `CLOSED_SHELL` y 1.439
+`MANIFOLD_SOLID_BREP`. Son recuentos de entidades del fichero, no un inventario auditado de
+componentes físicos ni de piezas únicas.
 
 ---
 
-## Por qué importa (aunque no se pueda abrir)
+## Por qué importa
 
 Las acciones correctivas de [`5- Retoques de molde`](5-retoques-molde.md) se aplican **sobre
 esta geometría**: *"fer créixer el plàstic Ø0,23 mm en la zona marcada en vermell"* significa
@@ -73,13 +76,15 @@ molde antes o después de los retoques de 2024. No hay fecha ni revisión en el 
 
 | Uso | Viabilidad |
 |---|---|
-| Descarga desde el frontend | Técnicamente posible por streaming; hoy no se puede cargar en la app por el límite de subida de 50 MB. La referencia externa está pendiente. |
-| Previsualización 3D en el navegador | ❌ No sin un derivado ligero |
-| **Enlace / referencia al fichero** | ✅ Es lo realista para el prototipo |
-| **Derivado ligero** (mallado decimado → glTF) | ⚠️ Posible pero requiere hidratar los 247 MB y procesarlos con OCCT. Hay Python 3.11 con `open3d`/`pymeshlab`, pero **OCCT no está instalado** y hace falta para leer un STEP |
+| Descarga desde el frontend | Vinculado al Bolt Eye por referencia local; descarga íntegra del STEP |
+| Previsualización 3D en el navegador | GLB generado en el servidor, con caché; el STEP contiene superficies que requieren reparación y la vista puede ser parcial |
+| **Enlace / referencia al fichero** | Implementado; original de solo lectura |
+| **Derivado ligero** (mallado → GLB) | OCP instalado en Docker; objetivo 500.000 triángulos, máximo 1.000.000 y 25 MiB. [Detalles](../vistas-3d.md) |
 | Extraer geometría de la cavidad | ❌ Fuera de alcance |
 
-**Prioridad de ingesta: la más baja de las 8 carpetas.** Guardar la referencia y punto.
+La visualización está incorporada; la extracción semántica de cavidades y componentes sigue
+fuera de esta fase. El aviso **Vista parcial** señala las superficies que el conversor no pudo
+representar; no se deben deducir ausencias de componentes a partir de esa vista.
 
 Encaja en el modelo como `PROYECTO.FICHEROS.molde` y alimenta la sección *"moldes CAD"* de
 *piezas ejemplo* del frontend → ver [modelo-datos.md](../modelo-datos.md).
