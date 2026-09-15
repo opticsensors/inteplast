@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import hashlib
 import html
 import io
 import json
@@ -104,7 +105,7 @@ def buscar_tesseract() -> str:
 def en_la_nube(ruta: Path) -> bool:
     """OneDrive Files On-Demand: leer un placeholder dispara la descarga completa.
 
-    FILE_ATTRIBUTE_RECALL_ON_OPEN_ACCESS = 0x400000. -> CLAUDE.md
+    FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS = 0x400000. -> CLAUDE.md
     """
     try:
         return bool(os.stat(ruta).st_file_attributes & 0x400000)
@@ -903,6 +904,11 @@ def main() -> None:
     parser.add_argument("--salida", type=Path, default=SALIDA, help="carpeta de salida")
     parser.add_argument("--no-abrir", action="store_true")
     args = parser.parse_args()
+    args.salida = args.salida.resolve()
+    if not np.isfinite(args.escala) or args.escala <= 0:
+        parser.error("--escala debe ser un numero positivo y finito")
+    if not 0 <= args.conf <= 100:
+        parser.error("--conf debe estar entre 0 y 100")
 
     pytesseract.pytesseract.tesseract_cmd = buscar_tesseract()
     print(f"tesseract: {pytesseract.pytesseract.tesseract_cmd}")
@@ -929,11 +935,13 @@ def main() -> None:
     jpeg, ext, ancho, alto = extraer_imagen(plano["ruta"])
     print(f"  imagen embebida: {ancho}x{alto} {ext}, {len(jpeg)/1e6:.2f} MB")
 
-    firma = {"bytes": plano["ruta"].stat().st_size, "escala": args.escala, "conf": args.conf}
+    # La longitud no identifica el contenido: dos revisiones pueden pesar lo mismo.
+    huella = hashlib.sha256(jpeg).hexdigest()
+    firma = {"sha256": huella, "escala": args.escala, "conf": args.conf}
     palabras = con_cache(destino / "ocr-3212.json", firma,
                          lambda: ocr_palabras(jpeg, args.escala, args.conf),
                          "OCR", args.reocr)
-    globos = con_cache(destino / "globos-3212.json", {"bytes": len(jpeg), "v": 3},
+    globos = con_cache(destino / "globos-3212.json", {"sha256": huella, "v": 3},
                        lambda: detectar_globos(jpeg), "globos", args.reocr)
     volcar_texto(palabras, destino / "texto-3212.txt")
 

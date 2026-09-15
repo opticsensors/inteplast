@@ -1,20 +1,19 @@
-# Stage 0, "build-stage", based on Bun, to build and compile the frontend
-FROM oven/bun:1 AS build-stage
+# Use the same npm lockfile as local development.
+FROM node:22-bookworm-slim AS build-stage
 
 WORKDIR /app
 
-COPY package.json bun.lock /app/
+COPY package.json package-lock.json /app/
 
 COPY frontend/package.json /app/frontend/
 
-WORKDIR /app/frontend
-
-RUN bun install
+RUN npm ci
 
 COPY ./frontend /app/frontend
+WORKDIR /app/frontend
 ARG VITE_API_URL
 
-RUN bun run build
+RUN npm run build
 
 
 # Stage 1, based on Nginx, to have only the compiled app, ready for production with Nginx

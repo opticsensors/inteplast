@@ -61,6 +61,8 @@ services:
       - DOMAIN=${DOMAIN}
       - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
       - ENVIRONMENT=${ENVIRONMENT}
+      - ALLOW_PUBLIC_SIGNUP=${ALLOW_PUBLIC_SIGNUP:-false}
+      - ENABLE_TEST_ROUTES=${ENABLE_TEST_ROUTES:-false}
       - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
       - SECRET_KEY=${SECRET_KEY?Variable not set}
       - FIRST_SUPERUSER=${FIRST_SUPERUSER?Variable not set}
@@ -68,6 +70,9 @@ services:
       - SMTP_HOST=${SMTP_HOST}
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_TLS=${SMTP_TLS:-true}
+      - SMTP_SSL=${SMTP_SSL:-false}
       - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL}
       - POSTGRES_SERVER=db
       - POSTGRES_PORT=${POSTGRES_PORT}
@@ -84,7 +89,7 @@ services:
       - default
     volumes:
       # Ficheros subidos desde la app (imagenes de features, CAD, planos PDF).
-      # Coincide con UPLOADS_DIR, que es relativo al WORKDIR /app del Dockerfile.
+      # El Dockerfile fija UPLOADS_DIR=/app/uploads, independiente del WORKDIR.
       - app-uploads:/app/uploads
     depends_on:
       db:
@@ -98,6 +103,8 @@ services:
       - DOMAIN=${DOMAIN}
       - FRONTEND_HOST=${FRONTEND_HOST?Variable not set}
       - ENVIRONMENT=${ENVIRONMENT}
+      - ALLOW_PUBLIC_SIGNUP=${ALLOW_PUBLIC_SIGNUP:-false}
+      - ENABLE_TEST_ROUTES=${ENABLE_TEST_ROUTES:-false}
       - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
       - SECRET_KEY=${SECRET_KEY?Variable not set}
       - FIRST_SUPERUSER=${FIRST_SUPERUSER?Variable not set}
@@ -105,6 +112,9 @@ services:
       - SMTP_HOST=${SMTP_HOST}
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_TLS=${SMTP_TLS:-true}
+      - SMTP_SSL=${SMTP_SSL:-false}
       - EMAILS_FROM_EMAIL=${EMAILS_FROM_EMAIL}
       - POSTGRES_SERVER=db
       - POSTGRES_PORT=${POSTGRES_PORT}

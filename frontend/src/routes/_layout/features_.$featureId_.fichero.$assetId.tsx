@@ -10,7 +10,8 @@ import { featureQueryOptions } from "@/components/Features/queries"
 import { fileAction } from "@/components/Features/viewers"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { fileUrl, formatFileSize } from "@/utils"
+import { useFileAccess } from "@/hooks/useFileAccess"
+import { formatFileSize } from "@/utils"
 
 /** El visor 3D arrastra three.js y OpenCascade: solo se descarga si hace falta. */
 const ModelViewer = lazy(() => import("@/components/Features/ModelViewer"))
@@ -60,8 +61,8 @@ function EmptyState({
  * - **Saber que necesita**: cuando no hay visor posible —Moldflow, SolidWorks,
  *   CATIA, o un ensamblaje de 247 MB— la pagina lo dice con palabras.
  *
- * 🔴 Lo que no puede hacer, y no hay forma: abrir el Explorador de Windows ni
- * lanzar el programa del PC. El navegador lo tiene prohibido.
+ * La aplicacion no integra el Explorador de Windows ni lanzadores de programas
+ * locales; el usuario abre la descarga con la aplicacion que tenga asociada.
  */
 function AssetDetail() {
   const { featureId, assetId } = Route.useParams()
@@ -74,6 +75,8 @@ function AssetDetail() {
     ...featureQueryOptions(featureId),
     retry: (failureCount, error) => !isNotFound(error) && failureCount < 3,
   })
+  const asset = (feature?.assets ?? []).find((item) => item.id === assetId)
+  const access = useFileAccess(asset?.file?.id)
 
   if (isPending) {
     return (
@@ -85,8 +88,6 @@ function AssetDetail() {
   }
 
   if (isError || !feature) return <FeatureNotFound />
-
-  const asset = (feature.assets ?? []).find((item) => item.id === assetId)
 
   if (!asset) {
     return (
@@ -142,7 +143,7 @@ function AssetDetail() {
             {viewer === "pdf" && (
               <Button variant="outline" size="sm" asChild>
                 <a
-                  href={fileUrl(file.id)}
+                  href={access.url}
                   target="_blank"
                   rel="noreferrer"
                   title="Abrir el PDF en una pestana nueva"
@@ -153,7 +154,7 @@ function AssetDetail() {
               </Button>
             )}
             <Button size="sm" asChild>
-              <a href={fileUrl(file.id)} download={file.filename}>
+              <a href={access.downloadUrl} download={file.filename}>
                 <Download className="mr-2" />
                 Descargar
               </a>
@@ -177,16 +178,28 @@ function AssetDetail() {
             con el programa que tenga asociado.
           </p>
         </EmptyState>
+      ) : access.isError ? (
+        <EmptyState title="No se ha podido autorizar el fichero">
+          <Button
+            onClick={() => {
+              void access.refetch()
+            }}
+          >
+            Reintentar
+          </Button>
+        </EmptyState>
+      ) : !access.url ? (
+        <Skeleton className="h-[70vh] w-full rounded-lg" />
       ) : viewer === "pdf" ? (
         <iframe
-          src={fileUrl(file.id)}
+          src={access.url}
           title={asset.name}
           className="h-[75vh] w-full rounded-lg border"
         />
       ) : viewer === "image" ? (
         <div className="flex justify-center rounded-lg border bg-muted/30 p-4">
           <img
-            src={fileUrl(file.id)}
+            src={access.url}
             alt={asset.name}
             className="max-h-[75vh] object-contain"
           />

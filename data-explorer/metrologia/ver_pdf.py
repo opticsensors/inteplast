@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import argparse
 import html
+import math
 import re
 import sys
 import webbrowser
@@ -201,12 +202,36 @@ def leer_pdf(ruta: Path, destino_img: Path, zoom: float, nombre_base: str) -> di
     return datos
 
 
-def hay_infraccion(d: dict) -> bool:
+def errores_medicion(d: dict) -> list[str]:
+    """No confundir una celda ausente/ilegible con un cero medido."""
+    campos = ("tol_inf", "tol_sup", "desv_inf", "desv_sup", "infr_inf", "infr_sup")
+    errores = [f"{campo} ausente o invalido" for campo in campos
+               if not isinstance(d.get(campo), (int, float)) or not math.isfinite(d[campo])]
+    if not errores and d["tol_inf"] > d["tol_sup"]:
+        errores.append("limites de tolerancia invertidos")
+    return errores
+
+
+def hay_infraccion(d: dict) -> bool | None:
+    if errores_medicion(d):
+        return None
     return bool(d.get("infr_inf")) or bool(d.get("infr_sup"))
 
 
-def peor_infraccion(d: dict) -> float:
+def peor_infraccion(d: dict) -> float | None:
+    if errores_medicion(d):
+        return None
     return max(abs(d.get("infr_inf") or 0.0), abs(d.get("infr_sup") or 0.0))
+
+
+def estado_html(d: dict) -> str:
+    errores = errores_medicion(d)
+    if errores:
+        return ("<span class='desconocido'>Estado desconocido: "
+                + html.escape("; ".join(errores)) + ". Revisar el PDF original.</span>")
+    if hay_infraccion(d):
+        return f"<span class='mal'>Se sale {peor_infraccion(d):.3f} mm de la tolerancia</span>"
+    return "<span class='bien'>Dentro de tolerancia</span>"
 
 
 # --------------------------------------------------------------------------------------
@@ -224,7 +249,7 @@ def fig_evolucion(por_elemento: dict[str, dict[str, dict]]) -> go.Figure:
             go.Scatter(
                 x=[f"intern.{m}" for m in muestreos],
                 y=[peor_infraccion(serie[m]) for m in muestreos],
-                mode="lines+markers", name=elemento,
+                mode="lines+markers", name=elemento, connectgaps=False,
                 hovertemplate="%{y:.3f} mm fuera<extra>%{fullData.name}</extra>",
             )
         )
@@ -248,7 +273,8 @@ def fig_desviaciones(por_elemento: dict[str, dict[str, dict]]) -> go.Figure:
     for muestreo in muestreos:
         fig.add_trace(
             go.Scatter(
-                x=[por_elemento[e].get(muestreo, {}).get("desv_inf") for e in elementos],
+                x=[None if errores_medicion(por_elemento[e].get(muestreo, {})) else
+                   por_elemento[e][muestreo]["desv_inf"] for e in elementos],
                 y=elementos, mode="markers", name=f"intern.{muestreo}",
                 marker=dict(size=9, symbol="triangle-left"),
                 hovertemplate="desviacion inferior %{x:.3f} mm<extra>%{y}</extra>",
@@ -393,6 +419,8 @@ def grafico(fig: go.Figure, div_id: str) -> str:
 
 def barra_tolerancia(d: dict) -> str:
     """Dibuja en CSS donde caen las desviaciones respecto a la banda de tolerancia."""
+    if errores_medicion(d):
+        return "<p>No se puede evaluar la tolerancia con los datos extraidos.</p>"
     tol = d.get("tol_sup") or 0.025
     escala = max(4 * tol, abs(d.get("desv_inf") or 0), abs(d.get("desv_sup") or 0)) * 1.15
 
@@ -451,6 +479,9 @@ def main() -> None:
     parser.add_argument("--cavidad", help="ver solo una cavidad, p.ej. c13")
     parser.add_argument("--no-abrir", action="store_true")
     args = parser.parse_args()
+    args.salida = args.salida.resolve()
+    if not math.isfinite(args.zoom) or args.zoom <= 0:
+        parser.error("--zoom debe ser un numero positivo y finito")
 
     ficheros = descubrir(args.raiz)
     if args.muestreo:
@@ -481,10 +512,11 @@ def main() -> None:
         ] = datos
 
         mal = hay_infraccion(datos)
+        estado = ("DESCONOCIDO: " + "; ".join(errores_medicion(datos)) if mal is None else
+                  "FUERA " + format(peor_infraccion(datos), ".3f") if mal else "ok")
         print(f"  intern.{fichero['muestreo']} {fichero['cavidad']} {elemento:5s} "
               f"contorno {datos.get('contorno', '??'):>3s}  "
-              f"desv {datos.get('desv_inf', 0):+.3f}/{datos.get('desv_sup', 0):+.3f}  "
-              f"{'FUERA ' + format(peor_infraccion(datos), '.3f') if mal else 'ok'}")
+              f"{estado}")
 
         nombre = f"{clave}.html"
         cuerpo = (
@@ -496,8 +528,7 @@ def main() -> None:
             f"<b>intern.{fichero['muestreo']}</b> (lote "
             f"{MUESTREOS.get(fichero['muestreo'], ('?',))[0]}) &nbsp;&middot;&nbsp; cavidad "
             f"<b>{fichero['cavidad']}</b><br>"
-            + (f"<span class='mal'>Se sale {peor_infraccion(datos):.3f} mm de la tolerancia</span>"
-               if mal else "<span class='bien'>Dentro de tolerancia</span>")
+            + estado_html(datos)
             + "</div>"
             + barra_tolerancia(datos)
             + tabla_datos(datos)
@@ -515,8 +546,7 @@ def main() -> None:
             f"<span class='nom'>contorno {datos.get('contorno', '??')} "
             f"&middot; {datos.get('perfil_nombre', '')}</span>"
             f"<span class='num'>"
-            + (f"<span class='mal'>fuera {peor_infraccion(datos):.3f}</span>"
-               if mal else "<span class='bien'>ok</span>")
+            + estado_html(datos)
             + "</span></a>"
         )
 
@@ -534,8 +564,9 @@ def main() -> None:
             f"{len({m for s in con_varios.values() for m in s})} muestreos</div>"
             "<div class='leyenda'>Cada linea es uno de los 12 recorridos del perfil. El eje "
             "vertical es <b>cuanto se sale de la tolerancia</b>: <b>cero es estar dentro</b>. "
-            "Si las lineas bajan hacia cero de un muestreo al siguiente, el retoque del molde "
-            "acerco el perfil al teorico.</div>"
+            "Si las lineas bajan hacia cero, el perfil medido se acerco al teorico; el historial "
+            "permite estudiar su relacion con el retoque. Un hueco significa que faltan datos "
+            "para evaluar ese PDF.</div>"
             + grafico(fig_evolucion(con_varios), "g1")
             + "<h2>Desviacion maxima inferior, recorrido a recorrido</h2>"
             "<div class='leyenda'>Lo mas lejos que se aleja la pieza del perfil teorico por "
@@ -557,12 +588,15 @@ def main() -> None:
         cavidades = []
         for cavidad in sorted(arbol[muestreo]):
             enlaces = arbol[muestreo][cavidad]
-            malas = sum(1 for e in enlaces if "fuera" in e)
+            malas = sum(1 for e in enlaces if "class='mal'" in e)
+            desconocidas = sum(1 for e in enlaces if "class='desconocido'" in e)
             cavidades.append(
                 f"<details><summary>{cavidad}"
                 f"<span class='meta'>{len(enlaces)} graficas &middot; "
                 + (f"<span class='mal'>{malas} fuera de tolerancia</span>" if malas
-                   else "<span class='bien'>todas dentro</span>")
+                   else "<span class='bien'>todas dentro</span>" if not desconocidas else "")
+                + (f" <span class='desconocido'>{desconocidas} sin evaluar</span>"
+                   if desconocidas else "")
                 + f"</span></summary><div class='hojas'>{''.join(enlaces)}</div></details>"
             )
         ramas.append(

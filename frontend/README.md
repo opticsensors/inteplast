@@ -1,121 +1,75 @@
-# FastAPI Project - Frontend
+﻿# INTEPLAST frontend
 
-The frontend is built with [Vite](https://vitejs.dev/), [React](https://reactjs.org/), [TypeScript](https://www.typescriptlang.org/), [TanStack Query](https://tanstack.com/query), [TanStack Router](https://tanstack.com/router) and [Tailwind CSS](https://tailwindcss.com/).
+React + TypeScript, Vite, TanStack Router/Query and Tailwind CSS. Read [the application guide](../docs/app-web.md) before changing feature workflows or the API client.
 
-## Requirements
+## Local development
 
-- [Bun](https://bun.sh/) (recommended) or [Node.js](https://nodejs.org/)
-
-## Quick Start
+Use Node.js 22 or later. Run these commands from the repository root:
 
 ```bash
-bun install
-bun run dev
+npm ci
+docker compose up -d --build db prestart backend
+npm run dev --workspace frontend
 ```
 
-* Then open your browser at http://localhost:5173/.
+Open http://localhost:5173. Set `VITE_API_URL=http://localhost:8000` in `frontend/.env` for the local backend, or set the remote API's origin for another deployment. The backend must allow the frontend origin through CORS.
 
-Notice that this live server is not running inside Docker, it's for local development, and that is the recommended workflow. Once you are happy with your frontend, you can build the frontend Docker image and start it, to test it in a production-like environment. But building the image at every change will not be as productive as running the local development server with live reload.
+Accounts are provisioned by an administrator. The login and `/signup` pages direct account requests to the administrator; they do not offer public registration.
 
-Check the file `package.json` to see other available options.
+## Feature editing
 
-### Removing the frontend
+- The header is saved with **Guardar**. Background refreshes preserve fields being edited.
+- Notes and asset names save automatically after 700 ms. Only locally edited fields are written, and updates for each row run in order.
+- Folding a section keeps its editor and pending changes alive. Saving or navigating waits for pending row edits and uploads.
+- A failed save retains its draft and displays **Reintentar**. Leaving is blocked until the pending changes are saved or corrected. Reloading or closing the tab with pending changes shows the browser's unsaved-changes warning.
+- **Cancelar** discards header changes after pending notes and uploads have finished. Already saved notes and assets remain saved.
+- The part selector creates or selects parts; it does not edit existing part codes or names.
 
-If you are developing an API-only app and want to remove the frontend, you can do it easily:
+## Protected files
 
-* Remove the `./frontend` directory.
+Images, previews and downloads obtain a short-lived URL from the authenticated `/files/{id}/access-url` endpoint. A plain file UUID is not sufficient to read bytes. Links request authorization metadata without downloading the file contents. Download links ask the server for attachment disposition, including when frontend and API use different origins.
 
-* In the `compose.yml` file, remove the whole service / section `frontend`.
+Header images accept JPEG, PNG, GIF, WebP, AVIF and BMP. SVG and other unsupported image types remain downloadable attachments. PDF previews require the `application/pdf` MIME type; the viewer follows what the server can display inline.
 
-* In the `compose.override.yml` file, remove the whole service / section `frontend` and `playwright`.
+3D loading stays lazy. The viewer supports mesh and CAD formats described in [the application guide](../docs/app-web.md); it does not run a desktop CAD application.
 
-Done, you have a frontend-less (api-only) app. 🤓
+## Generated API client
 
----
-
-If you want, you can also remove the `FRONTEND` environment variables from:
-
-* `.env`
-* `./scripts/*.sh`
-
-But it would be only to clean them up, leaving them won't really have any effect either way.
-
-## Generate Client
-
-### Automatically
-
-* Activate the backend virtual environment.
-* From the top level project directory, run the script:
+After changing backend endpoints or response models, regenerate `src/client` from the repository root:
 
 ```bash
-bash ./scripts/generate-client.sh
+bash scripts/generate-client.sh
 ```
 
-* Commit the changes.
+The script exports `frontend/openapi.json` and regenerates the client. Do not hand-edit generated files. For a manual regeneration, export the backend OpenAPI schema to `frontend/openapi.json` and run `npm run generate-client --workspace frontend`.
 
-### Manually
+## Verification
 
-* Start the Docker Compose stack.
-
-* Download the OpenAPI JSON file from `http://localhost/api/v1/openapi.json` and copy it to a new file `openapi.json` at the root of the `frontend` directory.
-
-* To generate the frontend client, run:
+From the repository root:
 
 ```bash
-bun run generate-client
+npm exec --workspace frontend -- tsc -p tsconfig.build.json --noEmit
+npm run test:components --workspace frontend
 ```
 
-* Commit the changes.
+The component regressions bundle the real React editors and router with an in-memory API. Playwright runs headless with all outbound browser requests blocked. They cover header preservation, folding, refetches, ordered saves, failures, navigation, uploads and file authorization links. Install the Playwright browser once if necessary with `npm exec --workspace frontend -- playwright install chromium`.
 
-Notice that everytime the backend changes (changing the OpenAPI schema), you should follow these steps again to update the frontend client.
+For end-to-end tests, use the dedicated disposable stack:
 
-## Using a Remote API
-
-If you want to use a remote API, you can set the environment variable `VITE_API_URL` to the URL of the remote API. For example, you can set it in the `frontend/.env` file:
-
-```env
-VITE_API_URL=https://api.my-domain.example.com
+```powershell
+./scripts/test.ps1 -E2E
 ```
-
-Then, when you run the frontend, it will use that URL as the base URL for the API.
-
-## Code Structure
-
-The frontend code is structured as follows:
-
-* `frontend/src` - The main frontend code.
-* `frontend/src/assets` - Static assets.
-* `frontend/src/client` - The generated OpenAPI client.
-* `frontend/src/components` -  The different components of the frontend.
-* `frontend/src/hooks` - Custom hooks.
-* `frontend/src/routes` - The different routes of the frontend which include the pages.
-
-## End-to-End Testing with Playwright
-
-The frontend includes initial end-to-end tests using Playwright. To run the tests, you need to have the Docker Compose stack running. Start the stack with the following command:
 
 ```bash
-docker compose up -d --wait backend
+bash scripts/test.sh --e2e
 ```
 
-Then, you can run the tests with the following command:
+These scripts use `compose.test.yml`, a separate Compose project and temporary test storage. The Playwright configuration rejects an ordinary application stack. Do not run destructive cleanup against the development stack. The E2E fixtures provision accounts through the test-only API, because public signup is closed.
 
-```bash
-bunx playwright test
-```
+## Structure
 
-You can also run your tests in UI mode to see the browser and interact with it running:
-
-```bash
-bunx playwright test --ui
-```
-
-To stop and remove the Docker Compose stack and clean the data created in tests, use the following command:
-
-```bash
-docker compose down -v
-```
-
-To update the tests, navigate to the tests directory and modify the existing test files or add new ones as needed.
-
-For more information on writing and running Playwright tests, refer to the official [Playwright documentation](https://playwright.dev/docs/intro).
+- `src/routes`: authentication, dashboard, feature management/detail, file viewers and user administration.
+- `src/components/Features`: feature forms, notes, part/file lists and editing save coordination.
+- `src/hooks/useFileAccess.ts`: short-lived file authorization URLs.
+- `src/client`: generated backend client.
+- `tests/components`: isolated regression tests; other `tests/*.spec.ts` files exercise the dedicated E2E stack.

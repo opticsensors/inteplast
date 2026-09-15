@@ -47,7 +47,8 @@ Cliente final: **Robert Bosch** (división BueP). Informes en formato **PPAP / Q
 ## Foco actual
 
 **Solo se trabaja sobre `3212 Pump Housing`.** Es el proyecto piloto, el más completo, y el
-único con histórico cerrado (metrología + retoques de molde + escaneado STL). Los otros tres
+que tiene el histórico más documentado (metrología + retoques de molde + escaneado STL).
+El cierre y la posible existencia de retoques posteriores siguen pendientes de confirmar. Los otros tres
 (`2820`, `3051`, `3197`) están documentados pero **no se tocan** salvo petición explícita.
 
 ---
@@ -76,14 +77,20 @@ docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bo
 
 - 🔑 **Antes de tocar `backend/` o `frontend/`, leer [docs/app-web.md](docs/app-web.md)**: modelo,
   endpoints, permisos, decisiones y cabos sueltos.
-- 🔴 **`--build` no es opcional tras tocar `backend/`.** El código va dentro de la imagen: sin él,
-  `docker compose up -d` reutiliza el `backend:latest` viejo y arrancas con código antiguo **sin
-  ningún error visible**. Se comprueba con `docker compose exec backend alembic current`.
+- 🔴 **Tras tocar `backend/`, reconstruir con `--build` o mantener `docker compose watch backend`
+  activo.** `up -d` por sí solo reutiliza la imagen y no sincroniza el código local. Alembic
+  `current` comprueba la revisión de la BD, **no** que el código de los endpoints esté actualizado.
 - ⚠️ **Cambiar un endpoint o un modelo obliga a regenerar el cliente TypeScript**
   (`bash scripts/generate-client.sh`), o el frontend se queda desincronizado.
 - La página `/items` es la demo de la plantilla: ya no está en el menú, pero el `Item` sigue en el
   código. La página real de gestión es `/features`, y la **ficha del feature es `/features/{id}`**
   — desde el 2026-08-19 es una página con URL propia, no una modal.
+- **Subidas persistentes:** el Dockerfile fija `UPLOADS_DIR=/app/uploads`, que coincide con el
+  volumen. Antes de recrear un contenedor anterior a la corrección, comprobar y rescatar los
+  posibles bytes de `/app/backend/uploads` (ver [deployment.md](deployment.md)).
+- **Acceso:** altas desde Admin por defecto; el UUID de un fichero ya no es un permiso de
+  lectura. El frontend obtiene enlaces firmados temporales con autenticación.
+- **Revisión del 2026-09-15:** cambios y pruebas en [docs/revision-2026-09-15.md](docs/revision-2026-09-15.md).
 
 ---
 
@@ -171,24 +178,26 @@ docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bo
   $a = [int](Get-Item -LiteralPath $ruta).Attributes
   if ($a -band 0x400000) { "EN LA NUBE - no leer" } else { "LOCAL - seguro" }
   ```
-- 🔴 **Los tests del backend NUNCA contra la BD `app`.** El `conftest.py` de la plantilla la
-  **vacía al terminar** (`Item`, `Feature`, `Part`, `StoredFile`, `User`), y de paso te tira la
-  sesión del navegador: el superusuario se recrea con otro `id` y el token que tienes guardado
-  deja de valer. Van contra `app_test`, y hay que copiarlos al contenedor porque la imagen no los
-  lleva — receta completa en [docs/app-web.md](docs/app-web.md#-los-tests-siempre-contra-app_test):
+- 🔴 **Los tests del backend NUNCA contra la BD `app`.** Desde la revisión del 2026-09-15,
+  `conftest.py` rechaza nombres que no terminen en `_test` antes de ejecutar pruebas y usa una
+  carpeta temporal para las subidas. La limpieza sigue borrando las tablas de la BD de test.
+  Los lanzadores crean un proyecto Docker exclusivo con `compose.test.yml`, sin compartir BD,
+  puertos ni volúmenes con la aplicación:
 
   ```powershell
-  docker compose exec -T backend rm -rf /app/backend/tests
-  docker cp backend/tests inteplast-backend-1:/app/backend/tests
-  docker compose exec -T -e POSTGRES_DB=app_test backend python -m pytest tests -q
+  .\scripts\test.ps1 -q
+  .\scripts\test.ps1 -E2E
   ```
 
-  Si aun así se vacía la BD: `docker compose exec backend python -m app.seed_features` la repuebla.
+  En Bash: `bash scripts/test.sh -q` y `bash scripts/test.sh --e2e`.
+  No copiar tests al contenedor de trabajo ni usar `down -v` como limpieza.
+  El seed solo crea un ejemplo; **no recupera datos borrados**.
 - **Ficheros temporales** → siempre al scratchpad de la sesión, nunca al repo ni a `/tmp`.
 - Los scripts de PowerShell largos: escribirlos a fichero con `Write` y ejecutarlos con `&`,
   no meterlos inline (el quoting se rompe).
-- 🔴 **Los `.ps1` deben ser SOLO ASCII.** PowerShell 5.1 los lee como ANSI: un guion largo (`—`)
-  o una `ç` en un literal provoca un error de sintaxis. Sin acentos en los scripts.
+- 🔴 **Convención del repo: mantener los `.ps1` en ASCII.** Evita problemas de codificación en
+  PowerShell 5.1, que puede interpretar un fichero UTF-8 sin BOM como ANSI. No asumir que cada
+  carácter no ASCII provoca por sí solo un error de sintaxis.
 
 ### Receta: leer un `.xls` PPAP
 
@@ -221,9 +230,9 @@ for f in $(ls "$D"/slide*.xml | sort -V); do sed 's/<[^>]*>/\n/g' "$f" | grep -v
 1. 🔴 **El `.xls` no siempre es la fuente de verdad — el CSV sí.** `intern.05.xls` tiene el
    bloque N117/N118 **copiado y pegado de `intern.03`** (valores idénticos), mientras el CSV de
    `intern.05` da valores distintos. **Ingerir los CSV, no los XLS.**
-2. 🔴 **Solo `intern.01` es un informe completo.** Del `.03` en adelante solo se remide lo que
-   fallaba. Si miras solo los XLS parecerá que N170 nunca se volvió a medir — sí se midió, está
-   en los CSV.
+2. 🔴 **Solo `intern.01` tiene el XLS completo.** Los XLS posteriores presentan selecciones
+   de cotas; eso no significa que la CMM solo remidiera lo que fallaba. Los CSV de cavidad de
+   `.01`, `.03`, `.05` y `.08` conservan las 211 filas. N170 sí se volvió a medir.
 3. **Error de signo sistemático en el export de la CMM**: bolts B2 y B4, `Posición Z` sale con
    el signo invertido (nominal +31, medido −30,990 ⇒ desviación −61,99). Está en **todos** los
    muestreos. No es una pieza mala.
@@ -285,7 +294,7 @@ hidratación en OneDrive y por dónde empezar.
 | `4- Metrologia` | [4-metrologia.md](docs/3212/4-metrologia.md) | 🔑 Los 9 muestreos, los XLS y los CSV de CMM |
 | `5- Retoques de molde` | [5-retoques-molde.md](docs/3212/5-retoques-molde.md) | 🔑 Las 54 acciones correctivas, diapositiva a diapositiva |
 | `6- Métode de mesura` | [6-metodo-medida.md](docs/3212/6-metodo-medida.md) | **Leer primero**: `GX`/`GN`/`LP(2)`, alineación, cómo se mide cada N-number |
-| `7- Moldflow` | [7-moldflow.md](docs/3212/7-moldflow.md) | `.mfr` cifrado: solo Moldflow Communicator |
+| `7- Moldflow` | [7-moldflow.md](docs/3212/7-moldflow.md) | `.mfr` propietario; consultar con Moldflow Communicator. El cifrado no está demostrado |
 | `8- STL peça real` | [8-stl-pieza-real.md](docs/3212/8-stl-pieza-real.md) | Malla de 4,9 M triángulos, lote 315346 |
 | *(transversal `4-`↔`5-`)* | [historial-molde.md](docs/3212/historial-molde.md) | Cronología muestreo ↔ corrección y la **prueba de que el retoque del Bolt Eye funcionó** |
 

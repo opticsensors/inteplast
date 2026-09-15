@@ -32,13 +32,13 @@ class UserRegister(SQLModel):
 
 # Properties to receive via API on update, all are optional
 class UserUpdate(UserBase):
-    email: EmailStr | None = Field(default=None, max_length=255)  # type: ignore
-    password: str | None = Field(default=None, min_length=8, max_length=128)
+    email: EmailStr = Field(default=None, max_length=255)
+    password: str = Field(default=None, min_length=8, max_length=128)
 
 
 class UserUpdateMe(SQLModel):
     full_name: str | None = Field(default=None, max_length=255)
-    email: EmailStr | None = Field(default=None, max_length=255)
+    email: EmailStr = Field(default=None, max_length=255)
 
 
 class UpdatePassword(SQLModel):
@@ -81,7 +81,7 @@ class ItemCreate(ItemBase):
 
 # Properties to receive on item update
 class ItemUpdate(ItemBase):
-    title: str | None = Field(default=None, min_length=1, max_length=255)  # type: ignore
+    title: str = Field(default=None, min_length=1, max_length=255)
 
 
 # Database model, database table inferred from class name
@@ -135,6 +135,11 @@ class FilePublic(SQLModel):
     created_at: datetime | None = None
 
 
+class FileAccessPublic(SQLModel):
+    url: str
+    expires_at: datetime
+
+
 # ---------------------------------------------------------------------------
 # Base de conocimiento de features
 # ---------------------------------------------------------------------------
@@ -182,7 +187,7 @@ class PartCreate(PartBase):
 
 
 class PartUpdate(SQLModel):
-    code: str | None = Field(default=None, min_length=1, max_length=64)
+    code: str = Field(default=None, min_length=1, max_length=64)
     name: str | None = Field(default=None, max_length=255)
 
 
@@ -242,10 +247,11 @@ class FeatureCreate(FeatureBase):
 
 # Properties to receive on feature update
 class FeatureUpdate(SQLModel):
-    name: str | None = Field(default=None, min_length=1, max_length=255)
+    # Omitted fields stay unchanged; explicit null is only valid for nullable columns.
+    name: str = Field(default=None, min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=2000)
     category: FeatureCategory | None = None
-    tags: list[str] | None = None
+    tags: list[str] = Field(default=None)
     image_id: uuid.UUID | None = None
 
 
@@ -297,10 +303,10 @@ class FeatureNoteCreate(FeatureNoteBase):
 
 
 class FeatureNoteUpdate(SQLModel):
-    kind: NoteKind | None = None
-    title: str | None = Field(default=None, min_length=1, max_length=255)
+    kind: NoteKind = Field(default=None)
+    title: str = Field(default=None, min_length=1, max_length=255)
     body: str | None = Field(default=None, max_length=20000)
-    position: int | None = None
+    position: int = Field(default=None)
 
 
 class FeatureNote(FeatureNoteBase, table=True):
@@ -334,9 +340,9 @@ class FeatureAssetCreate(FeatureAssetBase):
 
 
 class FeatureAssetUpdate(SQLModel):
-    kind: AssetKind | None = None
-    name: str | None = Field(default=None, min_length=1, max_length=255)
-    position: int | None = None
+    kind: AssetKind = Field(default=None)
+    name: str = Field(default=None, min_length=1, max_length=255)
+    position: int = Field(default=None)
     part_id: uuid.UUID | None = None
     file_id: uuid.UUID | None = None
 
@@ -410,7 +416,7 @@ class Token(SQLModel):
 
 # Contents of JWT token
 class TokenPayload(SQLModel):
-    sub: str | None = None
+    sub: uuid.UUID
 
 
 class NewPassword(SQLModel):

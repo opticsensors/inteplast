@@ -1,18 +1,13 @@
 import { expect, type Page } from "@playwright/test"
+import { createUser } from "./privateApi"
 
 export async function signUpNewUser(
   page: Page,
-  name: string,
+  _name: string,
   email: string,
   password: string,
 ) {
-  await page.goto("/signup")
-
-  await page.getByTestId("full-name-input").fill(name)
-  await page.getByTestId("email-input").fill(email)
-  await page.getByTestId("password-input").fill(password)
-  await page.getByTestId("confirm-password-input").fill(password)
-  await page.getByRole("button", { name: "Sign Up" }).click()
+  await createUser({ email, password })
   await page.goto("/login")
 }
 
@@ -23,9 +18,7 @@ export async function logInUser(page: Page, email: string, password: string) {
   await page.getByTestId("password-input").fill(password)
   await page.getByRole("button", { name: "Log In" }).click()
   await page.waitForURL("/")
-  await expect(
-    page.getByText("Welcome back, nice to see you again!"),
-  ).toBeVisible()
+  await expect(page.getByRole("heading", { name: /^Hola,/ })).toBeVisible()
 }
 
 export async function logOutUser(page: Page) {

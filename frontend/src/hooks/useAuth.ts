@@ -63,6 +63,7 @@ const useAuth = () => {
       formData: data,
     })
     localStorage.setItem("access_token", response.access_token)
+    queryClient.clear()
   }
 
   const loginMutation = useMutation({
@@ -73,9 +74,9 @@ const useAuth = () => {
     onError: handleError.bind(showErrorToast),
   })
 
-  const logout = () => {
-    localStorage.removeItem("access_token")
-    navigate({ to: "/login" })
+  const logout = async () => {
+    await navigate({ to: "/login", search: { logout: true } })
+    if (!localStorage.getItem("access_token")) queryClient.clear()
   }
 
   return {

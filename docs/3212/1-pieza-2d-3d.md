@@ -54,8 +54,8 @@ Es **poco para OCR fiable de cotas pequeñas** con símbolos GD&T (⌖, Ø, ⊥,
   Es lo que hay que usar. Abre el plano en una página, se teclea una cota y **la marca sobre la
   imagen**, con zoom y arrastre. → [visores.md](../visores.md)
   ```powershell
-  & $py "…\data-explorer\planoser_plano.py"
-  & $py "…\data-explorer\planoser_plano.py" --buscar "40,3"
+  & $py "…\data-explorer\planos\ver_plano.py"
+  & $py "…\data-explorer\planos\ver_plano.py" --buscar "40,3"
   ```
 - **El texto ya está extraído** en `data-explorer/out/plano/texto-3212.txt` (se regenera solo).
 - **A ojo**: abrirlo en cualquier visor.

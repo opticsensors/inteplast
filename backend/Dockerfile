@@ -1,6 +1,7 @@
 FROM python:3.10
 
 ENV PYTHONUNBUFFERED=1
+ENV UPLOADS_DIR=/app/uploads
 
 # Install uv
 # Ref: https://docs.astral.sh/uv/guides/integration/docker/#installing-uv

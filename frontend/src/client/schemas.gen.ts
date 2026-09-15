@@ -189,37 +189,16 @@ export const FeatureAssetPublicSchema = {
 export const FeatureAssetUpdateSchema = {
     properties: {
         kind: {
-            anyOf: [
-                {
-                    '$ref': '#/components/schemas/AssetKind'
-                },
-                {
-                    type: 'null'
-                }
-            ]
+            '$ref': '#/components/schemas/AssetKind'
         },
         name: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255,
-                    minLength: 1
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
+            maxLength: 255,
+            minLength: 1,
             title: 'Name'
         },
         position: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'integer',
             title: 'Position'
         },
         part_id: {
@@ -540,26 +519,12 @@ export const FeatureNotePublicSchema = {
 export const FeatureNoteUpdateSchema = {
     properties: {
         kind: {
-            anyOf: [
-                {
-                    '$ref': '#/components/schemas/NoteKind'
-                },
-                {
-                    type: 'null'
-                }
-            ]
+            '$ref': '#/components/schemas/NoteKind'
         },
         title: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255,
-                    minLength: 1
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
+            maxLength: 255,
+            minLength: 1,
             title: 'Title'
         },
         body: {
@@ -575,14 +540,7 @@ export const FeatureNoteUpdateSchema = {
             title: 'Body'
         },
         position: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'integer',
             title: 'Position'
         }
     },
@@ -691,16 +649,9 @@ export const FeaturePublicSchema = {
 export const FeatureUpdateSchema = {
     properties: {
         name: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255,
-                    minLength: 1
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
+            maxLength: 255,
+            minLength: 1,
             title: 'Name'
         },
         description: {
@@ -726,17 +677,10 @@ export const FeatureUpdateSchema = {
             ]
         },
         tags: {
-            anyOf: [
-                {
-                    items: {
-                        type: 'string'
-                    },
-                    type: 'array'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            items: {
+                type: 'string'
+            },
+            type: 'array',
             title: 'Tags'
         },
         image_id: {
@@ -773,6 +717,23 @@ export const FeaturesPublicSchema = {
     type: 'object',
     required: ['data', 'count'],
     title: 'FeaturesPublic'
+} as const;
+
+export const FileAccessPublicSchema = {
+    properties: {
+        url: {
+            type: 'string',
+            title: 'Url'
+        },
+        expires_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Expires At'
+        }
+    },
+    type: 'object',
+    required: ['url', 'expires_at'],
+    title: 'FileAccessPublic'
 } as const;
 
 export const FilePublicSchema = {
@@ -903,16 +864,9 @@ export const ItemPublicSchema = {
 export const ItemUpdateSchema = {
     properties: {
         title: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255,
-                    minLength: 1
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
+            maxLength: 255,
+            minLength: 1,
             title: 'Title'
         },
         description: {
@@ -1059,16 +1013,9 @@ export const PartPublicSchema = {
 export const PartUpdateSchema = {
     properties: {
         code: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 64,
-                    minLength: 1
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
+            maxLength: 64,
+            minLength: 1,
             title: 'Code'
         },
         name: {
@@ -1299,16 +1246,9 @@ export const UserRegisterSchema = {
 export const UserUpdateSchema = {
     properties: {
         email: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255,
-                    format: 'email'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
+            maxLength: 255,
+            format: 'email',
             title: 'Email'
         },
         is_active: {
@@ -1334,16 +1274,9 @@ export const UserUpdateSchema = {
             title: 'Full Name'
         },
         password: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 128,
-                    minLength: 8
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
+            maxLength: 128,
+            minLength: 8,
             title: 'Password'
         }
     },
@@ -1366,16 +1299,9 @@ export const UserUpdateMeSchema = {
             title: 'Full Name'
         },
         email: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255,
-                    format: 'email'
-                },
-                {
-                    type: 'null'
-                }
-            ],
+            type: 'string',
+            maxLength: 255,
+            format: 'email',
             title: 'Email'
         }
     },

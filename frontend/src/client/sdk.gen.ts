@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { FeaturesReadFeaturesData, FeaturesReadFeaturesResponse, FeaturesCreateFeatureData, FeaturesCreateFeatureResponse, FeaturesReadFeatureFiltersResponse, FeaturesReadFeatureData, FeaturesReadFeatureResponse, FeaturesUpdateFeatureData, FeaturesUpdateFeatureResponse, FeaturesDeleteFeatureData, FeaturesDeleteFeatureResponse, FeaturesCreateFeatureNoteData, FeaturesCreateFeatureNoteResponse, FeaturesUpdateFeatureNoteData, FeaturesUpdateFeatureNoteResponse, FeaturesDeleteFeatureNoteData, FeaturesDeleteFeatureNoteResponse, FeaturesLinkFeaturePartData, FeaturesLinkFeaturePartResponse, FeaturesUnlinkFeaturePartData, FeaturesUnlinkFeaturePartResponse, FeaturesCreateFeatureAssetData, FeaturesCreateFeatureAssetResponse, FeaturesUpdateFeatureAssetData, FeaturesUpdateFeatureAssetResponse, FeaturesDeleteFeatureAssetData, FeaturesDeleteFeatureAssetResponse, FilesUploadFileData, FilesUploadFileResponse, FilesReadFileData, FilesReadFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PartsReadPartsData, PartsReadPartsResponse, PartsCreatePartData, PartsCreatePartResponse, PartsUpdatePartData, PartsUpdatePartResponse, PartsDeletePartData, PartsDeletePartResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { FeaturesReadFeaturesData, FeaturesReadFeaturesResponse, FeaturesCreateFeatureData, FeaturesCreateFeatureResponse, FeaturesReadFeatureFiltersResponse, FeaturesReadFeatureData, FeaturesReadFeatureResponse, FeaturesUpdateFeatureData, FeaturesUpdateFeatureResponse, FeaturesDeleteFeatureData, FeaturesDeleteFeatureResponse, FeaturesCreateFeatureNoteData, FeaturesCreateFeatureNoteResponse, FeaturesUpdateFeatureNoteData, FeaturesUpdateFeatureNoteResponse, FeaturesDeleteFeatureNoteData, FeaturesDeleteFeatureNoteResponse, FeaturesLinkFeaturePartData, FeaturesLinkFeaturePartResponse, FeaturesUnlinkFeaturePartData, FeaturesUnlinkFeaturePartResponse, FeaturesCreateFeatureAssetData, FeaturesCreateFeatureAssetResponse, FeaturesUpdateFeatureAssetData, FeaturesUpdateFeatureAssetResponse, FeaturesDeleteFeatureAssetData, FeaturesDeleteFeatureAssetResponse, FilesUploadFileData, FilesUploadFileResponse, FilesCreateFileAccessUrlData, FilesCreateFileAccessUrlResponse, FilesReadFileData, FilesReadFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PartsReadPartsData, PartsReadPartsResponse, PartsCreatePartData, PartsCreatePartResponse, PartsUpdatePartData, PartsUpdatePartResponse, PartsDeletePartData, PartsDeletePartResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class FeaturesService {
     /**
@@ -358,15 +358,39 @@ export class FilesService {
     }
     
     /**
+     * Create File Access Url
+     * Issue a short-lived link for an image, viewer or browser download.
+     * @param data The data for the request.
+     * @param data.fileId
+     * @param data.download
+     * @returns FileAccessPublic Successful Response
+     * @throws ApiError
+     */
+    public static createFileAccessUrl(data: FilesCreateFileAccessUrlData): CancelablePromise<FilesCreateFileAccessUrlResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/files/{file_id}/access-url',
+            path: {
+                file_id: data.fileId
+            },
+            query: {
+                download: data.download
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
      * Read File
      * Servir un fichero por id.
      *
-     * Sin autenticacion a proposito: el `<img src>` y los enlaces de descarga del
-     * frontend no pueden mandar la cabecera Authorization. El id es un UUID v4,
-     * que hace de secreto. Si algun dia hay ficheros confidenciales habra que
-     * pasar a URLs firmadas.
+     * Require an active user's bearer token or a purpose-bound, expiring file link.
      * @param data The data for the request.
      * @param data.fileId
+     * @param data.token
+     * @param data.download
      * @returns unknown Successful Response
      * @throws ApiError
      */
@@ -376,6 +400,10 @@ export class FilesService {
             url: '/api/v1/files/{file_id}',
             path: {
                 file_id: data.fileId
+            },
+            query: {
+                token: data.token,
+                download: data.download
             },
             errors: {
                 422: 'Validation Error'

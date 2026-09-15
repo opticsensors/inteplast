@@ -18,7 +18,7 @@
 | ITP Ref. | `732120000` | `DR(3D)!C5` |
 | Part nº (Bosch) | `3130517012` | `DR(3D)!H5` |
 | Part nº Level | `3E1005491360` | `DR(3D)!L5` |
-| Nº Plano | `0140S00237` | `DR(3D)!H8` |
+| Nº Plano | `0140S00237` | `DR(3D)!H6` |
 | Drawing nº Level | **`06/3E1005491360`** en *todos* los informes | `DR(3D)!L6` |
 | Cliente | Robert Bosch, división BueP | Metadatos de los ficheros |
 | Nº de molde | *(no aparece en ningún fichero)* | — |
@@ -107,7 +107,7 @@ Get-ChildItem -LiteralPath $r -Recurse -File |
 2. [4-metrologia.md](4-metrologia.md) — dónde están las medidas y cómo leerlas.
 3. [historial-molde.md](historial-molde.md) — la historia completa del molde y la prueba de
    valor del proyecto.
-4. [5-retoques-molde.md](5-retoques-molde.md) — el detalle de las 55 acciones correctivas.
+4. [5-retoques-molde.md](5-retoques-molde.md) — las 54 diapositivas de corrección presentes (36 + 18), incluidas decisiones de no actuar.
 
 ## Nomenclatura de ficheros del 3212
 

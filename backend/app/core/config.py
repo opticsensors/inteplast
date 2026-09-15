@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
     FRONTEND_HOST: str = "http://localhost:5173"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
+    ALLOW_PUBLIC_SIGNUP: bool = False
+    ENABLE_TEST_ROUTES: bool = False
 
     BACKEND_CORS_ORIGINS: Annotated[
         list[AnyUrl] | str, BeforeValidator(parse_cors)
@@ -70,9 +72,10 @@ class Settings(BaseSettings):
         )
 
     # Donde se guardan los ficheros subidos (imagenes de features, CAD, planos).
-    # Relativo al working dir: "/app/uploads" en Docker, "backend/uploads" en local.
+    # Docker explicitly sets /app/uploads; local execution defaults to backend/uploads.
     UPLOADS_DIR: str = "uploads"
     MAX_UPLOAD_SIZE_MB: int = 50
+    FILE_ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -123,6 +126,13 @@ class Settings(BaseSettings):
         self._check_default_secret(
             "FIRST_SUPERUSER_PASSWORD", self.FIRST_SUPERUSER_PASSWORD
         )
+
+        if self.ENABLE_TEST_ROUTES and (
+            self.ENVIRONMENT != "local" or not self.POSTGRES_DB.endswith("_test")
+        ):
+            raise ValueError(
+                "Test routes require ENVIRONMENT=local and a _test database"
+            )
 
         return self
 

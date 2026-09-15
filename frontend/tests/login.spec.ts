@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test"
+﻿import { expect, type Page, test } from "@playwright/test"
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
 import { randomPassword } from "./utils/random.ts"
 
@@ -45,9 +45,7 @@ test("Log in with valid email and password ", async ({ page }) => {
 
   await page.waitForURL("/")
 
-  await expect(
-    page.getByText("Welcome back, nice to see you again!"),
-  ).toBeVisible()
+  await expect(page.getByRole("heading", { name: /^Hola,/ })).toBeVisible()
 })
 
 test("Log in with invalid email", async ({ page }) => {
@@ -77,9 +75,7 @@ test("Successful log out", async ({ page }) => {
 
   await page.waitForURL("/")
 
-  await expect(
-    page.getByText("Welcome back, nice to see you again!"),
-  ).toBeVisible()
+  await expect(page.getByRole("heading", { name: /^Hola,/ })).toBeVisible()
 
   await page.getByTestId("user-menu").click()
   await page.getByRole("menuitem", { name: "Log out" }).click()
@@ -94,9 +90,7 @@ test("Logged-out user cannot access protected routes", async ({ page }) => {
 
   await page.waitForURL("/")
 
-  await expect(
-    page.getByText("Welcome back, nice to see you again!"),
-  ).toBeVisible()
+  await expect(page.getByRole("heading", { name: /^Hola,/ })).toBeVisible()
 
   await page.getByTestId("user-menu").click()
   await page.getByRole("menuitem", { name: "Log out" }).click()

@@ -75,12 +75,17 @@ Decisiones que conviene conocer antes de tocarlo:
 
 ### Ficheros subidos
 
-Los bytes se guardan en disco, en `settings.UPLOADS_DIR` (por defecto `uploads`, **relativo al
-working dir**: `/app/uploads` en Docker, `backend/uploads` en local). El fichero se llama como el
+Los bytes se guardan en disco, en `settings.UPLOADS_DIR`. El Dockerfile fija **`/app/uploads`**
+como ruta absoluta; el WORKDIR es `/app/backend`. En local el valor por defecto `uploads` es
+relativo al directorio de trabajo, normalmente `backend/uploads`. El fichero se llama como el
 `id` de la fila; el nombre original y el mime-type viven en la base de datos.
 
 En Docker hay un volumen `app-uploads` montado en `/app/uploads` (`compose.yml`), así que los
 ficheros sobreviven a un `docker compose down`.
+
+Corregido el 2026-09-15: antes se escribía en `/app/backend/uploads`, fuera del volumen.
+Antes de recrear una instalación antigua, comprobar esa ruta y rescatar cualquier fichero;
+ver [deployment.md](../deployment.md). Los metadatos de la BD no permiten recuperar bytes perdidos.
 
 ### Sesión: qué pasa cuando el token deja de valer
 
@@ -105,10 +110,11 @@ Ahora, tres cierres independientes:
 Comprobado con los cuatro tipos de token malo (usuario borrado, firma rota, caducado y basura):
 los cuatro acaban en la pantalla de login en menos de medio segundo.
 
-🔴 **`GET /files/{id}` no pide autenticación, a propósito.** Un `<img src>` o un enlace de
-descarga no pueden mandar la cabecera `Authorization`. El secreto es el UUID v4. Si algún día hay
-que servir ficheros confidenciales, hay que pasar a URLs firmadas — está anotado en el propio
-endpoint.
+**`GET /files/{id}` requiere autenticación o una URL firmada temporal.** El frontend pide
+`GET /files/{id}/access-url` con su token de sesión y recibe una URL que puede usar en imágenes,
+visores y descargas. Caduca a los 15 minutos y está ligada al fichero y a un usuario activo;
+no sirve como token de sesión ni para otro fichero. El UUID por sí solo devuelve 401.
+HTML/SVG y tipos activos no permitidos se fuerzan como adjuntos, con `nosniff` y sin caché pública.
 
 ---
 
@@ -132,7 +138,8 @@ Todo bajo `/api/v1`. Documentación interactiva en `http://localhost:8000/docs`.
 | `PUT` | `/parts/{id}` | Editar código o nombre. El código es único: choque → `409` |
 | `DELETE` | `/parts/{id}` | Borrar una pieza. **Solo superusuario** |
 | `POST` | `/files/` | Subir un fichero (multipart) → devuelve el `id` que se referencia |
-| `GET` | `/files/{id}` | Servirlo. **Sin autenticación** (ver arriba) |
+| `GET` | `/files/{id}/access-url` | Obtener enlace temporal autenticado; `download=true` fuerza descarga |
+| `GET` | `/files/{id}` | Servirlo con bearer o enlace firmado válido |
 | `DELETE` | `/files/{id}` | Borrarlo |
 
 **La búsqueda `q` es global**: mira en el nombre, la descripción, los tags, el **código y el
@@ -142,12 +149,18 @@ el cuerpo de warnings y lessons learned. Es lo que permite encontrar el Bolt Eye
 
 ### Permisos
 
-La plantilla solo tiene dos roles (usuario y superusuario) y no se han añadido más:
+Hay dos roles (usuario y superusuario). El registro público está desactivado por defecto
+(`ALLOW_PUBLIC_SIGNUP=false`); Admin crea las cuentas. `/signup` indica que se contacte con
+el administrador. Las rutas privadas para crear usuarios de prueba requieren
+`ENABLE_TEST_ROUTES=true`, `ENVIRONMENT=local` y una BD cuyo nombre termine en `_test`.
 
 - **Leer**: cualquier usuario autenticado ve **todas** las fichas. Es el sentido de la
   herramienta — a diferencia del `Item` de la plantilla, que solo enseña los propios.
 - **Crear y editar**: cualquier usuario autenticado. La base es colaborativa.
-- **Borrar un feature**: solo el autor o un superusuario. Es lo único irreversible.
+- **Borrar un feature**: solo el autor o un superusuario.
+- **Borrar notas, adjuntos y ficheros**: cualquier usuario autenticado, conforme al modelo
+  colaborativo. También son acciones permanentes; quitar un adjunto no borra sus bytes.
+- **Borrar piezas**: solo superusuario.
 - **Gestión de usuarios**: superusuario, como en la plantilla.
 
 ---
@@ -161,7 +174,7 @@ La plantilla solo tiene dos roles (usuario y superusuario) y no se han añadido 
 | `/features` | `routes/_layout/features.tsx` | **Gestión** (la página «Ítems» de la fase B): mismas tarjetas, con *Añadir feature* y, en cada una, *Editar* y *Borrar* |
 | `/features/{id}/fichero/{assetId}` | `routes/_layout/features_.$featureId_.fichero.$assetId.tsx` | 🔑 **La página de un fichero**: el visor (PDF, imagen o 3D), el botón de descargar y, cuando no hay visor posible, qué programa hace falta |
 | `/features/nuevo` | `routes/_layout/features_.nuevo.tsx` | **Alta**. Al guardar los datos básicos salta a la ficha en modo edición, que es donde se le cuelgan notas y ficheros |
-| `/admin` | `routes/_layout/admin.tsx` | Usuarios y permisos. **Sin tocar**, es el de la plantilla |
+| `/admin` | `routes/_layout/admin.tsx` | Usuarios y permisos; punto de alta de cuentas con el registro público cerrado |
 
 Componentes en `components/Features/`:
 
@@ -202,17 +215,20 @@ fichero**.
 | Se ve | Significa | Al clicar |
 |---|---|---|
 | Nombre subrayable + fichero y tamaño | Hay fichero y **se puede ver aquí** | La página del fichero, con el visor |
-| Igual, pero en gris debajo *«necesita Moldflow Communicator»* o *«demasiado grande para el visor»* | Hay fichero pero **ningún navegador puede abrirlo** | Nada: solo queda el botón de descargar |
+| Igual, pero en gris debajo *«necesita Moldflow Communicator»* o *«demasiado grande para el visor»* | Hay fichero pero **la aplicación no ofrece un visor para él** | Nada: solo queda el botón de descargar |
 | *«sin fichero subido»* en cursiva | El adjunto está declarado pero **nadie ha subido el fichero**. Es el caso del seed | Nada |
 
-Lo decide `viewers.ts` a partir de la extensión y el tamaño: PDF e imágenes se pintan en la página;
-STL, GLB, OBJ, PLY, STEP e IGES van al visor 3D si pesan menos de **50 MB**; el resto —`.mfr` de
-Moldflow, `.sldprt`, `.CATPart`— solo se descargan.
+Lo decide `viewers.ts` a partir del tipo MIME, la extensión y el tamaño: los PDF con tipo
+`application/pdf` y las imágenes JPEG, PNG, GIF, WebP, AVIF y BMP se pintan en la página.
+La imagen de cabecera admite esos mismos formatos, tanto al seleccionar como al arrastrar;
+SVG y otros tipos no admitidos se ofrecen como archivos descargables. STL, GLB, OBJ, PLY,
+STEP e IGES van al visor 3D si pesan menos de **50 MB**; el resto —`.mfr` de Moldflow,
+`.sldprt`, `.CATPart`— solo se descargan.
 
-🔴 **Abrir el programa del PC desde la web es imposible** y no hay forma de rodearlo: el navegador
-tiene prohibido lanzar ejecutables, y además los bytes están en el servidor, no en el disco del
-usuario. La secuencia real es descargar → abrir desde la barra de descargas → Windows lo abre con
-el programa asociado.
+La aplicación no integra protocolos ni componentes de escritorio para abrir CAD local.
+Su flujo es descargar → abrir desde la barra de descargas → Windows usa el programa asociado.
+Una integración de escritorio sería un desarrollo adicional y requeriría instalación/configuración
+en el equipo del usuario.
 
 ### El visor 3D
 
@@ -245,7 +261,8 @@ modal se ha borrado. El motivo no es estético:
   tipos de fichero dentro de 672 px, que además abría modales encima de la modal. Ahora el alta
   es `/features/nuevo` y la edición ocurre **dentro de la propia ficha**. Desde el 2026-08-25
   **no queda ninguna modal de contenido**: `NoteDialog` y `AssetDialog` se han borrado y se edita
-  en línea (ver abajo). La única modal que sobrevive es la de confirmar el borrado de un feature.
+  en línea (ver abajo). Se mantienen confirmaciones de borrado y, desde la corrección de edición,
+  un diálogo para guardar cambios pendientes antes de salir de una ficha.
 
 🔑 **Cada página tiene su tarjeta** (2026-08-24). En el **dashboard** la tarjeta se clica y
 lleva a la ficha: se viene a consultar. En **gestión** la tarjeta **no se clica** — lleva sus dos
@@ -265,11 +282,13 @@ elegir entre dos cosas. **Ese modo `gestion` se ha borrado**, botones y *search 
 casilla—, la foto sigue a la izquierda —ahora se puede soltar otra encima—, y las secciones
 siguen debajo, con sus botones de añadir y borrar. Arriba a la derecha están *Cancelar* y
 *Guardar*, y ahí es donde tienen que estar: lo único que se guarda a mano es la cabecera, porque
-las notas y los ficheros se guardan solos desde sus propias modales. **Los dos devuelven a
+las notas y los ficheros se guardan en línea. **Los dos devuelven a
 `/features`**, que es de donde se venía: dejar la ficha en solo lectura sería un callejón sin
 salida, porque ahí ya no hay botón de editar. El modo vive en la URL y no en un `useState` por
 dos motivos: el *Editar* de la lista entra directo a él, y recargar (F5) no te echa de la
-edición. `validateSearch` lo declara **opcional**, o el dashboard no podría enlazar la ficha sin
+edición. Antes de salir, se completan los guardados pendientes de notas/adjuntos y las subidas;
+si fallan, se conserva la edición y se muestra el error. **Cancelar descarta la cabecera**, no
+deshace las notas ni los adjuntos guardados en línea. `validateSearch` lo declara **opcional**, o el dashboard no podría enlazar la ficha sin
 pasarlo (TanStack exige en los enlaces todo search param que el validador declare obligatorio).
 
 **No hay botón *Volver*** en ninguna de las dos: para eso están el botón del navegador y el menú
@@ -301,10 +320,13 @@ lista pero se escribía en otro sitio. Ahora **se escribe donde se lee**:
 
 **Solo queda el botón de borrar**, que es la única acción que no se puede expresar escribiendo.
 
-🔑 **Autoguardado, sin botón de guardar**: cada campo se manda **0,7 s después de la última tecla**
-(`useDebounce`), y solo ese campo — el backend hace `model_dump(exclude_unset=True)`, así que un
-`PATCH` con `{title}` no toca el cuerpo. Es coherente con lo que ya pasaba: en esta página lo único
-que se guarda a mano es la cabecera del feature, porque es lo único que vive en un `<form>`.
+🔑 **Autoguardado, sin botón de guardar**: se envían solo los campos modificados localmente
+tras **0,7 s**, mediante `PUT` parcial (`model_dump(exclude_unset=True)`). Las escrituras se
+serializan: una respuesta antigua no dispara una escritura que deshaga cambios posteriores.
+Una actualización del servidor sincroniza los campos limpios, sin convertir diferencias
+ajenas en ediciones locales. Los campos pendientes de la cabecera sobreviven a los refrescos.
+Plegar una sección de edición conserva montados sus borradores; guardar o navegar espera los
+guardados pendientes. La cabecera se sigue guardando mediante su botón.
 
 - El **título vacío no se guarda** (`min_length=1` en el backend): el campo se marca en rojo y se
   queda esperando. Lo mismo con el nombre de un fichero.
@@ -350,13 +372,14 @@ docker compose up -d --build db prestart backend   # aplica las migraciones al a
 cd frontend; npm run dev                           # http://localhost:5173
 ```
 
-🔴 **El `--build` no es opcional después de tocar `backend/`.** El Dockerfile copia el código
+🔴 **Sin `docker compose watch backend`, hay que usar `--build` después de tocar `backend/`.** El Dockerfile copia el código
 dentro de la imagen; si ya existe un `backend:latest`, `docker compose up -d` a secas **lo
 reutiliza tal cual** y arrancas con el código viejo — sin errores, simplemente faltan los
 endpoints. Cómo se detecta:
 
 ```powershell
-docker compose exec backend alembic current   # tiene que decir b7f1c0d2a3e4 (head)
+docker compose exec backend alembic current
+docker compose exec backend alembic heads     # current debe coincidir con heads
 ```
 
 El frontend no tiene este problema: Vite sirve desde el disco.
@@ -370,59 +393,50 @@ de [modelo-datos.md](modelo-datos.md) y [3212/historial-molde.md](3212/historial
 docker compose exec backend python -m app.seed_features
 ```
 
-Es idempotente: si el feature ya existe no toca nada. Crea la pieza **3212 Pump Housing**, la
+Es idempotente: si el feature ya existe no toca nada. La creación completa usa una transacción:
+un fallo revierte el ejemplo entero y permite reintentar. Crea la pieza **3212 Pump Housing**, la
 declara en el feature y le cuelga los cinco adjuntos, uno por tipo. Los adjuntos se crean **sin
 fichero** — los CAD del cliente no se copian al repo, se suben desde la aplicación.
 
-🔴 **Nunca lances los tests contra `app`.** Ver [Comprobaciones](#comprobaciones): el
-`conftest.py` de la plantilla **vacía la base de datos al terminar** y hay que usar `app_test`.
-
 ### Regenerar el cliente TypeScript
 
-Cualquier cambio en los endpoints o en los modelos del backend obliga a regenerar el cliente, o el
-frontend se queda desincronizado:
+Tras cambiar endpoints o modelos:
 
 ```bash
-bash scripts/generate-client.sh     # necesita uv
+bash scripts/generate-client.sh
 ```
 
-Sin `uv` a mano, los tres pasos son: volcar `app.main.app.openapi()` a `frontend/openapi.json`,
-`npm run generate-client` dentro de `frontend/`, y `npm run lint`.
+Requiere `uv` y npm. Exporta OpenAPI sin conectar a la BD, incluye las rutas exclusivas de tests
+para su SDK y genera `frontend/src/client`. El JSON intermedio queda ignorado por Git.
 
 ### Comprobaciones
 
-```powershell
-cd frontend; npx tsc -p tsconfig.build.json --noEmit;  npm run lint
-docker compose exec backend bash -c "ruff check app; ruff format --check app; mypy app"
-```
-
-#### 🔴 Los tests, SIEMPRE contra `app_test`
-
-El `conftest.py` de la plantilla **vacía la base de datos al terminar**: borra `Item`, `Feature`,
-`Part`, `StoredFile` y `User`. Lanzado contra `app` te borra los datos **y te tira la sesión del
-navegador**, porque el superusuario se recrea con un `id` distinto al que lleva tu token.
-
-Además los tests **no van dentro de la imagen** (`backend/Dockerfile` solo copia `app/`), así que
-hay que meterlos antes. La receta completa:
+Desde la raíz:
 
 ```powershell
-# 1. La base de datos de test, una sola vez
-docker compose exec -T db psql -U postgres -d postgres -c "CREATE DATABASE app_test"
-docker compose exec -T -e POSTGRES_DB=app_test backend alembic upgrade head
-
-# 2. Cada vez: copiar los tests y lanzarlos contra app_test
-docker compose exec -T backend rm -rf /app/backend/tests
-docker cp backend/tests inteplast-backend-1:/app/backend/tests
-docker compose exec -T -e POSTGRES_DB=app_test backend python -m pytest tests -q
+npm.cmd run build --workspace frontend
+npm.cmd run lint
+npm.cmd run test:components
+.\scripts\test.ps1 -q
+.\scripts\test.ps1 -E2E
 ```
 
-`POSTGRES_DB` es lo único que hace falta: `settings.SQLALCHEMY_DATABASE_URI` se construye a partir
-de esa variable, así que el `-e` desvía toda la sesión de test. Tras una migración nueva, repetir
-el `alembic upgrade head` sobre `app_test`.
+En Bash: `bash scripts/test.sh -q` y `bash scripts/test.sh --e2e`.
+Los argumentos llegan a pytest o Playwright. `lint` comprueba sin modificar ficheros.
 
-Los tests del backend están en `backend/tests/api/routes/test_features.py`, con las utilidades en
-`backend/tests/utils/feature.py`.
+#### Los tests, siempre en una BD y un stack aislados
 
+`compose.test.yml` es independiente de los otros Compose. Los lanzadores crean un nombre de
+proyecto nuevo, PostgreSQL con BD `app_test` y subidas temporales, sin puertos publicados ni
+volúmenes compartidos con el stack de trabajo. No cargan las credenciales de `.env`.
+
+`conftest.py` rechaza nombres de BD que no terminen en `_test` antes de ejecutar pruebas y cambia
+el directorio de subidas por otro temporal. Su limpieza borra únicamente las tablas de esa BD.
+No copiar ni ejecutar tests dentro del backend de trabajo y no usar `docker compose down -v`.
+
+Las pruebas de componentes simulan la API; las E2E utilizan el backend temporal. Los tests del
+backend cubren features, piezas, validación, acceso a ficheros, usuarios y rollback del seed.
+La cobertura HTML se genera dentro del stack de tests y desaparece al limpiarlo.
 ---
 
 ## Cabos sueltos
@@ -430,10 +444,10 @@ Los tests del backend están en `backend/tests/api/routes/test_features.py`, con
 | Qué | Estado |
 |---|---|
 | **La página `/items` de la plantilla sigue existiendo** | Se ha quitado del menú pero el `Item` de demo sigue en el backend, el frontend y los tests. No molesta; se puede borrar entero cuando se decida |
-| **Sin paginación en la UI** | La API ya la tiene (`skip`/`limit`); el frontend pide 100 de golpe. Con cientos de fichas hay que añadir los controles |
+| **Sin paginación en la UI** | La API ya la tiene (`skip`/`limit`); gestión pide 100 y el dashboard 50 al buscar o 5 recientes. Con más fichas hay que añadir controles |
 | **Ordenar warnings y adjuntos arrastrando** | El campo `position` ya está en la BD y se respeta al leer, pero la UI todavía no deja reordenar |
 | **Imagen con la zona marcada en rojo** | Se sube ya hecha desde el CAD. La herramienta de anotación dentro de la app que menciona la fase B no está |
 | **Vincular un feature con sus N-numbers y sus cotas** | La tabla ya existe (`FeaturePartLink`), pero está vacía de contenido: solo dice *feature ↔ pieza*. Añadirle los N-numbers y las tolerancias la convierte en el `INSTANCIA_EN_PROYECTO` de [modelo-datos.md](modelo-datos.md) |
 | **Los ficheros de más de 50 MB no caben** | `MAX_UPLOAD_SIZE_MB = 50`: el molde (247 MB), el escaneo (236 MB) y el Moldflow (184 MB) **no se pueden subir**. La salida es referenciarlos donde ya están en vez de copiarlos — está planeado en [TODO.md](../TODO.md), no implementado |
 | **El visor 3D no se ha probado con ficheros reales** | Compila y se empaqueta bien, pero hasta que no se suba un STEP o un STL no se sabe si tesela y encuadra como debe |
-| **La ficha de una pieza** | Hoy `Part` solo tiene código y nombre, y se edita desde el desplegable. No hay página propia donde ver *«todos los features del 3212»* |
+| **La ficha de una pieza** | Hoy `Part` solo tiene código y nombre; el desplegable permite crear y seleccionar, no editar piezas existentes. La API sí permite editarlas. No hay página propia de pieza |

@@ -9,6 +9,7 @@ interface CollapsibleSectionProps {
   /** Acciones a la derecha del titulo (p. ej. el boton de anadir). */
   actions?: ReactNode
   defaultOpen?: boolean
+  keepMounted?: boolean
   children: ReactNode
   className?: string
 }
@@ -19,6 +20,7 @@ export function CollapsibleSection({
   icon,
   actions,
   defaultOpen = true,
+  keepMounted = false,
   children,
   className,
 }: CollapsibleSectionProps) {
@@ -30,6 +32,7 @@ export function CollapsibleSection({
         <button
           type="button"
           onClick={() => setIsOpen((open) => !open)}
+          aria-expanded={isOpen}
           className="flex flex-1 items-center gap-2 text-left text-sm font-medium"
         >
           <ChevronDown
@@ -43,7 +46,11 @@ export function CollapsibleSection({
         </button>
         {actions}
       </div>
-      {isOpen && <div className="space-y-2 px-3 pb-3">{children}</div>}
+      {(isOpen || keepMounted) && (
+        <div hidden={!isOpen} className="space-y-2 px-3 pb-3">
+          {children}
+        </div>
+      )}
     </div>
   )
 }

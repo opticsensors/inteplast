@@ -127,13 +127,18 @@ DEPENDENCIA_COTA (n:n)     n_number_origen → n_number_afectado, tipo, texto
 | Prioridad | Fuente | Por qué | Esfuerzo |
 |:--:|---|---|---|
 | **1** | **CSV de CMM por cavidad** (`3212_c13.csv`) | **Es la fuente de verdad**: cubre todas las cotas en todos los muestreos, incluidos los que el XLS omite. Incluye desviación y semáforo ya calculados. | Bajo |
-| 2 | CSV `*_totes.csv` | Comparativa por cavidad ya montada | Bajo |
-| 3 | `.xls` PPAP — **solo cabecera + NOK** | Aporta los metadatos que el CSV no tiene: fecha, lote, PPAP ref, responsable, y la marca NOK consolidada | Bajo |
-| 4 | Texto de los PPTX de corrección | Lessons learned directas, formato regular | Medio |
-| 5 | Imágenes `ppt/media/` de los PPTX | Las imágenes de "zona en rojo" que pide el frontend | Medio |
+| 2 | `_PUNTS_NOUS.txt` | Objetivos de corrección distintos por cavidad y muestreo | Medio |
+| 3 | PDF `PA`/`PB` | Mediciones de contorno que no están en CSV ni XLS; conservar estado desconocido si falla la extracción | Medio |
+| 4 | XLS: **`HISTORY` primero**, cabecera como complemento | `intern.09!HISTORY` reúne fechas, lotes, responsables y motivos; la cabecera aporta PPAP y revisión, pero puede estar vacía o rota | Bajo |
+| 5 | Texto e imágenes de los PPTX de corrección | Lessons learned, acciones y zonas de retoque, con su evidencia | Medio |
 | 6 | Método de medida (DOCX) | Decodifica el vocabulario y aporta la consecuencia funcional. **Entrada manual**, es un documento por proyecto. | Bajo |
-| 7 | Nubes de puntos `.txt` | Soporte a las correcciones *"segons núvol de punts"* | Medio |
-| 8 | Plano 2D, Moldflow, STEP/STL | Alto valor pero requieren herramientas específicas / trabajo manual | Alto |
+| 7 | `.txt` de perfil y `PUNTS` | Soporte geométrico y ficheros adjuntos | Medio |
+| 8 | Plano 2D, Moldflow, STEP/STL | Referencias y visualización; análisis automático pendiente | Alto |
+| — | CSV `*_totes.csv`, `.igs`, `.dxf` | **No ingerir otra vez:** duplican datos de las fuentes anteriores. Conservar como adjuntos si hace falta | — |
+
+La marca NOK del XLS sirve para contrastar la medición; no sustituye al CSV cuando el informe
+contiene bloques copiados de otra tanda. La prioridad 4 de metrología corresponde a `HISTORY`;
+después se completa con la cabecera y se incorporan las correcciones.
 
 ---
 
@@ -148,9 +153,10 @@ DEPENDENCIA_COTA (n:n)     n_number_origen → n_number_afectado, tipo, texto
 > tolerancias — solo dice qué feature aparece en qué pieza). Lo que sigue
 > pendiente es la ingesta: `PROYECTO`, `MUESTREO`, `MEDICION`, `CORRECCION_MOLDE`.
 
-Según `inteplast_PADIH_fase_B.md`, el frontend ya tiene: búsqueda global de features,
-tarjetas con imagen + nombre + descripción + tags, y una modal con secciones desplegables de
-**warnings**, **lessons learned** y **piezas ejemplo** (CAD, piezas de referencia, planos PDF).
+El frontend tiene búsqueda global de features, tarjetas con imagen, nombre, descripción y tags,
+y una página propia `/features/{id}` con secciones desplegables de **warnings**,
+**lessons learned** y **piezas ejemplo**. Los ficheros se agrupan por pieza y las notas y los
+adjuntos se editan en línea. El estado actual de la aplicación se mantiene en [app-web.md](app-web.md).
 
 El mapeo es directo:
 

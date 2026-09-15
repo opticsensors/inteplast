@@ -8,7 +8,7 @@
 ```
 
 Es el **único fichero grande del proyecto que se puede leer de verdad**: el `.step` del molde
-está en la nube y el `.mfr` está cifrado. Este es una malla de triángulos abierta y estándar.
+estaba en la nube en la inspección y el `.mfr` es propietario. Este es una malla de triángulos abierta y estándar.
 
 ---
 
@@ -99,7 +99,7 @@ Es la entrada natural para el enfoque de **geometría computacional / slicing** 
 Y es la **verificación independiente de la metrología**: la CMM da ~55 cotas puntuales; el STL
 da la superficie completa de la misma familia de piezas. Se pueden contrastar.
 
-⚠️ **No es la misma pieza física que se midió en la CMM**, solo el mismo lote. No esperar que
+⚠️ **No está demostrado que sea la misma pieza física que se midió en la CMM**, solo el mismo lote. No esperar que
 los números coincidan exactamente con `intern.03`.
 
 ---
@@ -109,7 +109,7 @@ los números coincidan exactamente con `intern.03`.
 | Uso | Viabilidad |
 |---|---|
 | **Referencia + metadatos** (lote, cavidad, nº triángulos) | ✅ Trivial → `PIEZA_REAL` |
-| Descarga desde el frontend | ❌ 236 MB |
+| Descarga desde el frontend | Posible por streaming; el límite actual de subida de 50 MB impide cargarlo. La referencia externa está pendiente. |
 | Previsualización 3D en el navegador | ⚠️ Solo con un derivado decimado (glTF) |
 | Análisis geométrico automático | ✅ Alto valor y **viable ya**: hay Python 3.11 con `open3d`, `pyvista`, `pymeshlab` y `libigl` |
 | **Derivado decimado** (glTF para el navegador) | ✅ `open3d` / `pymeshlab` lo hacen en unas líneas |

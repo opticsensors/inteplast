@@ -1,11 +1,16 @@
-#! /usr/bin/env sh
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Exit in case of error
-set -e
-set -x
+repo_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+project="inteplast-tests-$(date +%s)-$$"
+compose=(docker compose --project-name "$project" --file "$repo_dir/compose.test.yml")
+cleanup() { "${compose[@]}" down --remove-orphans; }
+trap cleanup EXIT
 
-docker compose build
-docker compose down -v --remove-orphans # Remove possibly previous broken stacks left hanging after an error
-docker compose up -d
-docker compose exec -T backend bash scripts/tests-start.sh "$@"
-docker compose down -v --remove-orphans
+"${compose[@]}" up --build --wait backend
+if [[ "${1:-}" == "--e2e" ]]; then
+    shift
+    "${compose[@]}" run --build --rm playwright npm test -- "$@"
+else
+    "${compose[@]}" exec -T backend bash scripts/test.sh "$@"
+fi

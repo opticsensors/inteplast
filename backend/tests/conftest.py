@@ -12,8 +12,20 @@ from tests.utils.user import authentication_token_from_email
 from tests.utils.utils import get_superuser_token_headers
 
 
+def pytest_configure() -> None:
+    # Run before collection/fixtures, including when pytest is called directly.
+    if not settings.POSTGRES_DB.endswith("_test"):
+        raise pytest.UsageError(
+            "Refusing destructive tests: POSTGRES_DB must end in '_test'. "
+            "Use scripts/test.sh or scripts/test.ps1 for an isolated stack."
+        )
+
+
 @pytest.fixture(scope="session", autouse=True)
-def db() -> Generator[Session, None, None]:
+def db(tmp_path_factory: pytest.TempPathFactory) -> Generator[Session, None, None]:
+    # File deletion tests must never use application uploads, even with a test DB.
+    original_uploads = settings.UPLOADS_DIR
+    settings.UPLOADS_DIR = str(tmp_path_factory.mktemp("uploads"))
     with Session(engine) as session:
         init_db(session)
         yield session
@@ -29,6 +41,7 @@ def db() -> Generator[Session, None, None]:
         statement = delete(User)
         session.execute(statement)
         session.commit()
+    settings.UPLOADS_DIR = original_uploads
 
 
 @pytest.fixture(scope="module")

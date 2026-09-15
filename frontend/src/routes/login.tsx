@@ -34,7 +34,14 @@ type FormData = z.infer<typeof formSchema>
 
 export const Route = createFileRoute("/login")({
   component: Login,
-  beforeLoad: async () => {
+  validateSearch: (search: Record<string, unknown>): { logout?: true } =>
+    search.logout === true ? { logout: true } : {},
+  beforeLoad: async ({ search }) => {
+    // Route blockers finish pending saves before this loader is entered.
+    if (search.logout) {
+      localStorage.removeItem("access_token")
+      throw redirect({ to: "/login", replace: true })
+    }
     if (isLoggedIn()) {
       throw redirect({
         to: "/",
@@ -129,12 +136,9 @@ function Login() {
             </LoadingButton>
           </div>
 
-          <div className="text-center text-sm">
-            Don't have an account yet?{" "}
-            <RouterLink to="/signup" className="underline underline-offset-4">
-              Sign up
-            </RouterLink>
-          </div>
+          <p className="text-center text-sm text-muted-foreground">
+            Contacta con el administrador para solicitar una cuenta.
+          </p>
         </form>
       </Form>
     </AuthLayout>

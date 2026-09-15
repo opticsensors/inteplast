@@ -3,10 +3,17 @@ import { ImageIcon, Loader2, Paperclip, Upload, X } from "lucide-react"
 import { useRef, useState } from "react"
 
 import { type FilePublic, FilesService } from "@/client"
+import { SaveStatus } from "@/components/Features/SaveStatus"
+import { usePendingTask } from "@/components/Features/usePendingTask"
+import {
+  IMAGE_UPLOAD_ACCEPT,
+  isPreviewableImage,
+} from "@/components/Features/viewers"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
+import { useFileAccess } from "@/hooks/useFileAccess"
 import { cn } from "@/lib/utils"
-import { fileUrl, formatFileSize, handleError } from "@/utils"
+import { formatFileSize, handleError } from "@/utils"
 
 interface FileUploadProps {
   value: FilePublic | null
@@ -34,16 +41,24 @@ export function FileUpload({
   const [isDragging, setIsDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const { showErrorToast } = useCustomToast()
+  const { url } = useFileAccess(value?.id)
 
   const mutation = useMutation({
     mutationFn: (file: File) => FilesService.uploadFile({ formData: { file } }),
     onSuccess: (uploaded) => onChange(uploaded),
     onError: handleError.bind(showErrorToast),
   })
+  const upload = usePendingTask((file: File) => mutation.mutateAsync(file))
 
   const handleFiles = (files: FileList | null) => {
+    if (upload.pending) return
     const file = files?.[0]
-    if (file) mutation.mutate(file)
+    if (!file) return
+    if (variant === "image" && !isPreviewableImage(file.type)) {
+      showErrorToast("Usa una imagen JPEG, PNG, GIF, WebP, AVIF o BMP.")
+      return
+    }
+    void upload.run(file)
   }
 
   const dropHandlers = {
@@ -63,7 +78,7 @@ export function FileUpload({
     <input
       ref={inputRef}
       type="file"
-      accept={accept}
+      accept={variant === "image" ? IMAGE_UPLOAD_ACCEPT : accept}
       className="hidden"
       onChange={(event) => {
         handleFiles(event.target.files)
@@ -77,6 +92,7 @@ export function FileUpload({
       <div className={cn("relative", className)}>
         <button
           type="button"
+          disabled={upload.pending}
           onClick={() => inputRef.current?.click()}
           {...dropHandlers}
           className={cn(
@@ -88,9 +104,9 @@ export function FileUpload({
         >
           {mutation.isPending ? (
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
-          ) : value ? (
+          ) : value && url && isPreviewableImage(value.content_type) ? (
             <img
-              src={fileUrl(value.id)}
+              src={url}
               alt={value.filename}
               className="size-full object-cover"
             />
@@ -111,6 +127,11 @@ export function FileUpload({
           </Button>
         )}
         {input}
+        <SaveStatus
+          error={upload.error}
+          saving={upload.pending}
+          retry={upload.retry}
+        />
       </div>
     )
   }
@@ -146,6 +167,7 @@ export function FileUpload({
     <>
       <button
         type="button"
+        disabled={upload.pending}
         onClick={() => inputRef.current?.click()}
         {...dropHandlers}
         className={cn(
@@ -163,6 +185,11 @@ export function FileUpload({
         <span>Arrastra un fichero o haz clic para seleccionarlo</span>
       </button>
       {input}
+      <SaveStatus
+        error={upload.error}
+        saving={upload.pending}
+        retry={upload.retry}
+      />
     </>
   )
 }

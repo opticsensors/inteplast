@@ -2,8 +2,8 @@ import { RotateCcw, TriangleAlert } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import type * as THREE_NS from "three"
 
-import type { FilePublic } from "@/client"
-import { fileUrl } from "@/utils"
+import { type FilePublic, FilesService } from "@/client"
+import { absoluteFileUrl } from "@/hooks/useFileAccess"
 
 type Three = typeof THREE_NS
 
@@ -168,7 +168,10 @@ export default function ModelViewer({ file }: { file: FilePublic }) {
         if (disposed) return
 
         setStatus({ phase: "loading", step: "Descargando el fichero..." })
-        const response = await fetch(fileUrl(file.id))
+        const access = await FilesService.createFileAccessUrl({
+          fileId: file.id,
+        })
+        const response = await fetch(absoluteFileUrl(access.url))
         if (!response.ok) {
           throw new Error(`no se ha podido descargar (HTTP ${response.status})`)
         }

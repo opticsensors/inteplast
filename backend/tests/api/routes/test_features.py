@@ -279,8 +279,15 @@ def test_upload_and_read_file(
     assert stored["filename"] == "bolt-eye.txt"
     assert stored["size"] == len(b"contenido")
 
-    # Sin cabecera de autenticacion: el <img src> del frontend no la manda
+    # Un UUID no autoriza la descarga; imagenes y visores usan un enlace firmado.
     response = client.get(f"{settings.API_V1_STR}/files/{stored['id']}")
+    assert response.status_code == 401
+    link = client.get(
+        f"{settings.API_V1_STR}/files/{stored['id']}/access-url",
+        headers=superuser_token_headers,
+    )
+    assert link.status_code == 200
+    response = client.get(link.json()["url"])
     assert response.status_code == 200
     assert response.content == b"contenido"
 

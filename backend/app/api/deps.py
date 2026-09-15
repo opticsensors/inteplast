@@ -30,8 +30,13 @@ TokenDep = Annotated[str, Depends(reusable_oauth2)]
 def get_current_user(session: SessionDep, token: TokenDep) -> User:
     try:
         payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
+            token,
+            settings.SECRET_KEY,
+            algorithms=[security.ALGORITHM],
+            options={"require": ["exp", "sub"]},
         )
+        if payload.get("purpose", "access") != "access":
+            raise InvalidTokenError("Invalid token purpose")
         token_data = TokenPayload(**payload)
     except (InvalidTokenError, ValidationError):
         raise HTTPException(

@@ -1,6 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 import 'dotenv/config'
 
+if (process.env.INTEPLAST_TEST_STACK !== '1') {
+  throw new Error('Run E2E tests with scripts/test.ps1 -E2E or bash scripts/test.sh --e2e. They require an isolated stack.')
+}
+
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
@@ -11,6 +15,7 @@ import 'dotenv/config'
  */
 export default defineConfig({
   testDir: './tests',
+  testIgnore: '**/components/**',
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -84,8 +89,8 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'bun run dev',
+    command: 'npm run dev -- --host 127.0.0.1',
     url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
   },
 });

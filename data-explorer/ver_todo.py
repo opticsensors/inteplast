@@ -91,12 +91,14 @@ a.opcion.falta { opacity: .5; pointer-events: none; }
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--solo", help="regenerar solo estos visores, separados por coma: csv,txt,pdf")
+    parser.add_argument("--solo", help="regenerar solo estos visores, separados por coma: csv,txt,pdf,plano")
     parser.add_argument("--solo-inicio", action="store_true",
                         help="rehacer solo index.html, sin volver a procesar los datos")
     parser.add_argument("--salida", type=Path, default=SALIDA)
     parser.add_argument("--no-abrir", action="store_true")
     args = parser.parse_args()
+    args.salida = args.salida.resolve()
+    args.salida.mkdir(parents=True, exist_ok=True)
 
     if args.solo_inicio:
         cuales = []

@@ -32,7 +32,7 @@ Composición verificada el 2026-08-11:
 | | |
 |---|---|
 | Entradas del ZIP | 87 |
-| **Imágenes** | **55** (43 PNG + 8 JPEG) |
+| **Imágenes** | Recuento pendiente de reconciliar: la inspección anotó 55, pero el desglose 43 PNG + 8 JPEG suma 51. No se ha reabierto el original para resolverlo. |
 | Texto extraíble | **8.348 caracteres** |
 
 > ⚠️ **El 90 % del valor está en las imágenes**, no en el texto: cada cota lleva una captura del
@@ -61,7 +61,7 @@ específico para la comparación ITP–Bosch.
 > 🔑 **Por eso el plano A es crítico.** Es el primero de la cadena: si no es recto, arrastra
 > error a la posición de todos los agujeros. Es exactamente lo que INTEPLAST contestó en el
 > Dubte 3, y lo que aparece en 5 diapositivas de retoque
-> (ver [historial-molde.md](historial-molde.md#8-acoplamientos-entre-cotas)).
+> (ver [historial-molde.md](historial-molde.md#7-acoplamientos-entre-cotas)).
 
 ### Palpadores
 

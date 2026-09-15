@@ -35,9 +35,9 @@ export type FeatureAssetPublic = {
 };
 
 export type FeatureAssetUpdate = {
-    kind?: (AssetKind | null);
-    name?: (string | null);
-    position?: (number | null);
+    kind?: AssetKind;
+    name?: string;
+    position?: number;
     part_id?: (string | null);
     file_id?: (string | null);
 };
@@ -90,10 +90,10 @@ export type FeatureNotePublic = {
 };
 
 export type FeatureNoteUpdate = {
-    kind?: (NoteKind | null);
-    title?: (string | null);
+    kind?: NoteKind;
+    title?: string;
     body?: (string | null);
-    position?: (number | null);
+    position?: number;
 };
 
 export type FeaturePublic = {
@@ -115,11 +115,16 @@ export type FeaturesPublic = {
 };
 
 export type FeatureUpdate = {
-    name?: (string | null);
+    name?: string;
     description?: (string | null);
     category?: (FeatureCategory | null);
-    tags?: (Array<(string)> | null);
+    tags?: Array<(string)>;
     image_id?: (string | null);
+};
+
+export type FileAccessPublic = {
+    url: string;
+    expires_at: string;
 };
 
 export type FilePublic = {
@@ -153,7 +158,7 @@ export type ItemsPublic = {
 };
 
 export type ItemUpdate = {
-    title?: (string | null);
+    title?: string;
     description?: (string | null);
 };
 
@@ -186,7 +191,7 @@ export type PartsPublic = {
 };
 
 export type PartUpdate = {
-    code?: (string | null);
+    code?: string;
     name?: (string | null);
 };
 
@@ -236,16 +241,16 @@ export type UsersPublic = {
 };
 
 export type UserUpdate = {
-    email?: (string | null);
+    email?: string;
     is_active?: boolean;
     is_superuser?: boolean;
     full_name?: (string | null);
-    password?: (string | null);
+    password?: string;
 };
 
 export type UserUpdateMe = {
     full_name?: (string | null);
-    email?: (string | null);
+    email?: string;
 };
 
 export type ValidationError = {
@@ -356,8 +361,17 @@ export type FilesUploadFileData = {
 
 export type FilesUploadFileResponse = (FilePublic);
 
-export type FilesReadFileData = {
+export type FilesCreateFileAccessUrlData = {
+    download?: boolean;
     fileId: string;
+};
+
+export type FilesCreateFileAccessUrlResponse = (FileAccessPublic);
+
+export type FilesReadFileData = {
+    download?: boolean;
+    fileId: string;
+    token?: (string | null);
 };
 
 export type FilesReadFileResponse = (unknown);

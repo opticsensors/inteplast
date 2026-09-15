@@ -4,6 +4,7 @@ import { Lightbulb, Package2, TriangleAlert } from "lucide-react"
 
 import { ApiError, type NoteKind } from "@/client"
 import { CollapsibleSection } from "@/components/Common/CollapsibleSection"
+import { FileLink } from "@/components/Common/FileLink"
 import { RichTextView } from "@/components/Common/RichText"
 import { CATEGORY_LABELS } from "@/components/Features/constants"
 import { FeatureThumbnail } from "@/components/Features/FeatureCard"
@@ -14,7 +15,6 @@ import { featureParts } from "@/components/Features/parts"
 import { featureQueryOptions } from "@/components/Features/queries"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { fileUrl } from "@/utils"
 
 const flag = (value: unknown) => value === true || value === "true"
 
@@ -99,6 +99,7 @@ function FeatureDetail() {
   if (editar) {
     return (
       <FeatureForm
+        key={feature.id}
         featureId={feature.id}
         onCreated={() => undefined}
         onSaved={toList}
@@ -117,8 +118,8 @@ function FeatureDetail() {
           tamaño de pagina. Lo que hay que saber para diseñar va debajo. */}
       <div className="flex gap-4 rounded-lg border p-4 sm:gap-6 sm:p-6">
         {feature.image ? (
-          <a
-            href={fileUrl(feature.image.id)}
+          <FileLink
+            fileId={feature.image.id}
             target="_blank"
             rel="noreferrer"
             title="Abrir la imagen a tamano real"
@@ -129,7 +130,7 @@ function FeatureDetail() {
               fit="contain"
               className="size-32 sm:size-48"
             />
-          </a>
+          </FileLink>
         ) : (
           <FeatureThumbnail feature={feature} className="size-32 sm:size-48" />
         )}

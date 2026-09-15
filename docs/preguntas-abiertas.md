@@ -3,7 +3,7 @@
 > **Antes de preguntar algo a INTEPLAST, mirar aquí.** Varias de las preguntas originales se
 > han resuelto leyendo los datos, sin necesidad de consultar.
 >
-> Última revisión: **2026-08-13**
+> Última revisión: **2026-09-15**
 
 ---
 
@@ -17,12 +17,14 @@
 
 ---
 
-### A1 · Tres cotas quedaron NOK y el molde no se volvió a tocar
+<a id="a1--se-cerró-el-molde-con-3-cotas-fuera-de-tolerancia--por-qué"></a>
+### A1 · ¿Hubo más retoques y cómo se aceptaron las cotas NOK?
 
 **Recordatorio.** El 18/03/2024 hicisteis la **corrección de molde nº2** del 3212
 (`20240318-Mold correction_2_P3212_rev1.pptx`). Después seguisteis midiendo hasta
-`intern.09`, en abril de 2025. Ya hemos comprobado en vuestros propios datos de CMM que
-**el molde no se retocó más** después de esa corrección nº2.
+`intern.09`, en abril de 2025. Solo tenemos los documentos de dos correcciones. Los CSV
+posteriores no muestran otro cambio grande comparable, pero **no permiten descartar retoques
+pequeños**.
 
 **Qué no nos cuadra.** En `intern.08`, la última medición 3D completa, estas tres cotas están
 fuera de tolerancia **en las cuatro cavidades**:
@@ -39,18 +41,19 @@ mínimo. Cruzó la tolerancia de lado a lado.
 
 **Preguntas:**
 
-1. **¿Bosch os firmó una concesión / desviación para estas tres cotas?** Si existe el documento,
+1. **¿Hubo retoques después de la corrección nº2?** Si los hubo, nos interesan las fechas y los
+   documentos que faltan.
+2. **¿Bosch os firmó una concesión / desviación para estas tres cotas?** Si existe el documento,
    nos interesa.
-2. **¿Se detectó en su momento que N161 se había pasado al otro lado?**
-3. **¿Por qué se siguió midiendo hasta abril de 2025** si ya no se iba a tocar el molde?
+3. **¿Se detectó en su momento que N161 se había pasado al otro lado?**
+4. **¿Qué motivó los informes posteriores hasta abril de 2025?**
 
 <details><summary>Contexto interno (no enviar)</summary>
 
-*Resuelto por datos → [R10](#r10--hubo-una-tercera-corrección-de-molde-era-a1). La respuesta a
-la 1 es importante para la BD: "esta cota se quedó fuera y se aceptó" es una lesson learned de
-pleno derecho y ahora no tenemos ni rastro de ella. La 2 es el caso de sobrecorrección más claro
-de todo el proyecto. N161 además está ovalada (Ø mín. por debajo y LP(2) máx. por encima a la
-vez), así que ninguna corrección de diámetro puro la iba a arreglar.*
+*Reabierta el 2026-09-15. El umbral de 0,10 mm usado en R10 no detecta los retoques de 0,02 y
+0,03 mm que sí aparecen en las slides 2.3–2.5 y 2.9. El historial posterior y la eventual
+concesión siguen sin confirmar. N161 muestra a la vez Ø mínimo por debajo y LP(2) máximo por
+encima del límite: hay que conservar ambas evaluaciones y no resumirlo como un solo diámetro.*
 </details>
 
 ---
@@ -71,6 +74,14 @@ pin en el agujero del bolt eye a 0,1 mm/s y se registra la fuerza máxima, que d
 
 **Pregunta: ¿cuál es el pin que se usa realmente, y los otros dos números qué son?**
 (¿un pin distinto, un desgaste, una medida de otra cosa?)
+
+### Revisión interna pendiente · Signo de tolerancia de N266
+
+Las tablas de correcciones 1.24 y 2.8 transcriben `67,1−0,1`, pero el resumen de `intern.08`
+recogía `67,1+0,1` y clasificaba sus medidas como OK. **Hay que contrastar CSV, plano/revisión
+y diapositivas antes de usar ese veredicto**. No se han reabierto los originales en esta revisión.
+También queda por reconciliar el recuento de imágenes del método de medida (55 declaradas;
+43 PNG + 8 JPEG suman 51). Son comprobaciones de fuente, no hechos resueltos.
 
 ---
 
@@ -178,8 +189,9 @@ contorno en las 4 cavidades a la vez.
 dijisteis que ahí están los puntos de inyección y las líneas de soldadura, y que se abren con
 **Moldflow Communicator**.
 
-**Qué no nos cuadra.** Es un formato binario propietario: sin licencia de Moldflow no podemos
-leerlo, y meter 184 MB por estudio en la herramienta tampoco tiene sentido.
+**Qué no nos cuadra.** Nuestro parser no lee ese formato propietario. La documentación del
+proyecto identifica **Moldflow Communicator como visor gratuito**, así que no atribuimos el
+bloqueo a una licencia: faltan resultados exportados que nuestra aplicación pueda mostrar.
 
 **Pregunta: ¿nos podéis exportar de cada estudio estas tres cosas?**
 
@@ -268,11 +280,13 @@ barato ahora y caro cuando haya datos cargados. Ver el bloque «Donde viven los 
 
 ---
 
-## ✅ RESUELTAS con los datos (no hace falta preguntar)
+## Historial de conclusiones revisadas
 
-### R10 · ¿Hubo una tercera corrección de molde? *(era A1)*
+<a id="r10--hubo-una-tercera-corrección-de-molde-era-a1"></a>
+### R10 · Conclusión retirada: tercera corrección de molde
 
-**Resuelto el 2026-08-12 cruzando los CSV de la CMM: no la hubo.**
+**Reabierta como A1 el 2026-09-15.** Esta entrada se conserva para que los enlaces y el historial
+de la revisión no oculten que la conclusión anterior cambió; **no es una pregunta resuelta**.
 
 Se compara el valor medido de cada fila entre dos muestreos. Antes de concluir, se **calibra el
 método** sobre un tramo donde sabemos que sí hubo retoque (`intern.03 → .05`, con la corrección
@@ -283,15 +297,18 @@ nº2 en medio):
 | `intern.03 → .05` | ✅ la nº2 | 211 ×4 cav. | **129 en cada cavidad** | 0,335–0,349 mm |
 | `intern.05 → .08` | ❓ | 211 ×4 cav. | **0 en las cuatro** | 0,055–0,081 mm |
 
-Un retoque mueve **129 de 211 filas más de 0,10 mm en las cuatro cavidades a la vez**. Entre
-`intern.05` (01/05/2024) e `intern.08` no se mueve **ninguna**, y el máximo de todo el fichero
-(0,081 mm) queda por debajo de la menor acción documentada. **El molde no se tocó.**
+El retoque conocido nº2 coincide con **129 de 211 filas movidas más de 0,10 mm en cada cavidad**.
+Entre `intern.05` e `intern.08` no hay cambios por encima de ese umbral y el máximo es 0,081 mm.
+Esto **no descarta retoques menores**: las slides 2.3–2.5 documentan 0,02 mm y la 2.9, 0,03 mm.
+La afirmación previa de que 0,081 mm era menor que cualquier acción documentada era incorrecta.
 
-`intern.09` no tiene CSV; de sus 6 cotas medidas de verdad, la única con histórico es `N162`:
-49,858 (`.05`) → 49,855 (`.08`) → 49,840 (`.09`). **−0,015 mm en un año**: ruido.
+`intern.09` no tiene CSV y combina medidas con bloques copiados. La comparación utilizable
+en este análisis fue `N162`:
+49,858 (`.05`) → 49,855 (`.08`) → 49,840 (`.09`). El cambio de **−0,015 mm entre `.08` y `.09`**
+en esa cota tampoco permite excluir una intervención.
 
-> **No faltan ficheros de una corrección nº3.** Lo que queda por preguntar es *por qué se dio
-> por bueno el molde con tres cotas NOK → [A1 reformulada](#a1--se-cerró-el-molde-con-3-cotas-fuera-de-tolerancia--por-qué).*
+> **Pendiente:** confirmar con INTEPLAST si hubo más correcciones y cómo se aceptaron las cotas
+> NOK → [A1](#a1--se-cerró-el-molde-con-3-cotas-fuera-de-tolerancia--por-qué).
 
 **De regalo**, el tramo de control valida las acciones de la corrección nº2 una por una
 (N161 −0,335 vs −0,305 pedidos; N162 +0,201 vs 0,22; N266 +0,124 vs 0,14; N265 +0,089 vs 0,11)
@@ -303,6 +320,10 @@ literal de `intern.01`** (25/01/2024) — los 32 valores idénticos, 15 meses de
 `N275`/`N276` son copia de `intern.08`. Tercer caso de copia-pega detectado.
 
 → Todo el detalle en [3212/historial-molde.md §8](3212/historial-molde.md#8-hubo-una-tercera-corrección-de-molde--no).
+
+---
+
+## ✅ RESUELTAS con los datos (no hace falta preguntar)
 
 ### R9 · Las diapositivas sin cota identificada *(era A2)*
 

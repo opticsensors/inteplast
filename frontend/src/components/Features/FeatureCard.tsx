@@ -9,10 +9,11 @@ import {
 
 import type { FeaturePublic } from "@/client"
 import { Badge } from "@/components/ui/badge"
+import { useFileAccess } from "@/hooks/useFileAccess"
 import { cn } from "@/lib/utils"
-import { fileUrl } from "@/utils"
 import { CATEGORY_LABELS } from "./constants"
 import { featureParts, partLabel } from "./parts"
+import { isPreviewableImage } from "./viewers"
 
 /** Cuantos codigos de pieza caben en la tarjeta antes de resumir. */
 const MAX_CODES = 4
@@ -59,6 +60,7 @@ export function FeatureThumbnail({
    *  es lo que se va a mirar y cortarla por los bordes seria absurdo. */
   fit?: "cover" | "contain"
 }) {
+  const { url } = useFileAccess(feature.image?.id)
   return (
     <div
       className={cn(
@@ -67,9 +69,11 @@ export function FeatureThumbnail({
       )}
       style={style}
     >
-      {feature.image ? (
+      {feature.image &&
+      url &&
+      isPreviewableImage(feature.image.content_type) ? (
         <img
-          src={fileUrl(feature.image.id)}
+          src={url}
           alt={feature.name}
           className={cn(
             "size-full",

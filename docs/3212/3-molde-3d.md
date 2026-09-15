@@ -64,7 +64,7 @@ En particular, la corrección que arregló el Bolt Eye —*"podem utilitzar els 
 com en els altres motlles"*— es un cambio de componente del molde: los **expulsores** son
 piezas de este STEP.
 
-⚠️ **El STEP en disco es el estado actual del molde, no el original.** No sabemos si refleja el
+⚠️ **No conocemos la revisión del STEP en disco.** No sabemos si refleja el
 molde antes o después de los retoques de 2024. No hay fecha ni revisión en el nombre.
 
 ---
@@ -73,7 +73,7 @@ molde antes o después de los retoques de 2024. No hay fecha ni revisión en el 
 
 | Uso | Viabilidad |
 |---|---|
-| Descarga directa desde el frontend | ❌ 247 MB es inaceptable para un navegador |
+| Descarga desde el frontend | Técnicamente posible por streaming; hoy no se puede cargar en la app por el límite de subida de 50 MB. La referencia externa está pendiente. |
 | Previsualización 3D en el navegador | ❌ No sin un derivado ligero |
 | **Enlace / referencia al fichero** | ✅ Es lo realista para el prototipo |
 | **Derivado ligero** (mallado decimado → glTF) | ⚠️ Posible pero requiere hidratar los 247 MB y procesarlos con OCCT. Hay Python 3.11 con `open3d`/`pymeshlab`, pero **OCCT no está instalado** y hace falta para leer un STEP |

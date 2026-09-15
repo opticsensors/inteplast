@@ -79,7 +79,9 @@ N117 POSITION BOLT 1
 1. **Error de signo sistemático.** `32;Posición Z;;31.000;…;-30.990;-61.990` → nominal +31,
    medido −30,990 ⇒ desviación −61,99. Afecta a **B2 y B4** y aparece en **todos** los
    muestreos. Es la convención de signo del export, no una pieza mala.
-   → Regla de corrección: si `|medido| ≈ |nominal|` pero con signo opuesto, invertir.
+   → Corregir solo los elementos conocidos B2/B4 (`32`/`34`, `Posición Z`) cuando
+   `|medido| ≈ |nominal|` con signo opuesto. Recalcular desviación, exceso y NOK; conservar los
+   valores originales. No aplicar la heurística a otras características sin validarlas.
 2. **Errata de plantilla en las cabeceras.** `N170 BOLT 1 MIN/MAX H=5.0 mm` aparece repetido
    dentro del bloque del **BOLT 2** (copiar-pegar). Presente en los 4 muestreos del 3212.
    → Usar el **ID de elemento CMM**, no el texto de la cabecera.
@@ -92,21 +94,20 @@ iconv -f cp1252 -t utf-8 "…/3212_c13.csv"
 
 # Extraer cada fila con su cabecera de bloque:
 iconv -f cp1252 -t utf-8 "…/3212_c13.csv" | awk -F';' '
-  /^\*\*\*\*\*\*/ { next }
-  $1 !~ /^[0-9]+$/ { hdr=$0; sub(/[; \t]+$/,"",hdr); next }
-  { printf "%-46s | %s\n", hdr, $0 }'
+  /^\*\*\*\*/ || /^\/\/\/\// { next }
+  NF>=8 && $2!="" { printf "%-46s | %s\n", hdr, $0; next }
+  { line=$0; sub(/[; \t\r]+$/,"",line); if (line!="") hdr=line }'
 ```
 
-⚠️ **Ese `$1 !~ /^[0-9]+$/` como test de cabecera es incorrecto**: muchas filas de dato tienen
-**la columna 1 vacía** (`;Cálculo de fórmula;;1.350;…`) y se colarían como cabecera. El test
-bueno es **`NF>=8 && $2!=""`** para dato, y cualquier otra línea no vacía (ni `****` ni `////`)
-es cabecera.
+⚠️ **No usar `$1 !~ /^[0-9]+$/` como test de cabecera**: muchas filas de dato tienen
+**la columna 1 vacía** (`;Cálculo de fórmula;;1.350;…`). La receta usa **`NF>=8 && $2!=""`**
+para detectarlas correctamente.
 
 ### 🆕 El export no cambia entre muestreos
 
 Verificado el 2026-08-13 en `intern.01/c13`, `.01/c14`, `.03/c13`, `.05/c13` y `.08/C13`:
 **114 cabeceras de bloque y 211 filas de dato en todos**, y el `diff` de las cabeceras entre
-`intern.01/c13` e `intern.08/C13` (15 meses después) es **vacío**.
+`intern.01/c13` e `intern.08/C13` (aproximadamente un año después) es **vacío**.
 
 **El programa de la CMM nunca se tocó.** Por eso el emparejamiento por
 `cabecera + índice` de la receta siguiente es fiable, y por eso se remidió *todo* en cada
@@ -134,8 +135,9 @@ awk -F'|' 'NR==FNR{k=$1"|"$2; v[k]=$6; next} {k=$1"|"$2; if(k in v) printf "%-46
 ```
 
 📌 **Calibrar siempre antes de concluir.** Un tramo con retoque de molde conocido mueve
-**~130 de 211 filas más de 0,10 mm**; un tramo sin retoque no mueve ninguna y su máximo se
-queda en ~0,08 mm. Ese es el umbral de discriminación medido en el 3212.
+**~130 de 211 filas más de 0,10 mm**; en `.05 → .08` ninguna supera ese umbral y el máximo es
+~0,08 mm. **Esto no prueba que ese segundo tramo carezca de retoques**: los hay documentados
+de 0,02 y 0,03 mm. El umbral sirve para describir estos tramos, no para cerrar el historial.
 → [3212/historial-molde.md §8](3212/historial-molde.md#8-hubo-una-tercera-corrección-de-molde--no)
 
 ---
@@ -459,7 +461,9 @@ solo los 6 números resumen. Requiere identificar el path por color y mapear coo
 con los ticks de los ejes. **No implementado**: primero hay que ver si aporta algo sobre el
 resumen.
 
-→ 144 PDF × 6 valores = **864 mediciones de contorno** que **no están en ningún CSV ni XLS**, y
+→ 144 PDF = **144 registros de contorno**, con 864 valores en las seis columnas de límites,
+desviaciones e infracciones (más media y metadatos cuando estén disponibles). **No están en
+ningún CSV ni XLS**, y
 que **no se pueden recalcular** desde las nubes de puntos porque el contorno nominal no lo
 tenemos (el `.igs` es el *escaneado*, no el nominal).
 
@@ -474,12 +478,12 @@ tenemos (el `.igs` es el *escaneado*, no el nominal).
 | 3 | **Nombres de carpeta inconsistentes** | `support intern.01` / `Suport_Int_01` / `Support_Inf_04` / `support.intern.08`. Regex, no match exacto. |
 | 4 | **Nombres de fichero inconsistentes** | `3212_c13.csv`, `3212c14.csv`, `3212 C1.csv`, `13_3212.csv`. Cavidad con `[cC]\.?\s?_?(\d{1,2})`. |
 | 5 | **Cavidades no empiezan en 1** | 3212 → **c13–c16** (molde de 16, se controlan 4). 3197 → C1–C8. 3051 → Cav_1–Cav_4. |
-| 6 | **Error de signo CMM** | B2 y B4, `Posición Z`. Invertir si `\|medido\| ≈ \|nominal\|` con signo opuesto. |
+| 6 | **Error de signo CMM** | B2 y B4, `Posición Z`, IDs `32`/`34`. Invertir si `\|medido\| ≈ \|nominal\|` con signo opuesto, conservando originales y recalculando desviación, exceso y NOK. |
 | 7 | **Erratas en cabeceras de sección** | Fiarse del ID de elemento CMM. |
 | 8 | **`2- Moldflow` vacía** | Los estudios están en `7- Moldflow`. |
 | 9 | **Duplicados y comprimidos** | `.rar`/`.zip` redundantes, `Copia de Copia de …`, `_rev0/_rev1/_rev1_`. Deduplicar antes de ingerir. |
 | 10 | **Multilingüismo** | Catalán, castellano, inglés y alemán, a veces en el mismo fichero. El frontend debe asumirlo. |
-| 11 | **Planos 2D sin texto extraíble** | `pdftotext` vacío. Hidratar y reintentar; si no, OCR o entrada manual. |
+| 11 | **Planos 2D sin texto extraíble** | El plano 3212 es un escaneo confirmado. OCR solo como ayuda visual; números de globo manuales hasta recibir mejor fuente. No confundir el fallo de extracción de un PDF PA/PB con una medición OK. |
 | 12 | **`.mfr` ilegible** | Binario propietario. Requiere Moldflow Communicator + exportación manual de imágenes. |
 | 13 | **STEP de molde de 645 MB** | No servible al navegador. Derivado ligero o solo enlace de descarga. |
 | 14 | **XLS con datos caducados** | `intern.05.xls` copia el bloque N117/N118 de `intern.03`; **`intern.09.xls` lo copia de `intern.01` (15 meses antes) y sus N275/N276 de `intern.08`**. El CSV manda. |

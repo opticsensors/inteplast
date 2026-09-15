@@ -26,7 +26,7 @@ misma familia y por tanto comparables entre sí — eso los hace valiosos *más 
 
 | Motivo | Detalle |
 |---|---|
-| **Es el único con el histórico cerrado** | Metrología (9 muestreos) + retoques de molde (2 correcciones) + escaneado STL de una pieza real. Permite demostrar la cadena completa *problema → acción → resultado*. |
+| **Tiene el histórico más documentado** | Metrología (9 muestreos) + retoques de molde (2 correcciones documentadas) + escaneado STL. Permite estudiar *problema → acción → resultado*; faltan confirmar posibles retoques posteriores y la aceptación de cotas NOK. |
 | **Es sobre el que se trabajó el feature *Bolt Eye*** | Todas las preguntas y respuestas de `inteplast_resposta_dubtes.md` se refieren a él. |
 | **Es el que INTEPLAST usó para explicarnos el dominio** | El conocimiento que tenemos está anclado a esta pieza. |
 | **Alcance** | Modelar bien una pieza y validar el modelo vale más que ingerir cuatro a medias. Los otros tres se incorporan cuando el esquema esté probado. |

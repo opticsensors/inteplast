@@ -1,110 +1,71 @@
-# Inteplast
+# INTEPLAST
 
-We are using this template for backend fastapi and frontend react: 
-https://github.com/fastapi/full-stack-fastapi-template
+Base colaborativa de conocimiento para el diseño de piezas inyectadas: features, warnings,
+lessons learned y ficheros agrupados por pieza. Piloto actual: **3212 Pump Housing**.
+La ingesta de mediciones y correcciones de molde todavía no está implementada.
 
+## Documentación
 
-# Data explorer
+- [CLAUDE.md](CLAUDE.md): contexto, rutas y reglas del proyecto.
+- [Aplicación](docs/app-web.md): modelo, API, permisos y comportamiento.
+- [Datos del 3212](docs/3212/README.md) y [visores](data-explorer/README.md).
+- [Desarrollo](development.md), [backend](backend/README.md), [frontend](frontend/README.md).
+- [Despliegue](deployment.md) y [correcciones de la revisión](docs/revision-2026-09-15.md).
 
-```powershell
-py -3.11 .\data-explorer\ver_todo.py
-```
+## Arranque local (PowerShell)
 
-# Docker 
-
-```powershell
-Start-Process "$env:ProgramFiles\Docker\Docker\Docker Desktop.exe"
-```
-
-It needs ~30-60 s before the engine answers. Check it is up:
+Requisitos: Docker Desktop en ejecución y Node.js 22 con npm. Desde la raíz:
 
 ```powershell
-docker info --format "{{.ServerVersion}}"     # prints e.g. 28.5.1 when ready
+npm.cmd ci
+docker compose up -d --build db prestart backend mailcatcher
+npm.cmd run dev
 ```
 
+Frontend: http://localhost:5173. API: http://localhost:8000/docs.
+`prestart` termina con código 0 después de aplicar migraciones y crear el administrador inicial.
+Las credenciales locales de ejemplo están en `.env`; los usuarios los crea el administrador.
 
-## Backend
-
-Pick ONE:
+Para sincronizar automáticamente cambios del backend, usar en otra terminal:
 
 ```powershell
-docker compose up -d db prestart backend              # normal
-docker compose up -d --build db prestart backend      # after changing backend/
-docker compose watch backend                          # dev mode: auto-reload, no rebuild
+docker compose watch backend
 ```
 
-`watch backend` replaces the `up` (it starts db + prestart too). Foreground, Ctrl-C to stop.
-Always name the service: bare `docker compose watch` starts frontend, proxy, adminer, playwright.
-
-Optional, in another terminal:
+Sin `watch`, los cambios del backend requieren `--build`. Para cargar el ejemplo opcional:
 
 ```powershell
-docker compose exec backend python -m app.seed_features   # dummy data, only if DB empty
-docker compose ps                                         # db + backend = Up (healthy)
-docker compose exec backend alembic current               # must say ... (head)
+docker compose exec backend python -m app.seed_features
 ```
 
-`prestart` exits with code 0 - correct, it just applies the migrations.
-
-## Frontend
+## Comprobaciones
 
 ```powershell
-cd frontend
-npm.cmd run dev          # npm install the first time only
+npm.cmd run build --workspace frontend
+npm.cmd run test:components
+.\scripts\test.ps1
+.\scripts\test.ps1 -E2E
 ```
 
--> http://localhost:5173
+En Git Bash/Linux: `bash scripts/test.sh` y `bash scripts/test.sh --e2e`.
+Los scripts crean un proyecto Docker temporal, con BD `app_test`, sin puertos publicados ni
+volúmenes compartidos con la aplicación. No ejecutar suites contra la BD de trabajo.
 
+## Visores de datos
 
+```powershell
+& 'C:\Users\eduard.almar\AppData\Local\Programs\Python\Python311\python.exe' .\data-explorer\ver_todo.py
+```
 
-## Close Docker:
+Los datos del cliente permanecen fuera del repositorio. Revisar los atributos de OneDrive antes
+de leer ficheros: un placeholder puede disparar una descarga completa.
+
+## Parar la aplicación
+
+```powershell
 docker compose down
-docker builder prune -f
+```
 
-
-# Docker start
-
-docker rmi backend:latest prestart:latest frontend:latest 2>nul
-
-cmddocker buildx prune -f
-docker buildx rm default 2>nul
-docker buildx create --use --name mybuilder
-
-cmddocker compose up --build
-
-OR
-
-docker compose watch
-
-http://localhost:5173
-
-
-
-# frontend & backend run separately
-
-in backend folder:
-C:\Users\eduard.almar\AppData\Local\Programs\Python\Python312\Scripts\uv.exe sync
-
-.\.venv\Scripts\Activate
-deactivate (to deactivate venv)
-
-uvicorn app.main:app --reload
-
-In another terminal: 
-npm install (only first time)
-npm run dev
-
-I think this does not work: it does not start postgre db => we have to use docker for the backend 
-
-
-# clean frontend
-
-In Chrome/Edge:
-
-Go to http://localhost:5173
-Press F12 to open DevTools
-Go to Application tab (top menu)
-In the left sidebar: Storage → Local Storage → http://localhost:5173
-Right-click it → Clear
-Refresh the page (F5)
+Este comando conserva la BD y las subidas. No añadir `-v`: eliminaría los volúmenes persistentes.
+No hace falta borrar imágenes ni limpiar el builder para un arranque normal.
 

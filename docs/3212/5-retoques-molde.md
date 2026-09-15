@@ -26,7 +26,7 @@ Son las decisiones de retoque tomadas en reunión, una diapositiva por cota.
         └── 3212-00_intern.03_correction_2.xls       0,66 MB   ← versión superada
 ```
 
-**Solo hay 2 correcciones** (enero y marzo de 2024), pese a que los muestreos llegan hasta
+**Solo hay 2 correcciones documentadas** (enero y marzo de 2024), pese a que los muestreos llegan hasta
 abril de 2025 → pregunta abierta A1 en [preguntas-abiertas.md](../preguntas-abiertas.md).
 
 ### Qué fichero usar
@@ -234,6 +234,10 @@ las cotas que seguían mal.
 
 > 📌 **La corrección 2 audita a la 1 en su propio texto** (slides 2.7, 2.8, 2.18). No hace falta
 > inferir si la corrección anterior funcionó: está escrito.
+
+⚠️ **N266 necesita contraste con la fuente:** aquí se transcribió `67,1−0,1`; la tabla de
+resultado final del historial recogía `67,1+0,1`. Se conserva esta transcripción con la
+discrepancia explícita y se deja pendiente el veredicto, sin inventar cuál era la tolerancia correcta.
 
 > 📌 **Slide 2.1 menciona los proyectos `3181` y `3157`**, que no están en `Exemples`. Confirma
 > que la comparación entre piezas ya se practica manualmente → pregunta abierta A8.

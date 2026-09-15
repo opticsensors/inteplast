@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { ChevronDown, Plus, Trash2 } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 import {
   type FeatureNotePublic,
@@ -12,19 +12,17 @@ import { RichTextEditor } from "@/components/Common/RichText"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import useCustomToast from "@/hooks/useCustomToast"
-import useDebounce from "@/hooks/useDebounce"
 import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
 import { NOTE_KIND_SINGULAR } from "./constants"
+import { SaveStatus } from "./SaveStatus"
+import { useAutosave } from "./useAutosave"
 
 /** Lo que se escribe al crearla: se selecciona solo para escribir encima. */
 const NEW_TITLE: Record<NoteKind, string> = {
   warning: "Nueva advertencia",
   lesson: "Nueva leccion aprendida",
 }
-
-/** Lo que tarda en guardarse desde la ultima tecla. */
-const AUTOSAVE_MS = 700
 
 /**
  * Una nota en modo edicion: **el titulo se escribe encima** y el desplegable
@@ -45,8 +43,6 @@ function NoteRow({
   const queryClient = useQueryClient()
   const { showErrorToast } = useCustomToast()
   const [isOpen, setIsOpen] = useState(isNew)
-  const [title, setTitle] = useState(note.title)
-  const [body, setBody] = useState(note.body ?? "")
   const titleRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -57,10 +53,19 @@ function NoteRow({
     mutationFn: (data: FeatureNoteUpdate) =>
       FeaturesService.updateFeatureNote({ noteId: note.id, requestBody: data }),
     onError: handleError.bind(showErrorToast),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["features"] })
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["features"] }),
   })
+
+  const server = useMemo(
+    () => ({ title: note.title, body: note.body ?? "" }),
+    [note.title, note.body],
+  )
+  const autosave = useAutosave(
+    server,
+    (patch) => update.mutateAsync(patch),
+    (values) => Boolean(values.title.trim()),
+  )
+  const { title, body } = autosave.values
 
   const remove = useMutation({
     mutationFn: () => FeaturesService.deleteFeatureNote({ noteId: note.id }),
@@ -69,20 +74,6 @@ function NoteRow({
       queryClient.invalidateQueries({ queryKey: ["features"] })
     },
   })
-
-  const debouncedTitle = useDebounce(title, AUTOSAVE_MS)
-  const debouncedBody = useDebounce(body, AUTOSAVE_MS)
-  const { mutate: save } = update
-
-  useEffect(() => {
-    // Vacio no se guarda: el backend exige titulo (`min_length=1`).
-    const clean = debouncedTitle.trim()
-    if (clean && clean !== note.title) save({ title: clean })
-  }, [debouncedTitle, note.title, save])
-
-  useEffect(() => {
-    if (debouncedBody !== (note.body ?? "")) save({ body: debouncedBody })
-  }, [debouncedBody, note.body, save])
 
   return (
     <div className="rounded-md border">
@@ -104,7 +95,7 @@ function NoteRow({
         <Input
           ref={titleRef}
           value={title}
-          onChange={(event) => setTitle(event.target.value)}
+          onChange={(event) => autosave.change({ title: event.target.value })}
           placeholder="Titulo de la nota"
           className={cn(
             "h-8 border-0 px-2 text-sm font-medium shadow-none focus-visible:ring-1",
@@ -128,11 +119,16 @@ function NoteRow({
         <div className="px-2 pb-2">
           <RichTextEditor
             value={body}
-            onChange={setBody}
+            onChange={(body) => autosave.change({ body })}
             placeholder="Detalles: **negrita**, *cursiva*, `codigo` y listas con guion"
           />
         </div>
       )}
+      <SaveStatus
+        error={autosave.error}
+        saving={autosave.saving}
+        retry={autosave.flush}
+      />
     </div>
   )
 }

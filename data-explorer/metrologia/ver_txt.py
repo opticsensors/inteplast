@@ -137,7 +137,7 @@ def descubrir(raiz: Path) -> list[dict]:
                 "cavidad": cavidad,
                 "familia": familia(ruta),
                 "rel": ruta.relative_to(raiz.parent).as_posix(),
-                "en_la_nube": bool(ruta.stat().st_file_attributes & EN_LA_NUBE),
+                "en_la_nube": bool(getattr(ruta.stat(), "st_file_attributes", 0) & EN_LA_NUBE),
             }
         )
     return sorted(
@@ -376,6 +376,9 @@ def main() -> None:
     parser.add_argument("--cavidad", help="ver solo una cavidad, p.ej. c13")
     parser.add_argument("--no-abrir", action="store_true")
     args = parser.parse_args()
+    args.salida = args.salida.resolve()
+    if args.max_puntos <= 0:
+        parser.error("--max-puntos debe ser mayor que cero")
 
     ficheros = descubrir(args.raiz)
     if args.familia:
@@ -464,7 +467,8 @@ def main() -> None:
             f"<div class='sub'>{', '.join('intern.' + m for m, _ in sorted(grupo))}</div>"
             "<div class='leyenda'>Cada color es el objetivo que se le paso al fabricante del "
             "molde en un muestreo distinto, visto desde arriba. <b>Si los puntos no coinciden "
-            "entre muestreos es que se volvio a retocar esa cavidad.</b> Los 12 ficheros "
+            "entre muestreos es que cambio el objetivo propuesto para esa cavidad.</b> "
+            "El historial debe confirmar que el retoque se aplico. Los 12 ficheros "
             "<code>PUNTS_NOUS</code> del 3212 son todos distintos entre si: el retoque se "
             "especifica <b>hueco por hueco</b>, no para el molde entero.</div>"
             + grafico(fig_objetivos_superpuestos(sorted(grupo)), "g")

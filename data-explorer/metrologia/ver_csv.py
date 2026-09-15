@@ -215,14 +215,21 @@ def leer_csv_cavidad(ruta: Path) -> pd.DataFrame:
     # los cuatro muestreos: NO es una pieza mala.
     tabla["signo_sospechoso"] = [
         bool(
-            nom is not None
+            id_cmm in {"32", "34"}
+            and caracteristica.casefold().replace("ó", "o") == "posicion z"
+            and nom is not None
             and med is not None
             and abs(nom) > 1
             and nom * med < 0
             and abs(abs(med) - abs(nom)) < 0.5
         )
-        for nom, med in zip(tabla["nominal"], tabla["medido"])
+        for id_cmm, caracteristica, nom, med in zip(
+            tabla["id_cmm"], tabla["caracteristica"], tabla["nominal"], tabla["medido"]
+        )
     ]
+    for campo in ("medido", "desviacion", "fuera_tol", "barra", "nok"):
+        tabla[f"{campo}_original"] = tabla[campo]
+    tabla["signo_corregido"] = False
 
     tabla["etiqueta"] = [
         f"{b}  [{i}] {c}" + (f"  #{d}" if d else "")
@@ -245,11 +252,29 @@ def alinear(referencia: pd.DataFrame, otra: pd.DataFrame) -> pd.DataFrame:
 
 
 def corregir_signo(tabla: pd.DataFrame) -> pd.DataFrame:
-    """Invierte el medido de las filas con el error de signo y recalcula la desviacion."""
+    """Corrige B2/B4 y sus estados derivados, conservando los valores del export.
+
+    Aplicarla otra vez no vuelve a invertir los valores ya corregidos.
+    """
     tabla = tabla.copy()
-    afectadas = tabla["signo_sospechoso"]
+    afectadas = tabla["signo_sospechoso"] & ~tabla["signo_corregido"]
+    if tabla.loc[afectadas, ["tol_inf", "tol_sup"]].isna().any().any():
+        raise ValueError("No se puede corregir el signo sin ambos limites de tolerancia")
     tabla.loc[afectadas, "medido"] = -tabla.loc[afectadas, "medido"]
-    tabla.loc[afectadas, "desviacion"] = tabla.loc[afectadas, "medido"] - tabla.loc[afectadas, "nominal"]
+    tabla.loc[afectadas, "desviacion"] = (
+        tabla.loc[afectadas, "medido"] - tabla.loc[afectadas, "nominal"]
+    ).round(12)
+    for indice, fila in tabla.loc[afectadas].iterrows():
+        if fila["desviacion"] < fila["tol_inf"]:
+            exceso, barra = fila["desviacion"] - fila["tol_inf"], "<<---+-----"
+        elif fila["desviacion"] > fila["tol_sup"]:
+            exceso, barra = fila["desviacion"] - fila["tol_sup"], "-----+--->>"
+        else:
+            exceso, barra = None, "OK (recalculado)"
+        tabla.loc[indice, "fuera_tol"] = exceso
+        tabla.loc[indice, "nok"] = exceso is not None
+        tabla.loc[indice, "barra"] = barra
+    tabla.loc[afectadas, "signo_corregido"] = True
     return tabla
 
 
@@ -290,7 +315,9 @@ def hover_medicion(tabla: pd.DataFrame) -> list[str]:
             f"medido <b>{f['medido']}</b><br>"
             f"desviacion <b>{f['desviacion']:+.3f} mm</b><br>"
             f"{'FUERA DE TOLERANCIA' if f['nok'] else 'dentro de tolerancia'}"
-            + ("<br><i>signo invertido en el export</i>" if f["signo_sospechoso"] else "")
+            + (f"<br><i>signo corregido; medido original {f['medido_original']}</i>"
+               if f["signo_corregido"] else
+               "<br><i>signo invertido en el export</i>" if f["signo_sospechoso"] else "")
         )
     return textos
 
@@ -540,7 +567,12 @@ def grafico(fig: go.Figure, div_id: str) -> str:
 def tabla_html(tabla: pd.DataFrame) -> str:
     cabecera = ("<tr><th>bloque</th><th>#</th><th>ID</th><th>caracteristica</th><th>nominal</th>"
                 "<th>tol+</th><th>tol-</th><th>medido</th><th>desv</th><th>fuera</th>"
-                "<th>semaforo</th></tr>")
+                "<th>semaforo</th>")
+    corregida = bool(tabla["signo_corregido"].any())
+    if corregida:
+        cabecera += ("<th>medido original</th><th>desv original</th>"
+                     "<th>fuera original</th><th>semaforo original</th>")
+    cabecera += "</tr>"
     filas = []
     for _, f in tabla.iterrows():
         clase = ' class="nok"' if f["nok"] else ""
@@ -552,7 +584,12 @@ def tabla_html(tabla: pd.DataFrame) -> str:
             f"<td>{f['nominal']}</td><td>{f['tol_sup']}</td><td>{f['tol_inf']}</td>"
             f"<td><b>{f['medido']}</b></td><td>{f['desviacion']}</td>"
             f"<td>{'' if pd.isna(f['fuera_tol']) else f['fuera_tol']}</td>"
-            f"<td class='txt'>{html.escape(str(f['barra']))}</td></tr>"
+            f"<td class='txt'>{html.escape(str(f['barra']))}</td>"
+            + (f"<td>{f['medido_original']}</td><td>{f['desviacion_original']}</td>"
+               f"<td>{'' if pd.isna(f['fuera_tol_original']) else f['fuera_tol_original']}</td>"
+               f"<td class='txt'>{html.escape(str(f['barra_original']))}</td>"
+               if corregida else "")
+            + "</tr>"
         )
     return f"<table>{cabecera}{''.join(filas)}</table>"
 
@@ -571,18 +608,17 @@ LEYENDA_BANDA = (
 INTRO = """
 <details class='info'><summary>M&aacute;s informaci&oacute;n</summary><div class='info-cuerpo'>
 <p><b>Muestreo</b> (<code>intern.01</code>, <code>.03</code>&hellip;): una tanda de piezas sacada
-del molde y llevada a medir. El 3212 tiene nueve, pero <b>solo cuatro se midieron en 3D</b>
-&mdash; 01, 03, 05 y 08. <b>Entre uno y otro se retoco el molde</b>, asi que la secuencia es la
-historia de como fue mejorando la pieza.</p>
+del molde y llevada a medir. El 3212 tiene nueve informes, y <b>cuatro exports CMM completos</b>
+&mdash; 01, 03, 05 y 08. Hay correcciones documentadas entre 01 y 03 y entre 03 y 05;
+los cambios posteriores no permiten descartar otros retoques menores.</p>
 <p><b>Cavidad</b>: cada hueco del molde. De los 16 que tiene se controlan cuatro,
 <b>c13&ndash;c16</b>. Un fichero por cavidad y muestreo: <code>intern.05 / c14</code> es la pieza
 que salio del hueco 14 en esa tanda.</p>
 <p><b>Cada fichero trae 211 mediciones</b>: de cada una, lo que pedia el plano (nominal y
 tolerancia) y lo que se midio. Si se pasa de lo permitido, es un <b>NOK</b>.</p>
-<p><b>Se pueden comparar entre si</b> porque el programa de la maquina no se toco en 15 meses:
-midio las mismas 211 cosas en el mismo orden. La medicion n&ordm;&nbsp;57 de un muestreo y la 57
-de otro son el mismo punto, asi que restarlas dice <b>si el retoque funciono</b>. Eso son las dos
-ultimas carpetas del arbol.</p>
+<p><b>Se pueden comparar entre si</b> porque los exports comprobados contienen las mismas 211
+filas en el mismo orden. La comparacion muestra como cambiaron las medidas; atribuir el cambio
+a una correccion requiere consultar su historial. Eso son las dos ultimas carpetas del arbol.</p>
 <p><b>Dos rarezas del fichero que no son piezas malas.</b> (1) Los bolts <b>B2 y B4</b>
 exportan <code>Posicion Z</code> con el <b>signo invertido</b> (el plano pide +31 y la maquina
 escribe -30,990: la desviacion sale -61,99). Pasa en los cuatro muestreos, es la convencion del
@@ -604,6 +640,7 @@ def main() -> None:
                         help="invierte el medido de las filas con el error de signo de B2/B4")
     parser.add_argument("--no-abrir", action="store_true", help="no abrir el navegador al terminar")
     args = parser.parse_args()
+    args.salida = args.salida.resolve()
 
     ficheros = descubrir(args.raiz)
     if not ficheros:
@@ -622,6 +659,8 @@ def main() -> None:
     # --- una pagina por fichero medido -------------------------------------------------
     for fichero in ficheros:
         tabla = leer_csv_cavidad(fichero["ruta"])
+        if tabla.empty:
+            sys.exit(f"No se ha podido extraer ninguna medicion de {fichero['ruta']}")
         if args.corregir_signo:
             tabla = corregir_signo(tabla)
         tablas[(fichero["muestreo"], fichero["cavidad"])] = tabla
@@ -643,7 +682,8 @@ def main() -> None:
             f"{int(tabla['signo_sospechoso'].sum())} con el error de signo de B2/B4</div>"
             + LEYENDA_BANDA
             + grafico(fig_fichero(tabla), "g")
-            + f"<details class='crudo'><summary>ver las {len(tabla)} filas en crudo (mm)</summary>"
+            + f"<details class='crudo'><summary>ver las {len(tabla)} mediciones (mm; "
+            "valores originales conservados)</summary>"
             f"{tabla_html(tabla)}</details>"
         )
         (destino / nombre).write_text(pagina(fichero["ruta"].name, cuerpo, con_plotly=True),
@@ -673,7 +713,8 @@ def main() -> None:
             "Sirve para distinguir <b>un problema del molde entero</b> (los cuatro rombos "
             "desplazados a la vez hacia el mismo lado) de <b>un problema de una sola cavidad</b> "
             "(un rombo suelto lejos de los otros tres). Lo primero se corrige cambiando "
-            "parametros de inyeccion; lo segundo, retocando ese hueco del molde.</div>"
+            "parametros de inyeccion u otros factores comunes; lo segundo puede requerir revisar "
+            "ese hueco del molde. La comparacion sola no identifica la causa.</div>"
             + LEYENDA_BANDA
             + grafico(fig_cavidades(del_muestreo), "g")
         )
@@ -700,7 +741,8 @@ def main() -> None:
             "<div class='leyenda'>Cada <b>fila</b> es una medicion y cada <b>columna</b> un "
             "muestreo, en orden cronologico. <b>Verde = dentro de tolerancia, rojo = fuera.</b> "
             "Leer de izquierda a derecha es ver madurar el molde: <b>una fila que pasa de roja a "
-            "verde es un retoque que funciono</b>. Debajo, las 15 cotas que mas se movieron, esta "
+            "verde es una medicion que entro en tolerancia</b>; el historial permite estudiar "
+            "su relacion con los retoques. Debajo, las 15 cotas que mas se movieron, esta "
             "vez en milimetros reales.</div>"
             + grafico(fig_evolucion(de_la_cavidad), "g1")
             + "<h2>Las 15 cotas que mas se movieron (mm)</h2>"

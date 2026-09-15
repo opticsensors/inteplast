@@ -3,14 +3,32 @@ import type { FilePublic } from "@/client"
 /**
  * Que se puede hacer con un fichero desde el navegador.
  *
- * 🔴 Lo que NO se puede, y no hay forma: lanzar el programa del PC. Esta
- * prohibido, y ademas los bytes estan en el servidor, no en el disco del
- * usuario. Descargar y abrirlo desde la barra de descargas es el techo.
+ * Esta aplicacion no integra programas del PC: los formatos sin visor se
+ * descargan y se abren con el programa asociado. Otras aplicaciones pueden
+ * integrar protocolos del sistema, pero aqui no hay ninguno configurado.
  */
 export type ViewerKind = "pdf" | "image" | "mesh" | "brep" | null
 
 /** Por encima de esto no se ofrece visor: se ofrece la descarga y se explica. */
 export const VIEWER_MAX_MB = 50
+
+/** Same raster MIME types that the backend serves inline; SVG is a download. */
+export const RASTER_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/avif",
+  "image/bmp",
+] as const
+
+export const IMAGE_UPLOAD_ACCEPT = RASTER_IMAGE_TYPES.join(",")
+
+const mediaTypeOf = (contentType: string | null | undefined) =>
+  contentType?.split(";", 1)[0].trim().toLowerCase() ?? ""
+
+export const isPreviewableImage = (contentType: string | null | undefined) =>
+  RASTER_IMAGE_TYPES.some((type) => type === mediaTypeOf(contentType))
 
 const extensionOf = (filename: string) => {
   const dot = filename.lastIndexOf(".")
@@ -46,10 +64,10 @@ const REQUIRED_APP: Record<string, string> = {
 export function viewerFor(file: FilePublic | null | undefined): ViewerKind {
   if (!file) return null
   const extension = extensionOf(file.filename)
-  if (extension === "pdf" || file.content_type === "application/pdf") {
+  if (mediaTypeOf(file.content_type) === "application/pdf") {
     return "pdf"
   }
-  if (file.content_type?.startsWith("image/")) return "image"
+  if (isPreviewableImage(file.content_type)) return "image"
   if (MESH.has(extension)) return "mesh"
   if (BREP.has(extension)) return "brep"
   return null

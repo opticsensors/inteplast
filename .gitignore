@@ -9,3 +9,6 @@ node_modules/
 # data-explorer: HTML/PNG generados por los visores (~42 MB, se rehacen con ver_todo.py)
 /data-explorer/out/
 __pycache__/
+/.env.local
+/.env.production
+/frontend/openapi.json

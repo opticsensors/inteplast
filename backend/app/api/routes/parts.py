@@ -2,6 +2,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
+from sqlmodel import func, select
 
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
@@ -33,8 +34,9 @@ def read_parts(
     desplegable al adjuntar un fichero.
     """
     parts = crud.get_parts(session=session, skip=skip, limit=limit)
+    count = session.exec(select(func.count()).select_from(Part)).one()
     return PartsPublic(
-        data=[PartPublic.model_validate(part) for part in parts], count=len(parts)
+        data=[PartPublic.model_validate(part) for part in parts], count=count
     )
 
 

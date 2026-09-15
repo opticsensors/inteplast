@@ -19,18 +19,20 @@
 
 | Fichero | Qué hace |
 |---|---|
-| **`ver_todo.py`** | **Punto de entrada.** Ejecuta los tres visores y genera `out/index.html`, la pantalla donde se elige entre CSV, TXT y PDF |
-| `ver_csv.py` | Los **16 CSV de cavidad** → árbol + 24 páginas |
-| `ver_txt.py` | Las **40 nubes de puntos** `.txt` → árbol + 44 páginas |
-| `ver_pdf.py` | Las **144 gráficas de contorno** en PDF → árbol + 148 páginas + 144 PNG |
+| **`ver_todo.py`** | **Punto de entrada.** Ejecuta los cuatro visores y genera `out/index.html`, donde se elige CSV, TXT, PDF o plano |
+| `metrologia/ver_csv.py` | Los **16 CSV de cavidad** → árbol + 24 páginas |
+| `metrologia/ver_txt.py` | Las **40 nubes de puntos** `.txt` → árbol + 44 páginas |
+| `metrologia/ver_pdf.py` | Las **144 gráficas de contorno** en PDF → árbol + 148 páginas + 144 PNG |
+| `planos/ver_plano.py` | Plano 2D con búsqueda de texto OCR y globos localizados |
 | `README.md` | Uso, opciones y las trampas de los datos que los scripts ya resuelven |
 | `out/` | Lo generado (~42 MB). **Ignorado en git**, se rehace en un par de minutos |
 
 ```
-out/index.html            ← SE ABRE ESTO: elegir entre los tres
+out/index.html            ← SE ABRE ESTO: elegir entre los cuatro
  ├── csv-3212.html        las cotas medidas y comparadas contra el plano
  ├── txt-3212.html        las nubes de puntos en bruto
- └── pdf-3212.html        el perfil interior contra el contorno teórico
+ ├── pdf-3212.html        el perfil interior contra el contorno teórico
+ └── plano-3212.html      el plano 2D y su texto OCR
 ```
 
 ## Cómo se ejecutan
@@ -42,11 +44,11 @@ y falla. Hay que llamarlo por ruta absoluta:
 $py = "C:\Users\eduard.almar\AppData\Local\Programs\Python\Python311\python.exe"
 $s  = "C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\repos\inteplast\data-explorer"
 
-& $py "$s\ver_todo.py"                 # genera los tres y abre la pantalla inicial
+& $py "$s\ver_todo.py"                 # genera los cuatro y abre la pantalla inicial
 & $py "$s\ver_todo.py" --solo pdf      # regenera solo uno
-& $py "$s\ver_csv.py" --corregir-signo # invierte el error de signo de B2/B4
-& $py "$s\ver_txt.py" --familia nous --muestreo 01
-& $py "$s\ver_pdf.py" --zoom 2.0       # render de los PDF más grande
+& $py "$s\metrologia\ver_csv.py" --corregir-signo # invierte el error de signo de B2/B4
+& $py "$s\metrologia\ver_txt.py" --familia nous --muestreo 01
+& $py "$s\metrologia\ver_pdf.py" --zoom 2.0       # render de los PDF más grande
 ```
 
 Python 3.11.8 con `pandas`, `numpy` y `plotly` ya instalados. → [CLAUDE.md](../CLAUDE.md)
@@ -67,7 +69,8 @@ cavidades, más dos carpetas de comparativas al final:
 2. **Comparar las cavidades entre sí** (una página por muestreo): separa un problema del molde
    entero de uno de una sola cavidad.
 3. **Comparar los muestreos entre sí** (una página por cavidad): heatmap 211 cotas × 4 muestreos.
-   Una fila que pasa de roja a verde es **un retoque que funcionó**.
+   Una fila que pasa de roja a verde es una medición que entró en tolerancia; el historial
+   permite estudiar si el cambio corresponde a un retoque.
 
 **`ver_txt.py`** — árbol de dos niveles (muestreo → cavidad → los 3 ficheros de esa cavidad).
 Cada página trae la nube 3D girable y la vista en planta, con el nº de puntos, el bounding box y
@@ -93,7 +96,10 @@ capa reconstruida con Tesseract (1.504 palabras, confianza media 74). Además lo
   y `c16/` tienen ficheros con el mismo nombre.
 - **Las cabeceras repetidas se numeran** (`N170 BOLT 1 … H=5.0 mm` sale dos veces): sin eso el
   cruce entre muestreos se multiplica y falla.
-- **El error de signo de B2/B4 se marca, no se corrige** por defecto (`--corregir-signo` lo hace).
+- **El error de signo de B2/B4 se marca por defecto**. `--corregir-signo` recalcula también
+  desviación, exceso y NOK, conservando los valores originales del export.
+- **Una extracción PDF incompleta queda sin evaluar**: la página explica qué campos faltan y
+  los gráficos dejan un hueco. No se muestra un OK por ausencia de datos.
 - **Las fechas no salen en la interfaz**: los muestreos ya se ordenan por número, y lo relevante
   de cada uno es qué pasó antes (el retoque de molde). Las fechas viven en
   [3212/historial-molde.md](3212/historial-molde.md).

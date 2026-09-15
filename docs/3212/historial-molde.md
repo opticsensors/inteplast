@@ -25,10 +25,10 @@
 | ⚙️ **Corrección nº1** — 36 diapositivas | 24/01/2024 | — | — | — | — |
 | **`intern.01`** | 25/01/2024 | 315252 | DB | — | ✅ **completo** |
 | `intern.02` | **08/02/2024** | **315252** | **MH** | **FOT** · *rougness push in* | ❌ |
-| **`intern.03`** | 14/03/2024 | **315346** | **DB** | *cotes marcades en gris* | ⚠️ parcial |
+| **`intern.03`** | 14/03/2024 | **315346** | **DB** | *cotes marcades en gris* | CSV completo; XLS parcial |
 | ⚙️ **Corrección nº2** — 18 diapositivas | 18/03/2024 | — | — | — | — |
 | `intern.04` | **12/04/2024** ⚠️ | **315346** | KK | **FOT** | ❌ |
-| **`intern.05`** | 01/05/2024 | 315426 | DB | *cotes marcades en gris* | ⚠️ parcial |
+| **`intern.05`** | 01/05/2024 | 315426 | DB | *cotes marcades en gris* | CSV completo; XLS parcial |
 | `intern.06` | **15/05/2024** | — | **KK** | ***ICL + water + Push-in*** | ❌ |
 | `intern.07` | **30/10/2024** ⚠️ | **315714** | **MH** | *Comparation of the technologies KnO x VdB* | ❌ |
 | **`intern.08`** | **17/01/2025** ⚠️ | *Batch 08/01/2025* | NV | *Cotes CMM* | ✅ |
@@ -43,11 +43,12 @@ por secuencia — informe 7 el 30/10/2024, lote del 08/01/2025 — tiene que ser
 `Batch 08/01/2025`: ese lote **se identifica por fecha**. Hay que admitir el tipo, no corregirlo.
 
 📌 **La fecha del XLS es la de emisión del informe, no la de la medición.** El `.igs` y los PDFs
-PA/PB del muestreo 01 están fechados el **19/01/2024**, seis días antes del informe — y **un día
+PA/PB del muestreo 01 están fechados el **19/01/2024**, seis días antes del informe — y **cinco días
 antes de la reunión de corrección nº1**. La corrección se decidió con los datos ya medidos.
 
-Las 4 carpetas `support` (CMM) existen solo para **01, 03, 05, 08** — coinciden exactamente con
-los muestreos que llevaron medición 3D real.
+Las 4 carpetas `support` (CMM) existen solo para **01, 03, 05, 08**: son los muestreos con
+exports CMM completos disponibles. La ausencia de `support` no demuestra que no se midiera:
+`intern.09` contiene algunas medidas nuevas en el XLS, sin los CSV de respaldo.
 
 ### 🆕 Segunda prueba independiente: el contorno del perfil interior
 
@@ -64,7 +65,8 @@ interior por cavidad:
 
 🔑 **La corrección nº1 dividió la desviación del contorno por 5,5, y en las cuatro cavidades a la
 vez** — la huella de un cambio en la geometría común del molde, no de un retoque cavidad a
-cavidad. La nº2 no tocó esta zona (0,029 → 0,027).
+cavidad. El cambio del resumen tras la nº2 es pequeño (0,029 → 0,027); no permite concluir
+por sí solo si esa zona se tocó.
 
 Es una evidencia **independiente** de la del Bolt Eye y sobre un dato que **el CSV no contiene**.
 
@@ -277,9 +279,11 @@ Es la entidad `DEPENDENCIA_COTA` de [modelo-datos.md](../modelo-datos.md).
 
 ---
 
-## 8. ¿Hubo una tercera corrección de molde? — **no**
+<a id="8-hubo-una-tercera-corrección-de-molde--no"></a>
+## 8. ¿Hubo una tercera corrección de molde? — pendiente de confirmar
 
-*(Resuelto el 2026-08-12 cruzando los CSV de CMM — era la pregunta abierta A1.)*
+*(Reabierto el 2026-09-15: el cruce de CSV realizado el 2026-08-12 no permite descartar
+correcciones pequeñas. La pregunta sigue en A1.)*
 
 ### El método y su calibración
 
@@ -299,13 +303,19 @@ detecta un retoque conocido**, así que se corrió primero como control el tramo
 | `intern.05 → .08` c15 | ❓ | 211 | 29 | 3 | **0** | 0,078 |
 | `intern.05 → .08` c16 | ❓ | 211 | 19 | 3 | **0** | 0,055 |
 
-🔑 **La diferencia no admite discusión.** Un retoque de molde deja **129 de 211 filas movidas más
-de 0,10 mm, en las cuatro cavidades a la vez**. Entre `intern.05` e `intern.08` hay **cero**, y
-el máximo de todo el fichero (0,081 mm) está por debajo del mínimo de cualquier acción de las
-correcciones documentadas.
+La corrección nº2 conocida coincide con **129 de 211 filas movidas más de 0,10 mm en cada
+cavidad**. Entre `intern.05` e `intern.08` no hay cambios de esa magnitud; el máximo observado
+es 0,081 mm. Esto describe la diferencia entre esos dos tramos, no una regla que detecte
+cualquier intervención en el molde.
 
-> **Conclusión: el molde no se tocó entre el 01/05/2024 y `intern.08`.** No faltan ficheros de
-> una corrección nº3: no hubo corrección nº3.
+**La conclusión anterior era demasiado fuerte.** Las slides 2.3–2.5 documentan retoques de
+**0,02 mm**, y la 2.9 de **0,03 mm** ([detalle](5-retoques-molde.md#4-contenido-de-la-corrección-nº2--18032024)).
+Ambos quedan por debajo del umbral de 0,10 mm. Cambios de proceso, incertidumbre de medida y
+retoques localizados tampoco se separan con esta comparación.
+
+> **Conclusión limitada:** no se observa otro cambio grande comparable al de la corrección nº2
+> entre los exports disponibles. **No se puede descartar una tercera corrección ni afirmar que
+> el archivo esté completo.** Hay que confirmarlo con INTEPLAST y conservar la incertidumbre.
 
 ### De regalo: el control valida las acciones de la corrección nº2 una por una
 
@@ -326,10 +336,12 @@ La última fila es una **validación cruzada de [R9](../preguntas-abiertas.md)**
 que bajar 0,08 mm — y N240 bajó 0,057 mm. Ninguna otra cota del fichero se movió en ese sentido
 y esa magnitud. La identificación era correcta.
 
-### `intern.09` — tampoco, pero la evidencia es más débil
+### `intern.09` — evidencia adicional limitada
 
-`intern.09` **no tiene carpeta `support`**, así que no hay CSV: solo su hoja `DR`. Y esa hoja
-solo trae **6 cotas medidas de verdad** (`N128`, `N134`, `N162`, `N275`, `N276`, `N284`).
+`intern.09` **no tiene carpeta `support`**, así que no hay CSV: solo su hoja `DR`. La revisión
+inicial identificó seis cotas candidatas a medidas nuevas (`N128`, `N134`, `N162`, `N275`,
+`N276`, `N284`), pero **N275 y N276 resultaron copiadas de `.08`**, como se explica abajo.
+No deben contarse como mediciones nuevas sin respaldo.
 
 De las que se pueden comparar con `intern.08`, la única con histórico es `N162`:
 
@@ -337,7 +349,8 @@ De las que se pueden comparar con `intern.08`, la única con histórico es `N162
 |---|--:|--:|--:|
 | N162 Ø49,89 GN (c13) | 49,858 | 49,855 | 49,840 |
 
-**−0,015 mm en un año.** Ruido. Sin indicio de retoque.
+**−0,015 mm entre `.08` y `.09`**. Esa pequeña diferencia en una cota no permite determinar
+por sí sola si hubo retoque, cambio de proceso o variación de medida.
 
 ### 🔴 Hallazgo colateral: `intern.09` también tiene datos caducados
 
@@ -371,8 +384,12 @@ Estado en `intern.08`, la última medición 3D completa, en **las 4 cavidades**:
 | **N265** | Ø59,7 **−0,1** | 59,596 | 59,585 | 59,585 | 59,599 | 🔴 **NOK** (por 4–15 µm) |
 | N162 | Ø49,89 −0,12 | 49,855 | 49,856 | 49,834 | 49,863 | 🟢 ok |
 | N163 | Ø52,79 +0,12 | 52,807 | 52,807 | 52,824 | 52,806 | 🟢 ok |
-| N266 | Ø67,1 +0,1 | 67,126 | 67,120 | 67,121 | 67,130 | 🟢 ok |
+| N266 | Ø67,1; signo de tolerancia pendiente | 67,126 | 67,120 | 67,121 | 67,130 | ⚠️ revisar fuente |
 | N170 (bolt 1, H1,5) | Ø4 −0,1 | 3,978 | 3,975 | 3,976 | 3,974 | 🟢 ok |
+
+**Discrepancia documental N266:** esta tabla recogía `+0,1`, mientras las tablas de las
+slides 1.24 y 2.8 en [5-retoques-molde.md](5-retoques-molde.md) dicen `−0,1`. No se elige un
+signo sin volver a contrastar las fuentes: el veredicto de N266 queda pendiente de revisión.
 
 📌 **`N161` es un caso de libro de sobrecorrección.** Estaba en 45,731 (por encima del máximo
 45,520); la corrección 2.16 pidió reducir 0,305 mm; el resultado fue 45,396 — **por debajo del
@@ -390,6 +407,7 @@ conviene guardar la distancia al límite, no solo el booleano NOK — no es lo m
 que 49.
 
 > 🔴 **Y aquí está la pregunta que sí hay que hacerle a INTEPLAST**: tres cotas quedaron NOK en
-> las cuatro cavidades, el molde no se volvió a tocar y se siguió produciendo un año más.
-> ¿Se aceptaron por concesión del cliente? → A1 reformulada en
+> las cuatro cavidades y hay informes posteriores, pero no está confirmado si hubo más retoques
+> ni cómo se aceptaron esas cotas. ¿Hay correcciones posteriores o una concesión del cliente?
+> → A1 en
 > [preguntas-abiertas.md](../preguntas-abiertas.md).

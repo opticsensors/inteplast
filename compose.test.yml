@@ -1,0 +1,82 @@
+# Standalone: never combine with compose.yml/compose.override.yml.
+# No host ports, env_file or application volumes. All test data is ephemeral.
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: app_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: isolated-test-password
+      PGDATA: /var/lib/postgresql/test-data
+    tmpfs:
+      - /var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d app_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  mailcatcher:
+    image: schickling/mailcatcher
+
+  backend:
+    image: inteplast-test-backend:latest
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+      mailcatcher:
+        condition: service_started
+    environment:
+      ENVIRONMENT: local
+      ENABLE_TEST_ROUTES: "true"
+      ALLOW_PUBLIC_SIGNUP: "false"
+      PROJECT_NAME: INTEPLAST tests
+      SECRET_KEY: isolated-test-signing-key-not-for-deployment
+      FIRST_SUPERUSER: admin@example.com
+      FIRST_SUPERUSER_PASSWORD: isolated-test-admin-password
+      POSTGRES_SERVER: db
+      POSTGRES_DB: app_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: isolated-test-password
+      FRONTEND_HOST: http://localhost:5173
+      SMTP_HOST: mailcatcher
+      SMTP_PORT: "1025"
+      SMTP_TLS: "false"
+      EMAILS_FROM_EMAIL: noreply@example.com
+      UPLOADS_DIR: /test-uploads
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTEST_ADDOPTS: -p no:cacheprovider --basetemp=/test-artifacts/pytest
+      COVERAGE_FILE: /test-artifacts/.coverage
+      COVERAGE_HTML_DIR: /test-artifacts/htmlcov
+      MYPY_CACHE_DIR: /test-artifacts/mypy
+    volumes:
+      - ./backend:/app/backend:ro
+    tmpfs:
+      - /test-uploads
+      - /test-artifacts
+    command: ["bash", "-c", "bash scripts/prestart.sh && fastapi run app/main.py"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/utils/health-check/"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  playwright:
+    profiles: [e2e]
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile.playwright
+    ipc: host
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      INTEPLAST_TEST_STACK: "1"
+      VITE_API_URL: http://backend:8000
+      MAILCATCHER_HOST: http://mailcatcher:1080
+      FIRST_SUPERUSER: admin@example.com
+      FIRST_SUPERUSER_PASSWORD: isolated-test-admin-password
+      CI: "true"

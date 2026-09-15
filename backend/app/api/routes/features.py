@@ -24,6 +24,7 @@ from app.models import (
     FeatureUpdate,
     Message,
     Part,
+    StoredFile,
 )
 
 router = APIRouter(prefix="/features", tags=["features"])
@@ -101,6 +102,8 @@ def create_feature(
     """
     Crear un feature.
     """
+    if feature_in.image_id and not session.get(StoredFile, feature_in.image_id):
+        raise HTTPException(status_code=404, detail="File not found")
     feature = crud.create_feature(
         session=session, feature_in=feature_in, owner_id=current_user.id
     )
@@ -120,6 +123,8 @@ def update_feature(
     conocimiento es colaborativa.
     """
     feature = get_feature_or_404(session, feature_id)
+    if feature_in.image_id and not session.get(StoredFile, feature_in.image_id):
+        raise HTTPException(status_code=404, detail="File not found")
     feature.sqlmodel_update(feature_in.model_dump(exclude_unset=True))
     session.add(feature)
     session.commit()
@@ -273,6 +278,8 @@ def create_feature_asset(
     get_feature_or_404(session, feature_id)
     if asset_in.part_id and not session.get(Part, asset_in.part_id):
         raise HTTPException(status_code=404, detail="Part not found")
+    if asset_in.file_id and not session.get(StoredFile, asset_in.file_id):
+        raise HTTPException(status_code=404, detail="File not found")
     asset = crud.create_feature_asset(
         session=session, asset_in=asset_in, feature_id=feature_id
     )
@@ -295,6 +302,8 @@ def update_feature_asset(
         raise HTTPException(status_code=404, detail="Asset not found")
     if asset_in.part_id and not session.get(Part, asset_in.part_id):
         raise HTTPException(status_code=404, detail="Part not found")
+    if asset_in.file_id and not session.get(StoredFile, asset_in.file_id):
+        raise HTTPException(status_code=404, detail="File not found")
     asset.sqlmodel_update(asset_in.model_dump(exclude_unset=True))
     session.add(asset)
     session.commit()

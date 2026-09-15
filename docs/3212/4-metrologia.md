@@ -52,9 +52,9 @@ punto). Normalizar con regex, nunca con match exacto.
 |---|---|---|:--:|---|---|:--:|---|
 | `intern.01` | 25/01/2024 | 315252 | DB | — | `DR(3D)` | ✅ | ✅ **completo** (todas las cotas) |
 | `intern.02` | **08/02/2024** | **315252** | **MH** | **FOT** · *rougness push in* | *(solo `DR(100%)`)* | ❌ | ❌ |
-| `intern.03` | 14/03/2024 | 315346 | DB | *cotes marcades en gris* | `DR(3D)` | ✅ | ⚠️ parcial (N242, N117, N118) |
+| `intern.03` | 14/03/2024 | 315346 | DB | *cotes marcades en gris* | `DR(3D)` | ✅ | CSV completo; XLS parcial |
 | `intern.04` | **12/04/2024** ⚠️ | 315346 | KK | **FOT** | *(solo `DR(100%)`)* | ❌ | ❌ |
-| `intern.05` | 01/05/2024 | 315426 | DB | *cotes marcades en gris* | `DR(3D)` | ✅ | ⚠️ parcial |
+| `intern.05` | 01/05/2024 | 315426 | DB | *cotes marcades en gris* | `DR(3D)` | ✅ | CSV completo; XLS parcial |
 | `intern.06` | **15/05/2024** | **—** | **KK** | ***ICL + water + Push-in*** | *(solo `DR(100%)`)* | ❌ | ❌ |
 | `intern.07` | **30/10/2024** ⚠️ | **315714** | **MH** | *Comparation of the technologies KnO x VdB* | `Comparation KnO x VdB` | ❌ | ❌ |
 | `intern.08` | **17/01/2025** ⚠️ *(el fichero dice 2024, ver abajo)* | *Batch 08/01/2025* | NV | *Cotes CMM* | `DR` | ✅ | ✅ |
@@ -75,8 +75,9 @@ literalmente `Batch 08/01/2025`: **ese lote se identifica por fecha**, no por n�
 de `L9` es fiel al original — lo que hay que hacer es **admitir el tipo fecha en el campo lote**,
 no "corregirlo".
 
-> 🔑 **Las 4 carpetas `support` coinciden exactamente con los muestreos que llevaron medición
-> 3D real.** Si no hay carpeta `support`, no hubo CMM.
+> 🔑 **Las 4 carpetas `support` identifican los muestreos con exports CMM completos disponibles.**
+> Su ausencia no demuestra que no se midiera: `intern.09` contiene algunas medidas nuevas
+> en el XLS, sin CSV de respaldo.
 
 La cronología completa y su relación con los retoques de molde está en
 [historial-molde.md](historial-molde.md).
@@ -226,8 +227,8 @@ $wb.Close($false); $xl.Quit()
 ```
 
 ⚠️ **Cerrar siempre**: si no, quedan procesos `EXCEL.EXE` colgados.
-⚠️ Los scripts `.ps1` deben ser **solo ASCII** — PowerShell 5.1 los lee como ANSI y un guion
-largo o una `ç` provoca un error de sintaxis.
+⚠️ La convención del repo es mantener los scripts `.ps1` en **ASCII** para evitar problemas de
+codificación con PowerShell 5.1. Ver [CLAUDE.md](../../CLAUDE.md).
 
 ---
 
@@ -310,7 +311,8 @@ N265 · N266 · N232 · N233 · N244 · N277 · N142 · N145
 diff de las cabeceras intern.01/c13 ↔ intern.08/C13  →  IDÉNTICAS
 ```
 
-**El programa de la CMM nunca cambió en 15 meses.** Dos consecuencias fuertes:
+**Los exports comprobados conservan la misma estructura durante aproximadamente un año.**
+Dos consecuencias para comparar estas muestras:
 
 1. **Los CSV son comparables fila a fila entre muestreos** sin hacer *matching* difuso: basta
    `cabecera_de_bloque + índice dentro del bloque` (ver
@@ -344,9 +346,9 @@ iconv -f cp1252 -t utf-8 "…/support intern.01/c13/3212_c13.csv"
 
 # Cada fila con su cabecera de bloque:
 iconv -f cp1252 -t utf-8 "…/3212_c13.csv" | awk -F';' '
-  /^\*\*\*\*\*\*/ { next }
-  $1 !~ /^[0-9]+$/ { hdr=$0; sub(/[; \t]+$/,"",hdr); next }
-  { printf "%-46s | %s\n", hdr, $0 }'
+  /^\*\*\*\*/ || /^\/\/\/\// { next }
+  NF>=8 && $2!="" { printf "%-46s | %s\n", hdr, $0; next }
+  { line=$0; sub(/[; \t\r]+$/,"",line); if (line!="") hdr=line }'
 
 # Solo la lista de bloques:
 iconv -f cp1252 -t utf-8 "…/3212_c13.csv" | grep -v "^[0-9]*;" | grep -v "^\*\*\*\*" | grep -v "^;"
@@ -437,7 +439,8 @@ plano `YZ(X)` · `Offset -0.025` · `Nº de pares actual/nominal: 1` ·
 | Contorno actual vs nominal | `Contorno (21)` vs `CONTORN (10)` |
 | **Hora** | `19.01.2024 10:50` |
 
-→ 144 PDF × 6 valores = **864 mediciones de contorno** que no están en ningún CSV ni XLS.
+→ **144 registros de contorno** con seis columnas de límites/desviaciones/infracciones
+(864 valores), además de media y metadatos cuando estén disponibles. No están en CSV ni XLS.
 
 ⚠️ **La tabla del PDF son celdas sueltas**: los bloques de texto de PyMuPDF **no** agrupan las
 filas, y `Contorno (21)` sale separado de sus números. Hay que **agrupar las palabras por
@@ -458,7 +461,8 @@ Extraídos los 144 PDF, la **infracción media de tolerancia** por cavidad:
 
 **La corrección nº1 dividió la desviación del contorno por 5,5**, y lo hizo **en las cuatro
 cavidades a la vez** — huella de un cambio en la geometría común del molde, no de un retoque
-cavidad a cavidad. La nº2 apenas movió el contorno (0,029 → 0,027): no tocó esta zona.
+cavidad a cavidad. La nº2 apenas coincide con cambio en el resumen del contorno
+(0,029 → 0,027); ese dato por sí solo no prueba que no se tocara esta zona.
 
 ⚠️ **Matiz honesto: los 12 elementos siguen fuera de tolerancia en los tres muestreos** (12/12 en
 todos). La banda es ±0,025 mm y la infracción residual es de 0,01–0,06 mm. El perfil **mejoró
@@ -476,7 +480,7 @@ Eye, y en un dato que el CSV no contiene.
 |---|--:|---|:--:|
 | **CSV por cavidad** | 16 | `MEDICION` (n_number, tipo, nominal, tol, valor, desviación, NOK, cavidad, altura_H, id_elemento_cmm) — **3.376 filas** | **1** |
 | **`PUNTS_NOUS.txt`** | 12 | 🆕 **Dato, no adjunto**: 150 puntos objetivo × cavidad × muestreo = la evidencia cuantitativa de la acción correctiva | **2** |
-| **PDF `PA`/`PB`** | 144 | 🆕 `MEDICION` de tipo contorno: 4 valores × 144 = **576 filas** que no están en ningún CSV | **3** |
+| **PDF `PA`/`PB`** | 144 | `MEDICION_CONTORNO`: **144 registros**, cada uno con límites, dos desviaciones y dos infracciones; media y metadatos disponibles. Extracción incompleta = estado desconocido | **3** |
 | XLS: `HISTORY` | 9 | 🆕 `MUESTREO` (fecha, lote, responsable, **motivo**). **Con `intern.09` solo ya salen los 9** | **4** |
 | XLS: cabecera + columna NOK | 9 | `MUESTREO` (ppap_ref, plano, revisión) + validación cruzada del semáforo | 5 |
 | `.txt` de perfil y `PUNTS` | 28 | Ficheros adjuntos a `MEDICION` / materia prima de geometría | 6 |
@@ -492,8 +496,8 @@ Están en este mismo repo, en `data-explorer/`:
 ```powershell
 $py = "C:\Users\eduard.almar\AppData\Local\Programs\Python\Python311\python.exe"
 $s  = "C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\repos\inteplast\data-explorer"
-& $py "$s\ver_csv.py"     # los 16 informes de la CMM + comparativas
-& $py "$s\ver_txt.py"     # las 40 nubes de puntos en 3D
+& $py "$s\metrologia\ver_csv.py"     # los 16 informes de la CMM + comparativas
+& $py "$s\metrologia\ver_txt.py"     # las 40 nubes de puntos en 3D
 ```
 
 → [docs/visores.md](../visores.md)

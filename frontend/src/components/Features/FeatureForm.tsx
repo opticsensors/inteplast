@@ -1,7 +1,8 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useBlocker } from "@tanstack/react-router"
 import { Lightbulb, Package2, TriangleAlert } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
@@ -14,6 +15,14 @@ import {
 import { CollapsibleSection } from "@/components/Common/CollapsibleSection"
 import { FileUpload } from "@/components/Common/FileUpload"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Form,
   FormControl,
@@ -35,6 +44,11 @@ import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import { CATEGORIES, CATEGORY_LABELS } from "./constants"
+import {
+  EditingSessionContext,
+  useEditingSession,
+  useNewEditingSession,
+} from "./EditingSession"
 import { NoteList } from "./NoteList"
 import { PartAssetList } from "./PartAssetList"
 import { PartSelect } from "./PartSelect"
@@ -69,12 +83,21 @@ interface FeatureFormProps {
 /**
  * Alta y edicion de un feature.
  *
- * Los datos basicos se guardan con el boton de abajo. Los warnings, lessons
- * learned y piezas ejemplo se guardan al vuelo desde sus propias modales, y
+ * Los datos basicos se guardan con el boton. Los warnings, lessons
+ * learned y piezas ejemplo se guardan al vuelo en la propia ficha, y
  * necesitan que el feature exista para colgarse de el: por eso al crear uno
  * nuevo solo salen los datos basicos, y las secciones aparecen despues.
  */
-export function FeatureForm({
+export function FeatureForm(props: FeatureFormProps) {
+  const session = useNewEditingSession()
+  return (
+    <EditingSessionContext.Provider value={session}>
+      <FeatureFormContent {...props} />
+    </EditingSessionContext.Provider>
+  )
+}
+
+function FeatureFormContent({
   featureId,
   onCreated,
   onSaved,
@@ -83,6 +106,13 @@ export function FeatureForm({
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [image, setImage] = useState<FilePublic | null>(null)
+  const [imageDirty, setImageDirty] = useState(false)
+  const imageDraft = useRef<{ image: FilePublic | null; dirty: boolean }>({
+    image: null,
+    dirty: false,
+  })
+  const bypassNavigation = useRef(false)
+  const session = useEditingSession()!
 
   const { data: feature } = useQuery({
     ...featureQueryOptions(featureId ?? ""),
@@ -100,25 +130,46 @@ export function FeatureForm({
     },
   })
 
+  // Subscribe to dirtyFields so background refreshes retain edited fields.
+  const { dirtyFields, isDirty } = form.formState
+  const headerDirty = useRef(false)
+  headerDirty.current = isDirty || imageDirty
+
+  const blocker = useBlocker({
+    shouldBlockFn: async () => {
+      if (bypassNavigation.current) return false
+      const saved = await session.flush()
+      return !saved || headerDirty.current
+    },
+    enableBeforeUnload: () => headerDirty.current || session.pending(),
+    withResolver: true,
+  })
+
   useEffect(() => {
     if (!featureId) {
-      form.reset({ name: "", description: "", category: NO_CATEGORY, tags: "" })
-      setImage(null)
       return
     }
     if (feature) {
-      form.reset({
-        name: feature.name,
-        description: feature.description ?? "",
-        category: feature.category ?? NO_CATEGORY,
-        tags: (feature.tags ?? []).join(", "),
-      })
-      setImage(feature.image ?? null)
+      form.reset(
+        {
+          name: feature.name,
+          description: feature.description ?? "",
+          category: feature.category ?? NO_CATEGORY,
+          tags: (feature.tags ?? []).join(", "),
+        },
+        { keepDirtyValues: true },
+      )
+      if (!imageDirty) {
+        imageDraft.current = { image: feature.image ?? null, dirty: false }
+        setImage(feature.image ?? null)
+      }
     }
-  }, [featureId, feature, form])
+  }, [featureId, feature, form, imageDirty])
 
   const mutation = useMutation({
-    mutationFn: (data: FormData) => {
+    mutationFn: async (data: FormData) => {
+      if (!(await session.flush()))
+        throw new Error("Hay cambios sin guardar en las notas o ficheros")
       const body = {
         name: data.name,
         description: data.description || null,
@@ -127,22 +178,28 @@ export function FeatureForm({
             ? null
             : (data.category as FeatureCategory),
         tags: parseTags(data.tags),
-        image_id: image?.id ?? null,
+        image_id: imageDraft.current.image?.id ?? null,
       }
       return featureId
         ? FeaturesService.updateFeature({
             featureId,
-            requestBody: body,
+            requestBody: {
+              ...(dirtyFields.name ? { name: body.name } : {}),
+              ...(dirtyFields.description
+                ? { description: body.description }
+                : {}),
+              ...(dirtyFields.category ? { category: body.category } : {}),
+              ...(dirtyFields.tags ? { tags: body.tags } : {}),
+              ...(imageDraft.current.dirty ? { image_id: body.image_id } : {}),
+            },
           })
         : FeaturesService.createFeature({ requestBody: body })
     },
-    onSuccess: (saved) => {
+    onSuccess: () => {
       if (featureId) {
         showSuccessToast("Feature actualizado")
-        onSaved()
       } else {
         showSuccessToast("Feature creado: ya puedes anadirle contenido")
-        onCreated(saved.id)
       }
     },
     onError: handleError.bind(showErrorToast),
@@ -150,6 +207,32 @@ export function FeatureForm({
       queryClient.invalidateQueries({ queryKey: ["features"] })
     },
   })
+
+  const submit = async (data: FormData, proceed?: () => void) => {
+    try {
+      const saved = await mutation.mutateAsync(data)
+      form.reset(data)
+      imageDraft.current.dirty = false
+      setImageDirty(false)
+      bypassNavigation.current = true
+      if (proceed) proceed()
+      else if (featureId) onSaved()
+      else onCreated(saved.id)
+    } catch {
+      /* The editor and its failed drafts stay mounted for retry. */
+    }
+  }
+
+  const cancel = async () => {
+    if (!(await session.flush())) {
+      showErrorToast(
+        "Hay cambios sin guardar. Corrige los campos o reintenta antes de salir.",
+      )
+      return
+    }
+    bypassNavigation.current = true
+    onCancel()
+  }
 
   const linkPart = useMutation({
     mutationFn: (partId: string) =>
@@ -167,6 +250,7 @@ export function FeatureForm({
   // dentro del desplegable. Ni boton de editar ni modal.
   const noteSection = (kind: NoteKind, icon: React.ReactNode) => (
     <CollapsibleSection
+      keepMounted
       title={kind === "warning" ? "Warnings" : "Lessons Learned"}
       icon={icon}
     >
@@ -175,7 +259,10 @@ export function FeatureForm({
   )
 
   return (
-    <div className="flex flex-col gap-6">
+    <fieldset
+      disabled={mutation.isPending}
+      className="flex min-w-0 flex-col gap-6"
+    >
       {/* Los botones ocupan el mismo sitio que *Editar* y *Borrar* en modo
             lectura, y estan junto a lo unico que hay que guardar a mano: las
             secciones de abajo se guardan solas. */}
@@ -184,7 +271,9 @@ export function FeatureForm({
           type="button"
           variant="outline"
           size="sm"
-          onClick={onCancel}
+          onClick={() => {
+            void cancel()
+          }}
           disabled={mutation.isPending}
         >
           Cancelar
@@ -202,16 +291,19 @@ export function FeatureForm({
       <Form {...form}>
         <form
           id="feature-form"
-          onSubmit={form.handleSubmit((data) => mutation.mutate(data))}
+          onSubmit={form.handleSubmit((data) => submit(data))}
         >
           {/* Misma cabecera que la ficha —foto a la izquierda, identidad a
                 la derecha— con las casillas en el sitio de cada dato. */}
           <div className="flex gap-4 rounded-lg border p-4 sm:gap-6 sm:p-6">
             <FileUpload
               value={image}
-              onChange={setImage}
+              onChange={(file) => {
+                imageDraft.current = { image: file, dirty: true }
+                setImage(file)
+                setImageDirty(true)
+              }}
               variant="image"
-              accept="image/*"
               className="shrink-0"
               boxClassName="size-32 sm:size-48"
             />
@@ -321,6 +413,7 @@ export function FeatureForm({
             <Lightbulb className="size-4 text-yellow-500" />,
           )}
           <CollapsibleSection
+            keepMounted
             title="Piezas ejemplo"
             icon={<Package2 className="size-4 text-muted-foreground" />}
           >
@@ -343,6 +436,39 @@ export function FeatureForm({
           </CollapsibleSection>
         </div>
       )}
-    </div>
+      <Dialog
+        open={blocker.status === "blocked"}
+        onOpenChange={(open) => {
+          if (!open) blocker.reset?.()
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cambios sin guardar</DialogTitle>
+            <DialogDescription>
+              Guarda los cambios antes de salir. Si falla el guardado, tus
+              cambios se mantienen en esta ficha para reintentarlo.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => blocker.reset?.()}
+            >
+              Seguir editando
+            </Button>
+            <LoadingButton
+              loading={mutation.isPending}
+              onClick={form.handleSubmit((data) =>
+                submit(data, blocker.proceed),
+              )}
+            >
+              Guardar y salir
+            </LoadingButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </fieldset>
   )
 }

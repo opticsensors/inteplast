@@ -22,5 +22,5 @@ api_router.include_router(parts.router)
 api_router.include_router(files.router)
 
 
-if settings.ENVIRONMENT == "local":
+if settings.ENABLE_TEST_ROUTES:
     api_router.include_router(private.router)

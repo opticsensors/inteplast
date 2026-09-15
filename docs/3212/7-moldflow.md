@@ -22,10 +22,11 @@ HEX   62 7F 0A 0B 02 50 31 5C 5E 74 71 01 73 7F 06 0C 0B 5C 1D 7B 12 62 18 0D �
 ASCII b....P1\^tq.s....\.{.b...e..aab.f...b.3=,1B1%F...q.^U].^pC..vD.21Ap.t…
 ```
 
-**No hay magic number, ni cabecera legible, ni cadenas de texto.** Los datos están comprimidos
-o cifrados desde el byte 0. No hay especificación pública del formato.
+**La inspección de esos bytes no encontró una cabecera legible.** Eso no demuestra que el
+formato esté cifrado. No disponemos de un parser ni de una especificación utilizable en el proyecto.
 
-→ **Ninguna herramienta genérica puede leerlo.** No intentar.
+→ El pipeline actual no extrae sus resultados; usar el visor indicado por INTEPLAST o pedir
+exportaciones. No asumir que una lectura de la cabecera permite interpretar el estudio.
 
 ## Cómo abrirlo
 
@@ -100,5 +101,5 @@ soldadura sin depender del `.mfr`.
 **Prioridad de ingesta: 8 (la última), y bloqueada** hasta que llegue la exportación manual.
 
 > 💡 **No confundir con `3- 3D Molde`**: aquel es la geometría del molde (247 MB, en la nube);
-> este es la simulación del llenado (184 MB, local pero cifrado). Ninguno de los dos se puede
-> leer, por motivos distintos.
+> este es la simulación del llenado (184 MB, formato propietario). Sus limitaciones actuales
+> son distintas: disponibilidad local y herramienta de lectura, respectivamente.

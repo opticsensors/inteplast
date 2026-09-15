@@ -1,6 +1,9 @@
 # TODO
 
-- [ ]
+> Revisión de documentación: 2026-09-15. Los bloques fechados del 24/25 de agosto conservan
+> decisiones y contexto histórico. El trabajo de desplegables, visores y edición en línea está
+> implementado; siguen pendientes las pruebas con archivos reales, referencias externas,
+> derivados ligeros y selección de zonas. Estado técnico actual: [docs/app-web.md](docs/app-web.md).
 
 ## Ficha del feature: la tabla «Piezas ejemplo» -> desplegables + visores
 
@@ -22,7 +25,7 @@
 > Y sobre los derivados ligeros: «reduce el tamano o lo que sea necesario para el display, pero
 > **nunca modifiques el original**».
 
-**Donde esta hoy el codigo**
+**Dónde estaba el código al planear el cambio (2026-08-24; histórico)**
 
 - `frontend/src/components/Features/PartAssetMatrix.tsx` — la tabla de 6 columnas. Es lo que se
   sustituye (propuesta de nombre: `PartAssetList.tsx`).
@@ -50,7 +53,7 @@
       derivado es un extra, jamas un reemplazo.
 - [ ] 5. Abierto por defecto si solo hay una pieza; cerrados si hay varias.
 
-**Hechos comprobados el 2026-08-24 (no volver a investigarlos)**
+**Observaciones del 2026-08-24 (históricas; las rutas y líneas pueden haber cambiado)**
 
 - [ ] 🔴 **Por eso los iconos no se pueden clicar: no hay ningun fichero detras.** El seed crea
       los cinco adjuntos del Bolt Eye **sin fichero** (`backend/app/seed_features.py:148`, el
@@ -59,29 +62,28 @@
       tipo al 40 % y no hace nada. Diga lo que diga el diseno, eso hay que escribirlo con
       palabras en la interfaz.
 - [ ] `MAX_UPLOAD_SIZE_MB = 50` en `backend/app/core/config.py:75`.
-- [ ] `GET /files/{id}` ya sirve con `content_disposition_type="inline"`
-      (`backend/app/api/routes/files.py:82`) -> el PDF se abre en pestana o se embebe **sin tocar
-      el backend**.
+- [ ] El endpoint servía el PDF en línea. Desde la revisión del 2026-09-15 requiere
+      autenticación o una URL temporal de `/files/{id}/access-url`; el tipo MIME determina
+      si la respuesta se muestra en línea o se descarga. Ver [app-web.md](docs/app-web.md).
 - [ ] Tamanos reales del 3212 (de los `docs/3212/`): plano PDF **1,42 MB** · STEP de la pieza
       **10,06 MB** · escaneo STL **235,7 MB** (4,9 M triangulos) · STEP del molde **246,7 MB** ·
-      Moldflow `.mfr` **184,2 MB** (binario cifrado, sin cabecera legible).
+      Moldflow `.mfr` **184,2 MB** (binario propietario; no se ha demostrado que esté cifrado).
 
 **Visores: que se puede y que no**
 
 | Fichero | Visor en el navegador | Como |
 |---|---|---|
 | Plano PDF (1,4 MB) | ✅ trivial | `<iframe>` con el visor nativo + «abrir en pestana». Cero dependencias, el backend ya lo sirve inline |
-| Imagen | ✅ trivial | Lo mismo |
+| JPEG, PNG, GIF, WebP, AVIF y BMP | ✅ | `<img>` con una URL firmada; SVG se descarga como adjunto |
 | **STEP de la pieza (10 MB)** | ✅ **si, y es el que se quiere mirar** | STEP es B-rep (NURBS): hay que teselarlo. `occt-import-js` = OpenCascade en WASM (lo que usa Online 3D Viewer) lo hace **en el navegador**. Unos segundos con 10 MB |
-| STL del escaneo (236 MB) | ⚠️ solo con derivado | `three.js` + `STLLoader` pinta 4,9 M de triangulos sin problema; lo inviable es **bajar 236 MB para un vistazo**. Ver derivados |
-| STEP del molde (247 MB) | ❌ | Ensamblaje completo (placas, correderas, refrigeracion). Teselar eso en WASM no termina |
-| `.mfr` (184 MB), `.sldprt`, `.CATPart` | ❌ imposible | Binarios propietarios. El `.mfr` esta cifrado desde el byte 0 (`docs/3212/7-moldflow.md`). Solo Moldflow Communicator |
+| STL del escaneo (236 MB) | ⚠️ solo con derivado | Supera el límite de 50 MB del visor. La viabilidad del original depende de los recursos del equipo; se propone un derivado ligero |
+| STEP del molde (247 MB) | Sin visor en esta app | Ensamblaje completo que supera el límite de 50 MB del visor. Se ofrece descarga |
+| `.mfr` (184 MB), `.sldprt`, `.CATPart` | Sin visor en esta app | Binarios propietarios. El `.mfr` se consulta con Moldflow Communicator; no se ha demostrado que esté cifrado. |
 
-🔴 **Lo que el navegador NO puede hacer, y no hay forma:** lanzar un programa del PC. Esta
-prohibido, y ademas los bytes estan en el servidor, no en el disco del usuario. La secuencia real
-es descargar -> abrir desde la barra de descargas -> Windows lo abre con su programa asociado. Un
-clic de mas, y es el techo de una app web. Un `inteplast://` propio con un agente instalado en
-cada PC lo resolveria, pero es otro proyecto y pasa por IT.
+La aplicación no integra programas locales. La secuencia actual es descargar -> abrir desde
+la barra de descargas -> Windows lo abre con su programa asociado. Un protocolo `inteplast://`
+con un agente instalado en cada PC sería una integración adicional y requeriría coordinación
+con IT.
 
 **Derivados ligeros (para el visor, nunca para sustituir)**
 
@@ -290,31 +292,34 @@ Hechos que cierran opciones (ya comprobados)
 - [ ] STEP del molde = 247 MB: convertir siempre en el servidor, nunca servirlo crudo. Usar el STP de la pieza
 - [ ] El plano 2D es un escaneo sin texto -> en 2D la via estandar es ballooning con OCR, no extraccion de texto
 
-Soluciones por nivel de esfuerzo                                                                                - [ ] Nivel 0 (1-2 dias, recomendado empezargulos/poligonos + etiqueta N-number
-      sobre captura del 3D o recorte del plano. Guardar coords normalizadas (0-1) + label, pintar con SVG sobre       Libs: Annotorious / react-image-annotapias.
-      Fuente de imagenes ya existente: diapositivas de correccion de molde (zona en rojo), graficas de contorno,plano.
-- [ ] Nivel 1 (1-2 semanas): visor 3D del STL decimado con three.js + @react-three/fiber + three-mesh-bvh (pickirapido).
-      Clic -> raycast -> region growing por angulo entre normales (equivalente a la seleccion por tangencia de  SolidWorks).
-      Guardar la pose de camara para generar la miniatura de la ficha automaticamente.                          - [ ] Nivel 2 (semanas, valor real): B-rep. js (OpenCascade en WASM) o OCCT en servidor
-      -> malla separada por cara con id + tipo de superficie. Habilita seleccion persistente y autodeteccion de features.
-      Alternativas de pago: HOOPS Communicator (seleccion por cara, estandar del sector),
-      CAD Exchanger Web Toolkit, Autodesk APo selecciona por cuerpo, no por cara).
-- [ ] Via 2D estandar del sector: ballooning (InspectionXpert/Ideagen, High QA, Net-Inspect, Discus).
-      Caja sobre la cota + numero = N-number02. Con OCR y caja manual de respaldo.
-      Encaja con el TODO ya existente de localizar y marcar una cota en el PDF del plano.
-- [ ] Via 3D estandar del sector: MBD/PMI (Spso / PC-DMIS / Teamcenter.
-      Requiere CAD anotado del cliente; hoy solo tenemos PDF escaneado rev. 07 -> descartado por ahora.
+### Enfoques propuestos — pendientes de elegir
 
-Decisiones de diseño que hay que tomar SI o SI antes de implementar
-- [ ] NO guardar indices de triangulo ni de rtar o re-decimar el CAD.
-      Guardar ancla geometrica: punto 3D + normal + radio de crecimiento, en coords de pieza con la alineacion de `6- Metode de mesura`.
-- [ ] Modelar la seleccion como entidad propia de BD (p.ej. `zona_feature`: tipo 2D/3D, fichero origen, ancla,
-N-numbers).
-      Asi el mismo Bolt Eye puede tener caja en el plano + region en el STL + cara en el STEP, todas apuntando a N170.
+> El bloque anterior tenía frases truncadas. Se reescribe como propuestas claras, sin recuperar
+> nombres de bibliotecas ni estimaciones que ya no se pueden interpretar con fiabilidad.
+
+- [ ] **Anotación 2D manual:** dibujar una caja o un polígono sobre el plano o una captura del
+      CAD y asociarle un N-number. Guardar coordenadas normalizadas y la identidad/revisión de
+      la imagen. El OCR del plano actual puede ayudar con texto, pero no asignar globos automáticamente.
+- [ ] **Selección sobre malla 3D:** evaluar la selección por clic y crecimiento por ángulo entre
+      normales sobre un derivado ligero. El visor existe; esta selección no está implementada.
+      Guardar la cámara puede servir para reproducir una captura de la zona.
+- [ ] **Selección de caras B-rep:** evaluar caras/aristas del STEP con identificadores y tipos
+      de superficie. La teselación existente no implica que haya selección persistente por cara.
+- [ ] **CAD con PMI:** pedir una fuente anotada si se necesita asociar cotas semánticas a
+      geometría. No asumir que el STEP actual o el PDF escaneado contienen esa información.
+
+### Decisiones pendientes antes de implementar
+
+- [ ] Elegir si la primera versión marca imágenes 2D, mallas 3D o caras de un STEP.
+- [ ] Definir cómo conservar una selección al cambiar el fichero o regenerar su malla. No usar
+      solo índices de triángulo: evaluar anclas geométricas y una referencia a la revisión de origen.
+- [ ] Modelar la selección como entidad propia (`zona_feature`, nombre provisional): feature,
+      pieza, fichero/revisión, tipo 2D/3D, ancla y N-numbers. Un Bolt Eye podría tener distintas
+      representaciones de la misma zona, con correspondencias explícitas.
 
 
 
-# DONE
+# Encargos completados — texto histórico
 
 - [ ] make a data explorer python script that reads the 2d planos odf and extracts the text/ can locate where a certain text (cota name) in the pdf and mark it
 

@@ -9,9 +9,10 @@ import {
   FeaturesService,
 } from "@/client"
 import { CollapsibleSection } from "@/components/Common/CollapsibleSection"
+import { FileLink } from "@/components/Common/FileLink"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
-import { fileUrl, formatFileSize, handleError } from "@/utils"
+import { formatFileSize, handleError } from "@/utils"
 import { AssetEditRow, NEW_ASSET_NAME } from "./AssetEditRow"
 import { ASSET_ICONS, ASSET_KIND_SHORT, ASSET_KINDS } from "./constants"
 import { featureParts, type PartRow, partRows } from "./parts"
@@ -85,10 +86,10 @@ function AssetRow({
             className="size-7 shrink-0"
             title={`Descargar ${file.filename}`}
           >
-            <a href={fileUrl(file.id)} download={file.filename}>
+            <FileLink fileId={file.id} downloadFile download={file.filename}>
               <Download className="size-3.5" />
               <span className="sr-only">Descargar {asset.name}</span>
-            </a>
+            </FileLink>
           </Button>
         )}
       </div>
@@ -159,6 +160,7 @@ function PartGroup({
 
   return (
     <CollapsibleSection
+      keepMounted={editable}
       defaultOpen={defaultOpen}
       title={
         row.part ? (

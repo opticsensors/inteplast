@@ -95,10 +95,22 @@ BOLT_EYE_ASSETS = [
 
 
 def seed(session: Session) -> None:
+    """Create the complete sample in one transaction, or leave no partial sample."""
+    try:
+        created = _seed(session)
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    if created:
+        logger.info("Feature 'Bolt Eye' creado")
+
+
+def _seed(session: Session) -> bool:
     existing = session.exec(select(Feature).where(Feature.name == "Bolt Eye")).first()
     if existing:
         logger.info("El feature 'Bolt Eye' ya existe, no se toca nada")
-        return
+        return False
 
     feature = Feature(
         name="Bolt Eye",
@@ -111,8 +123,7 @@ def seed(session: Session) -> None:
         tags=["3212", "Pump Housing", "N170", "N117", "N178", "N288", "Bosch"],
     )
     session.add(feature)
-    session.commit()
-    session.refresh(feature)
+    session.flush()
 
     for position, (title, body) in enumerate(BOLT_EYE_WARNINGS):
         session.add(
@@ -138,8 +149,7 @@ def seed(session: Session) -> None:
     if not part:
         part = Part(code="3212", name="Pump Housing")
         session.add(part)
-        session.commit()
-        session.refresh(part)
+        session.flush()
 
     # El feature esta declarado en la pieza aunque no haya ficheros subidos.
     feature.parts.append(part)
@@ -157,8 +167,8 @@ def seed(session: Session) -> None:
                 position=position,
             )
         )
-    session.commit()
-    logger.info("Feature 'Bolt Eye' creado")
+    session.flush()
+    return True
 
 
 def main() -> None:
