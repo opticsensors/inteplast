@@ -3,7 +3,7 @@ set -euo pipefail
 
 repo_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 project="inteplast-tests-$(date +%s)-$$"
-compose=(docker compose --project-name "$project" --file "$repo_dir/compose.test.yml")
+compose=(docker compose --env-file "$repo_dir/.env.example" --project-name "$project" --file "$repo_dir/compose.test.yml")
 cleanup() { "${compose[@]}" down --remove-orphans; }
 trap cleanup EXIT
 

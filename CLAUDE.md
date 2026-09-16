@@ -70,20 +70,21 @@ Un feature puede además estar **declarado** en una pieza sin tener ningún fich
 CSV/XLS/PPTX y es la siguiente fase.
 
 ```powershell
-.\scripts\compose.ps1 up -d --build db prestart backend   # backend + BD (aplica migraciones)
+docker compose up -d --build db prestart backend   # backend + BD (aplica migraciones)
 cd frontend; npm run dev                           # http://localhost:5173
-.\scripts\compose.ps1 exec backend python -m app.seed_features   # carga de ejemplo: Bolt Eye del 3212
+docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bolt Eye del 3212
 ```
 
 - 🔑 **Antes de tocar `backend/` o `frontend/`, leer [docs/app-web.md](docs/app-web.md)**: modelo,
   endpoints, permisos, decisiones y cabos sueltos.
-- 🔴 **Tras tocar `backend/`, reconstruir con `--build` o mantener `.\scripts\compose.ps1 watch backend`
+- 🔴 **Tras tocar `backend/`, reconstruir con `--build` o mantener `docker compose watch backend`
   activo.** `up -d` por sí solo reutiliza la imagen y no sincroniza el código local. Alembic
   `current` comprueba la revisión de la BD, **no** que el código de los endpoints esté actualizado.
 - ⚠️ **Cambiar un endpoint o un modelo obliga a regenerar el cliente TypeScript**
   (`bash scripts/generate-client.sh`), o el frontend se queda desincronizado.
 - La página `/items` es la demo de la plantilla: ya no está en el menú, pero el `Item` sigue en el
-  código. La página real de gestión es `/features`, y la **ficha del feature es `/features/{id}`**
+  código. El inicio y catálogo único es `/features` (`/` redirige conservando la búsqueda),
+  con tarjetas de consulta y acceso directo a editar. La **ficha del feature es `/features/{id}`**
   — desde el 2026-08-19 es una página con URL propia, no una modal.
 - **Subidas persistentes:** el Dockerfile fija `UPLOADS_DIR=/app/uploads`, que coincide con el
   volumen. Antes de recrear un contenedor anterior a la corrección, comprobar y rescatar los
@@ -94,13 +95,15 @@ cd frontend; npm run dev                           # http://localhost:5173
 - **Archivos externos (2026-09-15):** el PDF y el STEP del 3212 están vinculados y comprobados
   en la instalación local. `StoredFile.id` identifica tanto subidas como referencias; el
   adaptador local lee originales sin copiarlos, con montaje Docker de solo lectura.
-  `.env.local` contiene la configuración personal y queda fuera de Git; usar `scripts/compose.ps1`
-  o `bash scripts/compose.sh` para conservarla al reiniciar/reconstruir. Graph, revisiones
+  `.env` contiene toda la configuración personal y queda fuera de Git; `.env.example` es la
+  plantilla versionada. `docker compose` carga el origen directamente, sin lanzadores ni
+  variables manuales en la terminal. No sobrescribir el `.env` de una instalación. Graph, revisiones
   históricas e ingesta siguen pendientes. Escaneo y molde grandes usan GLB automáticos en
   caché; ver [docs/vistas-3d.md](docs/vistas-3d.md) y [docs/ficheros-externos.md](docs/ficheros-externos.md).
   **La pregunta A10 sobre acceso a originales es prioridad 1 de la reunión con INTEPLAST.**
-- **Portadas CAD:** la cabecera admite pegar/arrastrar/elegir imágenes y crear una portada
-  desde el STEP vinculado de la pieza, con caras rojas y encuadre guardados. `Feature.cover_3d`
+- **Portadas CAD:** pulsar la cabecera abre la ampliación de imagen/3D; en edición abre una
+  modal para pegar/arrastrar/elegir imágenes o crear una portada desde el STEP vinculado de
+  la pieza, con caras rojas y encuadre guardados. `Feature.cover_3d`
   se liga a los bytes y la receta de importación; no reutilizar índices de caras entre
   revisiones. Detalles en [docs/portadas-cad.md](docs/portadas-cad.md).
 

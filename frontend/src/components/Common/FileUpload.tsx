@@ -24,6 +24,11 @@ interface FileUploadProps {
   className?: string
   /** Tamaño del cuadro de imagen. La ficha lo iguala al de su foto. */
   boxClassName?: string
+  /** Fixed rows shared with the CAD tab in the cover dialog. */
+  coverLayout?: boolean
+  /** Restrict clipboard images to this editor's dialog. */
+  pasteInDialog?: boolean
+  onUploadStateChange?: (state: { pending: boolean; error: boolean }) => void
 }
 
 /**
@@ -37,9 +42,13 @@ export function FileUpload({
   accept,
   className,
   boxClassName,
+  coverLayout = false,
+  pasteInDialog = false,
+  onUploadStateChange,
 }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
   const { showErrorToast } = useCustomToast()
   const { url } = useFileAccess(value?.id)
 
@@ -49,6 +58,9 @@ export function FileUpload({
     onError: handleError.bind(showErrorToast),
   })
   const upload = usePendingTask((file: File) => mutation.mutateAsync(file))
+  useEffect(() => {
+    onUploadStateChange?.({ pending: upload.pending, error: upload.error })
+  }, [upload.pending, upload.error, onUploadStateChange])
 
   const handleFiles = (files: FileList | null) => {
     if (upload.pending) return
@@ -67,12 +79,12 @@ export function FileUpload({
     if (variant !== "image") return
     const onPaste = (event: ClipboardEvent) => {
       const target = event.target instanceof Element ? event.target : null
-      if (
-        target?.closest(
-          "input, textarea, [contenteditable=true], [role=dialog]",
-        )
-      )
-        return
+      if (target?.closest("input, textarea, [contenteditable=true]")) return
+      const dialog = target?.closest('[role="dialog"]')
+      if (pasteInDialog) {
+        if (!dialog || dialog !== rootRef.current?.closest('[role="dialog"]'))
+          return
+      } else if (dialog) return
       const files = event.clipboardData?.files
       if (!files?.length) return
       event.preventDefault()
@@ -80,7 +92,7 @@ export function FileUpload({
     }
     window.addEventListener("paste", onPaste)
     return () => window.removeEventListener("paste", onPaste)
-  }, [variant])
+  }, [variant, pasteInDialog])
 
   const dropHandlers = {
     onDragOver: (event: React.DragEvent) => {
@@ -110,10 +122,19 @@ export function FileUpload({
 
   if (variant === "image") {
     return (
-      <div className={cn("relative", className)}>
+      <div
+        ref={rootRef}
+        className={cn(
+          "relative",
+          coverLayout &&
+            "row-span-2 grid grid-rows-[2.25rem_var(--cover-size)] gap-3",
+          className,
+        )}
+      >
         <button
           type="button"
           aria-label="Seleccionar imagen"
+          data-slot={coverLayout ? "cover-surface" : undefined}
           title="Seleccionar imagen del ordenador"
           disabled={upload.pending}
           onClick={() => inputRef.current?.click()}
@@ -122,6 +143,7 @@ export function FileUpload({
             "flex size-28 items-center justify-center overflow-hidden rounded-md border-2 border-dashed transition-colors",
             isDragging ? "border-primary bg-accent" : "border-input",
             "hover:border-primary hover:bg-accent/50",
+            coverLayout && "row-start-2",
             boxClassName,
           )}
         >
@@ -142,7 +164,12 @@ export function FileUpload({
             type="button"
             variant="secondary"
             size="icon"
-            className="absolute -top-2 -right-2 size-6 rounded-full"
+            className={cn(
+              "absolute size-6 rounded-full",
+              coverLayout
+                ? "right-2 top-[calc(3rem+0.5rem)]"
+                : "-top-2 -right-2",
+            )}
             onClick={() => onChange(null)}
           >
             <X className="size-3" />
@@ -150,14 +177,29 @@ export function FileUpload({
           </Button>
         )}
         {input}
-        <p className="mt-1 text-center text-xs text-muted-foreground">
-          Arrastra o pega (Ctrl+V)
+        <p
+          className={cn(
+            "text-center text-xs text-muted-foreground",
+            coverLayout
+              ? "row-start-1 flex items-center justify-center"
+              : "mt-1",
+          )}
+        >
+          Arrastra, pega (Ctrl+V) o haz clic para elegir
         </p>
-        <SaveStatus
-          error={upload.error}
-          saving={upload.pending}
-          retry={upload.retry}
-        />
+        <div
+          className={
+            coverLayout
+              ? "absolute inset-x-2 bottom-2 bg-background/95 empty:hidden"
+              : undefined
+          }
+        >
+          <SaveStatus
+            error={upload.error}
+            saving={upload.pending}
+            retry={upload.retry}
+          />
+        </div>
       </div>
     )
   }

@@ -67,6 +67,240 @@ async function mount(t) {
   return { page, network }
 }
 
+async function openCover(page, mode = "image") {
+  await page.getByRole("button", { name: /^(Añadir|Editar) portada$/ }).click()
+  await page
+    .getByRole("tab", {
+      name: mode === "cad" ? "CAD" : "Imagen",
+      exact: true,
+    })
+    .click()
+}
+
+async function applyCover(page) {
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Aplicar", exact: true })
+    .click()
+  await page.getByRole("dialog").waitFor({ state: "hidden" })
+}
+
+async function setCover(page, cad = false) {
+  await page.evaluate(async (withCad) => {
+    const feature = window.review.feature
+    feature.image = {
+      id: "saved-image",
+      filename: "cover.png",
+      content_type: "image/png",
+      size: 128,
+    }
+    feature.image_id = "saved-image"
+    if (withCad) {
+      const asset = feature.assets[0]
+      asset.kind = "part"
+      asset.file = {
+        id: "part-step",
+        filename: "part.stp",
+        content_type: "model/step",
+        size: 128,
+        version: "v1",
+      }
+      feature.cover_3d = {
+        asset_id: asset.id,
+        part_id: asset.part.id,
+        file_id: asset.file.id,
+        file_version: "v1",
+        faces: [{ mesh: 0, face: 1 }],
+        camera: { position: [10, -10, 10], target: [0, 0, 0], up: [0, 0, 1] },
+      }
+    }
+    await window.review.refetch()
+  }, cad)
+}
+
+test("the full image opens one modal, with only the corner close action and keyboard focus restored", async (t) => {
+  const { page } = await mount(t)
+  await setCover(page)
+  await page.evaluate(() => window.review.navigate("/cover"))
+  const trigger = page.getByRole("button", {
+    name: "Ampliar portada",
+    exact: true,
+  })
+  await trigger.getByRole("img").click()
+  const dialog = page.getByRole("dialog")
+  await dialog.waitFor()
+  assert.equal(
+    await dialog.getByRole("img", { name: "Original header" }).count(),
+    1,
+  )
+  assert.equal(await dialog.getByRole("button").count(), 1)
+  await page.keyboard.press("Escape")
+  await dialog.waitFor({ state: "hidden" })
+  assert.equal(
+    await trigger.evaluate((element) => document.activeElement === element),
+    true,
+  )
+  await page.keyboard.press("Enter")
+  await dialog.getByRole("button", { name: "Close", exact: true }).click()
+  await dialog.waitFor({ state: "hidden" })
+})
+
+test("CAD starts automatically only in the modal without image toggles", async (t) => {
+  const { page } = await mount(t)
+  await setCover(page, true)
+  await page.evaluate(() => window.review.navigate("/cover"))
+  assert.equal(
+    await page.getByRole("button", { name: "Activar 3D" }).count(),
+    0,
+  )
+  assert.equal(await page.evaluate(() => window.review.canvasMounts ?? 0), 0)
+  await page.getByRole("button", { name: "Ampliar portada" }).click()
+  const model = page.getByRole("img", { name: "Portada 3D del feature" })
+  await model.waitFor()
+  assert.equal(
+    await page.getByRole("button", { name: /Ver imagen|Activar 3D/ }).count(),
+    0,
+  )
+  assert.equal(await page.evaluate(() => window.review.canvasMounts), 1)
+  await page.keyboard.press("Escape")
+  await page.getByRole("button", { name: "Ampliar portada" }).click()
+  await model.waitFor()
+  assert.equal(await page.evaluate(() => window.review.canvasMounts), 2)
+})
+
+test("an unavailable CAD preserves the saved image in the modal", async (t) => {
+  const { page } = await mount(t)
+  await setCover(page, true)
+  await page.evaluate(() => {
+    window.review.feature.assets = []
+    return window.review.navigate("/cover")
+  })
+  await page.getByRole("button", { name: "Ampliar portada" }).click()
+  await page
+    .getByRole("alert")
+    .getByText(/El CAD vinculado ha cambiado/)
+    .waitFor()
+  await page
+    .getByRole("dialog")
+    .getByRole("img", { name: "Original header" })
+    .waitFor()
+  await page.keyboard.press("Escape")
+  await page.getByRole("dialog").waitFor({ state: "hidden" })
+})
+
+test("an empty cover has no enlargement action in consultation", async (t) => {
+  const { page } = await mount(t)
+  await page.evaluate(() => window.review.navigate("/cover"))
+  assert.equal(await page.getByRole("button").count(), 0)
+})
+
+test("closing an image draft leaves the previous cover and unsaved header intact", async (t) => {
+  const { page } = await mount(t)
+  await setCover(page, true)
+  await page.getByPlaceholder("Nombre del feature").fill("Keep my header")
+  await openCover(page)
+  await page
+    .getByRole("dialog")
+    .locator('input[type="file"]')
+    .setInputFiles({
+      name: "new.png",
+      mimeType: "image/png",
+      buffer: Buffer.from("image"),
+    })
+  await page
+    .getByRole("button", { name: "Aplicar" })
+    .waitFor({ state: "visible" })
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Close", exact: true })
+    .click()
+  await openCover(page)
+  assert.equal(
+    await page.getByRole("dialog").getByRole("img").getAttribute("alt"),
+    "cover.png",
+  )
+  await page.keyboard.press("Escape")
+  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
+  const feature = await page.evaluate(() => window.review.feature)
+  assert.equal(feature.name, "Keep my header")
+  assert.equal(feature.image_id, "saved-image")
+  assert.deepEqual(feature.cover_3d.faces, [{ mesh: 0, face: 1 }])
+})
+
+test("CAD editing stays in one modal, retains selection across tabs and cancels without applying", async (t) => {
+  const { page } = await mount(t)
+  await setCover(page, true)
+  await openCover(page, "cad")
+  await page.getByRole("button", { name: "Limpiar selección" }).click()
+  assert.equal(
+    await page.getByRole("button", { name: "Aplicar" }).isDisabled(),
+    true,
+  )
+  await page.getByRole("tab", { name: "Imagen", exact: true }).click()
+  await page.getByRole("tab", { name: "CAD", exact: true }).click()
+  assert.equal(
+    await page.getByRole("button", { name: "Aplicar" }).isDisabled(),
+    true,
+  )
+  assert.equal(await page.getByRole("dialog").count(), 1)
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Cancelar", exact: true })
+    .click()
+  await openCover(page, "cad")
+  assert.equal(
+    await page.getByRole("button", { name: "Aplicar" }).isEnabled(),
+    true,
+  )
+  assert.deepEqual(await page.evaluate(() => window.review.uploadRequests), [])
+})
+
+test("removing a CAD cover is a draft until the feature is saved", async (t) => {
+  const { page } = await mount(t)
+  await setCover(page, true)
+  await openCover(page)
+  await page.getByRole("button", { name: "Quitar imagen" }).click()
+  await page.getByRole("button", { name: "Quitar portada" }).click()
+  await page.getByRole("button", { name: "Añadir portada" }).waitFor()
+  assert.equal(
+    await page.evaluate(() => window.review.feature.image_id),
+    "saved-image",
+  )
+  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
+  assert.equal(await page.evaluate(() => window.review.feature.image_id), null)
+  assert.equal(await page.evaluate(() => window.review.feature.cover_3d), null)
+})
+
+test("a failed upload can be cancelled without blocking the feature or replacing its cover", async (t) => {
+  const { page } = await mount(t)
+  await setCover(page)
+  await openCover(page)
+  await page.evaluate(() => {
+    window.review.failUploads = true
+  })
+  await page
+    .getByRole("dialog")
+    .locator('input[type="file"]')
+    .setInputFiles({
+      name: "new.png",
+      mimeType: "image/png",
+      buffer: Buffer.from("image"),
+    })
+  await page.getByRole("button", { name: "Reintentar" }).waitFor()
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Cancelar", exact: true })
+    .click()
+  await page.getByRole("link", { name: "Otra pagina", exact: true }).click()
+  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
+  assert.equal(
+    await page.evaluate(() => window.review.feature.image_id),
+    "saved-image",
+  )
+})
+
 test("linking an original preserves the header and uploads no bytes", async (t) => {
   const { page, network } = await mount(t)
   await page.getByPlaceholder("Nombre del feature").fill("Unsaved header")
@@ -233,12 +467,14 @@ test("navigation flushes pending notes and files", async (t) => {
   )
 })
 
-test("Save waits for an image upload and stores its resulting reference", async (t) => {
+test("cover waits for the upload, applies a draft and saves its reference with the header", async (t) => {
   const { page } = await mount(t)
   await page.evaluate(() => {
-    window.review.delay = 200
+    window.review.holdUploads = true
   })
+  await openCover(page)
   await page
+    .getByRole("dialog")
     .locator('input[type="file"]')
     .first()
     .setInputFiles({
@@ -246,6 +482,22 @@ test("Save waits for an image upload and stores its resulting reference", async 
       mimeType: "image/png",
       buffer: Buffer.from("isolated-image-placeholder"),
     })
+  await page.waitForFunction(() => Boolean(window.review.releaseUpload))
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Quitar portada", exact: true })
+      .isDisabled(),
+    true,
+  )
+  await page.keyboard.press("Escape")
+  await page.getByRole("dialog").waitFor()
+  await page.evaluate(() => window.review.releaseUpload())
+  await page.getByRole("button", { name: "Aplicar", exact: true }).waitFor()
+  await applyCover(page)
+  assert.equal(
+    await page.evaluate(() => window.review.feature.image_id),
+    undefined,
+  )
   await page.getByRole("button", { name: "Guardar", exact: true }).click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   assert.equal(
@@ -367,7 +619,7 @@ test("cancelling a blocked logout keeps the session and draft", async (t) => {
 test("CAD cover explains the missing part STEP without discarding the header", async (t) => {
   const { page } = await mount(t)
   await page.getByPlaceholder("Nombre del feature").fill("Pending header")
-  await page.getByRole("button", { name: "Desde CAD", exact: true }).click()
+  await openCover(page, "cad")
   await page
     .getByRole("alert")
     .getByText(/Primero sube o vincula un STEP/)
@@ -395,9 +647,9 @@ test("CAD cover uploads its image but waits for Save to persist the annotation a
     await window.review.refetch()
   })
   await page.getByPlaceholder("Nombre del feature").fill("Pending CAD header")
-  await page.getByRole("button", { name: "Desde CAD", exact: true }).click()
+  await openCover(page, "cad")
   await page.getByRole("button", { name: "Marcar superficie" }).click()
-  await page.getByRole("button", { name: "Usar como portada" }).click()
+  await page.getByRole("button", { name: "Aplicar" }).click()
   await page.waitForFunction(() => !document.querySelector('[role="dialog"]'))
   assert.equal(
     await page.evaluate(() => window.review.feature.cover_3d),
@@ -438,8 +690,10 @@ test("pasting a local image replaces a CAD cover and leaves text fields alone", 
     }, selector)
   await paste('input[placeholder="Nombre del feature"]')
   assert.deepEqual(await page.evaluate(() => window.review.uploadRequests), [])
+  await openCover(page)
   await paste('button[aria-label="Seleccionar imagen"]')
   await page.waitForFunction(() => window.review.uploadRequests.length === 1)
+  await applyCover(page)
   await page.getByRole("button", { name: "Guardar", exact: true }).click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   assert.equal(await page.evaluate(() => window.review.feature.cover_3d), null)
@@ -451,6 +705,7 @@ test("pasting a local image replaces a CAD cover and leaves text fields alone", 
 
 test("dropping an image updates the cover through the same upload flow", async (t) => {
   const { page } = await mount(t)
+  await openCover(page)
   await page
     .getByRole("button", { name: "Seleccionar imagen", exact: true })
     .evaluate((element) => {
@@ -465,6 +720,7 @@ test("dropping an image updates the cover through the same upload flow", async (
       )
     })
   await page.waitForFunction(() => window.review.uploadRequests.length === 1)
+  await applyCover(page)
   await page.getByRole("button", { name: "Guardar", exact: true }).click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   assert.equal(
@@ -475,7 +731,8 @@ test("dropping an image updates the cover through the same upload flow", async (
 
 test("feature image picker rejects SVG before uploading", async (t) => {
   const { page } = await mount(t)
-  const input = page.locator('input[type="file"]').first()
+  await openCover(page)
+  const input = page.getByRole("dialog").locator('input[type="file"]')
   assert.equal(
     await input.getAttribute("accept"),
     "image/jpeg,image/png,image/gif,image/webp,image/avif,image/bmp",
@@ -496,7 +753,9 @@ test("feature image picker rejects SVG before uploading", async (t) => {
 
 test("dropping an unsupported file into the feature image is rejected", async (t) => {
   const { page } = await mount(t)
+  await openCover(page)
   const imageBox = page
+    .getByRole("dialog")
     .locator('input[type="file"]')
     .first()
     .locator("..")

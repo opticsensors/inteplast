@@ -14,7 +14,7 @@ Los pasos siguientes se ejecutan en el servidor preparado por el responsable del
 
 ## Configuración
 
-Crear `.env.production` fuera del control de versiones, partiendo de los **nombres** de `.env`.
+Crear `.env.production` fuera del control de versiones, partiendo de `.env.example`.
 Usar contraseñas distintas de los valores locales de ejemplo y una clave de firma aleatoria.
 La aplicación rechaza `changethis` cuando `ENVIRONMENT` es `production` o `staging`.
 
@@ -23,6 +23,7 @@ Configurar al menos:
 | Variable | Valor / finalidad |
 |---|---|
 | `ENVIRONMENT` | `production` |
+| `PROJECT_NAME` | Nombre de la aplicación |
 | `DOMAIN` | Dominio del servidor |
 | `FRONTEND_HOST` | `https://dashboard.<dominio>`; se usa en enlaces de correo |
 | `BACKEND_CORS_ORIGINS` | Origen HTTPS del frontend |
@@ -36,9 +37,9 @@ Configurar al menos:
 | `ALLOW_PUBLIC_SIGNUP` | Mantener `false` para altas administradas |
 | `ENABLE_TEST_ROUTES` | Mantener `false`; nunca habilitar en este entorno |
 
-Compose lee `.env` en los servicios y sobreescribe las variables declaradas en `environment`.
-Por ello las opciones de despliegue, incluidas las de registro y tests, están declaradas en
-`compose.yml`; `--env-file .env.production` proporciona sus valores de interpolación.
+`--env-file .env.production` proporciona los valores de interpolación. Los servicios reciben
+las variables declaradas en `environment` de `compose.yml`; no necesitan ni leen un `.env`
+de desarrollo. El fichero de producción no debe activar `compose.override.yml`.
 
 ## Proxy HTTPS
 
@@ -75,8 +76,8 @@ Los ficheros se sirven con autenticación o enlaces firmados temporales; el UUID
 
 Para un origen local accesible desde el servidor, añadir `-f compose.assets.yml` a **cada**
 comando de la aplicación y configurar `ASSETS_HOST_PATH`, `ASSETS_SOURCE_ID` y
-`ASSETS_SOURCE_NAME` en `.env.production`. El montaje es de solo lectura. No usar los lanzadores
-locales `scripts/compose.*` en producción: cargan `.env.local` y el override de desarrollo.
+`ASSETS_SOURCE_NAME` en `.env.production`. El montaje es de solo lectura. Usar los comandos
+explícitos de arriba para seleccionar el fichero de producción y excluir el override de desarrollo.
 Ver [archivos externos](docs/ficheros-externos.md). El acceso a los originales de INTEPLAST debe
 acordarse antes del despliegue; una ruta del ordenador de desarrollo no es una conexión Graph.
 

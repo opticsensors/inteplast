@@ -5,19 +5,20 @@
 Desde la raíz, con Docker Desktop arrancado:
 
 ```powershell
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
 npm.cmd ci
-.\scripts\compose.ps1 up -d --build db prestart backend mailcatcher
+docker compose up -d --build db prestart backend mailcatcher
 npm.cmd run dev
 ```
 
 El frontend usa Vite local. El backend y PostgreSQL corren en Docker. Para sincronización y
-recarga automática del backend, ejecutar `.\scripts\compose.ps1 watch backend`; `up` por sí solo
+recarga automática del backend, ejecutar `docker compose watch backend`; `up` por sí solo
 no sincroniza el código. El WORKDIR del backend es `/app/backend`.
 
-El lanzador carga `.env` y `.env.local` si existe; en Bash usar `bash scripts/compose.sh`.
-La configuración opcional conecta los originales en solo lectura mediante `compose.assets.yml`.
-Ver [archivos externos](docs/ficheros-externos.md). Usar el lanzador para todos los comandos de
-la aplicación conserva ese montaje. Los lanzadores de tests mantienen su configuración aislada.
+Docker Compose carga automáticamente el `.env` privado de la raíz, tanto en PowerShell como
+en Bash. Su configuración opcional conecta los originales en solo lectura mediante
+`compose.assets.yml`. Ver [archivos externos](docs/ficheros-externos.md).
+Los lanzadores de tests mantienen su configuración aislada.
 
 `compose.override.yml` añade puertos y configuración local. Usar los nombres de servicio:
 arrancar todo el Compose también incluye servicios que no hacen falta para trabajar.
@@ -29,8 +30,8 @@ de ejemplo a otros equipos. Producción usa el proxy HTTPS del Compose principal
 | Frontend Vite | http://localhost:5173 |
 | API / Swagger | http://localhost:8000/docs |
 | Mailcatcher (si se arranca) | http://localhost:1080 |
-| Adminer (opcional: `.\scripts\compose.ps1 up -d adminer`) | http://localhost:8080 |
-| Traefik (opcional: `.\scripts\compose.ps1 up -d proxy`) | http://localhost:8090 |
+| Adminer (opcional: `docker compose up -d adminer`) | http://localhost:8080 |
+| Traefik (opcional: `docker compose up -d proxy`) | http://localhost:8090 |
 
 Mailcatcher captura el correo local. No se inicia automáticamente al arrancar solo `backend`;
 incluirlo como servicio si se van a probar recuperación de contraseña o altas desde Admin.
@@ -40,7 +41,7 @@ incluirlo como servicio si se van a probar recuperación de contraseña o altas 
 PostgreSQL sigue siendo necesario. `uv` gestiona un workspace con `.venv` en la **raíz**:
 
 ```powershell
-.\scripts\compose.ps1 up -d db mailcatcher
+docker compose up -d db mailcatcher
 uv sync --package app
 cd backend
 ..\.venv\Scripts\Activate.ps1
@@ -58,9 +59,13 @@ administrador inicial; son necesarios en una BD nueva porque aquí no se ejecuta
 
 ## Configuración y datos
 
-`.env` contiene valores de desarrollo y está versionado. No guardar credenciales reales en él.
-`.env.local`, ignorado por Git, contiene la ruta personal del origen y su identificador estable;
-la plantilla es `.env.local.example`. No confundirlo con `frontend/.env` ni guardarlo en Git.
+`.env` es privado e ignorado por Git: contiene la configuración de la aplicación y, si se usa,
+la ruta del origen y su identificador estable. `.env.example` es la plantilla versionada.
+En una instalación nueva, copiarla sin sobrescribir un `.env` existente; en Bash:
+`test -f .env || cp .env.example .env`. No confundirlo con `frontend/.env`.
+La configuración anterior de `.env.local` se incorpora a `.env`; ya no se carga por separado.
+Los antiguos `scripts/compose.ps1` y `scripts/compose.sh` quedan como alias compatibles del
+comando normal, sin configuración adicional. No son necesarios para arrancar.
 Para despliegue, usar variables del entorno o un fichero excluido, por ejemplo `.env.production`;
 ver [deployment.md](deployment.md). Las variables del shell prevalecen en la interpolación de Compose.
 
@@ -87,7 +92,7 @@ bash scripts/test.sh --e2e
 ```
 
 Cada ejecución usa `compose.test.yml` como fichero **independiente**, con un nombre de proyecto
-nuevo. La BD y las subidas son temporales; no se leen las credenciales de `.env`, no se publican
+nuevo y `--env-file .env.example`. La BD y las subidas son temporales; no se leen las credenciales de `.env`, no se publican
 puertos y no se montan los volúmenes de trabajo. Los argumentos se pasan a pytest/Playwright.
 El script elimina su propio stack al terminar. La suite de componentes simula la API.
 
@@ -131,7 +136,7 @@ Si `uv` no está en el PATH pero el backend Docker ya está reconstruido, altern
 desde la raíz (solo exporta el esquema, sin conectar a la BD):
 
 ```powershell
-$schema = .\scripts\compose.ps1 exec -T -e ENABLE_TEST_ROUTES=true -e ENVIRONMENT=local -e POSTGRES_DB=app_test backend python -c 'import json; from app.main import app; print(json.dumps(app.openapi()))'
+$schema = docker compose exec -T -e ENABLE_TEST_ROUTES=true -e ENVIRONMENT=local -e POSTGRES_DB=app_test backend python -c 'import json; from app.main import app; print(json.dumps(app.openapi()))'
 if ($LASTEXITCODE -ne 0) { throw 'OpenAPI export failed' }
 [IO.File]::WriteAllText((Join-Path (Get-Location) 'frontend/openapi.json'), ($schema -join "`n"), (New-Object Text.UTF8Encoding $false))
 npm.cmd run generate-client --workspace frontend

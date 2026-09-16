@@ -107,8 +107,13 @@ export const FilesService = {
       filename: formData.file.name,
       contentType: formData.file.type,
     })
+    if (state().holdUploads)
+      await new Promise((resolve) => {
+        state().releaseUpload = resolve
+      })
     if (state().delay)
       await new Promise((resolve) => setTimeout(resolve, state().delay))
+    if (state().failUploads) throw new Error("Upload unavailable")
     return {
       id: "uploaded-image",
       filename: formData.file.name,

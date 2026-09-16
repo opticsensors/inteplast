@@ -14,7 +14,6 @@ import {
   type NoteKind,
 } from "@/client"
 import { CollapsibleSection } from "@/components/Common/CollapsibleSection"
-import { FileUpload } from "@/components/Common/FileUpload"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -44,13 +43,13 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
-import { CadCoverEditor } from "./CadCoverEditor"
 import { CATEGORIES, CATEGORY_LABELS } from "./constants"
 import {
   EditingSessionContext,
   useEditingSession,
   useNewEditingSession,
 } from "./EditingSession"
+import { FeatureCoverEditor } from "./FeatureCoverEditor"
 import { NoteList } from "./NoteList"
 import { PartAssetList } from "./PartAssetList"
 import { PartSelect } from "./PartSelect"
@@ -314,34 +313,21 @@ function FeatureFormContent({
           {/* Misma cabecera que la ficha —foto a la izquierda, identidad a
                 la derecha— con las casillas en el sitio de cada dato. */}
           <div className="flex gap-4 rounded-lg border p-4 sm:gap-6 sm:p-6">
-            <div className="w-32 shrink-0 space-y-2 sm:w-48">
-              <FileUpload
-                value={image}
-                onChange={(file) => {
-                  imageDraft.current = { image: file, cover: null, dirty: true }
-                  setImage(file)
-                  setCover(null)
-                  setImageDirty(true)
-                }}
-                variant="image"
-                className="shrink-0"
-                boxClassName="size-32 sm:size-48"
-              />
-              <CadCoverEditor
-                feature={feature}
-                cover={cover}
-                onChange={(file, annotation) => {
-                  imageDraft.current = {
-                    image: file,
-                    cover: annotation,
-                    dirty: true,
-                  }
-                  setImage(file)
-                  setCover(annotation)
-                  setImageDirty(true)
-                }}
-              />
-            </div>
+            <FeatureCoverEditor
+              feature={feature}
+              image={image}
+              cover={cover}
+              onChange={(file, annotation) => {
+                imageDraft.current = {
+                  image: file,
+                  cover: annotation,
+                  dirty: true,
+                }
+                setImage(file)
+                setCover(annotation)
+                setImageDirty(true)
+              }}
+            />
 
             <div className="min-w-0 flex-1 space-y-3">
               <FormField

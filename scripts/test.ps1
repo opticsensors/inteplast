@@ -6,7 +6,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $testRepo = Split-Path -Parent $PSScriptRoot
 $testProject = "inteplast-tests-$PID-$([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())"
-$composeArgs = @('compose', '--project-name', $testProject, '--file', (Join-Path $testRepo 'compose.test.yml'))
+$composeArgs = @('compose', '--env-file', (Join-Path $testRepo '.env.example'), '--project-name', $testProject, '--file', (Join-Path $testRepo 'compose.test.yml'))
 $testExit = 1
 try {
     & docker @composeArgs up --build --wait backend

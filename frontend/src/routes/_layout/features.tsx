@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { Plus, Search } from "lucide-react"
-import { useEffect, useState } from "react"
 
 import { FeatureActions } from "@/components/Features/FeatureActions"
 import { FeatureCard } from "@/components/Features/FeatureCard"
@@ -33,34 +32,25 @@ export const Route = createFileRoute("/_layout/features")({
 function Features() {
   const navigate = useNavigate()
   const params = Route.useSearch()
-  const [search, setSearch] = useState<FeatureSearchState>(() =>
-    toSearchState(params),
-  )
+  const search = toSearchState(params)
   const debouncedQuery = useDebounce(search.q)
 
-  // Aqui se viene a mantener la base, no a consultarla: el unico destino de
-  // una tarjeta es su formulario. Consultar la ficha es cosa del dashboard.
+  // La URL conserva los filtros al volver desde una ficha o un favorito.
+  // El debounce solo retrasa la consulta; no deja navegaciones pendientes.
+  const setSearch = (next: FeatureSearchState) =>
+    navigate({
+      to: "/features",
+      search: toSearchParams(next),
+      replace: true,
+      resetScroll: false,
+    })
+
   const editFeature = (featureId: string) =>
     navigate({
       to: "/features/$featureId",
       params: { featureId },
       search: { editar: true },
     })
-
-  // Igual que en el dashboard: la busqueda vive en la URL para sobrevivir al
-  // viaje de ida y vuelta a la ficha del feature.
-  useEffect(() => {
-    navigate({
-      to: "/features",
-      search: toSearchParams({
-        q: debouncedQuery,
-        category: search.category,
-        tag: search.tag,
-        partId: search.partId,
-      }),
-      replace: true,
-    })
-  }, [navigate, debouncedQuery, search.category, search.tag, search.partId])
 
   const { data, isPending } = useQuery(
     featuresQueryOptions({
@@ -75,16 +65,11 @@ function Features() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Features</h1>
-          <p className="text-muted-foreground">
-            Crea y mantiene las fichas de la base de conocimiento.
-          </p>
-        </div>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold tracking-tight">Features</h1>
         <Button onClick={() => navigate({ to: "/features/nuevo" })}>
-          <Plus className="mr-2" />
-          Anadir feature
+          <Plus />
+          Nuevo feature
         </Button>
       </div>
 
@@ -99,13 +84,13 @@ function Features() {
           </div>
           <h3 className="text-lg font-semibold">
             {isSearchActive(search)
-              ? "Ningun feature coincide con la busqueda"
-              : "Todavia no hay features"}
+              ? "Ningún feature coincide con la búsqueda"
+              : "Todavía no hay features"}
           </h3>
           <p className="text-muted-foreground">
             {isSearchActive(search)
-              ? "Prueba con otro termino o quita algun filtro."
-              : "Anade el primero para empezar."}
+              ? "Prueba con otro término o quita algún filtro."
+              : "Crea el primero con Nuevo feature."}
           </p>
         </div>
       ) : (
@@ -114,14 +99,14 @@ function Features() {
             <FeatureCard
               key={feature.id}
               feature={feature}
-              // La tarjeta no se clica: lo unico que se puede pulsar son sus
-              // dos botones. Clicarla llevaba a una ficha de solo lectura con
-              // estos mismos dos botones arriba, un paso de mas para nada.
+              onSelect={() =>
+                navigate({
+                  to: "/features/$featureId",
+                  params: { featureId: feature.id },
+                })
+              }
               actions={
-                <FeatureActions
-                  featureId={feature.id}
-                  onEdit={() => editFeature(feature.id)}
-                />
+                <FeatureActions onEdit={() => editFeature(feature.id)} />
               }
             />
           ))}

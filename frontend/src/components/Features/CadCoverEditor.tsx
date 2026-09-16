@@ -1,4 +1,4 @@
-import { Box, Eraser, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { lazy, Suspense, useRef, useState } from "react"
 
 import {
@@ -8,87 +8,25 @@ import {
   FilesService,
 } from "@/client"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
+import { COVER_EDITOR_ROWS } from "./CoverDialog"
+import { CoverLoading } from "./CoverLoading"
 import { type CoverControls, coverAssets } from "./cadCover"
+import { FeatureThumbnail } from "./FeatureCard"
 import { usePendingTask } from "./usePendingTask"
 
 const StepCoverCanvas = lazy(() => import("./StepCoverCanvas"))
 
 export function CadCoverEditor({
   feature,
-  cover,
-  onChange,
-}: {
-  feature?: FeaturePublic
-  cover: FeatureCover3D | null
-  onChange: (image: FilePublic, annotation: FeatureCover3D) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const [busy, setBusy] = useState(false)
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!busy) setOpen(next)
-      }}
-    >
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="w-full px-2 text-xs sm:text-sm"
-        onClick={() => setOpen(true)}
-      >
-        <Box className="size-4" />
-        {cover ? "Editar portada 3D" : "Desde CAD"}
-      </Button>
-      {open && (
-        <DialogContent
-          className="max-h-[95dvh] overflow-y-auto sm:max-w-3xl"
-          showCloseButton={!busy}
-          onPointerDownOutside={(event) => event.preventDefault()}
-          onEscapeKeyDown={(event) => {
-            if (busy) event.preventDefault()
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle>Portada desde la pieza CAD</DialogTitle>
-            <DialogDescription>
-              Haz clic para marcar superficies en rojo. Arrastra para girar y
-              usa la rueda para acercarte.
-            </DialogDescription>
-          </DialogHeader>
-          <CoverEditorContent
-            feature={feature}
-            initial={cover}
-            setBusy={setBusy}
-            onSaved={(image, annotation) => {
-              onChange(image, annotation)
-              setOpen(false)
-            }}
-            close={() => setOpen(false)}
-          />
-        </DialogContent>
-      )}
-    </Dialog>
-  )
-}
-
-function CoverEditorContent({
-  feature,
   initial,
+  image,
   setBusy,
   onSaved,
   close,
 }: {
   feature?: FeaturePublic
+  image: FilePublic | null
   initial: FeatureCover3D | null
   setBusy: (busy: boolean) => void
   onSaved: (image: FilePublic, cover: FeatureCover3D) => void
@@ -134,126 +72,135 @@ function CoverEditorContent({
     }
   })
 
-  if (!assets.length)
-    return (
-      <div className="space-y-4">
-        <p role="alert" className="text-sm">
-          {feature
-            ? "Primero sube o vincula un STEP de tipo Pieza CAD en Piezas ejemplo."
-            : "Guarda primero el feature y añade el STEP de la pieza en Piezas ejemplo."}
-        </p>
-        {feature && (
-          <Button
-            type="button"
-            onClick={() => {
-              close()
-              requestAnimationFrame(() =>
-                document
-                  .getElementById("example-parts-editor")
-                  ?.scrollIntoView({ behavior: "smooth", block: "start" }),
-              )
-            }}
-          >
-            Ir a Piezas ejemplo
-          </Button>
-        )}
-      </div>
+  const preview =
+    image && initial?.asset_id === asset?.id ? (
+      <FeatureThumbnail
+        feature={{ image, name: feature?.name ?? "Portada" }}
+        fit="contain"
+        className="size-full"
+      />
+    ) : (
+      <div className="size-full rounded-lg border bg-muted" />
     )
 
   return (
-    <div className="space-y-3">
-      <label className="block space-y-1 text-sm">
-        <span>Pieza CAD</span>
-        <select
-          aria-label="Pieza CAD para la portada"
-          className="h-9 w-full rounded-md border bg-background px-2"
-          value={asset?.id ?? ""}
-          disabled={save.pending}
-          onChange={(event) => {
-            setAssetId(event.target.value)
-            setUseSaved(true)
-            setError("")
-            setReady(false)
-            setCount(0)
-          }}
-        >
-          {!asset && <option value="">Selecciona el CAD vinculado</option>}
-          {assets.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.part?.code} · {item.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      {asset?.file && (
-        <div className={save.pending ? "pointer-events-none" : ""}>
-          <Suspense fallback={<output>Cargando editor…</output>}>
+    <div className={COVER_EDITOR_ROWS}>
+      <select
+        aria-label="Pieza CAD para la portada"
+        className="h-9 w-full min-w-0 rounded-md border bg-background px-2 text-sm"
+        value={asset?.id ?? ""}
+        disabled={save.pending || !assets.length}
+        onChange={(event) => {
+          setAssetId(event.target.value)
+          setUseSaved(true)
+          setError("")
+          setReady(false)
+          setCount(0)
+        }}
+      >
+        {!asset && (
+          <option value="">
+            {assets.length ? "Selecciona el CAD vinculado" : "Sin piezas CAD"}
+          </option>
+        )}
+        {assets.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.part?.code} · {item.name}
+          </option>
+        ))}
+      </select>
+      <div
+        data-slot="cover-surface"
+        className={
+          save.pending
+            ? "relative size-full pointer-events-none"
+            : "relative size-full"
+        }
+      >
+        {asset?.file ? (
+          <Suspense
+            fallback={
+              <>
+                {preview}
+                <CoverLoading />
+              </>
+            }
+          >
             <StepCoverCanvas
               key={`${asset.id}:${useSaved}`}
               file={asset.file}
               initial={saved}
               editable
-              className="mx-auto max-w-[min(58vh,600px)]"
+              disabled={save.pending}
+              fallback={
+                image && initial?.asset_id === asset.id ? preview : undefined
+              }
+              className="size-full"
               onReady={(api) => {
                 controls.current = api
                 setReady(Boolean(api))
               }}
               onSelectionChange={setCount}
-            />
-          </Suspense>
-        </div>
-      )}
-      {error && (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
-      )}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={!ready || !count || save.pending}
-            onClick={() => controls.current?.clear()}
-          >
-            <Eraser className="size-4" />
-            Limpiar selección
-          </Button>
-          {saved && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={save.pending}
-              onClick={() => {
+              onResetSelection={() => {
                 setUseSaved(false)
                 setReady(false)
                 setCount(0)
+                setError("")
               }}
-            >
-              Nueva selección
-            </Button>
-          )}
-        </div>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={save.pending}
-            onClick={close}
+            />
+          </Suspense>
+        ) : (
+          <div className="flex size-full flex-col items-center justify-center gap-3 rounded-lg border bg-muted p-4 text-center">
+            <p role="alert" className="text-sm">
+              {assets.length
+                ? "Selecciona una pieza CAD."
+                : feature
+                  ? "Primero sube o vincula un STEP de tipo Pieza CAD en Piezas ejemplo."
+                  : "Guarda primero el feature y añade el STEP de la pieza en Piezas ejemplo."}
+            </p>
+            {feature && !assets.length && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  close()
+                  requestAnimationFrame(() =>
+                    document
+                      .getElementById("example-parts-editor")
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+                  )
+                }}
+              >
+                Ir a Piezas ejemplo
+              </Button>
+            )}
+          </div>
+        )}
+        {error && (
+          <p
+            role="alert"
+            className="absolute inset-x-2 bottom-2 bg-background/95 p-2 text-sm text-destructive"
           >
-            Cancelar
-          </Button>
-          <Button
-            type="button"
-            disabled={!ready || !count || save.pending}
-            onClick={() => void save.run(undefined)}
-          >
-            {save.pending && <Loader2 className="size-4 animate-spin" />}Usar
-            como portada
-          </Button>
-        </div>
+            {error}
+          </p>
+        )}
+      </div>
+      <div className="flex justify-end gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={save.pending}
+          onClick={close}
+        >
+          Cancelar
+        </Button>
+        <Button
+          type="button"
+          disabled={!ready || !count || save.pending}
+          onClick={() => void save.run(undefined)}
+        >
+          {save.pending && <Loader2 className="size-4 animate-spin" />}Aplicar
+        </Button>
       </div>
     </div>
   )

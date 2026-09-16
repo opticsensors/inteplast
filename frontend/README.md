@@ -1,4 +1,4 @@
-﻿# INTEPLAST frontend
+# INTEPLAST frontend
 
 React + TypeScript, Vite, TanStack Router/Query and Tailwind CSS. Read [the application guide](../docs/app-web.md) before changing feature workflows or the API client.
 
@@ -7,8 +7,9 @@ React + TypeScript, Vite, TanStack Router/Query and Tailwind CSS. Read [the appl
 Use Node.js 22.13+ on the 22.x branch, or Node.js 24+, as required by PDF.js. Run these commands from the repository root:
 
 ```bash
+test -f .env || cp .env.example .env
 npm ci
-bash scripts/compose.sh up -d --build db prestart backend
+docker compose up -d --build db prestart backend
 npm run dev --workspace frontend
 ```
 
@@ -18,11 +19,27 @@ Accounts are provisioned by an administrator. The login and `/signup` pages dire
 
 ## Feature editing
 
-Header images support browsing, drag-and-drop and clipboard paste outside text fields.
-**Desde CAD** creates a cover from an already linked part STEP: select faces in red, frame the
-view and apply it to the header draft. **Guardar** persists its image and annotation together.
-Cards use the image; the detail page can activate or expand the 3D. Changed CAD revisions need
-a new selection. See [CAD covers](../docs/portadas-cad.md) for limits and persistence.
+`/features` is the home catalog for browsing and editing. `/` redirects there, preserving
+existing search links. Cards open in read mode and have a direct **Editar** action; the detail
+page also offers **Editar**, plus **Eliminar** for the owner or an administrator. Saving or
+cancelling returns to that same detail in read mode. Mode changes replace the history entry,
+so Back restores the catalog search and scroll position. There is no global editing toggle.
+
+Click the header cover to expand its image or CAD in a modal fitted to the square. CAD starts
+automatically, keeping the saved image visible with a small loading indicator while a cancellable worker prepares it. The
+corner icon appears on hover/focus and stays visible on touch screens. Cards and the detail
+header always use the static image.
+
+In edit mode, clicking the cover (including an empty one) opens one editor with **Imagen**
+and **CAD** tabs with identical modal and display dimensions. The editor matches the viewing
+modal's width and square; its extra controls add height, with scrolling on shorter screens.
+Images support browsing, drag-and-drop and clipboard paste inside
+that dialog, outside text fields. The CAD tab uses an already linked part STEP: select faces
+in red and frame the view. **Aplicar** applies either result to the header draft;
+closing/cancelling the dialog discards only that opening's changes. **Guardar** in the feature
+persists the image and annotation together. Changed CAD revisions need a new selection.
+The clear-selection icon sits next to the framing control and also restarts an obsolete
+selection on the current CAD. See [CAD covers](../docs/portadas-cad.md) for limits and persistence.
 
 - The header is saved with **Guardar**. Background refreshes preserve fields being edited.
 - Notes and asset names save automatically after 700 ms. Only locally edited fields are written, and updates for each row run in order.
@@ -103,7 +120,7 @@ These scripts use `compose.test.yml`, a separate Compose project and temporary t
 
 ## Structure
 
-- `src/routes`: authentication, dashboard, feature management/detail, file viewers and user administration.
+- `src/routes`: authentication, unified feature catalog/detail, file viewers and user administration.
 - `src/components/Features`: feature forms, notes, part/file lists and editing save coordination.
 - `src/hooks/useFileAccess.ts`: short-lived file authorization URLs.
 - `src/client`: generated backend client.

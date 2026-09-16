@@ -4,10 +4,14 @@ import { useEffect, useRef, useState } from "react"
 // isolates the form's draft, upload and save boundary from the CAD renderer.
 export default function StepCoverCanvas({
   initial,
+  editable,
   onReady,
   onSelectionChange,
 }) {
-  const [count, setCount] = useState(initial?.faces.length ?? 0)
+  const [count, setCount] = useState(initial?.faces?.length ?? 0)
+  useEffect(() => {
+    window.review.canvasMounts = (window.review.canvasMounts ?? 0) + 1
+  }, [])
   const callbacks = useRef({ onReady, onSelectionChange })
   callbacks.current = { onReady, onSelectionChange }
   useEffect(() => {
@@ -27,9 +31,20 @@ export default function StepCoverCanvas({
     })
     return () => callbacks.current.onReady?.(null)
   }, [count])
+  if (!editable)
+    return (
+      <div role="img" aria-label="Portada 3D del feature">
+        Modelo 3D
+      </div>
+    )
   return (
-    <button type="button" onClick={() => setCount(count ? 0 : 1)}>
-      Marcar superficie
-    </button>
+    <div>
+      <button type="button" onClick={() => setCount(count ? 0 : 1)}>
+        Marcar superficie
+      </button>
+      <button type="button" disabled={!count} onClick={() => setCount(0)}>
+        Limpiar selección
+      </button>
+    </div>
   )
 }

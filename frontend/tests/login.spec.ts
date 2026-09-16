@@ -1,4 +1,4 @@
-﻿import { expect, type Page, test } from "@playwright/test"
+import { expect, type Page, test } from "@playwright/test"
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
 import { randomPassword } from "./utils/random.ts"
 
@@ -43,9 +43,11 @@ test("Log in with valid email and password ", async ({ page }) => {
   await fillForm(page, firstSuperuser, firstSuperuserPassword)
   await page.getByRole("button", { name: "Log In" }).click()
 
-  await page.waitForURL("/")
+  await page.waitForURL("/features")
 
-  await expect(page.getByRole("heading", { name: /^Hola,/ })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Features", exact: true }),
+  ).toBeVisible()
 })
 
 test("Log in with invalid email", async ({ page }) => {
@@ -73,9 +75,11 @@ test("Successful log out", async ({ page }) => {
   await fillForm(page, firstSuperuser, firstSuperuserPassword)
   await page.getByRole("button", { name: "Log In" }).click()
 
-  await page.waitForURL("/")
+  await page.waitForURL("/features")
 
-  await expect(page.getByRole("heading", { name: /^Hola,/ })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Features", exact: true }),
+  ).toBeVisible()
 
   await page.getByTestId("user-menu").click()
   await page.getByRole("menuitem", { name: "Log out" }).click()
@@ -88,9 +92,11 @@ test("Logged-out user cannot access protected routes", async ({ page }) => {
   await fillForm(page, firstSuperuser, firstSuperuserPassword)
   await page.getByRole("button", { name: "Log In" }).click()
 
-  await page.waitForURL("/")
+  await page.waitForURL("/features")
 
-  await expect(page.getByRole("heading", { name: /^Hola,/ })).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Features", exact: true }),
+  ).toBeVisible()
 
   await page.getByTestId("user-menu").click()
   await page.getByRole("menuitem", { name: "Log out" }).click()

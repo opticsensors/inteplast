@@ -36,6 +36,7 @@ function NewFeature() {
             to: "/features/$featureId",
             params: { featureId },
             search: { editar: true },
+            replace: true,
           })
         }
         onSaved={toList}

@@ -19,12 +19,16 @@ import { handleError } from "@/utils"
 
 interface DeleteFeatureProps {
   featureId: string
-  /** Que hacer despues de borrar. En la lista no hay nada que hacer: invalidar
-   *  `["features"]` ya quita la tarjeta. */
+  featureName: string
+  /** Salir de la ficha que se acaba de eliminar. */
   onSuccess?: () => void
 }
 
-const DeleteFeature = ({ featureId, onSuccess }: DeleteFeatureProps) => {
+const DeleteFeature = ({
+  featureId,
+  featureName,
+  onSuccess,
+}: DeleteFeatureProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -32,7 +36,7 @@ const DeleteFeature = ({ featureId, onSuccess }: DeleteFeatureProps) => {
   const mutation = useMutation({
     mutationFn: () => FeaturesService.deleteFeature({ featureId }),
     onSuccess: () => {
-      showSuccessToast("Feature borrado")
+      showSuccessToast("Feature eliminado")
       setIsOpen(false)
       onSuccess?.()
     },
@@ -45,20 +49,21 @@ const DeleteFeature = ({ featureId, onSuccess }: DeleteFeatureProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <Button
-        variant="outline"
+        variant="ghost"
         size="sm"
-        className="text-destructive"
+        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
         onClick={() => setIsOpen(true)}
       >
-        <Trash2 className="mr-2" />
-        Borrar
+        <Trash2 />
+        Eliminar
       </Button>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Borrar feature</DialogTitle>
+          <DialogTitle>Eliminar feature</DialogTitle>
           <DialogDescription>
-            Se borrara la ficha con sus warnings, lessons learned y piezas
-            ejemplo. La accion no se puede deshacer.
+            Se eliminará «{featureName}» con sus warnings, lessons learned y
+            vínculos a piezas y archivos. Las piezas y los archivos se
+            conservan. Esta acción no se puede deshacer.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="mt-4">
@@ -72,7 +77,7 @@ const DeleteFeature = ({ featureId, onSuccess }: DeleteFeatureProps) => {
             loading={mutation.isPending}
             onClick={() => mutation.mutate()}
           >
-            Borrar
+            Eliminar
           </LoadingButton>
         </DialogFooter>
       </DialogContent>

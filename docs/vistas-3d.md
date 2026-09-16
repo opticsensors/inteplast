@@ -105,12 +105,12 @@ o sustituirlo por almacenamiento de objetos; no basta con replicar los contenedo
 
 ## Instalación y comprobaciones
 
-Reconstruir mediante `scripts/compose.ps1 up -d --build db prestart backend` para conservar
-`.env.local`, montar los originales en solo lectura y aplicar la migración. El Dockerfile
+Reconstruir mediante `docker compose up -d --build db prestart backend` para cargar
+el `.env` privado, montar los originales en solo lectura y aplicar la migración. El Dockerfile
 instala las bibliotecas nativas necesarias. Python admitido: **3.10–3.13**; las dependencias
 están fijadas en `uv.lock`. No requiere instalar CAD en el navegador ni credenciales Graph.
 
-En desarrollo, `scripts/compose.ps1 watch backend` conserva el origen de `.env.local`. Las
+En desarrollo, `docker compose watch backend` conserva el origen configurado en `.env`. Las
 pruebas y sus cachés se excluyen de la sincronización: modificarlas no debe reiniciar una
 conversión larga. Los cambios del código de la aplicación sí reinician el backend y recuperan
 el trabajo en curso desde el principio. Los patrones de exclusión son relativos a `backend/`,

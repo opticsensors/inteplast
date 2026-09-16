@@ -22,28 +22,33 @@ Requisitos: Docker Desktop en ejecución y Node.js 22.13 o posterior de la rama 
 con npm. Desde la raíz:
 
 ```powershell
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
 npm.cmd ci
-.\scripts\compose.ps1 up -d --build db prestart backend mailcatcher
+docker compose up -d --build db prestart backend mailcatcher
 npm.cmd run dev
 ```
 
 Frontend: http://localhost:5173. API: http://localhost:8000/docs.
 `prestart` termina con código 0 después de aplicar migraciones y crear el administrador inicial.
-Las credenciales locales de ejemplo están en `.env`; los usuarios los crea el administrador.
-El lanzador carga también `.env.local` si existe. La carpeta externa se configura siguiendo
+`.env` contiene la configuración privada de esta instalación y no se guarda en Git; la plantilla
+es `.env.example`. Docker Compose lo carga automáticamente, también desde una terminal nueva.
+Los usuarios los crea el administrador. La carpeta externa se configura siguiendo
 la [guía de archivos](docs/ficheros-externos.md); PDF, CAD, escaneo y molde del Bolt Eye están vinculados
 en la instalación local de desarrollo. Un seed nuevo sigue creando filas sin archivo.
+
+Si vienes de la configuración anterior con `.env.local`, incorpora sus variables a `.env`
+conservando sus valores (en especial `ASSETS_SOURCE_ID`). Ver la [migración](docs/ficheros-externos.md#migración-desde-envlocal).
 
 Para sincronizar automáticamente cambios del backend, usar en otra terminal:
 
 ```powershell
-.\scripts\compose.ps1 watch backend
+docker compose watch backend
 ```
 
 Sin `watch`, los cambios del backend requieren `--build`. Para cargar el ejemplo opcional:
 
 ```powershell
-.\scripts\compose.ps1 exec backend python -m app.seed_features
+docker compose exec backend python -m app.seed_features
 ```
 
 ## Comprobaciones
@@ -71,7 +76,7 @@ de leer ficheros: un placeholder puede disparar una descarga completa.
 ## Parar la aplicación
 
 ```powershell
-.\scripts\compose.ps1 down
+docker compose down
 ```
 
 Este comando conserva la BD y las subidas. No añadir `-v`: eliminaría los volúmenes persistentes.

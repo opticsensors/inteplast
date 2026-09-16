@@ -1,18 +1,19 @@
-import { RotateCcw } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { Eraser, RotateCcw } from "lucide-react"
+import { type ReactNode, useEffect, useRef, useState } from "react"
 import * as THREE from "three"
 
 import { type FeatureCover3D, type FilePublic, FilesService } from "@/client"
 import { Button } from "@/components/ui/button"
 import { absoluteFileUrl, fileErrorMessage } from "@/hooks/useFileAccess"
 import { cn } from "@/lib/utils"
+import { CoverLoading } from "./CoverLoading"
 import {
   COVER_RECIPE,
   type CoverControls,
   MAX_COVER_STEP_SIZE,
   sha256,
 } from "./cadCover"
-import { loadBrep } from "./ModelViewer"
+import { loadCoverGeometry } from "./coverGeometry"
 import { createModelControls } from "./modelControls"
 
 type Face = { first: number; last: number }
@@ -27,20 +28,29 @@ export default function StepCoverCanvas({
   initial,
   editable = false,
   className,
+  fallback,
   onReady,
   onSelectionChange,
+  onResetSelection,
+  disabled = false,
 }: {
   file: FilePublic
   initial?: FeatureCover3D | null
   editable?: boolean
   className?: string
+  fallback?: ReactNode
   onReady?: (controls: CoverControls | null) => void
   onSelectionChange?: (count: number) => void
+  onResetSelection?: () => void
+  disabled?: boolean
 }) {
   const host = useRef<HTMLDivElement>(null)
   const callbacks = useRef({ onReady, onSelectionChange })
   callbacks.current = { onReady, onSelectionChange }
   const reset = useRef<() => void>(() => {})
+  const clearSelection = useRef<() => void>(() => {})
+  const [selectedCount, setSelectedCount] = useState(0)
+  const [restartable, setRestartable] = useState(false)
   const [status, setStatus] = useState("Cargando pieza CAD…")
   const [error, setError] = useState("")
 
@@ -54,6 +64,8 @@ export default function StepCoverCanvas({
       for (const dispose of cleanup.splice(0).reverse()) dispose()
     }
     callbacks.current.onReady?.(null)
+    setSelectedCount(0)
+    setRestartable(false)
     setError("")
     setStatus("Cargando pieza CAD…")
 
@@ -82,13 +94,19 @@ export default function StepCoverCanvas({
           initial.file_id !== file.id ||
           (initial.file_version ?? null) !== (file.version ?? null))
       ) {
+        setRestartable(true)
         throw new Error(
-          "El CAD ha cambiado. Crea una nueva selección para esta revisión; la imagen guardada se conserva.",
+          "El CAD ha cambiado. Limpia la selección para trabajar con esta revisión.",
         )
       }
       setStatus("Preparando superficies…")
-      const object = await loadBrep(THREE, "step", buffer)
-      const meshes = object.children as THREE.Mesh[]
+      const { meshes: prepared, geometryKey } = await loadCoverGeometry(
+        buffer,
+        abort.signal,
+      )
+      if (stopped) return
+      const object = new THREE.Group()
+      const meshes: THREE.Mesh[] = []
       const materials = [
         new THREE.MeshPhongMaterial({
           color: 0xb8bdc6,
@@ -107,13 +125,33 @@ export default function StepCoverCanvas({
         for (const mesh of meshes) mesh.geometry.dispose()
         for (const material of materials) material.dispose()
       })
+      for (const mesh of prepared) {
+        const geometry = new THREE.BufferGeometry()
+        geometry.setAttribute(
+          "position",
+          new THREE.BufferAttribute(mesh.positions, 3),
+        )
+        geometry.setIndex(new THREE.BufferAttribute(mesh.indices, 1))
+        if (mesh.normals)
+          geometry.setAttribute(
+            "normal",
+            new THREE.BufferAttribute(mesh.normals, 3),
+          )
+        else geometry.computeVertexNormals()
+        const rendered = new THREE.Mesh(geometry, materials)
+        rendered.userData.cadFaces = mesh.faces
+        meshes.push(rendered)
+        object.add(rendered)
+        // Allow closing between meshes, including during renderer preparation.
+        await new Promise((resolve) => setTimeout(resolve, 0))
+        if (stopped) {
+          release()
+          return
+        }
+      }
       const surfaces = new Map<string, Surface>()
       const ranges: Face[][] = []
       meshes.forEach((mesh, meshIndex) => {
-        const original = mesh.material
-        for (const material of Array.isArray(original) ? original : [original])
-          material.dispose()
-        mesh.material = materials
         const faces = mesh.userData.cadFaces as Face[]
         ranges.push(faces)
         mesh.userData.meshIndex = meshIndex
@@ -153,17 +191,6 @@ export default function StepCoverCanvas({
         throw new Error(
           "Este STEP no contiene superficies que se puedan seleccionar.",
         )
-      const geometryKey = await sha256(
-        new TextEncoder().encode(
-          JSON.stringify(
-            meshes.map((mesh, i) => ({
-              positions: Array.from(mesh.geometry.attributes.position.array),
-              indices: Array.from(mesh.geometry.index!.array),
-              faces: ranges[i],
-            })),
-          ),
-        ).buffer,
-      )
       if (stopped) {
         release()
         return
@@ -176,8 +203,9 @@ export default function StepCoverCanvas({
         (initial.geometry_key !== geometryKey ||
           [...selected].some((key) => !surfaces.has(key)))
       ) {
+        setRestartable(true)
         throw new Error(
-          "La geometría de esta vista ha cambiado. Revisa la selección de la portada.",
+          "La geometría ha cambiado. Limpia la selección para volver a marcar las superficies.",
         )
       }
       let hovered: string | null = null
@@ -214,6 +242,7 @@ export default function StepCoverCanvas({
       }
       const changed = () => {
         paint()
+        setSelectedCount(selected.size)
         callbacks.current.onSelectionChange?.(selected.size)
       }
       changed()
@@ -366,12 +395,13 @@ export default function StepCoverCanvas({
           canvas.removeEventListener("pointerleave", leave)
         })
       }
+      clearSelection.current = () => {
+        selected.clear()
+        hovered = null
+        changed()
+      }
       callbacks.current.onReady?.({
-        clear: () => {
-          selected.clear()
-          hovered = null
-          changed()
-        },
+        clear: clearSelection.current,
         capture: async () => {
           if (!selected.size)
             throw new Error(
@@ -436,31 +466,54 @@ export default function StepCoverCanvas({
       )}
     >
       <div ref={host} className="size-full" />
-      {status && !error && (
-        <output className="absolute inset-0 flex items-center justify-center bg-muted text-center text-sm">
-          {status}
-        </output>
+      {(status || error) && fallback && (
+        <div className="absolute inset-0">{fallback}</div>
       )}
+      {status && !error && <CoverLoading />}
       {error && (
         <p
           role="alert"
-          className="absolute inset-0 flex items-center justify-center bg-muted p-4 text-center text-sm"
+          className={cn(
+            "absolute flex items-center justify-center p-4 text-center text-sm",
+            fallback
+              ? "inset-x-2 bottom-2 rounded bg-background/95"
+              : "inset-0 bg-muted",
+          )}
         >
           {error}
         </p>
       )}
-      {!status && !error && (
-        <Button
-          type="button"
-          variant="secondary"
-          size="icon"
-          className="absolute right-2 top-2 size-7"
-          title="Encuadrar"
-          aria-label="Encuadrar"
-          onClick={() => reset.current()}
-        >
-          <RotateCcw className="size-3.5" />
-        </Button>
+      {((!status && !error) || (editable && restartable)) && (
+        <div className="absolute right-2 top-2 flex gap-1">
+          {editable && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              className="size-7"
+              title="Limpiar selección"
+              aria-label="Limpiar selección"
+              disabled={disabled || (!restartable && !selectedCount)}
+              onClick={() =>
+                restartable ? onResetSelection?.() : clearSelection.current()
+              }
+            >
+              <Eraser className="size-3.5" />
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="secondary"
+            size="icon"
+            className="size-7"
+            title="Encuadrar"
+            aria-label="Encuadrar"
+            disabled={disabled || Boolean(status) || Boolean(error)}
+            onClick={() => reset.current()}
+          >
+            <RotateCcw className="size-3.5" />
+          </Button>
+        </div>
       )}
     </div>
   )

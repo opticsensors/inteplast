@@ -6,7 +6,7 @@ import {
 
 /**
  * Claves de cache. Todo cuelga de ["features"], asi que invalidar esa raiz
- * refresca a la vez el buscador del dashboard y la pagina de gestion.
+ * refresca a la vez el catalogo y las fichas.
  * Las piezas van aparte: se comparten entre features y cambian mucho menos.
  */
 export const featuresQueryOptions = (

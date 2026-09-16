@@ -11,6 +11,7 @@ import {
 import { createRoot } from "react-dom/client"
 import { Toaster } from "sonner"
 import { FileLink } from "../../../src/components/Common/FileLink"
+import { FeatureCover } from "../../../src/components/Features/FeatureCover"
 import { FeatureForm } from "../../../src/components/Features/FeatureForm"
 import { PartAssetList } from "../../../src/components/Features/PartAssetList"
 import useAuth from "../../../src/hooks/useAuth"
@@ -111,12 +112,18 @@ const previews = createRoute({
   path: "/previews",
   component: () => <PartAssetList feature={window.review.feature} />,
 })
+const cover = createRoute({
+  getParentRoute: () => root,
+  path: "/cover",
+  component: () => <FeatureCover feature={window.review.feature} />,
+})
 const router = createRouter({
   routeTree: root.addChildren([
     editor,
     away,
     files,
     previews,
+    cover,
     LoginRoute.update({
       id: "/login",
       path: "/login",

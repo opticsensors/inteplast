@@ -6,6 +6,8 @@ import { ApiError, type NoteKind } from "@/client"
 import { CollapsibleSection } from "@/components/Common/CollapsibleSection"
 import { RichTextView } from "@/components/Common/RichText"
 import { CATEGORY_LABELS } from "@/components/Features/constants"
+import DeleteFeature from "@/components/Features/DeleteFeature"
+import { FeatureActions } from "@/components/Features/FeatureActions"
 import { FeatureCover } from "@/components/Features/FeatureCover"
 import { FeatureForm } from "@/components/Features/FeatureForm"
 import { FeatureNotFound } from "@/components/Features/FeatureNotFound"
@@ -14,12 +16,13 @@ import { featureParts } from "@/components/Features/parts"
 import { featureQueryOptions } from "@/components/Features/queries"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import useAuth from "@/hooks/useAuth"
 
 const flag = (value: unknown) => value === true || value === "true"
 
 export const Route = createFileRoute("/_layout/features_/$featureId")({
   component: FeatureDetail,
-  // Opcionales a proposito: el dashboard enlaza la ficha sin pasar nada, y
+  // Opcionales a proposito: el catalogo enlaza la ficha sin pasar nada, y
   // TanStack obliga a pasar en cada enlace todo lo que el validador declare.
   validateSearch: (search: Record<string, unknown>): { editar?: true } => ({
     ...(flag(search.editar) ? { editar: true as const } : {}),
@@ -42,7 +45,7 @@ const isNotFound = (error: Error) =>
  *
  * | URL | Cara |
  * |---|---|
- * | `/features/{id}` | solo lectura: se llega desde el dashboard, se consulta |
+ * | `/features/{id}` | lectura, con acceso directo a editar |
  * | `?editar=true` | **el mismo contenido, editable aqui mismo** |
  *
  * Editar no cambia el reparto de la pagina: cada dato pasa a ser su casilla en
@@ -54,11 +57,19 @@ function FeatureDetail() {
   const { featureId } = Route.useParams()
   const { editar } = Route.useSearch()
   const navigate = useNavigate()
+  const { user } = useAuth()
 
-  // Al editar se llega desde la lista, y a la lista se vuelve al guardar o al
-  // cancelar: dejar aqui la ficha en solo lectura seria un callejon sin salida
-  // —desde el dashboard no hay boton de editar— y no es de donde se venia.
-  const toList = () => navigate({ to: "/features" })
+  // Cambiar de modo no añade pasos al historial: atras vuelve al catalogo
+  // con sus filtros, tanto al editar desde la tarjeta como desde la ficha.
+  const setEditing = (editing: boolean) =>
+    navigate({
+      to: "/features/$featureId",
+      params: { featureId },
+      search: editing ? { editar: true } : {},
+      replace: true,
+      resetScroll: false,
+    })
+  const toRead = () => setEditing(false)
 
   const {
     data: feature,
@@ -101,8 +112,8 @@ function FeatureDetail() {
         key={feature.id}
         featureId={feature.id}
         onCreated={() => undefined}
-        onSaved={toList}
-        onCancel={toList}
+        onSaved={toRead}
+        onCancel={toRead}
       />
     )
   }
@@ -112,6 +123,16 @@ function FeatureDetail() {
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="flex justify-end gap-2">
+        {(user?.is_superuser || user?.id === feature.owner_id) && (
+          <DeleteFeature
+            featureId={feature.id}
+            featureName={feature.name}
+            onSuccess={() => navigate({ to: "/features", replace: true })}
+          />
+        )}
+        <FeatureActions onEdit={() => setEditing(true)} variant="outline" />
+      </div>
       {/* Identidad del feature: la misma lectura que la tarjeta del buscador
           —imagen a la izquierda, todo lo que dice QUE es a la derecha— pero a
           tamaño de pagina. Lo que hay que saber para diseñar va debajo. */}

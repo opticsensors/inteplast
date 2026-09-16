@@ -33,7 +33,7 @@ export const isSearchActive = (state: FeatureSearchState) =>
   Boolean(state.q || state.category || state.tag || state.partId)
 
 /**
- * La busqueda tambien vive en la URL (`/?q=bolt&part=<id>`). Asi el boton de
+ * La busqueda tambien vive en la URL (`/features?q=bolt&part=<id>`). Asi el boton de
  * atras del navegador devuelve los resultados al volver de la ficha, y una
  * busqueda se puede compartir o guardar en favoritos.
  */

@@ -39,12 +39,12 @@ marcadas en rojo. El marcado se guarda en la aplicación y mantiene intacto el o
 
 ## Configuración local con Docker
 
-En el equipo de desarrollo de Eduard ya está configurado `.env.local`, excluido de Git, para
+En el equipo de desarrollo de Eduard ya está configurado `.env`, excluido de Git, para
 la carpeta `Exemples/3212 Pump Housing` indicada en [CLAUDE.md](../CLAUDE.md). Esto utiliza la
 copia local sincronizada por OneDrive. **No inicia sesión en Microsoft ni usa Microsoft Graph.**
 
-En otro equipo, crear `.env.local` a partir de [.env.local.example](../.env.local.example), sin
-sobrescribir una configuración existente, y ajustar:
+En otro equipo, crear `.env` a partir de [.env.example](../.env.example), sin sobrescribir una
+configuración existente. Descomentar el bloque de originales externos y ajustar:
 
 | Variable | Qué representa |
 |---|---|
@@ -56,22 +56,37 @@ sobrescribir una configuración existente, y ajustar:
 Desde la raíz:
 
 ```powershell
-.\scripts\compose.ps1 up -d --build db prestart backend mailcatcher
+docker compose up -d --build db prestart backend mailcatcher
 npm.cmd run dev
 ```
 
-En Bash: `bash scripts/compose.sh up -d --build db prestart backend mailcatcher`.
-Usar estos lanzadores también para `watch backend`, `restart backend`, `exec` y `down`:
-cargan `.env` y la configuración opcional `.env.local`. **Un `docker compose up` sin esa
-configuración puede recrear el backend sin conectar los originales.** Los lanzadores sirven
-también cuando no existe `.env.local`; en ese caso el selector indica que falta configurar el origen.
+El mismo comando funciona en PowerShell y Bash. `docker compose watch backend`, `exec` y
+`up` leen automáticamente `.env`, también en una terminal nueva; no se necesitan variables
+exportadas ni un lanzador especial. Si el bloque de originales queda comentado, la aplicación
+arranca con subidas y el selector indica que no hay origen configurado.
+
+### Migración desde `.env.local`
+
+La configuración se unifica en `.env` desde el **2026-09-16**. En una instalación existente:
+
+1. Conservar una copia privada de `.env` y `.env.local` antes de actualizar el repositorio.
+2. Incorporar a `.env` las variables de `.env.local`, conservando sus valores y evitando
+   claves duplicadas. **No cambiar `ASSETS_SOURCE_ID`**: lo usan los documentos ya vinculados.
+3. Archivar `.env.local` fuera del repositorio; deja de ser un fichero activo de configuración.
+4. Detener el `watch` anterior con Ctrl+C y arrancar `docker compose watch backend`.
+
+`.env` ya no se versiona y `.env.example` contiene únicamente valores de ejemplo. No copiar la
+plantilla sobre una instalación existente. Los antiguos `scripts/compose.*` quedan como alias
+compatibles que leen ese mismo `.env`. La configuración del equipo de Eduard ya está migrada.
+
+### Montaje y backend nativo
 
 `compose.assets.yml` monta únicamente la carpeta elegida en `/external-assets`, con
 `read_only: true` y `create_host_path: false`. La aplicación no escribe, renombra ni borra los
 originales. No combinar este Compose con `compose.test.yml`: las pruebas usan archivos sintéticos
 en almacenamiento temporal. En un backend Python nativo, configurar directamente `ASSETS_ROOT`
-con la ruta local y los mismos `ASSETS_SOURCE_ID`/`ASSETS_SOURCE_NAME`; el lanzador Compose no
-configura procesos Python externos a Docker. Para imponer solo lectura allí, usar permisos del SO.
+con la ruta local y los mismos `ASSETS_SOURCE_ID`/`ASSETS_SOURCE_NAME`; el montaje de Compose no
+se aplica a procesos Python externos a Docker. Para imponer solo lectura allí, usar permisos del SO.
 
 ### OneDrive y cambios de ubicación
 
@@ -128,7 +143,7 @@ han añadido permisos por documento. Un UUID solo no autoriza una descarga.
 
 La migración `a62f58d4e930` asigna `source=upload` a registros anteriores y mantiene sus enlaces.
 Su downgrade se rechaza mientras existan referencias externas. Hacer copia de BD antes de
-actualizar y conservar `.env.local` por separado. El backup de la app **no incluye** los originales
+actualizar y conservar `.env` por separado. El backup de la app **no incluye** los originales
 externos; su conservación corresponde al almacenamiento que los contiene.
 
 ## Integración futura con INTEPLAST

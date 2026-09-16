@@ -8,12 +8,12 @@ modelos o endpoints; allí se describen la base de conocimiento y los permisos.
 Desde la raíz:
 
 ```powershell
-.\scripts\compose.ps1 up -d --build db prestart backend mailcatcher
+docker compose up -d --build db prestart backend mailcatcher
 ```
 
 API: http://localhost:8000/docs. `prestart` aplica Alembic y crea el administrador inicial.
 El código de la imagen vive en `/app/backend/app`; el directorio de trabajo es `/app/backend`.
-`.\scripts\compose.ps1 watch backend` sincroniza cambios locales. Sin `watch`, reconstruir con `--build`.
+`docker compose watch backend` sincroniza cambios locales. Sin `watch`, reconstruir con `--build`.
 
 También se puede ejecutar Python localmente: `uv sync --package app` desde la raíz instala el
 workspace en `.venv`. Desde `backend/`, activar `../.venv/bin/activate` (Bash) o
@@ -54,8 +54,8 @@ Las [portadas CAD](../docs/portadas-cad.md) añaden `Feature.cover_3d` mediante 
 SHA-256 del original. Regenerar el cliente TypeScript al actualizar estos modelos.
 
 ```powershell
-.\scripts\compose.ps1 exec backend alembic current
-.\scripts\compose.ps1 exec backend alembic heads
+docker compose exec backend alembic current
+docker compose exec backend alembic heads
 ```
 
 La revisión actual debe coincidir con `heads`; no depender de un identificador pegado en una guía.
@@ -74,8 +74,9 @@ Revisar el contenido generado, versionarlo y reconstruir el backend. El prestart
 `StoredFile` representa subidas y referencias locales mediante un mismo UUID. El adaptador
 de [file_sources.py](app/file_sources.py) resuelve los bytes; el montaje opcional de originales
 es de solo lectura. Configuración, migración, API, límites de revisión y Graph pendiente en
-[archivos externos](../docs/ficheros-externos.md). Usar el lanzador Compose conserva `.env.local`
-al reconstruir. En Bash, el equivalente es `bash scripts/compose.sh` desde la raíz.
+[archivos externos](../docs/ficheros-externos.md). `docker compose` carga automáticamente
+el `.env` privado de la raíz, incluidos los originales. En una instalación nueva, copiar
+`.env.example` a `.env` antes del primer arranque, sin sobrescribir una configuración existente.
 
 `UPLOADS_DIR=/app/uploads` en Docker; volumen persistente `app-uploads`. No guardar bytes en
 `/app/backend/uploads` dentro del contenedor. En local, el valor por defecto es `uploads`.

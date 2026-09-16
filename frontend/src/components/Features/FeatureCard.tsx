@@ -53,7 +53,7 @@ export function FeatureThumbnail({
   style,
   fit = "cover",
 }: {
-  feature: FeaturePublic
+  feature: Pick<FeaturePublic, "image" | "name">
   className?: string
   style?: CSSProperties
   /** En la tarjeta se recorta para que cuadre; en la ficha, no: la geometria
@@ -119,7 +119,7 @@ function useTextHeight() {
 interface FeatureCardProps {
   feature: FeaturePublic
   onSelect?: (feature: FeaturePublic) => void
-  /** Botones de Editar y Borrar de la pagina de gestion. */
+  /** Acciones independientes del boton que abre la ficha en lectura. */
   actions?: ReactNode
 }
 

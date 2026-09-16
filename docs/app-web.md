@@ -190,9 +190,9 @@ el administrador. Las rutas privadas para crear usuarios de prueba requieren
 
 | Ruta | Fichero | Qué es |
 |---|---|---|
-| `/` | `routes/_layout/index.tsx` | **Dashboard**: buscador global + filtros y tarjetas de resultado. La búsqueda va en la URL (`/?q=3212`) |
+| `/` | `routes/_layout/index.tsx` | Redirige a `/features`, conservando los filtros de los enlaces antiguos |
 | `/features/{id}` | `routes/_layout/features_.$featureId.tsx` | 🔑 **La ficha del feature**: cabecera con la imagen a la izquierda e identidad a la derecha (nombre, descripción, categoría, tags, piezas), y debajo a todo el ancho warnings, lessons y los ficheros por pieza. **Se edita aquí mismo** (ver abajo) |
-| `/features` | `routes/_layout/features.tsx` | **Gestión** (la página «Ítems» de la fase B): mismas tarjetas, con *Añadir feature* y, en cada una, *Editar* y *Borrar* |
+| `/features` | `routes/_layout/features.tsx` | **Catálogo e inicio**: buscador, filtros y tarjetas que abren la ficha en lectura, con *Nuevo feature* y *Editar* directamente accesibles. La búsqueda va en la URL (`/features?q=3212`) |
 | `/features/{id}/fichero/{assetId}` | `routes/_layout/features_.$featureId_.fichero.$assetId.tsx` | 🔑 **La página de un fichero**: el visor (PDF, imagen o 3D), el botón de descargar y, cuando no hay visor posible, qué programa hace falta |
 | `/features/nuevo` | `routes/_layout/features_.nuevo.tsx` | **Alta**. Al guardar los datos básicos salta a la ficha en modo edición, que es donde se le cuelgan notas y ficheros |
 | `/admin` | `routes/_layout/admin.tsx` | Usuarios y permisos; punto de alta de cuentas con el registro público cerrado |
@@ -212,7 +212,7 @@ Componentes en `components/Features/`:
 | `PartSelect.tsx` | Desplegable de piezas con alta al vuelo (código + nombre) |
 | `FeatureForm.tsx` | El formulario de alta y edición (datos básicos + warnings, lessons, **Piezas** y **Ficheros por pieza**). Lo montan `/features/nuevo` y la propia ficha en modo edición. 🔑 **Repite el reparto de la ficha** —foto a la izquierda, datos a la derecha, secciones debajo— con una casilla en el sitio de cada dato, para que entrar y salir de edición no mueva nada de sitio |
 | `FeatureNotFound.tsx` | La pantalla de «feature no encontrado» de la ficha |
-| `FeatureActions.tsx` | Los botones *Editar* y *Borrar* de la tarjeta de gestión |
+| `FeatureActions.tsx` | El botón *Editar* compartido por las tarjetas y la ficha; *Eliminar* vive en la ficha, con confirmación y solo para autor o superusuario |
 | `NoteList.tsx` | Warnings y lessons **en modo edición**: título editable en su sitio, desplegable con el cuerpo dentro y autoguardado |
 | `AssetEditRow.tsx` | Fila **en edición**: tipo/pieza, nombre, subida y vínculo a un archivo existente |
 | `SourceFilePicker.tsx` | Diálogo de selección de originales; vincular o volver a vincular con revisión opcional |
@@ -252,7 +252,7 @@ sesión del navegador y se restaura el scroll de la ruta.
 
 Lo decide `viewers.ts` a partir del tipo MIME, la extensión y el tamaño: los PDF con tipo
 `application/pdf` y las imágenes JPEG, PNG, GIF, WebP, AVIF y BMP se pintan en la página.
-La imagen de cabecera admite esos mismos formatos al seleccionar, arrastrar o pegar (Ctrl+V);
+La modal de edición de portada admite esos mismos formatos al seleccionar, arrastrar o pegar (Ctrl+V);
 SVG y otros tipos no admitidos se ofrecen como archivos descargables. STL, GLB, OBJ, PLY,
 STEP e IGES van directamente al visor 3D hasta **50 MiB**. Los STL y STEP/STP mayores usan
 un [GLB generado en el servidor](vistas-3d.md); otros formatos grandes solo se descargan.
@@ -268,7 +268,9 @@ en el equipo del usuario.
 
 La cabecera también permite crear una [portada desde el STEP de la pieza](portadas-cad.md),
 seleccionando superficies en rojo y guardando el encuadre. Las tarjetas usan una imagen;
-la ficha puede activar o ampliar el 3D. La selección queda ligada a la revisión del documento.
+la ficha muestra una miniatura clicable que abre una modal ajustada al cuadrado. El 3D se
+activa automáticamente sobre la captura y su preparación se cancela al cerrar. El editor
+mantiene iguales dimensiones en Imagen y CAD. La selección queda ligada a la revisión del documento.
 
 Interacción ajustada el **2026-09-15** a petición del usuario: arrastre izquierdo para girar
 libremente en el sentido de la pantalla, rueda para zoom, derecho/central para desplazar y
@@ -326,41 +328,43 @@ modal se ha borrado. El motivo no es estético:
 (ver abajo). Se mantienen confirmaciones de borrado, el diálogo de cambios pendientes,
 el selector de originales y los diálogos para crear o ampliar una portada CAD.
 
-🔑 **Cada página tiene su tarjeta** (2026-08-24). En el **dashboard** la tarjeta se clica y
-lleva a la ficha: se viene a consultar. En **gestión** la tarjeta **no se clica** — lleva sus dos
-botones, *Editar* y *Borrar*, y no hay otro sitio al que ir. Antes clicarla llevaba a la ficha en
-modo `gestion`: la misma ficha de solo lectura del dashboard, con esos mismos dos botones arriba
-a la derecha. Un paso de más para nada, y el menú `⋯` de la tarjeta eran otros dos clics para
-elegir entre dos cosas. **Ese modo `gestion` se ha borrado**, botones y *search param* incluidos.
+🔑 **Un único catálogo de Features** (2026-09-16). Se unifican el dashboard y la lista de
+gestión. El menú lateral tiene una sola entrada **Features**, activa también dentro de las
+fichas y los visores; **Admin** sigue separado para los superusuarios. La cabecera muestra
+el título y *Nuevo feature*, sin saludo ni párrafos de instrucciones.
+
+La tarjeta se pulsa para consultar y su botón *Editar* abre directamente la edición. No hay
+interruptor global ni menú intermedio. La ficha en lectura también ofrece *Editar*, y
+*Eliminar* aparece como acción secundaria con confirmación para el autor o un superusuario.
+Los permisos no cambian: cualquier usuario autenticado puede crear y editar.
 
 🔑 **La ficha tiene dos caras, y las dos son la misma página** — solo cambia un *search param*:
 
 | Desde | URL | Qué enseña |
 |---|---|---|
-| Dashboard | `/features/{id}` | Solo lectura. Se consulta, no se toca |
-| *Editar* de la lista | `?editar=true` | **El mismo contenido, en el mismo sitio, editable** |
+| Tarjeta del catálogo | `/features/{id}` | Lectura, con acceso a *Editar* |
+| *Editar* de la tarjeta o de la ficha | `?editar=true` | **El mismo contenido, en el mismo sitio, editable** |
 
 *Editar* no cambia el reparto de la página: el nombre sigue siendo el nombre —ahora en una
-casilla—, la foto sigue a la izquierda —ahora se puede soltar otra encima—, y las secciones
+casilla—, la foto sigue a la izquierda —ahora abre el editor de portada—, y las secciones
 siguen debajo, con sus botones de añadir y borrar. Arriba a la derecha están *Cancelar* y
 *Guardar*, y ahí es donde tienen que estar: lo único que se guarda a mano es la cabecera, porque
-las notas y los ficheros se guardan en línea. **Los dos devuelven a
-`/features`**, que es de donde se venía: dejar la ficha en solo lectura sería un callejón sin
-salida, porque ahí ya no hay botón de editar. El modo vive en la URL y no en un `useState` por
+las notas y los ficheros se guardan en línea. **Los dos dejan la misma ficha en lectura**.
+Cambiar de modo reemplaza la entrada del historial: *atrás* vuelve al catálogo con sus filtros
+y posición, sin recorrer modos de edición anteriores. El modo vive en la URL y no en un `useState` por
 dos motivos: el *Editar* de la lista entra directo a él, y recargar (F5) no te echa de la
 edición. Antes de salir, se completan los guardados pendientes de notas/adjuntos y las subidas;
 si fallan, se conserva la edición y se muestra el error. **Cancelar descarta la cabecera**, no
-deshace las notas ni los adjuntos guardados en línea. `validateSearch` lo declara **opcional**, o el dashboard no podría enlazar la ficha sin
+deshace las notas ni los adjuntos guardados en línea. `validateSearch` lo declara **opcional**, o el catálogo no podría enlazar la ficha sin
 pasarlo (TanStack exige en los enlaces todo search param que el validador declare obligatorio).
 
 **No hay botón *Volver*** en ninguna de las dos: para eso están el botón del navegador y el menú
 lateral. El único que queda es el de «Feature no encontrado», donde no hay nada más donde pulsar.
 
-🔑 **La búsqueda vive en la URL** (`validateSearch` en las dos rutas). Sin eso, volver de la ficha
-con el botón *atrás* devolvía el buscador vacío — que es el precio que se paga por cambiar una
-modal por una página, y por eso se pagó de entrada. El input sigue siendo estado local y se
-refleja en la URL con `replace: true` tras el *debounce*, para no dejar una entrada de historial
-por tecla.
+🔑 **La búsqueda vive en la URL**. El catálogo lee directamente los parámetros validados y
+los actualiza con `replace: true`, sin una entrada de historial por tecla. Solo la consulta a
+la API usa *debounce*. Así *atrás* restaura los filtros y no quedan escrituras de URL pendientes
+al abrir una ficha. Los favoritos antiguos de `/` redirigen con los mismos parámetros.
 
 🔴 **Ojo con los *search params* del router**: TanStack pasa cada valor por `JSON.parse` y, al
 escribir, entrecomilla lo que parezca JSON para conservar el tipo. Buscar `3212` daba
@@ -431,21 +435,22 @@ guardados pendientes. La cabecera se sigue guardando mediante su botón.
 ## Cómo se levanta
 
 ```powershell
-.\scripts\compose.ps1 up -d --build db prestart backend   # aplica las migraciones al arrancar
+docker compose up -d --build db prestart backend   # aplica las migraciones al arrancar
 cd frontend; npm run dev                           # http://localhost:5173
 ```
 
-El lanzador carga también `.env.local` si existe y mantiene el montaje de originales. En Bash,
-usar `bash scripts/compose.sh`. Configuración en [ficheros-externos.md](ficheros-externos.md).
+Docker Compose carga el `.env` privado de la raíz, incluidos los originales, sin un lanzador.
+En una instalación nueva, copiar `.env.example` a `.env` sin sobrescribir una configuración
+existente. Configuración en [ficheros-externos.md](ficheros-externos.md).
 
-🔴 **Sin `.\scripts\compose.ps1 watch backend`, hay que usar `--build` después de tocar `backend/`.** El Dockerfile copia el código
+🔴 **Sin `docker compose watch backend`, hay que usar `--build` después de tocar `backend/`.** El Dockerfile copia el código
 dentro de la imagen; si ya existe un `backend:latest`, `docker compose up -d` a secas **lo
 reutiliza tal cual** y arrancas con el código viejo — sin errores, simplemente faltan los
 endpoints. Cómo se detecta:
 
 ```powershell
-.\scripts\compose.ps1 exec backend alembic current
-.\scripts\compose.ps1 exec backend alembic heads     # current debe coincidir con heads
+docker compose exec backend alembic current
+docker compose exec backend alembic heads     # current debe coincidir con heads
 ```
 
 El frontend no tiene este problema: Vite sirve desde el disco.
@@ -456,7 +461,7 @@ Hay una carga opcional con el **Bolt Eye del 3212**: sus 8 warnings y 2 lessons 
 de [modelo-datos.md](modelo-datos.md) y [3212/historial-molde.md](3212/historial-molde.md).
 
 ```powershell
-.\scripts\compose.ps1 exec backend python -m app.seed_features
+docker compose exec backend python -m app.seed_features
 ```
 
 Es idempotente: si el feature ya existe no toca nada. La creación completa usa una transacción:
@@ -513,7 +518,7 @@ La cobertura HTML se genera dentro del stack de tests y desaparece al limpiarlo.
 | Qué | Estado |
 |---|---|
 | **La página `/items` de la plantilla sigue existiendo** | Se ha quitado del menú pero el `Item` de demo sigue en el backend, el frontend y los tests. No molesta; se puede borrar entero cuando se decida |
-| **Sin paginación en la UI** | La API ya la tiene (`skip`/`limit`); gestión pide 100 y el dashboard 50 al buscar o 5 recientes. Con más fichas hay que añadir controles |
+| **Sin paginación en la UI** | La API ya la tiene (`skip`/`limit`); el catálogo pide hasta 100 fichas. Con más fichas hay que añadir controles |
 | **Ordenar warnings y adjuntos arrastrando** | El campo `position` ya está en la BD y se respeta al leer, pero la UI todavía no deja reordenar |
 | **Imagen con la zona marcada en rojo** | Implementada la [portada CAD](portadas-cad.md): caras del STEP, captura, cámara y 3D interactivo. El marcado libre sobre imágenes/planos sigue pendiente |
 | **Vincular un feature con sus N-numbers y sus cotas** | La tabla ya existe (`FeaturePartLink`), pero está vacía de contenido: solo dice *feature ↔ pieza*. Añadirle los N-numbers y las tolerancias la convierte en el `INSTANCIA_EN_PROYECTO` de [modelo-datos.md](modelo-datos.md) |
