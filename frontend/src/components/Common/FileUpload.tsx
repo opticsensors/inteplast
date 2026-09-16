@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query"
 import { ImageIcon, Loader2, Paperclip, Upload, X } from "lucide-react"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { type FilePublic, FilesService } from "@/client"
 import { SaveStatus } from "@/components/Features/SaveStatus"
@@ -61,6 +61,27 @@ export function FileUpload({
     void upload.run(file)
   }
 
+  const paste = useRef(handleFiles)
+  paste.current = handleFiles
+  useEffect(() => {
+    if (variant !== "image") return
+    const onPaste = (event: ClipboardEvent) => {
+      const target = event.target instanceof Element ? event.target : null
+      if (
+        target?.closest(
+          "input, textarea, [contenteditable=true], [role=dialog]",
+        )
+      )
+        return
+      const files = event.clipboardData?.files
+      if (!files?.length) return
+      event.preventDefault()
+      paste.current(files)
+    }
+    window.addEventListener("paste", onPaste)
+    return () => window.removeEventListener("paste", onPaste)
+  }, [variant])
+
   const dropHandlers = {
     onDragOver: (event: React.DragEvent) => {
       event.preventDefault()
@@ -92,6 +113,8 @@ export function FileUpload({
       <div className={cn("relative", className)}>
         <button
           type="button"
+          aria-label="Seleccionar imagen"
+          title="Seleccionar imagen del ordenador"
           disabled={upload.pending}
           onClick={() => inputRef.current?.click()}
           {...dropHandlers}
@@ -108,7 +131,7 @@ export function FileUpload({
             <img
               src={url}
               alt={value.filename}
-              className="size-full object-cover"
+              className="size-full object-contain"
             />
           ) : (
             <ImageIcon className="size-8 text-muted-foreground" />
@@ -127,6 +150,9 @@ export function FileUpload({
           </Button>
         )}
         {input}
+        <p className="mt-1 text-center text-xs text-muted-foreground">
+          Arrastra o pega (Ctrl+V)
+        </p>
         <SaveStatus
           error={upload.error}
           saving={upload.pending}

@@ -49,6 +49,10 @@ en solo lectura. No copiar ni ejecutar los tests dentro del contenedor de trabaj
 
 ## Migraciones
 
+Las [portadas CAD](../docs/portadas-cad.md) añaden `Feature.cover_3d` mediante la migración
+`c84d70f6ab52`. La API guarda selección e imagen conjuntamente y comprueba el vínculo y el
+SHA-256 del original. Regenerar el cliente TypeScript al actualizar estos modelos.
+
 ```powershell
 .\scripts\compose.ps1 exec backend alembic current
 .\scripts\compose.ps1 exec backend alembic heads

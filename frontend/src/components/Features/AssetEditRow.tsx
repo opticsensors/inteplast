@@ -1,5 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Check, ChevronDown, Loader2, Trash2, Upload } from "lucide-react"
+import {
+  Check,
+  ChevronDown,
+  Download,
+  Loader2,
+  Trash2,
+  Upload,
+} from "lucide-react"
 import { useEffect, useMemo, useRef } from "react"
 
 import {
@@ -10,6 +17,7 @@ import {
   FilesService,
   type PartPublic,
 } from "@/client"
+import { FileLink } from "@/components/Common/FileLink"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -255,6 +263,38 @@ export function AssetEditRow({
           </Button>
         )}
 
+        {file && (
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
+            className="size-7 shrink-0"
+            title={`Descargar ${asset.name}`}
+          >
+            <FileLink fileId={file.id} downloadFile download={file.filename}>
+              <Download className="size-3.5" />
+              <span className="sr-only">Descargar {asset.name}</span>
+            </FileLink>
+          </Button>
+        )}
+        <SourceFilePicker
+          compact
+          chooseAction
+          document={file?.source === "local" ? file : undefined}
+          disabled={fileUpload.pending || metadata.pending}
+          onLinked={async (linked) => {
+            const patch: FeatureAssetUpdate = { file_id: linked.id }
+            if (name === NEW_ASSET_NAME) {
+              autosave.change({ name: linked.filename.replace(/\.[^.]+$/, "") })
+              const guessed = KIND_BY_EXTENSION[extensionOf(linked.filename)]
+              if (guessed) patch.kind = guessed
+            }
+            if (!(await metadata.run(patch)))
+              throw new Error(
+                "No se ha podido guardar el adjunto. Reintenta el guardado de la fila.",
+              )
+          }}
+        />
         <Button
           type="button"
           variant="ghost"
@@ -282,32 +322,6 @@ export function AssetEditRow({
             event.target.value = ""
           }}
         />
-      </div>
-      <div className="flex flex-wrap items-center gap-2 py-1">
-        <SourceFilePicker
-          disabled={fileUpload.pending || metadata.pending}
-          onLinked={async (linked) => {
-            const patch: FeatureAssetUpdate = { file_id: linked.id }
-            if (name === NEW_ASSET_NAME) {
-              autosave.change({ name: linked.filename.replace(/\.[^.]+$/, "") })
-              const guessed = KIND_BY_EXTENSION[extensionOf(linked.filename)]
-              if (guessed) patch.kind = guessed
-            }
-            if (!(await metadata.run(patch)))
-              throw new Error(
-                "No se ha podido guardar el adjunto. Reintenta el guardado de la fila.",
-              )
-          }}
-        />
-        {file?.source === "local" && (
-          <SourceFilePicker
-            document={file}
-            disabled={fileUpload.pending || metadata.pending}
-            onLinked={async () => {
-              await queryClient.invalidateQueries({ queryKey: ["features"] })
-            }}
-          />
-        )}
       </div>
       <DocumentStatus file={file} />
       <SaveStatus

@@ -7,7 +7,7 @@ originales se leen cuando se abre el visor o se descarga. Las subidas siguen dis
 ## Uso en la ficha
 
 1. Abrir **Bolt Eye → Editar → Piezas ejemplo → 3212**.
-2. En la fila del plano o del CAD, pulsar **Vincular archivo existente**.
+2. En la fila del plano o del CAD, pulsar el **icono de cadena**, junto a la descarga.
 3. Entrar en `1-2D y 3D Pieza`, seleccionar el fichero y, si se conoce, indicar su revisión.
 4. Pulsar **Vincular**. La asociación se guarda automáticamente; **Guardar** guarda también
    los cambios de la cabecera y vuelve al listado.
@@ -25,13 +25,17 @@ detalles y descarga. Los desplegables por pieza y la posición de scroll se recu
 La ficha muestra el nombre legible y el tamaño, sin repetir nombres internos, rutas ni etiquetas
 de revisión. Tampoco muestra el pie «Archivo vinculado» cuando todo está disponible. Conserva
 los avisos de «sin archivo vinculado», no encontrado, original cambiado y origen inaccesible.
-**Volver a vincular** permite elegir la ubicación/revisión actual y conserva
+Desde el icono de cadena, **Actualizar ubicación o revisión del documento** permite elegir
+la referencia actual y conserva
 el identificador del documento. Afecta a **todas las fichas que usan ese mismo documento**,
-como indica el diálogo. Si solo se desea cambiar una fila, usar **Vincular archivo existente**.
+como indica el diálogo. Si solo se desea cambiar una fila, elegir **Usar otro archivo en esta ficha**.
 
 Seleccionar de nuevo el mismo archivo, con la misma fecha/tamaño, reutiliza su registro.
 Una revisión vacía conserva la etiqueta existente; una etiqueta distinta devuelve un aviso
-de conflicto. Para cambiar esa etiqueta explícitamente, usar **Volver a vincular**.
+de conflicto. Para cambiar esa etiqueta explícitamente, elegir **Actualizar ubicación o revisión del documento**.
+
+La cabecera puede usar una [portada creada desde el STEP](portadas-cad.md), con superficies
+marcadas en rojo. El marcado se guarda en la aplicación y mantiene intacto el original.
 
 ## Configuración local con Docker
 

@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException
 
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
+from app.cad_covers import validate_cover
 from app.models import (
     Feature,
     FeatureAsset,
@@ -125,7 +126,27 @@ def update_feature(
     feature = get_feature_or_404(session, feature_id)
     if feature_in.image_id and not session.get(StoredFile, feature_in.image_id):
         raise HTTPException(status_code=404, detail="File not found")
-    feature.sqlmodel_update(feature_in.model_dump(exclude_unset=True))
+    changes = feature_in.model_dump(exclude_unset=True)
+    if feature_in.cover_3d is not None:
+        image = (
+            session.get(StoredFile, feature_in.image_id)
+            if feature_in.image_id
+            else None
+        )
+        if not image or image.content_type not in {
+            "image/png",
+            "image/webp",
+            "image/jpeg",
+        }:
+            raise HTTPException(
+                422, "Guarda la imagen de portada junto con la selección 3D."
+            )
+        validate_cover(session, feature, feature_in.cover_3d)
+        changes["cover_3d"] = feature_in.cover_3d.model_dump(mode="json")
+    elif "image_id" in changes:
+        # An uploaded/pasted image replaces the CAD cover as one atomic header edit.
+        changes["cover_3d"] = None
+    feature.sqlmodel_update(changes)
     session.add(feature)
     session.commit()
     session.refresh(feature)

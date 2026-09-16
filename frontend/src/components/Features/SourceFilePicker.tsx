@@ -12,6 +12,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
 import { formatFileSize } from "@/utils"
 import { usePendingTask } from "./usePendingTask"
@@ -21,13 +26,25 @@ export function SourceFilePicker({
   document,
   onLinked,
   disabled = false,
+  compact = false,
+  chooseAction = false,
 }: {
   document?: FilePublic
   onLinked: (file: FilePublic) => Promise<void>
   disabled?: boolean
+  compact?: boolean
+  chooseAction?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [relink, setRelink] = useState(!chooseAction)
+  const currentDocument = relink ? document : undefined
+  const label =
+    chooseAction && document
+      ? "Vincular o cambiar archivo"
+      : document
+        ? "Volver a vincular"
+        : "Vincular archivo existente"
   return (
     <Dialog
       open={open}
@@ -35,16 +52,26 @@ export function SourceFilePicker({
         if (!busy) setOpen(value)
       }}
     >
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={disabled}
-        onClick={() => setOpen(true)}
-      >
-        <Link2 className="size-3.5" />
-        {document ? "Volver a vincular" : "Vincular archivo existente"}
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant={compact ? "ghost" : "outline"}
+            size={compact ? "icon" : "sm"}
+            className={compact ? "size-7 shrink-0" : undefined}
+            aria-label={label}
+            disabled={disabled}
+            onClick={() => {
+              setRelink(!chooseAction)
+              setOpen(true)
+            }}
+          >
+            <Link2 className="size-3.5" />
+            {!compact && label}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{label}</TooltipContent>
+      </Tooltip>
       {open && (
         <DialogContent
           className="sm:max-w-2xl"
@@ -56,18 +83,33 @@ export function SourceFilePicker({
         >
           <DialogHeader>
             <DialogTitle>
-              {document
+              {currentDocument
                 ? "Actualizar referencia del documento"
                 : "Vincular archivo existente"}
             </DialogTitle>
             <DialogDescription>
-              {document
+              {currentDocument
                 ? "La nueva ubicación y revisión se aplicarán a todas las fichas que usan este documento. El original se conserva."
                 : "Selecciona un archivo de la carpeta compartida con la aplicación. El original permanece en su ubicación."}
             </DialogDescription>
           </DialogHeader>
+          {chooseAction && document && (
+            <select
+              aria-label="Acción sobre el vínculo"
+              className="h-9 rounded-md border bg-background px-2 text-sm"
+              disabled={busy}
+              value={relink ? "relink" : "replace"}
+              onChange={(event) => setRelink(event.target.value === "relink")}
+            >
+              <option value="replace">Usar otro archivo en esta ficha</option>
+              <option value="relink">
+                Actualizar ubicación o revisión del documento
+              </option>
+            </select>
+          )}
           <SourceBrowser
-            document={document}
+            key={relink ? "relink" : "replace"}
+            document={currentDocument}
             onLinked={onLinked}
             setBusy={setBusy}
             close={() => setOpen(false)}

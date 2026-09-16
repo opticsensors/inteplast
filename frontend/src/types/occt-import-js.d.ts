@@ -11,6 +11,7 @@ declare module "occt-import-js" {
   export interface OcctMesh {
     name?: string
     color?: [number, number, number]
+    brep_faces?: { first: number; last: number; color?: number[] | null }[]
     attributes: {
       position: OcctArray
       normal?: OcctArray

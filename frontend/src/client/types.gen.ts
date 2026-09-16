@@ -15,6 +15,29 @@ export type Body_login_login_access_token = {
     client_secret?: (string | null);
 };
 
+export type CadCamera = {
+    position: [
+        number,
+        number,
+        number
+    ];
+    target: [
+        number,
+        number,
+        number
+    ];
+    up: [
+        number,
+        number,
+        number
+    ];
+};
+
+export type CadFaceSelection = {
+    mesh: number;
+    face: number;
+};
+
 export type FeatureAssetCreate = {
     kind: AssetKind;
     name: string;
@@ -44,6 +67,21 @@ export type FeatureAssetUpdate = {
 
 export type FeatureCategory = 'hole' | 'rib' | 'thickness' | 'boss' | 'fillet' | 'draft' | 'other';
 
+/**
+ * An annotation tied to exact source bytes and a deterministic tessellation.
+ */
+export type FeatureCover3D = {
+    asset_id: string;
+    part_id: string;
+    file_id: string;
+    file_version?: (string | null);
+    source_sha256: string;
+    geometry_key: string;
+    recipe: "occt-import-js@0.0.23/cover-v1";
+    faces: Array<CadFaceSelection>;
+    camera: CadCamera;
+};
+
 export type FeatureCreate = {
     name: string;
     description?: (string | null);
@@ -61,6 +99,7 @@ export type FeatureDetail = {
     created_at?: (string | null);
     owner_id?: (string | null);
     image?: (FilePublic | null);
+    cover_3d?: (FeatureCover3D | null);
     assets?: Array<FeatureAssetPublic>;
     parts?: Array<PartPublic>;
     notes?: Array<FeatureNotePublic>;
@@ -105,6 +144,7 @@ export type FeaturePublic = {
     created_at?: (string | null);
     owner_id?: (string | null);
     image?: (FilePublic | null);
+    cover_3d?: (FeatureCover3D | null);
     assets?: Array<FeatureAssetPublic>;
     parts?: Array<PartPublic>;
 };
@@ -120,6 +160,7 @@ export type FeatureUpdate = {
     category?: (FeatureCategory | null);
     tags?: Array<(string)>;
     image_id?: (string | null);
+    cover_3d?: (FeatureCover3D | null);
 };
 
 export type FileAccessPublic = {

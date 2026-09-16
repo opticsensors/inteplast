@@ -69,7 +69,7 @@ async function loadMesh(
  * antes de poder pintarla. Lo hace OpenCascade compilado a WebAssembly, **en el
  * navegador del que mira**: el servidor no participa.
  */
-async function loadBrep(
+export async function loadBrep(
   three: Three,
   extension: string,
   buffer: ArrayBuffer,
@@ -122,7 +122,9 @@ async function loadBrep(
       shininess: 30,
       side: three.DoubleSide,
     })
-    group.add(new three.Mesh(geometry, material))
+    const object = new three.Mesh(geometry, material)
+    object.userData.cadFaces = mesh.brep_faces ?? []
+    group.add(object)
   }
   return group
 }

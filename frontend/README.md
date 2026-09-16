@@ -18,6 +18,12 @@ Accounts are provisioned by an administrator. The login and `/signup` pages dire
 
 ## Feature editing
 
+Header images support browsing, drag-and-drop and clipboard paste outside text fields.
+**Desde CAD** creates a cover from an already linked part STEP: select faces in red, frame the
+view and apply it to the header draft. **Guardar** persists its image and annotation together.
+Cards use the image; the detail page can activate or expand the 3D. Changed CAD revisions need
+a new selection. See [CAD covers](../docs/portadas-cad.md) for limits and persistence.
+
 - The header is saved with **Guardar**. Background refreshes preserve fields being edited.
 - Notes and asset names save automatically after 700 ms. Only locally edited fields are written, and updates for each row run in order.
 - Folding a section keeps its editor and pending changes alive. Saving or navigating waits for pending row edits and uploads.
@@ -27,9 +33,10 @@ Accounts are provisioned by an administrator. The login and `/signup` pages dire
 
 ## Protected files
 
-**Vincular archivo existente** selects an original from the configured read-only source.
-**Volver a vincular** updates a local document's location/revision while retaining its UUID;
-the dialog explains that every feature using that document is affected. Missing, changed and
+The chain icon next to download selects an original from the configured read-only source.
+For local references, its dialog offers replacing this asset's file or updating the existing
+document's location/revision while retaining its UUID. The latter affects every feature using
+that document, as the dialog explains. Missing, changed and
 unavailable originals display recovery actions. See [external files](../docs/ficheros-externos.md)
 for setup and the real 3212 PDF/STEP verification. Graph is a future adapter.
 

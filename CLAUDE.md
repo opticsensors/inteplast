@@ -99,6 +99,10 @@ cd frontend; npm run dev                           # http://localhost:5173
   históricas e ingesta siguen pendientes. Escaneo y molde grandes usan GLB automáticos en
   caché; ver [docs/vistas-3d.md](docs/vistas-3d.md) y [docs/ficheros-externos.md](docs/ficheros-externos.md).
   **La pregunta A10 sobre acceso a originales es prioridad 1 de la reunión con INTEPLAST.**
+- **Portadas CAD:** la cabecera admite pegar/arrastrar/elegir imágenes y crear una portada
+  desde el STEP vinculado de la pieza, con caras rojas y encuadre guardados. `Feature.cover_3d`
+  se liga a los bytes y la receta de importación; no reutilizar índices de caras entre
+  revisiones. Detalles en [docs/portadas-cad.md](docs/portadas-cad.md).
 
 ---
 

@@ -8,6 +8,7 @@ import { z } from "zod"
 
 import {
   type FeatureCategory,
+  type FeatureCover3D,
   FeaturesService,
   type FilePublic,
   type NoteKind,
@@ -43,6 +44,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
+import { CadCoverEditor } from "./CadCoverEditor"
 import { CATEGORIES, CATEGORY_LABELS } from "./constants"
 import {
   EditingSessionContext,
@@ -106,9 +108,15 @@ function FeatureFormContent({
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const [image, setImage] = useState<FilePublic | null>(null)
+  const [cover, setCover] = useState<FeatureCover3D | null>(null)
   const [imageDirty, setImageDirty] = useState(false)
-  const imageDraft = useRef<{ image: FilePublic | null; dirty: boolean }>({
+  const imageDraft = useRef<{
+    image: FilePublic | null
+    cover: FeatureCover3D | null
+    dirty: boolean
+  }>({
     image: null,
+    cover: null,
     dirty: false,
   })
   const bypassNavigation = useRef(false)
@@ -160,8 +168,13 @@ function FeatureFormContent({
         { keepDirtyValues: true },
       )
       if (!imageDirty) {
-        imageDraft.current = { image: feature.image ?? null, dirty: false }
+        imageDraft.current = {
+          image: feature.image ?? null,
+          cover: feature.cover_3d ?? null,
+          dirty: false,
+        }
         setImage(feature.image ?? null)
+        setCover(feature.cover_3d ?? null)
       }
     }
   }, [featureId, feature, form, imageDirty])
@@ -190,7 +203,12 @@ function FeatureFormContent({
                 : {}),
               ...(dirtyFields.category ? { category: body.category } : {}),
               ...(dirtyFields.tags ? { tags: body.tags } : {}),
-              ...(imageDraft.current.dirty ? { image_id: body.image_id } : {}),
+              ...(imageDraft.current.dirty
+                ? {
+                    image_id: body.image_id,
+                    cover_3d: imageDraft.current.cover,
+                  }
+                : {}),
             },
           })
         : FeaturesService.createFeature({ requestBody: body })
@@ -296,17 +314,34 @@ function FeatureFormContent({
           {/* Misma cabecera que la ficha —foto a la izquierda, identidad a
                 la derecha— con las casillas en el sitio de cada dato. */}
           <div className="flex gap-4 rounded-lg border p-4 sm:gap-6 sm:p-6">
-            <FileUpload
-              value={image}
-              onChange={(file) => {
-                imageDraft.current = { image: file, dirty: true }
-                setImage(file)
-                setImageDirty(true)
-              }}
-              variant="image"
-              className="shrink-0"
-              boxClassName="size-32 sm:size-48"
-            />
+            <div className="w-32 shrink-0 space-y-2 sm:w-48">
+              <FileUpload
+                value={image}
+                onChange={(file) => {
+                  imageDraft.current = { image: file, cover: null, dirty: true }
+                  setImage(file)
+                  setCover(null)
+                  setImageDirty(true)
+                }}
+                variant="image"
+                className="shrink-0"
+                boxClassName="size-32 sm:size-48"
+              />
+              <CadCoverEditor
+                feature={feature}
+                cover={cover}
+                onChange={(file, annotation) => {
+                  imageDraft.current = {
+                    image: file,
+                    cover: annotation,
+                    dirty: true,
+                  }
+                  setImage(file)
+                  setCover(annotation)
+                  setImageDirty(true)
+                }}
+              />
+            </div>
 
             <div className="min-w-0 flex-1 space-y-3">
               <FormField
@@ -412,28 +447,30 @@ function FeatureFormContent({
             "lesson",
             <Lightbulb className="size-4 text-yellow-500" />,
           )}
-          <CollapsibleSection
-            keepMounted
-            title="Piezas ejemplo"
-            icon={<Package2 className="size-4 text-muted-foreground" />}
-          >
-            {/* 🔑 El MISMO componente que la ficha, en modo edicion. Antes
+          <div id="example-parts-editor" className="scroll-mt-20">
+            <CollapsibleSection
+              keepMounted
+              title="Piezas ejemplo"
+              icon={<Package2 className="size-4 text-muted-foreground" />}
+            >
+              {/* 🔑 El MISMO componente que la ficha, en modo edicion. Antes
                   aqui se agrupaba por tipo y en la ficha por pieza: dos
                   idiomas distintos para lo mismo. */}
-            {feature && (
-              <PartAssetList
-                feature={feature}
-                editable
-                footer={
-                  <PartSelect
-                    value={null}
-                    onChange={(partId) => partId && linkPart.mutate(partId)}
-                    placeholder="Anadir una pieza..."
-                  />
-                }
-              />
-            )}
-          </CollapsibleSection>
+              {feature && (
+                <PartAssetList
+                  feature={feature}
+                  editable
+                  footer={
+                    <PartSelect
+                      value={null}
+                      onChange={(partId) => partId && linkPart.mutate(partId)}
+                      placeholder="Anadir una pieza..."
+                    />
+                  }
+                />
+              )}
+            </CollapsibleSection>
+          </div>
         </div>
       )}
       <Dialog

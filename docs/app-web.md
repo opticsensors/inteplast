@@ -39,7 +39,7 @@ Part                          la pieza = el proyecto = el molde  → embrión de
   id, code ("3212", UNIQUE), name ("Pump Housing")
 
 Feature                       la ficha del feature
-  id, name, description, category, tags[], owner_id, image_id → StoredFile
+  id, name, description, category, tags[], owner_id, image_id → StoredFile, cover_3d (JSON)
   ├─ FeatureNote (n)          kind = warning | lesson
   │    title, body (markdown reducido), position
   ├─ FeatureAsset (n)         kind = mold | part | scan | drawing | moldflow
@@ -252,7 +252,7 @@ sesión del navegador y se restaura el scroll de la ruta.
 
 Lo decide `viewers.ts` a partir del tipo MIME, la extensión y el tamaño: los PDF con tipo
 `application/pdf` y las imágenes JPEG, PNG, GIF, WebP, AVIF y BMP se pintan en la página.
-La imagen de cabecera admite esos mismos formatos, tanto al seleccionar como al arrastrar;
+La imagen de cabecera admite esos mismos formatos al seleccionar, arrastrar o pegar (Ctrl+V);
 SVG y otros tipos no admitidos se ofrecen como archivos descargables. STL, GLB, OBJ, PLY,
 STEP e IGES van directamente al visor 3D hasta **50 MiB**. Los STL y STEP/STP mayores usan
 un [GLB generado en el servidor](vistas-3d.md); otros formatos grandes solo se descargan.
@@ -265,6 +265,10 @@ Una integración de escritorio sería un desarrollo adicional y requeriría inst
 en el equipo del usuario.
 
 ### El visor 3D
+
+La cabecera también permite crear una [portada desde el STEP de la pieza](portadas-cad.md),
+seleccionando superficies en rojo y guardando el encuadre. Las tarjetas usan una imagen;
+la ficha puede activar o ampliar el 3D. La selección queda ligada a la revisión del documento.
 
 Interacción ajustada el **2026-09-15** a petición del usuario: arrastre izquierdo para girar
 libremente en el sentido de la pantalla, rueda para zoom, derecho/central para desplazar y
@@ -318,9 +322,9 @@ modal se ha borrado. El motivo no es estético:
 - **El formulario tampoco es una modal.** Era una modal con warnings, lessons, piezas y cinco
   tipos de fichero dentro de 672 px, que además abría modales encima de la modal. Ahora el alta
   es `/features/nuevo` y la edición ocurre **dentro de la propia ficha**. Desde el 2026-08-25
-  **no queda ninguna modal de contenido**: `NoteDialog` y `AssetDialog` se han borrado y se edita
-  en línea (ver abajo). Se mantienen confirmaciones de borrado y, desde la corrección de edición,
-  un diálogo para guardar cambios pendientes antes de salir de una ficha.
+  las notas y los adjuntos se editan **en línea**: `NoteDialog` y `AssetDialog` se han borrado
+(ver abajo). Se mantienen confirmaciones de borrado, el diálogo de cambios pendientes,
+el selector de originales y los diálogos para crear o ampliar una portada CAD.
 
 🔑 **Cada página tiene su tarjeta** (2026-08-24). En el **dashboard** la tarjeta se clica y
 lleva a la ficha: se viene a consultar. En **gestión** la tarjeta **no se clica** — lleva sus dos
@@ -373,10 +377,11 @@ lista pero se escribía en otro sitio. Ahora **se escribe donde se lee**:
 | | Antes | Ahora |
 |---|---|---|
 | Warning / lesson | Fila con el título + lápiz → modal con título y cuerpo | **Título editable en la fila** y desplegable con el cuerpo dentro, editable ahí mismo |
-| Fichero de una pieza | Fila con el nombre + lápiz → modal con tipo, pieza y fichero | **Icono → desplegable**, nombre en línea, subida o **Vincular archivo existente** |
+| Fichero de una pieza | Fila con el nombre + lápiz → modal con tipo, pieza y fichero | Tipo/pieza en desplegable, nombre en línea y acciones de subir, descargar y vincular en la fila |
 | Añadir | Modal vacía que hay que rellenar y confirmar | Crea la fila en el momento, abierta y con el texto seleccionado para escribir encima |
 
-**Solo queda el botón de borrar**, que es la única acción que no se puede expresar escribiendo.
+Las notas mantienen el botón de borrar y edición en línea. Los archivos agrupan sus acciones
+en la propia fila: subida, descarga, vínculo y borrado, sin botones de vínculo debajo.
 
 🔑 **Autoguardado, sin botón de guardar**: se envían solo los campos modificados localmente
 tras **0,7 s**, mediante `PUT` parcial (`model_dump(exclude_unset=True)`). Las escrituras se
@@ -510,7 +515,7 @@ La cobertura HTML se genera dentro del stack de tests y desaparece al limpiarlo.
 | **La página `/items` de la plantilla sigue existiendo** | Se ha quitado del menú pero el `Item` de demo sigue en el backend, el frontend y los tests. No molesta; se puede borrar entero cuando se decida |
 | **Sin paginación en la UI** | La API ya la tiene (`skip`/`limit`); gestión pide 100 y el dashboard 50 al buscar o 5 recientes. Con más fichas hay que añadir controles |
 | **Ordenar warnings y adjuntos arrastrando** | El campo `position` ya está en la BD y se respeta al leer, pero la UI todavía no deja reordenar |
-| **Imagen con la zona marcada en rojo** | Se sube ya hecha desde el CAD. La herramienta de anotación dentro de la app que menciona la fase B no está |
+| **Imagen con la zona marcada en rojo** | Implementada la [portada CAD](portadas-cad.md): caras del STEP, captura, cámara y 3D interactivo. El marcado libre sobre imágenes/planos sigue pendiente |
 | **Vincular un feature con sus N-numbers y sus cotas** | La tabla ya existe (`FeaturePartLink`), pero está vacía de contenido: solo dice *feature ↔ pieza*. Añadirle los N-numbers y las tolerancias la convierte en el `INSTANCIA_EN_PROYECTO` de [modelo-datos.md](modelo-datos.md) |
 | **Vistas ligeras de escaneo y molde** | Implementadas: cola persistente, GLB en caché, original intacto y descarga íntegra; ver [vistas-3d.md](vistas-3d.md) |
 | **Conexión Microsoft 365** | Adaptador local implementado. Confirmar ubicación/permisos con IT (A10, prioridad 1) y desarrollar Graph con IDs estables; los visores usan el UUID interno del documento |

@@ -76,6 +76,87 @@ export const Body_login_login_access_tokenSchema = {
     title: 'Body_login-login_access_token'
 } as const;
 
+export const CadCameraSchema = {
+    properties: {
+        position: {
+            prefixItems: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'number'
+                }
+            ],
+            type: 'array',
+            maxItems: 3,
+            minItems: 3,
+            title: 'Position'
+        },
+        target: {
+            prefixItems: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'number'
+                }
+            ],
+            type: 'array',
+            maxItems: 3,
+            minItems: 3,
+            title: 'Target'
+        },
+        up: {
+            prefixItems: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'number'
+                }
+            ],
+            type: 'array',
+            maxItems: 3,
+            minItems: 3,
+            title: 'Up'
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    required: ['position', 'target', 'up'],
+    title: 'CadCamera'
+} as const;
+
+export const CadFaceSelectionSchema = {
+    properties: {
+        mesh: {
+            type: 'integer',
+            maximum: 1000000,
+            minimum: 0,
+            title: 'Mesh'
+        },
+        face: {
+            type: 'integer',
+            maximum: 1000000,
+            minimum: 0,
+            title: 'Face'
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    required: ['mesh', 'face'],
+    title: 'CadFaceSelection'
+} as const;
+
 export const FeatureAssetCreateSchema = {
     properties: {
         kind: {
@@ -236,6 +317,70 @@ export const FeatureCategorySchema = {
     title: 'FeatureCategory'
 } as const;
 
+export const FeatureCover3DSchema = {
+    properties: {
+        asset_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Asset Id'
+        },
+        part_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Part Id'
+        },
+        file_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'File Id'
+        },
+        file_version: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'File Version'
+        },
+        source_sha256: {
+            type: 'string',
+            pattern: '^[0-9a-f]{64}$',
+            title: 'Source Sha256'
+        },
+        geometry_key: {
+            type: 'string',
+            pattern: '^[0-9a-f]{64}$',
+            title: 'Geometry Key'
+        },
+        recipe: {
+            type: 'string',
+            const: 'occt-import-js@0.0.23/cover-v1',
+            title: 'Recipe'
+        },
+        faces: {
+            items: {
+                '$ref': '#/components/schemas/CadFaceSelection'
+            },
+            type: 'array',
+            maxItems: 5000,
+            minItems: 1,
+            title: 'Faces'
+        },
+        camera: {
+            '$ref': '#/components/schemas/CadCamera'
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    required: ['asset_id', 'part_id', 'file_id', 'source_sha256', 'geometry_key', 'recipe', 'faces', 'camera'],
+    title: 'FeatureCover3D',
+    description: 'An annotation tied to exact source bytes and a deterministic tessellation.'
+} as const;
+
 export const FeatureCreateSchema = {
     properties: {
         name: {
@@ -361,6 +506,16 @@ export const FeatureDetailSchema = {
             anyOf: [
                 {
                     '$ref': '#/components/schemas/FilePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        cover_3d: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FeatureCover3D'
                 },
                 {
                     type: 'null'
@@ -624,6 +779,16 @@ export const FeaturePublicSchema = {
                 }
             ]
         },
+        cover_3d: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FeatureCover3D'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         assets: {
             items: {
                 '$ref': '#/components/schemas/FeatureAssetPublic'
@@ -694,6 +859,16 @@ export const FeatureUpdateSchema = {
                 }
             ],
             title: 'Image Id'
+        },
+        cover_3d: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FeatureCover3D'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         }
     },
     type: 'object',

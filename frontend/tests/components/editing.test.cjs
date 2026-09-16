@@ -22,6 +22,9 @@ before(async () => {
       {
         name: "isolated-api",
         setup(build) {
+          build.onResolve({ filter: /^\.\/StepCoverCanvas$/ }, () => ({
+            path: path.join(__dirname, "fixtures/cad-canvas.jsx"),
+          }))
           build.onResolve({ filter: /^\/assets\// }, ({ path: asset }) => ({
             path: path.join(frontend, "public", asset),
           }))
@@ -129,8 +132,9 @@ test("missing original can be relinked with its document identity intact", async
     })
     .waitFor()
   await page
-    .getByRole("button", { name: "Volver a vincular", exact: true })
+    .getByRole("button", { name: "Vincular o cambiar archivo", exact: true })
     .click()
+  await page.getByLabel("Acción sobre el vínculo").selectOption("relink")
   await page.getByRole("button", { name: "drawings", exact: true }).click()
   await page.getByRole("button", { name: /drawing.pdf/ }).click()
   await page.getByLabel("Revisión del documento (opcional)").fill("07")
@@ -358,6 +362,115 @@ test("cancelling a blocked logout keeps the session and draft", async (t) => {
     "Header retained on cancelled logout",
   )
   assert.ok(await page.evaluate(() => localStorage.getItem("access_token")))
+})
+
+test("CAD cover explains the missing part STEP without discarding the header", async (t) => {
+  const { page } = await mount(t)
+  await page.getByPlaceholder("Nombre del feature").fill("Pending header")
+  await page.getByRole("button", { name: "Desde CAD", exact: true }).click()
+  await page
+    .getByRole("alert")
+    .getByText(/Primero sube o vincula un STEP/)
+    .waitFor()
+  await page.getByRole("button", { name: "Ir a Piezas ejemplo" }).click()
+  assert.equal(
+    await page.getByPlaceholder("Nombre del feature").inputValue(),
+    "Pending header",
+  )
+  assert.deepEqual(await page.evaluate(() => window.review.uploadRequests), [])
+})
+
+test("CAD cover uploads its image but waits for Save to persist the annotation and header", async (t) => {
+  const { page } = await mount(t)
+  await page.evaluate(async () => {
+    const asset = window.review.feature.assets[0]
+    asset.kind = "part"
+    asset.file = {
+      id: "part-step",
+      version: "step-version",
+      filename: "part.stp",
+      content_type: "model/step",
+      size: 100,
+    }
+    await window.review.refetch()
+  })
+  await page.getByPlaceholder("Nombre del feature").fill("Pending CAD header")
+  await page.getByRole("button", { name: "Desde CAD", exact: true }).click()
+  await page.getByRole("button", { name: "Marcar superficie" }).click()
+  await page.getByRole("button", { name: "Usar como portada" }).click()
+  await page.waitForFunction(() => !document.querySelector('[role="dialog"]'))
+  assert.equal(
+    await page.evaluate(() => window.review.feature.cover_3d),
+    undefined,
+  )
+  await page.evaluate(async () => {
+    await window.review.refetch()
+  })
+  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
+  const feature = await page.evaluate(() => window.review.feature)
+  assert.equal(feature.name, "Pending CAD header")
+  assert.equal(feature.image_id, "uploaded-image")
+  assert.equal(feature.cover_3d.asset_id, "asset-one")
+  assert.equal(feature.cover_3d.file_id, "part-step")
+  assert.deepEqual(feature.cover_3d.faces, [{ mesh: 0, face: 1 }])
+})
+
+test("pasting a local image replaces a CAD cover and leaves text fields alone", async (t) => {
+  const { page } = await mount(t)
+  await page.evaluate(async () => {
+    window.review.feature.cover_3d = { asset_id: "old-asset" }
+    await window.review.refetch()
+  })
+  const paste = async (selector) =>
+    page.evaluate((target) => {
+      const data = new DataTransfer()
+      data.items.add(
+        new File(["image"], "clipboard.png", { type: "image/png" }),
+      )
+      document.querySelector(target).dispatchEvent(
+        new ClipboardEvent("paste", {
+          clipboardData: data,
+          bubbles: true,
+          cancelable: true,
+        }),
+      )
+    }, selector)
+  await paste('input[placeholder="Nombre del feature"]')
+  assert.deepEqual(await page.evaluate(() => window.review.uploadRequests), [])
+  await paste('button[aria-label="Seleccionar imagen"]')
+  await page.waitForFunction(() => window.review.uploadRequests.length === 1)
+  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
+  assert.equal(await page.evaluate(() => window.review.feature.cover_3d), null)
+  assert.equal(
+    await page.evaluate(() => window.review.feature.image_id),
+    "uploaded-image",
+  )
+})
+
+test("dropping an image updates the cover through the same upload flow", async (t) => {
+  const { page } = await mount(t)
+  await page
+    .getByRole("button", { name: "Seleccionar imagen", exact: true })
+    .evaluate((element) => {
+      const data = new DataTransfer()
+      data.items.add(new File(["image"], "dropped.png", { type: "image/png" }))
+      element.dispatchEvent(
+        new DragEvent("drop", {
+          dataTransfer: data,
+          bubbles: true,
+          cancelable: true,
+        }),
+      )
+    })
+  await page.waitForFunction(() => window.review.uploadRequests.length === 1)
+  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
+  assert.equal(
+    await page.evaluate(() => window.review.feature.image_id),
+    "uploaded-image",
+  )
 })
 
 test("feature image picker rejects SVG before uploading", async (t) => {

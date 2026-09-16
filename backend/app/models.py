@@ -1,10 +1,17 @@
 import uuid
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import EmailStr
-from sqlalchemy import ARRAY, DateTime, String
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    FiniteFloat,
+    StringConstraints,
+    model_validator,
+)
+from sqlalchemy import ARRAY, JSON, Column, DateTime, String
 from sqlmodel import AutoString, Field, Relationship, SQLModel
 
 
@@ -310,6 +317,57 @@ class FeatureCreate(FeatureBase):
     image_id: uuid.UUID | None = None
 
 
+class CadFaceSelection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    mesh: int = Field(ge=0, le=1000000)
+    face: int = Field(ge=0, le=1000000)
+
+
+class CadCamera(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    position: tuple[FiniteFloat, FiniteFloat, FiniteFloat]
+    target: tuple[FiniteFloat, FiniteFloat, FiniteFloat]
+    up: tuple[FiniteFloat, FiniteFloat, FiniteFloat]
+
+    @model_validator(mode="after")
+    def valid_view(self) -> "CadCamera":
+        direction = [a - b for a, b in zip(self.position, self.target, strict=True)]
+        cross = [
+            direction[1] * self.up[2] - direction[2] * self.up[1],
+            direction[2] * self.up[0] - direction[0] * self.up[2],
+            direction[0] * self.up[1] - direction[1] * self.up[0],
+        ]
+        if any(abs(v) > 1e12 for v in (*self.position, *self.target, *self.up)):
+            raise ValueError("Camera coordinates out of range")
+        if sum(v * v for v in cross) < 1e-12:
+            raise ValueError("Camera direction and up must define a view")
+        return self
+
+
+Sha256 = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{64}$")]
+
+
+class FeatureCover3D(BaseModel):
+    """An annotation tied to exact source bytes and a deterministic tessellation."""
+
+    model_config = ConfigDict(extra="forbid")
+    asset_id: uuid.UUID
+    part_id: uuid.UUID
+    file_id: uuid.UUID
+    file_version: uuid.UUID | None = None
+    source_sha256: Sha256
+    geometry_key: Sha256
+    recipe: Literal["occt-import-js@0.0.23/cover-v1"]
+    faces: list[CadFaceSelection] = Field(min_length=1, max_length=5000)
+    camera: CadCamera
+
+    @model_validator(mode="after")
+    def unique_faces(self) -> "FeatureCover3D":
+        if len({(face.mesh, face.face) for face in self.faces}) != len(self.faces):
+            raise ValueError("Duplicate CAD faces")
+        return self
+
+
 # Properties to receive on feature update
 class FeatureUpdate(SQLModel):
     # Omitted fields stay unchanged; explicit null is only valid for nullable columns.
@@ -318,6 +376,7 @@ class FeatureUpdate(SQLModel):
     category: FeatureCategory | None = None
     tags: list[str] = Field(default=None)
     image_id: uuid.UUID | None = None
+    cover_3d: FeatureCover3D | None = None
 
 
 # Database model, database table inferred from class name
@@ -336,6 +395,9 @@ class Feature(FeatureBase, table=True):
         default=None, foreign_key="storedfile.id", ondelete="SET NULL"
     )
     image: StoredFile | None = Relationship()
+    cover_3d: dict[str, Any] | None = Field(
+        default=None, sa_column=Column(JSON, nullable=True)
+    )
     notes: list["FeatureNote"] = Relationship(
         back_populates="feature",
         cascade_delete=True,
@@ -447,6 +509,7 @@ class FeaturePublic(FeatureBase):
     created_at: datetime | None = None
     owner_id: uuid.UUID | None = None
     image: FilePublic | None = None
+    cover_3d: FeatureCover3D | None = None
     assets: list[FeatureAssetPublic] = []
     parts: list[PartPublic] = []
 

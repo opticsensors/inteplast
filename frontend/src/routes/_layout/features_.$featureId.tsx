@@ -4,10 +4,9 @@ import { Lightbulb, Package2, TriangleAlert } from "lucide-react"
 
 import { ApiError, type NoteKind } from "@/client"
 import { CollapsibleSection } from "@/components/Common/CollapsibleSection"
-import { FileLink } from "@/components/Common/FileLink"
 import { RichTextView } from "@/components/Common/RichText"
 import { CATEGORY_LABELS } from "@/components/Features/constants"
-import { FeatureThumbnail } from "@/components/Features/FeatureCard"
+import { FeatureCover } from "@/components/Features/FeatureCover"
 import { FeatureForm } from "@/components/Features/FeatureForm"
 import { FeatureNotFound } from "@/components/Features/FeatureNotFound"
 import { PartAssetList } from "@/components/Features/PartAssetList"
@@ -117,23 +116,7 @@ function FeatureDetail() {
           —imagen a la izquierda, todo lo que dice QUE es a la derecha— pero a
           tamaño de pagina. Lo que hay que saber para diseñar va debajo. */}
       <div className="flex gap-4 rounded-lg border p-4 sm:gap-6 sm:p-6">
-        {feature.image ? (
-          <FileLink
-            fileId={feature.image.id}
-            target="_blank"
-            rel="noreferrer"
-            title="Abrir la imagen a tamano real"
-            className="shrink-0"
-          >
-            <FeatureThumbnail
-              feature={feature}
-              fit="contain"
-              className="size-32 sm:size-48"
-            />
-          </FileLink>
-        ) : (
-          <FeatureThumbnail feature={feature} className="size-32 sm:size-48" />
-        )}
+        <FeatureCover key={feature.id} feature={feature} />
 
         <div className="min-w-0 flex-1 space-y-3">
           <div className="space-y-1">
