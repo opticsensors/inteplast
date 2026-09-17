@@ -1,11 +1,5 @@
 import { ImageIcon, Package2 } from "lucide-react"
-import {
-  type CSSProperties,
-  type ReactNode,
-  useEffect,
-  useRef,
-  useState,
-} from "react"
+import type { CSSProperties, ReactNode } from "react"
 
 import type { FeaturePublic } from "@/client"
 import { Badge } from "@/components/ui/badge"
@@ -30,19 +24,18 @@ function PartSummary({ feature }: { feature: FeaturePublic }) {
   const rest = parts.length - shown.length
 
   return (
-    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-muted-foreground">
+    <div className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
       <Package2 className="size-3.5 shrink-0" />
-      <span>
+      <span className="shrink-0">
         {parts.length} pieza{parts.length === 1 ? "" : "s"}
       </span>
       <span aria-hidden>·</span>
-      {shown.map((part, index) => (
-        <span key={part.id} className="font-mono" title={partLabel(part)}>
-          {part.code}
-          {index < shown.length - 1 || rest > 0 ? "," : ""}
+      <span className="truncate" title={parts.map(partLabel).join(", ")}>
+        <span className="font-mono">
+          {shown.map((part) => part.code).join(", ")}
         </span>
-      ))}
-      {rest > 0 && <span>+{rest} mas</span>}
+        {rest > 0 && <span>, +{rest} mas</span>}
+      </span>
     </div>
   )
 }
@@ -87,35 +80,6 @@ export function FeatureThumbnail({
   )
 }
 
-/** Lado minimo y maximo de la miniatura de la tarjeta, en px. */
-const THUMB_MIN = 64
-const THUMB_MAX = 144
-
-/**
- * Mide el bloque de texto para que la miniatura sea cuadrada y tan alta como la
- * fila. Con CSS no sale: el alto de la fila lo marca el texto, y `aspect-ratio`
- * necesita un alto definido para deducir el ancho (comprobado en Chromium: sale
- * un rectangulo, no un cuadrado). Converge en dos pasadas porque el texto solo
- * puede crecer al estrecharse la columna, nunca encogerse.
- */
-function useTextHeight() {
-  const ref = useRef<HTMLDivElement>(null)
-  const [height, setHeight] = useState<number>()
-
-  useEffect(() => {
-    const element = ref.current
-    if (!element) return
-    const observer = new ResizeObserver(([entry]) => {
-      const measured = Math.round(entry.contentRect.height)
-      setHeight(Math.min(Math.max(measured, THUMB_MIN), THUMB_MAX))
-    })
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [])
-
-  return { ref, height }
-}
-
 interface FeatureCardProps {
   feature: FeaturePublic
   onSelect?: (feature: FeaturePublic) => void
@@ -126,7 +90,6 @@ interface FeatureCardProps {
 /** Tarjeta de resultado: imagen, nombre, descripcion, tags y piezas. */
 export function FeatureCard({ feature, onSelect, actions }: FeatureCardProps) {
   const tags = feature.tags ?? []
-  const { ref: textRef, height: thumbSide } = useTextHeight()
 
   return (
     <div
@@ -148,19 +111,24 @@ export function FeatureCard({ feature, onSelect, actions }: FeatureCardProps) {
       )}
       <FeatureThumbnail
         feature={feature}
-        style={thumbSide ? { width: thumbSide, height: thumbSide } : undefined}
+        className="size-24 self-center sm:size-36"
       />
-      <div ref={textRef} className="min-w-0 flex-1 space-y-1.5">
+      <div className="h-36 min-w-0 flex-1 space-y-1.5">
         <div className="flex items-start gap-2">
-          <h3 className="flex-1 font-semibold leading-tight">{feature.name}</h3>
-          {actions && <div className="relative z-20">{actions}</div>}
+          <h3
+            className="line-clamp-2 min-w-0 flex-1 break-words font-semibold leading-tight"
+            title={feature.name}
+          >
+            {feature.name}
+          </h3>
+          {actions && <div className="relative z-20 shrink-0">{actions}</div>}
         </div>
         {feature.description && (
-          <p className="line-clamp-2 text-sm text-muted-foreground">
+          <p className="line-clamp-2 break-words text-sm text-muted-foreground">
             {feature.description}
           </p>
         )}
-        <div className="flex flex-wrap items-center gap-1">
+        <div className="flex items-center gap-1 overflow-hidden">
           {feature.category && (
             <Badge variant="secondary">
               {CATEGORY_LABELS[feature.category]}

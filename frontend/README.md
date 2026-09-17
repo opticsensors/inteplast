@@ -15,6 +15,13 @@ npm run dev --workspace frontend
 
 Open http://localhost:5173. Set `VITE_API_URL=http://localhost:8000` in `frontend/.env` for the local backend, or set the remote API's origin for another deployment. The backend must allow the frontend origin through CORS.
 
+Vite prepares the lazy PDF/3D dependencies at startup and keeps the app cache in
+`frontend/node_modules/.vite-app`, separate from standalone Vite checks. Test servers
+must use their own cache directory. If a dev tab reports `Outdated Optimize Dep` or
+a failed dynamic import after dependency changes, restart with
+`npm run dev --workspace frontend -- --force` and reload the tab. This cache is unrelated
+to stored documents or generated GLB previews.
+
 Accounts are provisioned by an administrator. The login and `/signup` pages direct account requests to the administrator; they do not offer public registration.
 
 ## Feature editing
