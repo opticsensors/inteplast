@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { ChevronDown, Plus, Trash2 } from "lucide-react"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
 
 import {
   type FeatureNotePublic,
@@ -16,7 +16,9 @@ import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
 import { NOTE_KIND_SINGULAR } from "./constants"
 import { SaveStatus } from "./SaveStatus"
+import { SortableEditorList } from "./SortableEditorList"
 import { useAutosave } from "./useAutosave"
+import { usePendingTask } from "./usePendingTask"
 
 /** Lo que se escribe al crearla: se selecciona solo para escribir encima. */
 const NEW_TITLE: Record<NoteKind, string> = {
@@ -35,10 +37,12 @@ const NEW_TITLE: Record<NoteKind, string> = {
 function NoteRow({
   note,
   isNew,
+  dragHandle,
 }: {
   note: FeatureNotePublic
   /** Recien creada: se abre y se selecciona el titulo de oficio. */
   isNew: boolean
+  dragHandle: ReactNode
 }) {
   const queryClient = useQueryClient()
   const { showErrorToast } = useCustomToast()
@@ -78,6 +82,7 @@ function NoteRow({
   return (
     <div className="rounded-md border">
       <div className="flex items-center gap-1 px-1 py-1">
+        {dragHandle}
         <button
           type="button"
           onClick={() => setIsOpen((open) => !open)}
@@ -141,10 +146,12 @@ function NoteRow({
  */
 export function NoteList({
   featureId,
+  ensureFeatureId,
   kind,
   notes,
 }: {
   featureId: string
+  ensureFeatureId?: () => Promise<string>
   kind: NoteKind
   notes: FeatureNotePublic[]
 }) {
@@ -153,9 +160,9 @@ export function NoteList({
   const [newNoteId, setNewNoteId] = useState<string | null>(null)
 
   const create = useMutation({
-    mutationFn: () =>
+    mutationFn: async () =>
       FeaturesService.createFeatureNote({
-        featureId,
+        featureId: ensureFeatureId ? await ensureFeatureId() : featureId,
         requestBody: {
           kind,
           title: NEW_TITLE[kind],
@@ -167,26 +174,45 @@ export function NoteList({
       }),
     onSuccess: (created) => setNewNoteId(created.id),
     onError: handleError.bind(showErrorToast),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["features"] })
-    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["features"] }),
   })
+  const creating = usePendingTask((_: undefined) => create.mutateAsync())
 
   return (
     <>
-      {notes.map((note) => (
-        <NoteRow key={note.id} note={note} isNew={note.id === newNoteId} />
-      ))}
+      <SortableEditorList
+        items={[...notes].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))}
+        saveOrder={(ids) =>
+          FeaturesService.reorderFeatureNotes({
+            featureId,
+            requestBody: { kind, note_ids: ids },
+          })
+        }
+        dragLabel={(note) => `Mover ${NOTE_KIND_SINGULAR[kind]} ${note.title}`}
+      >
+        {(note, handle) => (
+          <NoteRow
+            note={note}
+            isNew={note.id === newNoteId}
+            dragHandle={handle}
+          />
+        )}
+      </SortableEditorList>
       <Button
         type="button"
         variant="outline"
         size="sm"
-        onClick={() => create.mutate()}
-        disabled={create.isPending}
+        onClick={() => void creating.run(undefined)}
+        disabled={creating.pending}
       >
         <Plus className="mr-1 size-3.5" />
         Anadir {NOTE_KIND_SINGULAR[kind]}
       </Button>
+      <SaveStatus
+        error={creating.error}
+        saving={creating.pending}
+        retry={creating.retry}
+      />
     </>
   )
 }

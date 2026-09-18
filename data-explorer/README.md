@@ -36,7 +36,7 @@ out/
 │   └── evo-c13.html               ← la evolución de una cavidad entre muestreos
 ├── txt/
 │   ├── intern.01-c13-perfil.html  ← una página por nube de puntos
-│   └── obj-c13.html               ← los objetivos de retoque superpuestos
+│   └── obj-c13.html               ← los subconjuntos PUNTS_NOUS superpuestos
 ├── pdf/
 │   ├── intern.01-c13-PA_1.html    ← una página por gráfica de contorno
 │   ├── evo-c13.html               ← la evolución del contorno entre muestreos
@@ -92,7 +92,7 @@ falla con 0,99 de confianza). Esa parte **se quitó a propósito**: ver
 ```powershell
 & $py "$s\metrologia\ver_csv.py" --no-abrir           # no abrir el navegador
 & $py "$s\metrologia\ver_csv.py" --corregir-signo     # invierte el error de signo de B2/B4
-& $py "$s\metrologia\ver_txt.py" --familia nous       # solo los puntos objetivo
+& $py "$s\metrologia\ver_txt.py" --familia nous       # solo el subconjunto PUNTS_NOUS
 & $py "$s\metrologia\ver_txt.py" --muestreo 01 --cavidad c13
 & $py "$s\metrologia\ver_txt.py" --max-puntos 12000   # más detalle (y más peso)
 & $py "$s\metrologia\ver_csv.py" --raiz "D:\otra\ruta\4- Metrologia"
@@ -134,7 +134,7 @@ al final **dos carpetas de comparativas**. Tres tipos de página:
 Árbol de dos niveles: muestreo → cavidad → los 3 ficheros de esa cavidad (perfil, `PUNTS`,
 `PUNTS_NOUS`). Cada página trae la **nube 3D** (arrastra para rotar, color = altura Y) y la
 **vista en planta X-Z**, con las estadísticas reales (nº de puntos, bounding box, niveles de
-altura detectados). Al final, una carpeta con los **puntos objetivo de cada muestreo
+altura detectados). Al final, una carpeta con los **subconjuntos PUNTS_NOUS de cada muestreo
 superpuestos** por cavidad.
 
 ### `ver_pdf.py` — la tolerancia de contorno
@@ -191,7 +191,8 @@ visible y un hueco en la evolución. Una extracción incompleta nunca equivale a
 & $py -B -m unittest discover -s "$s\tests" -v
 ```
 
-Estos tests usan CSV sintéticos en memoria y páginas PDF simuladas. No recorren `Exemples`,
+Estos tests usan CSV sintéticos en memoria, páginas PDF simuladas y celdas XLS simuladas
+para los emparejamientos y previsiones del prototipo. No recorren `Exemples`,
 no abren archivos del cliente y no necesitan Docker ni una base de datos.
 
 ---
@@ -209,3 +210,27 @@ librería embebidos cada una.
 
 ⚠️ Eso implica que **las páginas necesitan estar junto a su carpeta `vendor/`**: si mueves un
 HTML suelto a otro sitio, se queda sin librería y no pinta nada. Mueve `out/` entera.
+
+## Prototipo independiente de correcciones (17/09/2026)
+
+`ver_correcciones.py` genera `out/correcciones-3212/index.html`, sin modificar `ver_todo.py`
+ni sus salidas. Lee CSV, previsiones de los XLS de retoques y texto/imágenes de PPTX.
+Incluye N161, N240, N170 y N165, selección de cavidad, agujero/altura en N170, evolución,
+secciones de N165 y perfiles A/B complementarios. Conserva enlaces y localizadores de origen.
+
+```powershell
+$py = "C:\Users\eduard.almar\AppData\Local\Programs\Python\Python311\python.exe"
+& $py -m pip install xlrd
+& $py data-explorer/ver_correcciones.py
+# Opcional: --no-abrir, --raiz <carpeta de la pieza>, --salida <carpeta de salida>
+```
+
+Dependencias: pandas, numpy, plotly, PyMuPDF y **xlrd**. Se leen valores guardados de XLS;
+no se ejecutan macros ni se recalculan hipótesis. Las correspondencias son explícitas para
+el 3212 y se validan; no es una ingesta genérica. Faltantes se muestran sin evaluar.
+Para mover la vista, conservar juntos `index.html`, `datos.json` y `assets/`. Los enlaces
+a originales siguen apuntando a la carpeta externa de esta máquina.
+
+La documentación antigua del visor TXT llamaba «objetivos» a PUNTS_NOUS. Esa interpretación
+está retirada: son los últimos 150 puntos de PUNTS. Los visores anteriores se conservan
+sin cambios de código por petición del usuario. [Hallazgos y límites](../docs/3212/revision-2026-09-17.md).

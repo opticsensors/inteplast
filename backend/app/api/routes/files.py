@@ -26,6 +26,7 @@ from app.file_sources import (
     stamp,
 )
 from app.models import (
+    FeatureAsset,
     FileAccessPublic,
     FilePreview,
     FilePreviewPublic,
@@ -72,10 +73,11 @@ def list_source(
     path: str = "",
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=200),
+    directories_only: bool = False,
 ) -> SourceListing:
     """Browse one directory in the configured source, without reading file bytes."""
     try:
-        return browse_source(path, skip, limit)
+        return browse_source(path, skip, limit, directories_only)
     except SourceError as error:
         raise HTTPException(status_code=error.status_code, detail=error.message)
     except OSError:
@@ -172,8 +174,14 @@ def relink_file(
             status_code=409,
             detail="Otra persona ha actualizado el vínculo. Recarga la ficha.",
         )
+    assets = session.exec(
+        select(FeatureAsset).where(FeatureAsset.file_id == file_id)
+    ).all()
     document.sqlmodel_update(reference_metadata(body))
     session.add(document)
+    for asset in assets:
+        asset.name = document.filename
+        session.add(asset)
     try:
         session.commit()
     except IntegrityError:

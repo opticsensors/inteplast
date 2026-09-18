@@ -49,26 +49,30 @@ The clear-selection icon sits next to the framing control and also restarts an o
 selection on the current CAD. See [CAD covers](../docs/portadas-cad.md) for limits and persistence.
 
 - The header is saved with **Guardar**. Background refreshes preserve fields being edited.
-- Notes and asset names save automatically after 700 ms. Only locally edited fields are written, and updates for each row run in order.
+- New features expose all sections immediately. The first note or piece creates the feature once, using **Nuevo feature** if its title is still empty. Opening/cancelling an empty form creates nothing; concurrent additions share creation and Save waits for them before opening the completed detail.
+- Notes, part codes/names and asset names save automatically after 700 ms. Only locally edited fields are written, and updates for each row run in order.
 - Folding a section keeps its editor and pending changes alive. Saving or navigating waits for pending row edits and uploads.
 - A failed save retains its draft and displays **Reintentar**. Leaving is blocked until the pending changes are saved or corrected. Reloading or closing the tab with pending changes shows the browser's unsaved-changes warning.
 - **Cancelar** discards header changes after pending notes and uploads have finished. Already saved notes and assets remain saved.
-- The part selector creates or selects parts; it does not edit existing part codes or names.
+- **Anadir pieza** searches existing folders under one shared source root (assumption pending INTEPLAST A12) and registered legacy parts. Selecting a folder reuses or registers the piece with its folder name and numeric code prefix, opening an editable card. The API deduplicates folders; no blank creation or filesystem writes. **Cambiar carpeta** lives in the secondary three-dot menu.
+- The catalog's trash icon directly deletes an unused part without confirmation, keeping the selector open. Used parts show their distinct feature count and cannot be deleted until unlinked everywhere. Catalog deletion remains restricted to administrators, is rechecked by the backend, and preserves folders and documents.
+- Parts share code, name and a source folder across features. Each feature chooses its own assets. Selecting a folder fills the default name from the folder; custom names are retained. File selection starts in that part's folder. The local adapter and relative folder paths are temporary; SharePoint/OneDrive access remains a future adapter.
+- A part's trash action removes its entire card and asset rows from this feature, retaining the reusable part, other features and original files. The file type menu changes only the type.
+- Drag the grip on a piece, file, warning or lesson to reorder it with live insertion feedback from `@dnd-kit/react`. Files stay within their piece and notes within their section. Keyboard dragging uses Space, arrows and Space; Escape cancels. Order is saved per feature and retained in read mode. Each list saves atomically; pending order changes are included in Save/navigation.
 
 ## Protected files
 
 The chain icon next to download selects an original from the configured read-only source.
-For local references, its dialog offers replacing this asset's file or updating the existing
-document's location/revision while retaining its UUID. The latter affects every feature using
-that document, as the dialog explains. Missing, changed and
-unavailable originals display recovery actions. See [external files](../docs/ficheros-externos.md)
-for setup and the real 3212 PDF/STEP verification. Graph is a future adapter.
+Selecting and confirming a file links it to the current asset only, including when replacing
+an existing link. There is no action selector or shared-document update option. The picker
+highlights the selected file without repeating its path or requesting a revision label.
+Graph remains a future adapter.
 
 The file viewer remains a dedicated page. The picker uses a dialog. Part sections retain their
 folding state in session storage, and navigation restores scroll by pathname.
 
-File rows display the human-readable asset name and size. Viewer headers omit internal
-filenames, paths and revision metadata. Available originals have no status footer; actionable
+Linked file rows and viewer headers display the real filename including its extension.
+The filename is read-only; selecting or uploading another file updates it automatically. Available originals have no status footer; actionable
 missing/changed/unavailable messages remain. Metadata is retained for linking and downloads.
 
 `PdfViewer.tsx` uses PDF.js with a locally bundled module worker, loaded only when opening a

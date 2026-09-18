@@ -1,7 +1,9 @@
 import uuid
+from collections.abc import Sequence
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
+from sqlmodel import col, select
 
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
@@ -10,6 +12,7 @@ from app.models import (
     Feature,
     FeatureAsset,
     FeatureAssetCreate,
+    FeatureAssetOrder,
     FeatureAssetPublic,
     FeatureAssetUpdate,
     FeatureCategory,
@@ -18,8 +21,10 @@ from app.models import (
     FeatureFilters,
     FeatureNote,
     FeatureNoteCreate,
+    FeatureNoteOrder,
     FeatureNotePublic,
     FeatureNoteUpdate,
+    FeaturePartOrder,
     FeaturePublic,
     FeaturesPublic,
     FeatureUpdate,
@@ -174,6 +179,62 @@ def delete_feature(
 # ---------------------------------------------------------------------------
 
 
+def save_positions(
+    session: SessionDep,
+    rows: Sequence[FeatureNote | FeatureAsset],
+    ids: list[uuid.UUID],
+) -> Message:
+    by_id = {row.id: row for row in rows}
+    if len(set(ids)) != len(ids) or set(ids) != set(by_id):
+        raise HTTPException(
+            status_code=409,
+            detail="La lista ha cambiado. Actualiza la ficha y reintenta.",
+        )
+    for position, row_id in enumerate(ids):
+        row = by_id[row_id]
+        row.position = position
+        session.add(row)
+    session.commit()
+    return Message(message="Order saved successfully")
+
+
+@router.put("/{feature_id}/notes/order", response_model=Message)
+def reorder_feature_notes(
+    session: SessionDep,
+    _current_user: CurrentUser,
+    feature_id: uuid.UUID,
+    body: FeatureNoteOrder,
+) -> Message:
+    get_feature_or_404(session, feature_id)
+    notes = session.exec(
+        select(FeatureNote)
+        .where(FeatureNote.feature_id == feature_id, FeatureNote.kind == body.kind)
+        .order_by(col(FeatureNote.id))
+        .with_for_update()
+    ).all()
+    return save_positions(session, notes, body.note_ids)
+
+
+@router.put("/{feature_id}/assets/order", response_model=Message)
+def reorder_feature_assets(
+    session: SessionDep,
+    _current_user: CurrentUser,
+    feature_id: uuid.UUID,
+    body: FeatureAssetOrder,
+) -> Message:
+    get_feature_or_404(session, feature_id)
+    assets = session.exec(
+        select(FeatureAsset)
+        .where(
+            FeatureAsset.feature_id == feature_id,
+            FeatureAsset.part_id == body.part_id,
+        )
+        .order_by(col(FeatureAsset.id))
+        .with_for_update()
+    ).all()
+    return save_positions(session, assets, body.asset_ids)
+
+
 @router.post("/{feature_id}/notes", response_model=FeatureNotePublic)
 def create_feature_note(
     *,
@@ -232,6 +293,46 @@ def delete_feature_note(
 # ---------------------------------------------------------------------------
 
 
+def ordered_part_ids(feature: Feature) -> list[str]:
+    parts = {part.id: part for part in feature.parts}
+    for asset in feature.assets:
+        if asset.part:
+            parts[asset.part.id] = asset.part
+    existing = {str(part_id) for part_id in parts}
+    order = [part_id for part_id in feature.part_order if part_id in existing]
+    order.extend(
+        str(part.id)
+        for part in sorted(parts.values(), key=lambda part: part.code)
+        if str(part.id) not in order
+    )
+    return order
+
+
+@router.put("/{feature_id}/parts/order", response_model=FeatureDetail)
+def reorder_feature_parts(
+    session: SessionDep,
+    _current_user: CurrentUser,
+    feature_id: uuid.UUID,
+    body: FeaturePartOrder,
+) -> Any:
+    feature = session.exec(
+        select(Feature).where(Feature.id == feature_id).with_for_update()
+    ).first()
+    if not feature:
+        raise HTTPException(status_code=404, detail="Feature not found")
+    order = [str(part_id) for part_id in body.part_ids]
+    if len(set(order)) != len(order) or set(order) != set(ordered_part_ids(feature)):
+        raise HTTPException(
+            status_code=409,
+            detail="Las piezas han cambiado. Actualiza la ficha y reintenta.",
+        )
+    feature.part_order = order
+    session.add(feature)
+    session.commit()
+    session.refresh(feature)
+    return FeatureDetail.model_validate(feature)
+
+
 @router.post("/{feature_id}/parts/{part_id}", response_model=FeatureDetail)
 def link_feature_part(
     session: SessionDep,
@@ -250,7 +351,11 @@ def link_feature_part(
     if not part:
         raise HTTPException(status_code=404, detail="Part not found")
     if part not in feature.parts:
+        order = ordered_part_ids(feature)
         feature.parts.append(part)
+        if str(part_id) not in order:
+            order.append(str(part_id))
+        feature.part_order = order
         session.add(feature)
         session.commit()
         session.refresh(feature)
@@ -265,8 +370,8 @@ def unlink_feature_part(
     part_id: uuid.UUID,
 ) -> Message:
     """
-    Quitar la declaracion. Los adjuntos de esa pieza no se tocan: si los hay, la
-    pieza sigue saliendo en la ficha porque tiene ficheros.
+    Quitar la tarjeta y sus adjuntos de este feature. La pieza compartida y
+    los documentos originales se conservan.
     """
     feature = get_feature_or_404(session, feature_id)
     part = session.get(Part, part_id)
@@ -274,8 +379,16 @@ def unlink_feature_part(
         raise HTTPException(status_code=404, detail="Part not found")
     if part in feature.parts:
         feature.parts.remove(part)
-        session.add(feature)
-        session.commit()
+    removed = [asset for asset in feature.assets if asset.part_id == part_id]
+    if feature.cover_3d and any(
+        str(asset.id) == feature.cover_3d.get("asset_id") for asset in removed
+    ):
+        feature.cover_3d = None
+    for asset in removed:
+        session.delete(asset)
+    feature.part_order = [item for item in feature.part_order if item != str(part_id)]
+    session.add(feature)
+    session.commit()
     return Message(message="Part unlinked successfully")
 
 
@@ -299,8 +412,11 @@ def create_feature_asset(
     get_feature_or_404(session, feature_id)
     if asset_in.part_id and not session.get(Part, asset_in.part_id):
         raise HTTPException(status_code=404, detail="Part not found")
-    if asset_in.file_id and not session.get(StoredFile, asset_in.file_id):
-        raise HTTPException(status_code=404, detail="File not found")
+    if asset_in.file_id:
+        document = session.get(StoredFile, asset_in.file_id)
+        if not document:
+            raise HTTPException(status_code=404, detail="File not found")
+        asset_in.name = document.filename
     asset = crud.create_feature_asset(
         session=session, asset_in=asset_in, feature_id=feature_id
     )
@@ -323,9 +439,14 @@ def update_feature_asset(
         raise HTTPException(status_code=404, detail="Asset not found")
     if asset_in.part_id and not session.get(Part, asset_in.part_id):
         raise HTTPException(status_code=404, detail="Part not found")
-    if asset_in.file_id and not session.get(StoredFile, asset_in.file_id):
-        raise HTTPException(status_code=404, detail="File not found")
-    asset.sqlmodel_update(asset_in.model_dump(exclude_unset=True))
+    changes = asset_in.model_dump(exclude_unset=True)
+    file_id = changes.get("file_id", asset.file_id)
+    if file_id:
+        document = session.get(StoredFile, file_id)
+        if not document:
+            raise HTTPException(status_code=404, detail="File not found")
+        changes["name"] = document.filename
+    asset.sqlmodel_update(changes)
     session.add(asset)
     session.commit()
     session.refresh(asset)

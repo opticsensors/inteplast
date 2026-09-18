@@ -52,7 +52,6 @@ import {
 import { FeatureCoverEditor } from "./FeatureCoverEditor"
 import { NoteList } from "./NoteList"
 import { PartAssetList } from "./PartAssetList"
-import { PartSelect } from "./PartSelect"
 import { featureQueryOptions } from "./queries"
 
 const NO_CATEGORY = "none"
@@ -75,7 +74,7 @@ const parseTags = (value: string) =>
 interface FeatureFormProps {
   /** null = crear uno nuevo. */
   featureId: string | null
-  /** Recien creado: la pagina lleva a su edicion para seguir rellenandolo. */
+  /** Alta terminada: abrir la ficha creada. */
   onCreated: (featureId: string) => void
   onSaved: () => void
   onCancel: () => void
@@ -84,10 +83,8 @@ interface FeatureFormProps {
 /**
  * Alta y edicion de un feature.
  *
- * Los datos basicos se guardan con el boton. Los warnings, lessons
- * learned y piezas ejemplo se guardan al vuelo en la propia ficha, y
- * necesitan que el feature exista para colgarse de el: por eso al crear uno
- * nuevo solo salen los datos basicos, y las secciones aparecen despues.
+ * Todas las secciones estan disponibles desde el alta. El primer contenido
+ * crea el feature automaticamente; abrir el formulario vacio no crea registros.
  */
 export function FeatureForm(props: FeatureFormProps) {
   const session = useNewEditingSession()
@@ -99,13 +96,17 @@ export function FeatureForm(props: FeatureFormProps) {
 }
 
 function FeatureFormContent({
-  featureId,
+  featureId: initialFeatureId,
   onCreated,
   onSaved,
   onCancel,
 }: FeatureFormProps) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  const [createdFeatureId, setCreatedFeatureId] = useState<string | null>(null)
+  const featureId = initialFeatureId ?? createdFeatureId
+  const featureIdRef = useRef(initialFeatureId)
+  const creation = useRef<Promise<string> | null>(null)
   const [image, setImage] = useState<FilePublic | null>(null)
   const [cover, setCover] = useState<FeatureCover3D | null>(null)
   const [imageDirty, setImageDirty] = useState(false)
@@ -136,6 +137,40 @@ function FeatureFormContent({
       tags: "",
     },
   })
+
+  // Notes and parts may be added concurrently: they share a single creation.
+  const ensureFeatureId = async (): Promise<string> => {
+    if (initialFeatureId) return initialFeatureId
+    if (featureIdRef.current) return featureIdRef.current
+    if (!creation.current) {
+      const values = form.getValues()
+      creation.current = FeaturesService.createFeature({
+        requestBody: {
+          name: values.name.trim() || "Nuevo feature",
+          description: values.description || null,
+          category:
+            values.category === NO_CATEGORY
+              ? null
+              : (values.category as FeatureCategory),
+          tags: parseTags(values.tags),
+          image_id: imageDraft.current.image?.id ?? null,
+        },
+      })
+        .then((created) => {
+          featureIdRef.current = created.id
+          queryClient.setQueryData(
+            featureQueryOptions(created.id).queryKey,
+            created,
+          )
+          setCreatedFeatureId(created.id)
+          return created.id
+        })
+        .finally(() => {
+          creation.current = null
+        })
+    }
+    return creation.current
+  }
 
   // Subscribe to dirtyFields so background refreshes retain edited fields.
   const { dirtyFields, isDirty } = form.formState
@@ -181,7 +216,9 @@ function FeatureFormContent({
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
       if (!(await session.flush()))
-        throw new Error("Hay cambios sin guardar en las notas o ficheros")
+        throw new Error(
+          "Hay cambios sin guardar en las notas, piezas o ficheros",
+        )
       const body = {
         name: data.name,
         description: data.description || null,
@@ -192,9 +229,10 @@ function FeatureFormContent({
         tags: parseTags(data.tags),
         image_id: imageDraft.current.image?.id ?? null,
       }
-      return featureId
+      const savedId = initialFeatureId ?? featureIdRef.current
+      return savedId
         ? FeaturesService.updateFeature({
-            featureId,
+            featureId: savedId,
             requestBody: {
               ...(dirtyFields.name ? { name: body.name } : {}),
               ...(dirtyFields.description
@@ -210,13 +248,13 @@ function FeatureFormContent({
                 : {}),
             },
           })
-        : FeaturesService.createFeature({ requestBody: body })
+        : { id: await ensureFeatureId() }
     },
     onSuccess: () => {
-      if (featureId) {
+      if (initialFeatureId) {
         showSuccessToast("Feature actualizado")
       } else {
-        showSuccessToast("Feature creado: ya puedes anadirle contenido")
+        showSuccessToast("Feature creado")
       }
     },
     onError: handleError.bind(showErrorToast),
@@ -233,7 +271,7 @@ function FeatureFormContent({
       setImageDirty(false)
       bypassNavigation.current = true
       if (proceed) proceed()
-      else if (featureId) onSaved()
+      else if (initialFeatureId) onSaved()
       else onCreated(saved.id)
     } catch {
       /* The editor and its failed drafts stay mounted for retry. */
@@ -251,15 +289,6 @@ function FeatureFormContent({
     onCancel()
   }
 
-  const linkPart = useMutation({
-    mutationFn: (partId: string) =>
-      FeaturesService.linkFeaturePart({ featureId: featureId ?? "", partId }),
-    onError: handleError.bind(showErrorToast),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["features"] })
-    },
-  })
-
   const notesOf = (kind: NoteKind) =>
     (feature?.notes ?? []).filter((note) => note.kind === kind)
 
@@ -271,7 +300,12 @@ function FeatureFormContent({
       title={kind === "warning" ? "Warnings" : "Lessons Learned"}
       icon={icon}
     >
-      <NoteList featureId={featureId ?? ""} kind={kind} notes={notesOf(kind)} />
+      <NoteList
+        featureId={featureId ?? ""}
+        ensureFeatureId={ensureFeatureId}
+        kind={kind}
+        notes={notesOf(kind)}
+      />
     </CollapsibleSection>
   )
 
@@ -423,42 +457,40 @@ function FeatureFormContent({
         </form>
       </Form>
 
-      {featureId && (
-        <div className="space-y-4">
-          {noteSection(
-            "warning",
-            <TriangleAlert className="size-4 text-amber-500" />,
-          )}
-          {noteSection(
-            "lesson",
-            <Lightbulb className="size-4 text-yellow-500" />,
-          )}
-          <div id="example-parts-editor" className="scroll-mt-20">
-            <CollapsibleSection
-              keepMounted
-              title="Piezas ejemplo"
-              icon={<Package2 className="size-4 text-muted-foreground" />}
-            >
-              {/* 🔑 El MISMO componente que la ficha, en modo edicion. Antes
+      <div className="space-y-4">
+        {noteSection(
+          "warning",
+          <TriangleAlert className="size-4 text-amber-500" />,
+        )}
+        {noteSection(
+          "lesson",
+          <Lightbulb className="size-4 text-yellow-500" />,
+        )}
+        <div id="example-parts-editor" className="scroll-mt-20">
+          <CollapsibleSection
+            keepMounted
+            title="Piezas ejemplo"
+            icon={<Package2 className="size-4 text-muted-foreground" />}
+          >
+            {/* 🔑 El MISMO componente que la ficha, en modo edicion. Antes
                   aqui se agrupaba por tipo y en la ficha por pieza: dos
                   idiomas distintos para lo mismo. */}
-              {feature && (
-                <PartAssetList
-                  feature={feature}
-                  editable
-                  footer={
-                    <PartSelect
-                      value={null}
-                      onChange={(partId) => partId && linkPart.mutate(partId)}
-                      placeholder="Anadir una pieza..."
-                    />
-                  }
-                />
-              )}
-            </CollapsibleSection>
-          </div>
+            <PartAssetList
+              feature={
+                feature ?? {
+                  id: featureId ?? "",
+                  name: "Nuevo feature",
+                  notes: [],
+                  assets: [],
+                  parts: [],
+                }
+              }
+              ensureFeatureId={ensureFeatureId}
+              editable
+            />
+          </CollapsibleSection>
         </div>
-      )}
+      </div>
       <Dialog
         open={blocker.status === "blocked"}
         onOpenChange={(open) => {

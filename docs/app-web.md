@@ -75,9 +75,9 @@ Decisiones que conviene conocer antes de tocarlo:
 | `Feature.owner_id` es **`ON DELETE SET NULL`** | La ficha es conocimiento compartido: sobrevive al borrado del usuario que la creó. (El `Item` de la plantilla, en cambio, es `CASCADE`) |
 | Las notas y los adjuntos son **`ON DELETE CASCADE`** | No tienen sentido sin su feature |
 | `FeatureAsset.file_id` y `part_id` son **`SET NULL`** | Borrar un fichero no borra la fila que lo describía; borrar una pieza no borra sus adjuntos, que caen a un desplegable *«Sin pieza»* al final de la lista |
-| `Part.code` es **UNIQUE** y el alta va por desplegable, no por texto libre | Es la clave con la que se agrupa todo. Escrito a mano acababa en dos piezas por cada pieza real |
+| `Part.code` es **UNIQUE**; las piezas existentes se pueden vincular sin duplicarlas | Es la clave con la que se agrupa todo. El alta desde carpeta extrae un código editable del nombre |
 | `FeaturePartLink` es una tabla de unión **sin campos propios** | Hoy solo dice *«este feature está en esta pieza»*. Cuando llegue la ingesta, aquí cuelgan los N-numbers y las tolerancias y pasa a ser `INSTANCIA_EN_PROYECTO` |
-| Borrar una pieza es **solo de superusuario** | Es compartida por todos los features; no tiene autor al que atribuirla |
+| Borrar una pieza es **solo de superusuario y si no tiene uso** | Se rechaza con `409` si quedan vínculos directos o adjuntos en algún feature; no se borran carpetas ni documentos |
 
 ### Ficheros subidos y originales externos
 
@@ -148,12 +148,16 @@ Todo bajo `/api/v1`. Documentación interactiva en `http://localhost:8000/docs`.
 | `PUT` `DELETE` | `/features/{id}` | Editar / borrar |
 | `POST` | `/features/{id}/notes` | Añadir warning o lesson learned |
 | `PUT` `DELETE` | `/features/notes/{id}` | Editar / borrar una nota |
-| `POST` `DELETE` | `/features/{id}/parts/{part_id}` | Declarar / quitar una pieza sin ficheros |
+| `POST` `DELETE` | `/features/{id}/parts/{part_id}` | Vincular una pieza / quitar su tarjeta y adjuntos del feature |
+| `PUT` | `/features/{id}/parts/order` | Guardar el orden de tarjetas de ese feature |
+| `PUT` | `/features/{id}/notes/order` | Ordenar advertencias o lecciones en una sola operación (`kind`, `note_ids`) |
+| `PUT` | `/features/{id}/assets/order` | Ordenar los ficheros de una pieza (`part_id`, `asset_ids`) |
 | `POST` | `/features/{id}/assets` | Adjuntar el fichero de una pieza |
 | `PUT` `DELETE` | `/features/assets/{id}` | Editar / quitar un adjunto |
-| `GET` `POST` | `/parts/` | Listar y dar de alta piezas |
+| `POST` | `/parts/from-folder` | Registrar o reutilizar una carpeta de pieza existente, sin duplicados |
+| `GET` `POST` | `/parts/` | Listar (incluye `feature_count` por pieza) y dar de alta piezas |
 | `PUT` | `/parts/{id}` | Editar código o nombre. El código es único: choque → `409` |
-| `DELETE` | `/parts/{id}` | Borrar una pieza. **Solo superusuario** |
+| `DELETE` | `/parts/{id}` | Borrar una pieza sin uso. **Solo superusuario**; usada → `409` |
 | `POST` | `/files/` | Subir un fichero (multipart) → devuelve el `id` que se referencia |
 | `GET` | `/files/source` | Listar una carpeta del origen configurado; `path`, `skip`, `limit` |
 | `POST` | `/files/reference` | Registrar/reutilizar un original local sin copiarlo |
@@ -181,7 +185,7 @@ el administrador. Las rutas privadas para crear usuarios de prueba requieren
 - **Borrar un feature**: solo el autor o un superusuario.
 - **Borrar notas, adjuntos y ficheros**: cualquier usuario autenticado, conforme al modelo
   colaborativo. También son acciones permanentes; quitar un adjunto no borra sus bytes.
-- **Borrar piezas**: solo superusuario.
+- **Borrar piezas**: solo superusuario y después de desvincularlas de todos los features.
 - **Gestión de usuarios**: superusuario, como en la plantilla.
 
 ---
@@ -194,7 +198,7 @@ el administrador. Las rutas privadas para crear usuarios de prueba requieren
 | `/features/{id}` | `routes/_layout/features_.$featureId.tsx` | 🔑 **La ficha del feature**: cabecera con la imagen a la izquierda e identidad a la derecha (nombre, descripción, categoría, tags, piezas), y debajo a todo el ancho warnings, lessons y los ficheros por pieza. **Se edita aquí mismo** (ver abajo) |
 | `/features` | `routes/_layout/features.tsx` | **Catálogo e inicio**: buscador, filtros y tarjetas que abren la ficha en lectura, con *Nuevo feature* y *Editar* directamente accesibles. La búsqueda va en la URL (`/features?q=3212`) |
 | `/features/{id}/fichero/{assetId}` | `routes/_layout/features_.$featureId_.fichero.$assetId.tsx` | 🔑 **La página de un fichero**: el visor (PDF, imagen o 3D), el botón de descargar y, cuando no hay visor posible, qué programa hace falta |
-| `/features/nuevo` | `routes/_layout/features_.nuevo.tsx` | **Alta**. Al guardar los datos básicos salta a la ficha en modo edición, que es donde se le cuelgan notas y ficheros |
+| `/features/nuevo` | `routes/_layout/features_.nuevo.tsx` | **Alta completa** con todas las secciones desde el principio. Añadir contenido crea el feature automáticamente; Guardar termina en su ficha de consulta |
 | `/admin` | `routes/_layout/admin.tsx` | Usuarios y permisos; punto de alta de cuentas con el registro público cerrado |
 
 Componentes en `components/Features/`:
@@ -209,13 +213,15 @@ Componentes en `components/Features/`:
 | `modelControls.ts` | Giro libre en pantalla, desplazamiento y zoom 3D, sin bloqueo en los polos ni inercia al soltar |
 | `PdfViewer.tsx` | PDF.js en canvas: rueda sobre el cursor, arrastre del plano, encuadre y cambio de página |
 | `parts.ts` | La unión *piezas declaradas + piezas con ficheros* y el reparto por pieza y tipo. Es la lógica de la lista |
-| `PartSelect.tsx` | Desplegable de piezas con alta al vuelo (código + nombre) |
+| `PartActions.tsx` | Buscador de carpetas existentes y piezas registradas; seleccionar registra o reutiliza la pieza |
+| `PartIdentityEditor.tsx` | Código y nombre editables en la cabecera de la pieza, con autoguardado y recuperación de errores |
+| `PartFolderPicker.tsx` | Carpeta compartida de la pieza; reutiliza el explorador de originales |
 | `FeatureForm.tsx` | El formulario de alta y edición (datos básicos + warnings, lessons, **Piezas** y **Ficheros por pieza**). Lo montan `/features/nuevo` y la propia ficha en modo edición. 🔑 **Repite el reparto de la ficha** —foto a la izquierda, datos a la derecha, secciones debajo— con una casilla en el sitio de cada dato, para que entrar y salir de edición no mueva nada de sitio |
 | `FeatureNotFound.tsx` | La pantalla de «feature no encontrado» de la ficha |
 | `FeatureActions.tsx` | El botón *Editar* compartido por las tarjetas y la ficha; *Eliminar* vive en la ficha, con confirmación y solo para autor o superusuario |
 | `NoteList.tsx` | Warnings y lessons **en modo edición**: título editable en su sitio, desplegable con el cuerpo dentro y autoguardado |
 | `AssetEditRow.tsx` | Fila **en edición**: tipo/pieza, nombre, subida y vínculo a un archivo existente |
-| `SourceFilePicker.tsx` | Diálogo de selección de originales; vincular o volver a vincular con revisión opcional |
+| `SourceFilePicker.tsx` | Selector de originales: elegir un archivo y vincularlo a esta tarjeta, sin opciones adicionales |
 | `DocumentStatus.tsx` | Estado del original y aviso de archivo ausente/cambiado/inaccesible |
 | `constants.ts` | Las etiquetas en castellano de categorías y tipos, y el icono de cada tipo |
 | `queries.ts` | Las query keys. Todo cuelga de `["features"]`: invalidar esa raíz refresca todo |
@@ -234,6 +240,35 @@ fichero**.
 **El checklist de lo que falta no se pierde**: lo dan el contador de cada pieza
 (*«5 ficheros · 2 vinculados»*) y las filas que dicen *«sin archivo vinculado»*.
 
+**Añadir pieza** busca entre las subcarpetas directas de una carpeta principal común
+(supuesto pendiente de confirmar con INTEPLAST, pregunta A12). Al seleccionar una carpeta,
+`POST /parts/from-folder` reutiliza la pieza asociada o la registra y abre su tarjeta: nombre
+completo de carpeta y código numérico inicial, ambos editables. Sin prefijo numérico se asigna
+un código provisional estable `PIEZA-…`. No se crean carpetas originales. Una pieza antigua
+sin carpeta con el mismo código se reutiliza conservando su nombre; un código ya asociado a
+otra carpeta produce conflicto. Código y carpeta son únicos, incluso ante altas simultáneas.
+
+Código, nombre y carpeta se comparten entre features; cada feature elige sus propios ficheros.
+El selector de ficheros empieza en la carpeta de la pieza. **Cambiar carpeta** está en el menú
+de tres puntos y conserva los nombres personalizados. `folder_path` pertenece al adaptador
+local temporal; Graph sustituirá esa referencia por la identidad estable del origen.
+
+Las piezas antiguas sin correspondencia en el origen siguen disponibles en el buscador.
+La papelera elimina directamente del catálogo las piezas sin uso, sin confirmación;
+las utilizadas muestran «Usada en X features» y tienen la papelera desactivada. Se mantiene
+el permiso de superusuario. La API cuenta vínculos directos y adjuntos de cada feature una
+sola vez. Borrar el registro conserva los originales: si su carpeta sigue en el origen,
+continúa disponible para registrarla de nuevo. Las carpetas aún no registradas no muestran papelera.
+
+Las tarjetas se reordenan con el tirador y `@dnd-kit/react`, con desplazamiento animado durante
+el arrastre. Space/flechas/Space permiten ordenar con teclado y Escape cancela. `Feature.part_order`
+guarda el orden de piezas por feature, también usado en consulta. El mismo arrastre se aplica a
+los ficheros dentro de cada pieza, las advertencias y las lecciones, guardando `position` en una
+sola operación por lista. El orden de ficheros se conserva entre tipos distintos. Las listas no
+intercambian elementos al arrastrar. La papelera retira la tarjeta y sus filas
+de adjuntos en una transacción; conserva la pieza compartida, los otros features y los originales.
+El desplegable de tipo de fichero contiene únicamente tipos.
+
 🔑 **Cada fila promete lo que va a pasar antes de que la cliques**, que es lo que la tabla no hacía
 (los iconos no se podían clicar y nadie sabía por qué):
 
@@ -246,7 +281,7 @@ fichero**.
 La fila no repite el nombre original del archivo ni «Archivo vinculado». La cabecera del visor
 también omite tipo, nombre interno, ruta y revisión técnica. Esos metadatos siguen en la BD.
 Solo se muestran avisos de disponibilidad cuando requieren una acción. Si falta el original
-o ha cambiado, **Volver a vincular** permite corregir la ubicación/revisión. El selector es un
+o ha cambiado, **Volver a vincular** permite corregir la ubicación, conservando la revisión guardada. El selector es un
 diálogo; los visores siguen en su página. Al volver se conserva el desplegado por pieza en la
 sesión del navegador y se restaura el scroll de la ruta.
 
@@ -404,17 +439,17 @@ guardados pendientes. La cabecera se sigue guardando mediante su botón.
 
 ### Tres cosas del frontend que hay que saber
 
-1. **Al crear un feature, `/features/nuevo` salta a su ficha en modo edición.** Los warnings,
-   lessons y adjuntos necesitan que el feature exista para colgarse de él, así que el alta solo
-   pide los datos básicos y al guardar te deja en la ficha ya editable, con esas secciones. Los
-   datos básicos se guardan con el botón; las notas y los adjuntos **se guardan solos según se
-   escriben**.
+1. **El alta muestra cabecera, warnings, lessons y piezas desde el primer momento.** Abrir o
+   cancelar el formulario vacío no crea registros. La primera nota o pieza crea automáticamente
+   el feature con los datos actuales y nombre provisional «Nuevo feature» si falta título. Las
+   altas simultáneas comparten esa misma creación. Las notas, piezas y adjuntos se guardan al
+   vuelo; Guardar espera las operaciones pendientes y termina en la ficha de consulta.
 
 2. 🔴 **Radix `Select` dentro de un `<form>` dispara `onValueChange("")` él solo** mientras su
    lista no se haya abierto. En el formulario del feature eso **borraba la categoría**: el
    desplegable enseñaba *Sin categoría* aunque el feature fuera `hole`, y al guardar el `PUT`
    salía con `category: ""` → **422 «Something went wrong!»**. Venía de la modal original, no del
-   cambio a páginas. El corte está en `FeatureForm.tsx` y en `PartSelect.tsx`:
+   cambio a páginas. El corte está en `FeatureForm.tsx`:
 
    ```tsx
    onValueChange={(next) => next && field.onChange(next)}
@@ -519,9 +554,21 @@ La cobertura HTML se genera dentro del stack de tests y desaparece al limpiarlo.
 |---|---|
 | **La página `/items` de la plantilla sigue existiendo** | Se ha quitado del menú pero el `Item` de demo sigue en el backend, el frontend y los tests. No molesta; se puede borrar entero cuando se decida |
 | **Sin paginación en la UI** | La API ya la tiene (`skip`/`limit`); el catálogo pide hasta 100 fichas. Con más fichas hay que añadir controles |
-| **Ordenar warnings y adjuntos arrastrando** | El campo `position` ya está en la BD y se respeta al leer, pero la UI todavía no deja reordenar |
 | **Imagen con la zona marcada en rojo** | Implementada la [portada CAD](portadas-cad.md): caras del STEP, captura, cámara y 3D interactivo. El marcado libre sobre imágenes/planos sigue pendiente |
 | **Vincular un feature con sus N-numbers y sus cotas** | La tabla ya existe (`FeaturePartLink`), pero está vacía de contenido: solo dice *feature ↔ pieza*. Añadirle los N-numbers y las tolerancias la convierte en el `INSTANCIA_EN_PROYECTO` de [modelo-datos.md](modelo-datos.md) |
 | **Vistas ligeras de escaneo y molde** | Implementadas: cola persistente, GLB en caché, original intacto y descarga íntegra; ver [vistas-3d.md](vistas-3d.md) |
 | **Conexión Microsoft 365** | Adaptador local implementado. Confirmar ubicación/permisos con IT (A10, prioridad 1) y desarrollar Graph con IDs estables; los visores usan el UUID interno del documento |
-| **La ficha de una pieza** | Hoy `Part` solo tiene código y nombre; el desplegable permite crear y seleccionar, no editar piezas existentes. La API sí permite editarlas. No hay página propia de pieza |
+| **La ficha de una pieza** | Hoy `Part` solo tiene código y nombre; se crean, vinculan y editan desde el feature. No hay página propia de pieza |
+
+### Nombre real del fichero en las tarjetas (2026-09-17)
+
+Una tarjeta con fichero vinculado muestra siempre `StoredFile.filename`, incluida la extensión,
+tanto al editar como al consultar o abrir el visor. Su nombre deja de ser una etiqueta editable.
+Las filas sin archivo conservan el nombre provisional hasta vincular o subir uno. La API impone
+el nombre real al crear o actualizar el adjunto; la migración `f170a3c9de85` corrige las etiquetas
+antiguas de los documentos ya vinculados, sin modificar sus originales ni sus identidades.
+
+El selector tiene una sola acción: vincular el archivo elegido a esta tarjeta. Cambiar el archivo
+de una tarjeta no cambia el documento de otros features. Se han retirado el texto introductorio
+y las opciones de reemplazar/actualizar el documento compartido. La API de actualización explícita
+de referencias sigue disponible para integraciones, y mantiene sincronizados los nombres.

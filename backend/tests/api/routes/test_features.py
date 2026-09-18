@@ -275,6 +275,7 @@ def test_upload_and_read_file(
         files={"file": ("bolt-eye.txt", b"contenido", "text/plain")},
     )
     assert response.status_code == 200
+
     stored = response.json()
     assert stored["filename"] == "bolt-eye.txt"
     assert stored["size"] == len(b"contenido")
@@ -295,3 +296,47 @@ def test_upload_and_read_file(
         f"{settings.API_V1_STR}/files/{stored['id']}", headers=superuser_token_headers
     )
     assert response.status_code == 200
+
+
+def test_linked_asset_uses_filename_on_create_edit_and_replacement(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    headers = superuser_token_headers
+    base = settings.API_V1_STR
+    features = [create_random_feature(db), create_random_feature(db)]
+    filenames = [f"{uuid.uuid4()}_real file.step", f"{uuid.uuid4()}_new file.stp"]
+    documents = [
+        client.post(
+            f"{base}/files/",
+            headers=headers,
+            files={"file": (name, b"synthetic", "model/step")},
+        ).json()
+        for name in filenames
+    ]
+    assets = []
+    for feature in features:
+        response = client.post(
+            f"{base}/features/{feature.id}/assets",
+            headers=headers,
+            json={"kind": "part", "name": "Old alias", "file_id": documents[0]["id"]},
+        )
+        assert response.status_code == 200
+        assert response.json()["name"] == filenames[0]
+        assets.append(response.json())
+    url = f"{base}/features/assets/{assets[0]['id']}"
+    renamed = client.put(url, headers=headers, json={"name": "Outdated name"})
+    assert renamed.json()["name"] == filenames[0]
+    replaced = client.put(url, headers=headers, json={"file_id": documents[1]["id"]})
+    assert replaced.status_code == 200
+    assert replaced.json()["name"] == filenames[1]
+    saved = [
+        client.get(f"{base}/features/{feature.id}", headers=headers).json()
+        for feature in features
+    ]
+    assert saved[0]["assets"][0]["file"]["id"] == documents[1]["id"]
+    assert saved[1]["assets"][0]["file"]["id"] == documents[0]["id"]
+    assert saved[1]["assets"][0]["name"] == filenames[0]
+    found = client.get(
+        f"{base}/features/", headers=headers, params={"q": filenames[1]}
+    ).json()
+    assert str(features[0].id) in [item["id"] for item in found["data"]]

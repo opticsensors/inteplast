@@ -100,7 +100,7 @@ Plantilla corporativa de 1999 (`Title: PPAP`, `Subject: aCCORDING TO QS9000 /TS`
 | **`DR(3D)`** | 🔑 tabla de cotas 3D | `.01`, `.03`, `.05` |
 | **`DR`** | Igual, pero **fusionada con las filas informativas** de `DR(100%)` | `.08`, `.09` |
 | `DR(N165)` | Desglose punto a punto de N165 (espesores locales) | `.01`, `.03` |
-| `DR(100%)` | Requisitos informativos del plano (notas, normas, acabados) → OK/NOK | `.01`–`.06` |
+| `DR(100%)` | Requisitos, medidas CMM y con otros equipos, ensayos y OK/NOK; en libros de retoques también previsiones | `.01`–`.06` |
 | `DR(SKETCH)`, `DR_SKETCH(2)`, `DR_SKETCH(3)` | Croquis anotados | varía |
 | `Comparation KnO x VdB` | Comparativa entre dos plantas/laboratorios | solo `.07` |
 
@@ -187,7 +187,7 @@ en el `.07`, `Sizes Nr.128/134/162 GN evolvation` en el `.09`.
 | L | **NOK** (`X` si fuera de tolerancia) | `X` |
 | M | Comentarios | `H= -1.5`, `H= 5`, `PUNTS LOCALS`, `A`, `B` |
 
-### 🔴 El XLS **no** es la fuente de verdad
+### Discrepancias entre medidas XLS y CSV
 
 Dos problemas verificados:
 
@@ -205,8 +205,9 @@ Dos problemas verificados:
    CSV** — que traen las 211 filas en todos los muestreos
    ([§3](#-los-csv-son-idénticos-en-estructura-entre-los-4-muestreos)).
 
-→ **Usar los CSV para las medidas y el XLS solo para metadatos** (fecha, lote, responsable,
-motivo, PPAP ref) y la marca `NOK` consolidada. Y para los metadatos, **`HISTORY` antes que la
+→ **Priorizar CSV para las medidas CMM coincidentes**. Los XLS aportan metadatos, medidas de
+otros equipos y ensayos; los de retoques, previsiones en `DR(100%)`. No descartar esas hojas
+ni tratar sus previsiones como medidas. Ver [revisión 17/09/2026](revision-2026-09-17.md). Y para los metadatos, **`HISTORY` antes que la
 cabecera**: está completa y no tiene fórmulas rotas.
 
 ### Cómo abrirlo
@@ -243,7 +244,7 @@ support intern.01/
 │   ├── 3212_c13.csv          18 KB   ← 🔑 INFORME DE MEDICIÓN DE LA CAVIDAD
 │   ├── 3212_Cav13.txt       600 KB   ← pieza entera escaneada (17.656 pts)
 │   ├── 3212_PUNTS.txt       436 KB   ← solo el perfil interior (12.828 pts)
-│   ├── 3212_PUNTS_NOUS.txt    5 KB   ← 150 puntos OBJETIVO (6 contornos x 25)
+│   ├── 3212_PUNTS_NOUS.txt    5 KB   ← últimos 150 puntos de PUNTS (6 grupos x 25)
 │   ├── 3212_CONTORN.igs     3,3 MB   ← 🔁 duplicado de 3212_PUNTS.txt
 │   ├── Perfil_3212_C_c13.dxf 1,5 MB  ← 🔁 duplicado de 3212_Cav13.txt
 │   └── PA_1..6.pdf, PB_1..6.pdf      ← 12 gráficas de desviación de contorno
@@ -367,15 +368,15 @@ Medido el 2026-08-13 sobre `support intern.01/c13/`:
 |---|:--:|--:|---|---|
 | **Perfil de cavidad**<br>`3212_Cav13.txt`, `3212_C13_.txt`, `3212_Cav_.txt`, `13_3212_Cav_.txt` | 16 | **17.656** | X[−33,2; 33,2]<br>Y[0; 49,2]<br>Z[−33,2; 59,9] | **La pieza entera escaneada** |
 | **`3212_PUNTS.txt`** | 12 | **12.828** | X[−17,8; 16,9]<br>**Y[12,0; 28,0]**<br>Z[−17,0; 16,6] | **Solo el perfil interior** — la zona que se controla contra tolerancia de contorno |
-| **`3212_PUNTS_NOUS.txt`** | 12 | **150** | X[−16,6; 16,6]<br>**Y[12,0; 16,7]**<br>Z[−16,6; 16,6] | 🔑 **6 contornos × 25 puntos** = los puntos **objetivo** que se le pasan al proveedor del molde (respuesta al Dubte 5) |
+| **`3212_PUNTS_NOUS.txt`** | 12 | **150** | X[−16,6; 16,6]<br>**Y[12,0; 16,7]**<br>Z[−16,6; 16,6] | **6 grupos × 25 puntos**, idénticos a los últimos 150 de PUNTS; uso como objetivo no demostrado |
 
-🆕 **Los `PUNTS_NOUS` son 150 puntos repartidos en 6 alturas**, no una nube suelta: en
-`intern.01/c13` están en Y ≈ 16,7 · 16,0 · 14,9 · 13,9 · 12,9 · 12,0, con 25 puntos cada una
-(≈ uno cada 14,4°). En `intern.05/c13` las alturas cambian: 16,6 · 15,9 · 14,8 · 13,8 · 12,8 · 12,0.
-
-🔴 **Los 12 `PUNTS_NOUS.txt` son TODOS DISTINTOS** — 12 hashes MD5 distintos, aunque pesen los
-mismos 5.100 B (es el ancho fijo: 150 × 34 B). **Hay un objetivo por cavidad y por muestreo**,
-no un fichero de referencia replicado. Son **dato ingerible, no un adjunto**.
+**Reverificado el 17/09/2026:** en los doce pares se cumple exactamente, también en orden,
+`PUNTS_NOUS == PUNTS[-150:]`. Son seis grupos de 25 puntos con pequeñas variaciones de Y
+dentro del grupo. Los doce archivos son distintos, pero eso no demuestra que sean objetivos
+de mecanizado. La respuesta al Dubte 5 habla de una nube hecha con la CMM y no identifica
+ese archivo ni una transformación correctiva. Mantenerlo como soporte del muestreo/cavidad;
+su vínculo con una acción y su finalidad exacta siguen pendientes. No crear `PUNTOS_OBJETIVO`.
+Ver [evidencia completa](revision-2026-09-17.md#3-punts_nous-es-un-subconjunto-de-punts).
 
 ### 🔴 El `.igs` y el `.dxf` son **duplicados** de los `.txt`
 
@@ -479,10 +480,11 @@ Eye, y en un dato que el CSV no contiene.
 | Fuente | Nº | Destino | Prioridad |
 |---|--:|---|:--:|
 | **CSV por cavidad** | 16 | `MEDICION` (n_number, tipo, nominal, tol, valor, desviación, NOK, cavidad, altura_H, id_elemento_cmm) — **3.376 filas** | **1** |
-| **`PUNTS_NOUS.txt`** | 12 | 🆕 **Dato, no adjunto**: 150 puntos objetivo × cavidad × muestreo = la evidencia cuantitativa de la acción correctiva | **2** |
+| **`PUNTS_NOUS.txt`** | 12 | Soporte geométrico: subconjunto de PUNTS; no evidencia de objetivo ni acción ejecutada | 6 |
 | **PDF `PA`/`PB`** | 144 | `MEDICION_CONTORNO`: **144 registros**, cada uno con límites, dos desviaciones y dos infracciones; media y metadatos disponibles. Extracción incompleta = estado desconocido | **3** |
 | XLS: `HISTORY` | 9 | 🆕 `MUESTREO` (fecha, lote, responsable, **motivo**). **Con `intern.09` solo ya salen los 9** | **4** |
-| XLS: cabecera + columna NOK | 9 | `MUESTREO` (ppap_ref, plano, revisión) + validación cruzada del semáforo | 5 |
+| XLS: cabecera, requisitos, medidas de otros equipos y ensayos | 9 | Contexto y datos no presentes en CSV; revisar bloques heredados | 5 |
+| XLS de retoques `DR(100%)` | 2 principales | Previsiones por cavidad y efectos encadenados (ver carpeta 5) | **1** |
 | `.txt` de perfil y `PUNTS` | 28 | Ficheros adjuntos a `MEDICION` / materia prima de geometría | 6 |
 | ~~`totes.csv`~~ | 3 | ❌ **No ingerir**: subconjunto pobre del CSV de cavidad (sin desviación, sin NOK, sin semáforo) | — |
 | ~~`.igs`~~ | 12 | ❌ **No ingerir**: 🆕 = `PUNTS.txt` con offset en Z. Solo descarga | — |
@@ -568,7 +570,8 @@ del plano en `3212_Cav13.txt`:
 | N266 | 67,10 | 40 |
 
 **N161, N162 y N163 están evaluados en el CSV y no tienen ni un punto en la nube.**
-→ **El CSV no se puede regenerar desde el TXT.** Hay que ingerir los dos.
+→ **No se puede regenerar íntegramente el CSV con estos TXT.** Priorizar resultados tabulares
+y conservar las nubes como soporte; su visor no es obligatorio en la vista principal.
 
 📌 **Cómo se generan.** La medición es **automática**: los PDF llevan la firma
 `GEOPAK MMC modo repetición in MCOSMOS-3 v4.3` — el programa de pieza se ejecuta en modo
@@ -595,3 +598,14 @@ misma pieza** — el diámetro más estrecho y el más ancho del mismo agujero, 
 si ha salido ovalado. Lo mismo con los 60 `POINT n`: 60 secciones de la misma pieza.
 
 Una fila de CSV ≈ una fila de `MEDICION`. Ver [modelo-datos.md](../modelo-datos.md).
+
+## Revisión del 17/09/2026 y presentación
+
+Las 211 filas se reparten en 120 POINT, 2 GLOBAL, 73 bajo cabeceras N y 16 POSICIONS.
+POINT y GLOBAL pertenecen a N165; no excluirlos por no empezar con N ni contar cada fila
+como una característica independiente. Conservar mínimo y máximo (N170 mejora parcialmente),
+subelemento, altura y cavidad. Las X-Z son diagnóstico, no sustituyen la tolerancia de posición.
+
+Se reextrajeron los 144 PDF PA/PB: ninguno incompleto y todos con alguna infracción.
+Fechas impresas: 19/01/2024, 12/03/2024 y 29/04/2024, distintas de la emisión XLS.
+No equiparar los perfiles A/B a los datums. Ver [revisión y prototipo](revision-2026-09-17.md).

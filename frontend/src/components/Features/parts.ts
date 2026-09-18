@@ -7,6 +7,10 @@ import type {
 
 import { ASSET_KINDS } from "./constants"
 
+/** A linked document's real filename takes precedence over legacy card labels. */
+export const assetName = (asset: FeatureAssetPublic) =>
+  asset.file?.filename ?? asset.name
+
 /** Una fila de la matriz: la pieza y sus ficheros repartidos por tipo. */
 export interface PartRow {
   /** null = adjuntos que se quedaron sin pieza (se borro la pieza). */
@@ -30,7 +34,14 @@ export function featureParts(feature: FeaturePublic): PartPublic[] {
   for (const asset of feature.assets ?? []) {
     if (asset.part) byId.set(asset.part.id, asset.part)
   }
-  return [...byId.values()].sort(byCode)
+  const order = new Map(
+    (feature.part_order ?? []).map((id, index) => [id, index]),
+  )
+  return [...byId.values()].sort(
+    (a, b) =>
+      (order.get(a.id) ?? Infinity) - (order.get(b.id) ?? Infinity) ||
+      byCode(a, b),
+  )
 }
 
 const emptyAssets = (): Record<AssetKind, FeatureAssetPublic[]> => {

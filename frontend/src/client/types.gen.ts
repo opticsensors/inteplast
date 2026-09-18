@@ -46,6 +46,11 @@ export type FeatureAssetCreate = {
     file_id?: (string | null);
 };
 
+export type FeatureAssetOrder = {
+    part_id?: (string | null);
+    asset_ids: Array<(string)>;
+};
+
 export type FeatureAssetPublic = {
     kind: AssetKind;
     name: string;
@@ -100,6 +105,7 @@ export type FeatureDetail = {
     owner_id?: (string | null);
     image?: (FilePublic | null);
     cover_3d?: (FeatureCover3D | null);
+    part_order?: Array<(string)>;
     assets?: Array<FeatureAssetPublic>;
     parts?: Array<PartPublic>;
     notes?: Array<FeatureNotePublic>;
@@ -116,6 +122,11 @@ export type FeatureNoteCreate = {
     title: string;
     body?: (string | null);
     position?: number;
+};
+
+export type FeatureNoteOrder = {
+    kind: NoteKind;
+    note_ids: Array<(string)>;
 };
 
 export type FeatureNotePublic = {
@@ -135,6 +146,10 @@ export type FeatureNoteUpdate = {
     position?: number;
 };
 
+export type FeaturePartOrder = {
+    part_ids: Array<(string)>;
+};
+
 export type FeaturePublic = {
     name: string;
     description?: (string | null);
@@ -145,6 +160,7 @@ export type FeaturePublic = {
     owner_id?: (string | null);
     image?: (FilePublic | null);
     cover_3d?: (FeatureCover3D | null);
+    part_order?: Array<(string)>;
     assets?: Array<FeatureAssetPublic>;
     parts?: Array<PartPublic>;
 };
@@ -238,26 +254,42 @@ export type NewPassword = {
 
 export type NoteKind = 'warning' | 'lesson';
 
+export type PartCatalogPublic = {
+    code: string;
+    name?: (string | null);
+    folder_path?: (string | null);
+    id: string;
+    created_at?: (string | null);
+    feature_count: number;
+};
+
 export type PartCreate = {
     code: string;
     name?: (string | null);
+    folder_path?: (string | null);
+};
+
+export type PartFromFolder = {
+    folder_path: string;
 };
 
 export type PartPublic = {
     code: string;
     name?: (string | null);
+    folder_path?: (string | null);
     id: string;
     created_at?: (string | null);
 };
 
 export type PartsPublic = {
-    data: Array<PartPublic>;
+    data: Array<PartCatalogPublic>;
     count: number;
 };
 
 export type PartUpdate = {
     code?: string;
     name?: (string | null);
+    folder_path?: (string | null);
 };
 
 export type PrivateUserCreate = {
@@ -387,6 +419,20 @@ export type FeaturesDeleteFeatureData = {
 
 export type FeaturesDeleteFeatureResponse = (Message);
 
+export type FeaturesReorderFeatureNotesData = {
+    featureId: string;
+    requestBody: FeatureNoteOrder;
+};
+
+export type FeaturesReorderFeatureNotesResponse = (Message);
+
+export type FeaturesReorderFeatureAssetsData = {
+    featureId: string;
+    requestBody: FeatureAssetOrder;
+};
+
+export type FeaturesReorderFeatureAssetsResponse = (Message);
+
 export type FeaturesCreateFeatureNoteData = {
     featureId: string;
     requestBody: FeatureNoteCreate;
@@ -406,6 +452,13 @@ export type FeaturesDeleteFeatureNoteData = {
 };
 
 export type FeaturesDeleteFeatureNoteResponse = (Message);
+
+export type FeaturesReorderFeaturePartsData = {
+    featureId: string;
+    requestBody: FeaturePartOrder;
+};
+
+export type FeaturesReorderFeaturePartsResponse = (FeatureDetail);
 
 export type FeaturesLinkFeaturePartData = {
     featureId: string;
@@ -442,6 +495,7 @@ export type FeaturesDeleteFeatureAssetData = {
 export type FeaturesDeleteFeatureAssetResponse = (Message);
 
 export type FilesListSourceData = {
+    directoriesOnly?: boolean;
     limit?: number;
     path?: string;
     skip?: number;
@@ -579,6 +633,12 @@ export type PartsCreatePartData = {
 };
 
 export type PartsCreatePartResponse = (PartPublic);
+
+export type PartsCreatePartFromFolderData = {
+    requestBody: PartFromFolder;
+};
+
+export type PartsCreatePartFromFolderResponse = (PartPublic);
 
 export type PartsUpdatePartData = {
     partId: string;

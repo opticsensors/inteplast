@@ -7,7 +7,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react"
-import { useEffect, useMemo, useRef } from "react"
+import { type ReactNode, useEffect, useMemo, useRef } from "react"
 
 import {
   type AssetKind,
@@ -15,7 +15,6 @@ import {
   type FeatureAssetUpdate,
   FeaturesService,
   FilesService,
-  type PartPublic,
 } from "@/client"
 import { FileLink } from "@/components/Common/FileLink"
 import { Button } from "@/components/ui/button"
@@ -24,15 +23,20 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import useCustomToast from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
 import { formatFileSize, handleError } from "@/utils"
 import { ASSET_ICONS, ASSET_KIND_LABELS, ASSET_KINDS } from "./constants"
 import { DocumentStatus } from "./DocumentStatus"
+import { assetName } from "./parts"
 import { SaveStatus } from "./SaveStatus"
 import { SourceFilePicker } from "./SourceFilePicker"
 import { useAutosave } from "./useAutosave"
@@ -62,7 +66,7 @@ const extensionOf = (filename: string) =>
 /**
  * Un fichero de una pieza, en modo edicion. Todo se cambia en la propia fila:
  *
- * - **el tipo y la pieza**, en el desplegable que abre el icono,
+ * - **el tipo**, en el desplegable que abre el icono,
  * - **el nombre**, escribiendo encima,
  * - **el fichero**, con *Subir* / *Cambiar*.
  *
@@ -71,13 +75,12 @@ const extensionOf = (filename: string) =>
  */
 export function AssetEditRow({
   asset,
-  parts,
   isNew,
+  dragHandle,
 }: {
   asset: FeatureAssetPublic
-  /** Para poder mover el fichero a otra pieza desde el mismo desplegable. */
-  parts: PartPublic[]
   isNew: boolean
+  dragHandle?: ReactNode
 }) {
   const queryClient = useQueryClient()
   const { showErrorToast } = useCustomToast()
@@ -97,7 +100,8 @@ export function AssetEditRow({
     onError: handleError.bind(showErrorToast),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["features"] }),
   })
-  const server = useMemo(() => ({ name: asset.name }), [asset.name])
+  const filename = assetName(asset)
+  const server = useMemo(() => ({ name: filename }), [filename])
   const autosave = useAutosave(
     server,
     (patch) => update.mutateAsync(patch),
@@ -126,14 +130,16 @@ export function AssetEditRow({
   })
   const fileUpload = usePendingTask(async (file: File) => {
     const uploaded = await upload.mutateAsync(file)
-    const patch: FeatureAssetUpdate = { file_id: uploaded.id }
+    const patch: FeatureAssetUpdate = {
+      file_id: uploaded.id,
+      name: uploaded.filename,
+    }
     // Fila recien creada y sin tocar: la rellena el propio fichero.
     if (name === NEW_ASSET_NAME) {
-      const base = uploaded.filename.replace(/\.[^.]+$/, "")
-      autosave.change({ name: base })
       const guessed = KIND_BY_EXTENSION[extensionOf(uploaded.filename)]
       if (guessed) patch.kind = guessed
     }
+    autosave.change({ name: uploaded.filename })
     if (!(await autosave.flush())) throw new Error("Nombre sin guardar")
     await update.mutateAsync(patch)
   })
@@ -144,6 +150,7 @@ export function AssetEditRow({
   return (
     <div>
       <div className="flex items-center gap-1 rounded-md border px-1 py-1 text-sm">
+        {dragHandle}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -151,7 +158,7 @@ export function AssetEditRow({
               variant="ghost"
               size="sm"
               className="h-7 shrink-0 justify-start gap-1 px-1.5 font-normal text-muted-foreground"
-              title="Cambiar el tipo o la pieza"
+              title="Cambiar el tipo"
               disabled={metadata.pending || fileUpload.pending}
             >
               <Icon className="size-3.5" />
@@ -178,40 +185,14 @@ export function AssetEditRow({
                 </DropdownMenuItem>
               )
             })}
-            {parts.length > 0 && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel>Pieza</DropdownMenuLabel>
-                {parts.map((part) => (
-                  <DropdownMenuItem
-                    key={part.id}
-                    onSelect={() =>
-                      part.id !== asset.part?.id && save({ part_id: part.id })
-                    }
-                  >
-                    <span className="font-mono">{part.code}</span>
-                    <span className="truncate text-muted-foreground">
-                      {part.name}
-                    </span>
-                    {part.id === asset.part?.id && (
-                      <Check className="ml-auto size-3.5" />
-                    )}
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuItem
-                  onSelect={() => asset.part && save({ part_id: null })}
-                >
-                  Sin pieza
-                  {!asset.part && <Check className="ml-auto size-3.5" />}
-                </DropdownMenuItem>
-              </>
-            )}
           </DropdownMenuContent>
         </DropdownMenu>
 
         <Input
           ref={nameRef}
-          value={name}
+          value={asset.file?.filename ?? name}
+          readOnly={Boolean(asset.file)}
+          title={asset.file?.filename}
           disabled={metadata.pending || fileUpload.pending}
           onChange={(event) => autosave.change({ name: event.target.value })}
           placeholder="Nombre del fichero"
@@ -221,17 +202,18 @@ export function AssetEditRow({
           )}
         />
 
-        {file ? (
-          <>
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {formatFileSize(file.size)}
-            </span>
+        {file && (
+          <span className="shrink-0 text-xs text-muted-foreground">
+            {formatFileSize(file.size)}
+          </span>
+        )}
+        <Tooltip>
+          <TooltipTrigger asChild>
             <Button
               type="button"
               variant="ghost"
               size="icon"
               className="size-7 shrink-0"
-              title="Cambiar el fichero"
               onClick={() => fileRef.current?.click()}
               disabled={fileUpload.pending || metadata.pending}
             >
@@ -241,27 +223,14 @@ export function AssetEditRow({
                 <Upload className="size-3.5" />
               )}
               <span className="sr-only">
-                Cambiar el fichero de {asset.name}
+                {file ? `Cambiar el fichero de ${filename}` : "Subir"}
               </span>
             </Button>
-          </>
-        ) : (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-7 shrink-0"
-            onClick={() => fileRef.current?.click()}
-            disabled={fileUpload.pending || metadata.pending}
-          >
-            {upload.isPending ? (
-              <Loader2 className="mr-1 size-3.5 animate-spin" />
-            ) : (
-              <Upload className="mr-1 size-3.5" />
-            )}
-            Subir
-          </Button>
-        )}
+          </TooltipTrigger>
+          <TooltipContent>
+            {file ? "Cambiar el fichero" : "Subir fichero"}
+          </TooltipContent>
+        </Tooltip>
 
         {file && (
           <Button
@@ -269,26 +238,29 @@ export function AssetEditRow({
             variant="ghost"
             size="icon"
             className="size-7 shrink-0"
-            title={`Descargar ${asset.name}`}
+            title={`Descargar ${filename}`}
           >
             <FileLink fileId={file.id} downloadFile download={file.filename}>
               <Download className="size-3.5" />
-              <span className="sr-only">Descargar {asset.name}</span>
+              <span className="sr-only">Descargar {filename}</span>
             </FileLink>
           </Button>
         )}
         <SourceFilePicker
+          initialPath={asset.part?.folder_path ?? ""}
           compact
-          chooseAction
-          document={file?.source === "local" ? file : undefined}
+          document={file ?? undefined}
           disabled={fileUpload.pending || metadata.pending}
           onLinked={async (linked) => {
-            const patch: FeatureAssetUpdate = { file_id: linked.id }
+            const patch: FeatureAssetUpdate = {
+              file_id: linked.id,
+              name: linked.filename,
+            }
             if (name === NEW_ASSET_NAME) {
-              autosave.change({ name: linked.filename.replace(/\.[^.]+$/, "") })
               const guessed = KIND_BY_EXTENSION[extensionOf(linked.filename)]
               if (guessed) patch.kind = guessed
             }
+            autosave.change({ name: linked.filename })
             if (!(await metadata.run(patch)))
               throw new Error(
                 "No se ha podido guardar el adjunto. Reintenta el guardado de la fila.",
@@ -309,7 +281,7 @@ export function AssetEditRow({
           }
         >
           <Trash2 className="size-3.5" />
-          <span className="sr-only">Borrar {asset.name}</span>
+          <span className="sr-only">Borrar {filename}</span>
         </Button>
 
         <input

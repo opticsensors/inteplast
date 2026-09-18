@@ -141,6 +141,17 @@ def test_relink_retains_identity_and_revokes_old_links(
     document = client.post(
         f"{BASE}/reference", headers=headers, json={"path": "part.stp"}
     ).json()
+    feature = client.post(
+        f"{settings.API_V1_STR}/features/",
+        headers=headers,
+        json={"name": "Relink filenames"},
+    ).json()
+    asset = client.post(
+        f"{settings.API_V1_STR}/features/{feature['id']}/assets",
+        headers=headers,
+        json={"kind": "part", "name": "Old label", "file_id": document["id"]},
+    )
+    assert asset.json()["name"] == "part.stp"
     endpoint = f"{BASE}/{document['id']}"
     old_url = client.get(endpoint + "/access-url", headers=headers).json()["url"]
     (source / "part.stp").rename(source / "renamed.stp")
@@ -161,6 +172,10 @@ def test_relink_retains_identity_and_revokes_old_links(
     assert updated.json()["id"] == document["id"]
     assert updated.json()["version"] != document["version"]
     assert updated.json()["content_type"] == "model/step"
+    saved = client.get(
+        f"{settings.API_V1_STR}/features/{feature['id']}", headers=headers
+    ).json()
+    assert saved["assets"][0]["name"] == "renamed.stp"
     assert client.get(old_url).status_code == 401
     assert client.get(endpoint + "/access-url", headers=headers).status_code == 200
     assert (

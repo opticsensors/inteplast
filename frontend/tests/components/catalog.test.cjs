@@ -172,14 +172,10 @@ test("deletion is secondary, confirmed, and only offered to owner or admin", asy
   await page.getByRole("heading", { name: "Todavía no hay features" }).waitFor()
 })
 
-test("creating a feature opens its editor and leaves no empty creation page in history", async (t) => {
+test("saving a new feature opens its completed detail and replaces the creation page in history", async (t) => {
   const page = await mount(t)
   await page.getByRole("button", { name: "Nuevo feature", exact: true }).click()
   await page.getByPlaceholder("Nombre del feature").fill("Nuevo nervio")
-  await page.getByRole("button", { name: "Guardar", exact: true }).click()
-  await page.waitForFunction(
-    () => window.review.location().search.editar === true,
-  )
   await page.getByRole("button", { name: "Guardar", exact: true }).click()
   await readHeading(page, "Nuevo nervio")
   await page.evaluate(() => window.review.back())

@@ -145,7 +145,9 @@ def document_path(document: StoredFile) -> Path:
         raise HTTPException(status_code=503, detail="No se puede acceder al archivo.")
 
 
-def browse_source(relative: str, skip: int, limit: int) -> SourceListing:
+def browse_source(
+    relative: str, skip: int, limit: int, directories_only: bool = False
+) -> SourceListing:
     if not settings.ASSETS_ROOT:
         return SourceListing(
             configured=False,
@@ -162,6 +164,8 @@ def browse_source(relative: str, skip: int, limit: int) -> SourceListing:
             if item.name.startswith(".") or item.is_symlink():
                 continue
             is_dir = item.is_dir(follow_symlinks=False)
+            if directories_only and not is_dir:
+                continue
             if not is_dir and not item.is_file(follow_symlinks=False):
                 continue
             entries.append(

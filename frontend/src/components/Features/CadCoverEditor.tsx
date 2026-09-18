@@ -156,24 +156,8 @@ export function CadCoverEditor({
                 ? "Selecciona una pieza CAD."
                 : feature
                   ? "Primero sube o vincula un STEP de tipo Pieza CAD en Piezas ejemplo."
-                  : "Guarda primero el feature y añade el STEP de la pieza en Piezas ejemplo."}
+                  : "Añade el STEP de la pieza en Piezas ejemplo."}
             </p>
-            {feature && !assets.length && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  close()
-                  requestAnimationFrame(() =>
-                    document
-                      .getElementById("example-parts-editor")
-                      ?.scrollIntoView({ behavior: "smooth", block: "start" }),
-                  )
-                }}
-              >
-                Ir a Piezas ejemplo
-              </Button>
-            )}
           </div>
         )}
         {error && (

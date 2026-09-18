@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { FeaturesReadFeaturesData, FeaturesReadFeaturesResponse, FeaturesCreateFeatureData, FeaturesCreateFeatureResponse, FeaturesReadFeatureFiltersResponse, FeaturesReadFeatureData, FeaturesReadFeatureResponse, FeaturesUpdateFeatureData, FeaturesUpdateFeatureResponse, FeaturesDeleteFeatureData, FeaturesDeleteFeatureResponse, FeaturesCreateFeatureNoteData, FeaturesCreateFeatureNoteResponse, FeaturesUpdateFeatureNoteData, FeaturesUpdateFeatureNoteResponse, FeaturesDeleteFeatureNoteData, FeaturesDeleteFeatureNoteResponse, FeaturesLinkFeaturePartData, FeaturesLinkFeaturePartResponse, FeaturesUnlinkFeaturePartData, FeaturesUnlinkFeaturePartResponse, FeaturesCreateFeatureAssetData, FeaturesCreateFeatureAssetResponse, FeaturesUpdateFeatureAssetData, FeaturesUpdateFeatureAssetResponse, FeaturesDeleteFeatureAssetData, FeaturesDeleteFeatureAssetResponse, FilesListSourceData, FilesListSourceResponse, FilesReferenceFileData, FilesReferenceFileResponse, FilesRelinkFileData, FilesRelinkFileResponse, FilesFileStatusData, FilesFileStatusResponse, FilesUploadFileData, FilesUploadFileResponse, FilesCreateFileAccessUrlData, FilesCreateFileAccessUrlResponse, FilesPreparePreviewData, FilesPreparePreviewResponse, FilesReadPreviewData, FilesReadPreviewResponse, FilesReadFileData, FilesReadFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PartsReadPartsData, PartsReadPartsResponse, PartsCreatePartData, PartsCreatePartResponse, PartsUpdatePartData, PartsUpdatePartResponse, PartsDeletePartData, PartsDeletePartResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { FeaturesReadFeaturesData, FeaturesReadFeaturesResponse, FeaturesCreateFeatureData, FeaturesCreateFeatureResponse, FeaturesReadFeatureFiltersResponse, FeaturesReadFeatureData, FeaturesReadFeatureResponse, FeaturesUpdateFeatureData, FeaturesUpdateFeatureResponse, FeaturesDeleteFeatureData, FeaturesDeleteFeatureResponse, FeaturesReorderFeatureNotesData, FeaturesReorderFeatureNotesResponse, FeaturesReorderFeatureAssetsData, FeaturesReorderFeatureAssetsResponse, FeaturesCreateFeatureNoteData, FeaturesCreateFeatureNoteResponse, FeaturesUpdateFeatureNoteData, FeaturesUpdateFeatureNoteResponse, FeaturesDeleteFeatureNoteData, FeaturesDeleteFeatureNoteResponse, FeaturesReorderFeaturePartsData, FeaturesReorderFeaturePartsResponse, FeaturesLinkFeaturePartData, FeaturesLinkFeaturePartResponse, FeaturesUnlinkFeaturePartData, FeaturesUnlinkFeaturePartResponse, FeaturesCreateFeatureAssetData, FeaturesCreateFeatureAssetResponse, FeaturesUpdateFeatureAssetData, FeaturesUpdateFeatureAssetResponse, FeaturesDeleteFeatureAssetData, FeaturesDeleteFeatureAssetResponse, FilesListSourceData, FilesListSourceResponse, FilesReferenceFileData, FilesReferenceFileResponse, FilesRelinkFileData, FilesRelinkFileResponse, FilesFileStatusData, FilesFileStatusResponse, FilesUploadFileData, FilesUploadFileResponse, FilesCreateFileAccessUrlData, FilesCreateFileAccessUrlResponse, FilesPreparePreviewData, FilesPreparePreviewResponse, FilesReadPreviewData, FilesReadPreviewResponse, FilesReadFileData, FilesReadFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PartsReadPartsData, PartsReadPartsResponse, PartsCreatePartData, PartsCreatePartResponse, PartsCreatePartFromFolderData, PartsCreatePartFromFolderResponse, PartsUpdatePartData, PartsUpdatePartResponse, PartsDeletePartData, PartsDeletePartResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class FeaturesService {
     /**
@@ -143,6 +143,52 @@ export class FeaturesService {
     }
 
     /**
+     * Reorder Feature Notes
+     * @param data The data for the request.
+     * @param data.featureId
+     * @param data.requestBody
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static reorderFeatureNotes(data: FeaturesReorderFeatureNotesData): CancelablePromise<FeaturesReorderFeatureNotesResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/features/{feature_id}/notes/order',
+            path: {
+                feature_id: data.featureId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Reorder Feature Assets
+     * @param data The data for the request.
+     * @param data.featureId
+     * @param data.requestBody
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static reorderFeatureAssets(data: FeaturesReorderFeatureAssetsData): CancelablePromise<FeaturesReorderFeatureAssetsResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/features/{feature_id}/assets/order',
+            path: {
+                feature_id: data.featureId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
      * Create Feature Note
      * Anadir una advertencia (`kind=warning`) o leccion aprendida (`kind=lesson`).
      * @param data The data for the request.
@@ -212,6 +258,29 @@ export class FeaturesService {
     }
 
     /**
+     * Reorder Feature Parts
+     * @param data The data for the request.
+     * @param data.featureId
+     * @param data.requestBody
+     * @returns FeatureDetail Successful Response
+     * @throws ApiError
+     */
+    public static reorderFeatureParts(data: FeaturesReorderFeaturePartsData): CancelablePromise<FeaturesReorderFeaturePartsResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/features/{feature_id}/parts/order',
+            path: {
+                feature_id: data.featureId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
      * Link Feature Part
      * Declarar que el feature existe en esa pieza, tenga ficheros o no.
      *
@@ -239,8 +308,8 @@ export class FeaturesService {
 
     /**
      * Unlink Feature Part
-     * Quitar la declaracion. Los adjuntos de esa pieza no se tocan: si los hay, la
-     * pieza sigue saliendo en la ficha porque tiene ficheros.
+     * Quitar la tarjeta y sus adjuntos de este feature. La pieza compartida y
+     * los documentos originales se conservan.
      * @param data The data for the request.
      * @param data.featureId
      * @param data.partId
@@ -340,6 +409,7 @@ export class FilesService {
      * @param data.path
      * @param data.skip
      * @param data.limit
+     * @param data.directoriesOnly
      * @returns SourceListing Successful Response
      * @throws ApiError
      */
@@ -350,7 +420,8 @@ export class FilesService {
             query: {
                 path: data.path,
                 skip: data.skip,
-                limit: data.limit
+                limit: data.limit,
+                directories_only: data.directoriesOnly
             },
             errors: {
                 422: 'Validation Error'
@@ -784,7 +855,7 @@ export class PartsService {
     /**
      * Read Parts
      * Todas las piezas (= proyectos), ordenadas por codigo. Es lo que puebla el
-     * desplegable al adjuntar un fichero.
+     * selector de piezas, con el numero de features que utiliza cada una.
      * @param data The data for the request.
      * @param data.skip
      * @param data.limit
@@ -827,6 +898,26 @@ export class PartsService {
     }
 
     /**
+     * Create Part From Folder
+     * Register or reuse an existing part folder; never create source directories.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns PartPublic Successful Response
+     * @throws ApiError
+     */
+    public static createPartFromFolder(data: PartsCreatePartFromFolderData): CancelablePromise<PartsCreatePartFromFolderResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/parts/from-folder',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
      * Update Part
      * Editar el codigo o el nombre de una pieza.
      * @param data The data for the request.
@@ -852,10 +943,7 @@ export class PartsService {
 
     /**
      * Delete Part
-     * Borrar una pieza. Solo superusuario: la comparten todos los features.
-     *
-     * Los adjuntos no se borran, se quedan sin pieza (`part_id` a NULL) y la vista
-     * los agrupa aparte.
+     * Borrar una pieza sin uso. Solo superusuario. Nunca borra documentos ni carpetas.
      * @param data The data for the request.
      * @param data.partId
      * @returns Message Successful Response

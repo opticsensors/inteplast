@@ -1,17 +1,15 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, File, Folder, Link2, Loader2 } from "lucide-react"
-import { useEffect, useId, useState } from "react"
+import { useEffect, useState } from "react"
 
 import { type FilePublic, FilesService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import {
   Tooltip,
   TooltipContent,
@@ -27,24 +25,19 @@ export function SourceFilePicker({
   onLinked,
   disabled = false,
   compact = false,
-  chooseAction = false,
+  initialPath = "",
 }: {
   document?: FilePublic
   onLinked: (file: FilePublic) => Promise<void>
   disabled?: boolean
   compact?: boolean
-  chooseAction?: boolean
+  initialPath?: string
 }) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [relink, setRelink] = useState(!chooseAction)
-  const currentDocument = relink ? document : undefined
-  const label =
-    chooseAction && document
-      ? "Vincular o cambiar archivo"
-      : document
-        ? "Volver a vincular"
-        : "Vincular archivo existente"
+  const label = document
+    ? "Cambiar archivo vinculado"
+    : "Vincular archivo existente"
   return (
     <Dialog
       open={open}
@@ -61,10 +54,7 @@ export function SourceFilePicker({
             className={compact ? "size-7 shrink-0" : undefined}
             aria-label={label}
             disabled={disabled}
-            onClick={() => {
-              setRelink(!chooseAction)
-              setOpen(true)
-            }}
+            onClick={() => setOpen(true)}
           >
             <Link2 className="size-3.5" />
             {!compact && label}
@@ -74,6 +64,7 @@ export function SourceFilePicker({
       </Tooltip>
       {open && (
         <DialogContent
+          aria-describedby={undefined}
           className="sm:max-w-2xl"
           showCloseButton={!busy}
           onEscapeKeyDown={(event) => {
@@ -82,34 +73,10 @@ export function SourceFilePicker({
           onPointerDownOutside={(event) => event.preventDefault()}
         >
           <DialogHeader>
-            <DialogTitle>
-              {currentDocument
-                ? "Actualizar referencia del documento"
-                : "Vincular archivo existente"}
-            </DialogTitle>
-            <DialogDescription>
-              {currentDocument
-                ? "La nueva ubicación y revisión se aplicarán a todas las fichas que usan este documento. El original se conserva."
-                : "Selecciona un archivo de la carpeta compartida con la aplicación. El original permanece en su ubicación."}
-            </DialogDescription>
+            <DialogTitle>{label}</DialogTitle>
           </DialogHeader>
-          {chooseAction && document && (
-            <select
-              aria-label="Acción sobre el vínculo"
-              className="h-9 rounded-md border bg-background px-2 text-sm"
-              disabled={busy}
-              value={relink ? "relink" : "replace"}
-              onChange={(event) => setRelink(event.target.value === "relink")}
-            >
-              <option value="replace">Usar otro archivo en esta ficha</option>
-              <option value="relink">
-                Actualizar ubicación o revisión del documento
-              </option>
-            </select>
-          )}
           <SourceBrowser
-            key={relink ? "relink" : "replace"}
-            document={currentDocument}
+            initialPath={initialPath}
             onLinked={onLinked}
             setBusy={setBusy}
             close={() => setOpen(false)}
@@ -120,46 +87,49 @@ export function SourceFilePicker({
   )
 }
 
-function SourceBrowser({
-  document,
+export function SourceBrowser({
   onLinked,
   setBusy,
   close,
+  initialPath = "",
+  onFolderSelected,
 }: {
-  document?: FilePublic
-  onLinked: (file: FilePublic) => Promise<void>
+  onLinked?: (file: FilePublic) => Promise<void>
+  initialPath?: string
+  onFolderSelected?: (path: string) => Promise<void>
   setBusy: (busy: boolean) => void
   close: () => void
 }) {
   const queryClient = useQueryClient()
-  const revisionId = useId()
-  const [path, setPath] = useState("")
+  const [path, setPath] = useState(initialPath)
+  const folderMode = Boolean(onFolderSelected)
   const [skip, setSkip] = useState(0)
   const [selected, setSelected] = useState<string | null>(null)
-  const [revision, setRevision] = useState(document?.revision ?? "")
   const [error, setError] = useState("")
   const listing = useQuery({
-    queryKey: ["file-source", path, skip],
-    queryFn: () => FilesService.listSource({ path, skip, limit: 50 }),
+    queryKey: ["file-source", path, skip, folderMode],
+    queryFn: () =>
+      FilesService.listSource({
+        path,
+        skip,
+        limit: 50,
+        directoriesOnly: folderMode,
+      }),
     retry: false,
   })
   const linking = usePendingTask(async (_: undefined) => {
-    if (!selected) return
+    if (!folderMode && !selected) return
     setError("")
     try {
-      const file = document?.version
-        ? await FilesService.relinkFile({
-            fileId: document.id,
-            requestBody: {
-              path: selected,
-              revision: revision || null,
-              expected_version: document.version,
-            },
-          })
-        : await FilesService.referenceFile({
-            requestBody: { path: selected, revision: revision || null },
-          })
-      await onLinked(file)
+      if (onFolderSelected) {
+        await onFolderSelected(path)
+        close()
+        return
+      }
+      const file = await FilesService.referenceFile({
+        requestBody: { path: selected! },
+      })
+      await onLinked?.(file)
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["features"] }),
         queryClient.invalidateQueries({ queryKey: ["file-status"] }),
@@ -217,7 +187,9 @@ function SourceBrowser({
         <>
           <section
             className="max-h-[40vh] overflow-y-auto rounded-md border"
-            aria-label="Archivos disponibles"
+            aria-label={
+              folderMode ? "Carpetas disponibles" : "Archivos disponibles"
+            }
           >
             {listing.data.entries.length === 0 && (
               <p className="p-4 text-sm text-muted-foreground">
@@ -277,20 +249,6 @@ function SourceBrowser({
               </Button>
             </div>
           )}
-          <label htmlFor={revisionId} className="block space-y-1 text-sm">
-            <span>Revisión del documento (opcional)</span>
-            <Input
-              id={revisionId}
-              value={revision}
-              maxLength={100}
-              disabled={linking.pending}
-              onChange={(event) => setRevision(event.target.value)}
-              placeholder="Por ejemplo, rev. 07"
-            />
-          </label>
-          {selected && (
-            <p className="break-words text-sm">Seleccionado: {selected}</p>
-          )}
         </>
       )}
       {error && (
@@ -309,11 +267,17 @@ function SourceBrowser({
         </Button>
         <Button
           type="button"
-          disabled={!selected || linking.pending || !listing.data?.configured}
+          disabled={
+            (!folderMode && !selected) ||
+            linking.pending ||
+            !listing.data?.configured ||
+            listing.isError ||
+            listing.isPending
+          }
           onClick={() => void linking.run(undefined)}
         >
           {linking.pending && <Loader2 className="size-4 animate-spin" />}
-          {document ? "Actualizar referencia" : "Vincular"}
+          {folderMode ? "Usar esta carpeta" : "Vincular"}
         </Button>
       </div>
     </div>

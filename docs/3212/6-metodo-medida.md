@@ -32,7 +32,7 @@ Composición verificada el 2026-08-11:
 | | |
 |---|---|
 | Entradas del ZIP | 87 |
-| **Imágenes** | Recuento pendiente de reconciliar: la inspección anotó 55, pero el desglose 43 PNG + 8 JPEG suma 51. No se ha reabierto el original para resolverlo. |
+| **Imágenes** | **55: 43 PNG + 8 JPEG + 4 JPG**. Verificado el 17/09/2026; faltaba contar la extensión `.JPG` en mayúsculas. |
 | Texto extraíble | **8.348 caracteres** |
 
 > ⚠️ **El 90 % del valor está en las imágenes**, no en el texto: cada cota lleva una captura del

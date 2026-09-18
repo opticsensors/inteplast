@@ -25,14 +25,15 @@ detalles y descarga. Los desplegables por pieza y la posición de scroll se recu
 La ficha muestra el nombre legible y el tamaño, sin repetir nombres internos, rutas ni etiquetas
 de revisión. Tampoco muestra el pie «Archivo vinculado» cuando todo está disponible. Conserva
 los avisos de «sin archivo vinculado», no encontrado, original cambiado y origen inaccesible.
-Desde el icono de cadena, **Actualizar ubicación o revisión del documento** permite elegir
-la referencia actual y conserva
-el identificador del documento. Afecta a **todas las fichas que usan ese mismo documento**,
-como indica el diálogo. Si solo se desea cambiar una fila, elegir **Usar otro archivo en esta ficha**.
+Desde el icono de cadena se elige un archivo y se pulsa **Vincular**. Ese archivo sustituye
+al vínculo de la tarjeta actual; las demás fichas conservan sus documentos. El selector ya no
+pide elegir entre reemplazar y actualizar un documento compartido, ni muestra texto introductorio.
+La tarjeta y el visor muestran el nombre real completo, incluida la extensión.
 
 Seleccionar de nuevo el mismo archivo, con la misma fecha/tamaño, reutiliza su registro.
-Una revisión vacía conserva la etiqueta existente; una etiqueta distinta devuelve un aviso
-de conflicto. Para cambiar esa etiqueta explícitamente, elegir **Actualizar ubicación o revisión del documento**.
+El selector no pide una etiqueta de revisión. La API conserva la etiqueta existente al omitirla;
+una etiqueta distinta devuelve conflicto. La actualización explícita del documento compartido
+sigue disponible en `PUT /files/{id}/reference` para integraciones, fuera de este selector.
 
 La cabecera puede usar una [portada creada desde el STEP](portadas-cad.md), con superficies
 marcadas en rojo. El marcado se guarda en la aplicación y mantiene intacto el original.
@@ -40,15 +41,27 @@ marcadas en rojo. El marcado se guarda en la aplicación y mantiene intacto el o
 ## Configuración local con Docker
 
 En el equipo de desarrollo de Eduard ya está configurado `.env`, excluido de Git, para
-la carpeta `Exemples/3212 Pump Housing` indicada en [CLAUDE.md](../CLAUDE.md). Esto utiliza la
+la carpeta `Exemples` indicada en [CLAUDE.md](../CLAUDE.md), con una subcarpeta por pieza. Esto utiliza la
 copia local sincronizada por OneDrive. **No inicia sesión en Microsoft ni usa Microsoft Graph.**
+
+Esta conexión local es temporal. Cada pieza guarda su `folder_path` relativo al origen;
+el selector de ficheros comienza ahí. Código, nombre y carpeta se comparten entre features,
+pero cada ficha vincula solo los ficheros que necesita. La futura conexión con SharePoint/OneDrive
+deberá sustituir el acceso al origen manteniendo esta interacción.
+
+El 2026-09-17 se amplió el montaje desde `Exemples/3212 Pump Housing` a `Exemples`.
+Los cuatro documentos existentes se actualizaron añadiendo `3212 Pump Housing/` a sus rutas
+y recalculando sus claves de deduplicación; conservaron UUID, versión y vínculos. La pieza 3212
+quedó asociada a esa subcarpeta. Se verificó la disponibilidad de los cuatro originales y se
+guardó una copia previa de la BD y `.env` fuera del repositorio. En otra instalación que cambie
+su carpeta raíz, también hay que adaptar las rutas relativas existentes.
 
 En otro equipo, crear `.env` a partir de [.env.example](../.env.example), sin sobrescribir una
 configuración existente. Descomentar el bloque de originales externos y ajustar:
 
 | Variable | Qué representa |
 |---|---|
-| `ASSETS_HOST_PATH` | Carpeta existente del equipo que ejecuta Docker, fuera del repo. En Windows usar `/`, por ejemplo `C:/datos/3212 Pump Housing` |
+| `ASSETS_HOST_PATH` | Carpeta común de las piezas, fuera del repo. En Windows usar `/`, por ejemplo `C:/datos/Exemples` |
 | `ASSETS_SOURCE_ID` | Nombre estable del conjunto de datos, independiente de la ruta del PC |
 | `ASSETS_SOURCE_NAME` | Nombre que muestra el selector |
 | `COMPOSE_FILE`, `COMPOSE_PATH_SEPARATOR` | Activan `compose.yml`, `compose.override.yml` y `compose.assets.yml`; conservar los valores del ejemplo |
@@ -239,3 +252,12 @@ Configuración, límites y pruebas en [vistas-3d.md](vistas-3d.md).
 
 Quedan para las siguientes fases: Graph, mediciones/N-numbers y marcado de zonas.
 El límite de carga directa de 50 MiB sigue vigente para otros formatos 3D grandes.
+
+### Alta de piezas desde carpetas existentes (2026-09-17)
+
+El buscador de «Añadir pieza» lista las subcarpetas directas del origen común y carga todas
+las páginas antes de filtrar. Elegir una registra o reutiliza su pieza, sin leer el contenido
+de los documentos ni crear carpetas. Nombre y código se rellenan automáticamente y siguen
+siendo editables. La carpeta se comparte entre features, pero sus adjuntos se eligen por feature.
+La asociación local es temporal; no implementa todavía Microsoft Graph. Se mantiene la pregunta
+[A12](preguntas-abiertas.md) sobre si esa raíz común coincide con la organización real en la nube.

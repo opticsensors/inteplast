@@ -3,8 +3,9 @@ import { createFileRoute, Link } from "@tanstack/react-router"
 import { Download, ExternalLink, FileQuestion } from "lucide-react"
 import { lazy, Suspense } from "react"
 
-import { ApiError } from "@/client"
+import { ApiError, FeaturesService } from "@/client"
 import { FeatureNotFound } from "@/components/Features/FeatureNotFound"
+import { assetName } from "@/components/Features/parts"
 import { featureQueryOptions } from "@/components/Features/queries"
 import { SourceFilePicker } from "@/components/Features/SourceFilePicker"
 import { fileAction, usesWebPreview } from "@/components/Features/viewers"
@@ -116,6 +117,7 @@ function AssetDetail() {
   }
 
   const file = asset.file
+  const name = assetName(asset)
   const { action, viewer, reason } = fileAction(file)
   const unavailable =
     file?.source === "local" &&
@@ -143,7 +145,9 @@ function AssetDetail() {
               </>
             )}
           </p>
-          <h1 className="text-2xl font-bold tracking-tight">{asset.name}</h1>
+          <h1 className="break-words text-2xl font-bold tracking-tight">
+            {name}
+          </h1>
         </div>
 
         {file && (
@@ -151,7 +155,12 @@ function AssetDetail() {
             {file.source === "local" && (
               <SourceFilePicker
                 document={file}
-                onLinked={async () => {
+                initialPath={asset.part?.folder_path ?? ""}
+                onLinked={async (linked) => {
+                  await FeaturesService.updateFeatureAsset({
+                    assetId: asset.id,
+                    requestBody: { file_id: linked.id, name: linked.filename },
+                  })
                   await queryClient.invalidateQueries({
                     queryKey: ["features"],
                   })
@@ -234,14 +243,14 @@ function AssetDetail() {
           <PdfViewer
             key={`${file.id}:${file.version}`}
             file={file}
-            title={asset.name}
+            title={name}
           />
         </Suspense>
       ) : viewer === "image" ? (
         <div className="flex justify-center rounded-lg border bg-muted/30 p-4">
           <img
             src={access.url}
-            alt={asset.name}
+            alt={name}
             className="max-h-[75vh] object-contain"
           />
         </div>

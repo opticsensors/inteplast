@@ -252,15 +252,38 @@ class AssetKind(str, Enum):
 class PartBase(SQLModel):
     code: str = Field(min_length=1, max_length=64, unique=True, index=True)
     name: str | None = Field(default=None, max_length=255)
+    # Relative to the configured source; never an absolute workstation path.
+    folder_path: str | None = Field(
+        default=None, max_length=2048, unique=True, index=True
+    )
 
 
 class PartCreate(PartBase):
     pass
 
 
+class PartFromFolder(SQLModel):
+    folder_path: str = Field(min_length=1, max_length=2048)
+
+
 class PartUpdate(SQLModel):
     code: str = Field(default=None, min_length=1, max_length=64)
     name: str | None = Field(default=None, max_length=255)
+    folder_path: str | None = Field(default=None, max_length=2048)
+
+
+class FeaturePartOrder(SQLModel):
+    part_ids: list[uuid.UUID]
+
+
+class FeatureNoteOrder(SQLModel):
+    kind: NoteKind
+    note_ids: list[uuid.UUID]
+
+
+class FeatureAssetOrder(SQLModel):
+    part_id: uuid.UUID | None = None
+    asset_ids: list[uuid.UUID]
 
 
 class FeaturePartLink(SQLModel, table=True):
@@ -294,8 +317,12 @@ class PartPublic(PartBase):
     created_at: datetime | None = None
 
 
+class PartCatalogPublic(PartPublic):
+    feature_count: int
+
+
 class PartsPublic(SQLModel):
-    data: list[PartPublic]
+    data: list[PartCatalogPublic]
     count: int
 
 
@@ -397,6 +424,9 @@ class Feature(FeatureBase, table=True):
     image: StoredFile | None = Relationship()
     cover_3d: dict[str, Any] | None = Field(
         default=None, sa_column=Column(JSON, nullable=True)
+    )
+    part_order: list[str] = Field(
+        default_factory=list, sa_column=Column(JSON, nullable=False)
     )
     notes: list["FeatureNote"] = Relationship(
         back_populates="feature",
@@ -510,6 +540,7 @@ class FeaturePublic(FeatureBase):
     owner_id: uuid.UUID | None = None
     image: FilePublic | None = None
     cover_3d: FeatureCover3D | None = None
+    part_order: list[uuid.UUID] = Field(default_factory=list)
     assets: list[FeatureAssetPublic] = []
     parts: list[PartPublic] = []
 

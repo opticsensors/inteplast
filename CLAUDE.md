@@ -243,9 +243,10 @@ for f in $(ls "$D"/slide*.xml | sort -V); do sed 's/<[^>]*>/\n/g' "$f" | grep -v
 
 ## Trampas que ya nos han mordido
 
-1. 🔴 **El `.xls` no siempre es la fuente de verdad — el CSV sí.** `intern.05.xls` tiene el
+1. 🔴 **Priorizar el CSV para medidas CMM coincidentes.** `intern.05.xls` tiene el
    bloque N117/N118 **copiado y pegado de `intern.03`** (valores idénticos), mientras el CSV de
-   `intern.05` da valores distintos. **Ingerir los CSV, no los XLS.**
+   `intern.05` da valores distintos. Los XLS conservan valor para contexto, otros ensayos y
+   previsiones de retoque en `DR(100%)`; registrar las discrepancias por bloque.
 2. 🔴 **Solo `intern.01` tiene el XLS completo.** Los XLS posteriores presentan selecciones
    de cotas; eso no significa que la CMM solo remidiera lo que fallaba. Los CSV de cavidad de
    `.01`, `.03`, `.05` y `.08` conservan las 211 filas. N170 sí se volvió a medir.
@@ -312,7 +313,7 @@ hidratación en OneDrive y por dónde empezar.
 | `6- Métode de mesura` | [6-metodo-medida.md](docs/3212/6-metodo-medida.md) | **Leer primero**: `GX`/`GN`/`LP(2)`, alineación, cómo se mide cada N-number |
 | `7- Moldflow` | [7-moldflow.md](docs/3212/7-moldflow.md) | `.mfr` propietario; consultar con Moldflow Communicator. El cifrado no está demostrado |
 | `8- STL peça real` | [8-stl-pieza-real.md](docs/3212/8-stl-pieza-real.md) | Malla de 4,9 M triángulos, lote 315346 |
-| *(transversal `4-`↔`5-`)* | [historial-molde.md](docs/3212/historial-molde.md) | Cronología muestreo ↔ corrección y la **prueba de que el retoque del Bolt Eye funcionó** |
+| *(transversal `4-`↔`5-`)* | [historial-molde.md](docs/3212/historial-molde.md) | Cronología muestreo ↔ corrección y la **evaluación de la mejora parcial del Bolt Eye** |
 
 ### Documentos generales
 
@@ -334,3 +335,10 @@ hidratación en OneDrive y por dónde empezar.
 - Al resolver una pregunta abierta, **actualizar `docs/preguntas-abiertas.md`** moviéndola a
   resueltas **con la evidencia** (fichero, celda o línea concreta).
 - No inventar cifras: toda afirmación numérica debe salir de un fichero leído en la sesión.
+
+## Revisión del 17/09/2026
+
+[Hallazgos y prototipo](docs/3212/revision-2026-09-17.md): los XLS de retoques sí contienen previsiones en
+`DR(100%)`; `PUNTS_NOUS` coincide con los últimos 150 puntos de PUNTS y no demuestra un
+objetivo corregido; N170 mejora en GX pero conserva LP máximos fuera. La vista nueva
+`data-explorer/ver_correcciones.py` es independiente de `ver_todo.py`.

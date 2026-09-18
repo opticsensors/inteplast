@@ -3,6 +3,7 @@ const path = require("node:path")
 const { before, after, test } = require("node:test")
 const esbuild = require("esbuild")
 const { chromium } = require("playwright")
+const { expect } = require("@playwright/test")
 
 const frontend = path.resolve(__dirname, "../..")
 let browser
@@ -67,6 +68,363 @@ async function mount(t) {
   return { page, network }
 }
 
+async function addPart(page, folder = "2820 Pump Housing") {
+  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await page.getByRole("menuitem", { name: folder, exact: true }).click()
+}
+
+test("new feature shows all sections immediately and opening/cancelling creates nothing", async (t) => {
+  const { page } = await mount(t)
+  await page.evaluate(() => window.review.navigate("/new"))
+  await expect(
+    page.getByRole("button", { name: "Anadir advertencia", exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Anadir leccion aprendida", exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Anadir pieza", exact: true }),
+  ).toBeVisible()
+  assert.deepEqual(
+    await page.evaluate(() => window.review.featureCreateRequests ?? []),
+    [],
+  )
+  await page.getByRole("button", { name: "Cancelar", exact: true }).click()
+  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
+  assert.deepEqual(
+    await page.evaluate(() => window.review.featureCreateRequests ?? []),
+    [],
+  )
+})
+
+test("new feature accepts notes, existing pieces and files before the first Save", async (t) => {
+  const { page } = await mount(t)
+  await page.evaluate(() => window.review.navigate("/new"))
+  await page
+    .getByRole("button", { name: "Anadir advertencia", exact: true })
+    .click()
+  await expect(page.getByPlaceholder("Titulo de la nota")).toHaveValue(
+    "Nueva advertencia",
+  )
+  await expect(page.getByPlaceholder("Nombre del feature")).toHaveValue(
+    "Nuevo feature",
+  )
+  await page.getByPlaceholder("Nombre del feature").fill("Feature with content")
+  await page.getByPlaceholder("Titulo de la nota").fill("Watch the thickness")
+  await page
+    .getByRole("button", { name: "Anadir leccion aprendida", exact: true })
+    .click()
+  await expect(page.getByPlaceholder("Titulo de la nota")).toHaveCount(2)
+  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await page
+    .getByRole("menuitem", { name: "3212 - Pump Housing", exact: true })
+    .click()
+  await page
+    .getByRole("button", { name: "Anadir fichero", exact: true })
+    .click()
+  await expect(page.getByPlaceholder("Nombre del fichero")).toHaveValue(
+    "Nuevo fichero",
+  )
+  await page.getByPlaceholder("Nombre del fichero").fill("Mold reference")
+  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
+  const result = await page.evaluate(() => ({
+    feature: window.review.feature,
+    creates: window.review.featureCreateRequests,
+    createdId: window.review.createdFeatureId,
+  }))
+  assert.equal(result.creates.length, 1)
+  assert.equal(result.createdId, result.feature.id)
+  assert.equal(result.feature.name, "Feature with content")
+  assert.equal(result.feature.notes.length, 2)
+  assert.equal(result.feature.notes[0].title, "Watch the thickness")
+  assert.equal(result.feature.assets[0].name, "Mold reference")
+  assert.equal(result.feature.parts[0].id, "part-one")
+})
+
+test("concurrent first additions share one feature and retain header edits during creation", async (t) => {
+  const { page } = await mount(t)
+  await page.evaluate(() => window.review.navigate("/new"))
+  await page.evaluate(() => {
+    window.review.holdFeatureCreate = true
+  })
+  await page
+    .getByRole("button", { name: "Anadir advertencia", exact: true })
+    .click()
+  await page.waitForFunction(() => Boolean(window.review.releaseFeatureCreate))
+  await page
+    .getByRole("button", { name: "Anadir leccion aprendida", exact: true })
+    .click()
+  await addPart(page)
+  await page
+    .getByPlaceholder("Nombre del feature")
+    .fill("Written while creating")
+  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  assert.equal(
+    await page.getByRole("heading", { name: "Otra pagina abierta" }).count(),
+    0,
+  )
+  await page.evaluate(() => window.review.releaseFeatureCreate())
+  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
+  assert.equal(
+    await page.evaluate(() => window.review.featureCreateRequests.length),
+    1,
+  )
+  assert.equal(await page.evaluate(() => window.review.feature.notes.length), 2)
+  assert.equal(await page.evaluate(() => window.review.feature.parts.length), 1)
+  assert.equal(
+    await page.evaluate(() => window.review.feature.name),
+    "Written while creating",
+  )
+})
+
+test("failed automatic creation keeps the header and retries without creating stray parts", async (t) => {
+  const { page } = await mount(t)
+  await page.evaluate(() => window.review.navigate("/new"))
+  await page.getByPlaceholder("Nombre del feature").fill("Retained title")
+  await page.evaluate(() => {
+    window.review.failFeatureCreate = true
+  })
+  await addPart(page)
+  await page.getByRole("button", { name: "Reintentar", exact: true }).waitFor()
+  assert.equal(await page.evaluate(() => window.review.parts.length), 1)
+  await expect(page.getByPlaceholder("Nombre del feature")).toHaveValue(
+    "Retained title",
+  )
+  await page.evaluate(() => {
+    window.review.failFeatureCreate = false
+  })
+  await page.getByRole("button", { name: "Reintentar", exact: true }).click()
+  await expect(
+    page.getByRole("textbox", { name: "Nombre de la pieza", exact: true }),
+  ).toHaveValue("2820 Pump Housing")
+  assert.equal(await page.evaluate(() => window.review.feature.parts.length), 1)
+  await expect(page.getByPlaceholder("Nombre del feature")).toHaveValue(
+    "Retained title",
+  )
+})
+
+test("part menu searches registered pieces and existing folders without blank creation", async (t) => {
+  const { page } = await mount(t)
+  await page.evaluate(async () => {
+    window.review.parts.push({ id: "shared-part", code: "3197", name: "Pot" })
+    await window.review.refetchParts()
+  })
+  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await page.getByRole("textbox", { name: "Buscar pieza" }).fill("pot")
+  await page.getByRole("menuitem", { name: "3197 - Pot", exact: true }).click()
+  await page
+    .getByRole("textbox", { name: "Nombre de la pieza", exact: true })
+    .last()
+    .waitFor()
+  await page.waitForFunction(() => window.review.feature.parts.length === 2)
+  assert.equal(await page.evaluate(() => window.review.parts.length), 2)
+  assert.equal(
+    await page.evaluate(() => window.review.feature.assets.length),
+    1,
+  )
+  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  assert.equal(
+    await page
+      .getByRole("menuitem", { name: "3197 - Pot", exact: true })
+      .count(),
+    0,
+  )
+  await expect(
+    page.getByRole("menuitem", { name: "Crear nueva pieza", exact: true }),
+  ).toHaveCount(0)
+  await page.getByRole("textbox", { name: "Buscar pieza" }).fill("2820")
+  await expect(
+    page.getByRole("menuitem", { name: "2820 Pump Housing", exact: true }),
+  ).toBeVisible()
+})
+
+test("folder search includes later source pages and preserves registered names", async (t) => {
+  const { page } = await mount(t)
+  await page.evaluate(async () => {
+    window.review.sourceFolders = Array.from(
+      { length: 205 },
+      (_, index) => `${8000 + index} Housing`,
+    )
+    window.review.parts.push({
+      id: "renamed",
+      code: "CUSTOM",
+      name: "Custom housing",
+      folder_path: "8204 Housing",
+    })
+    await window.review.refetchParts()
+  })
+  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await page.getByRole("textbox", { name: "Buscar pieza" }).fill("8204")
+  await page
+    .getByRole("menuitem", { name: "CUSTOM - Custom housing", exact: true })
+    .click()
+  await page.waitForFunction(() =>
+    window.review.feature.parts.some((part) => part.id === "renamed"),
+  )
+  assert.equal(await page.evaluate(() => window.review.parts.length), 2)
+  assert.ok(
+    await page.evaluate(() =>
+      window.review.sourceRequests.some((request) => request.skip === 200),
+    ),
+  )
+})
+
+test("unavailable folder source reports the error and still allows legacy parts", async (t) => {
+  const { page } = await mount(t)
+  await page.evaluate(async () => {
+    window.review.failSource = true
+    window.review.parts.push({
+      id: "legacy",
+      code: "LEGACY",
+      name: "Existing piece",
+    })
+    await window.review.refetchParts()
+  })
+  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await expect(
+    page.getByText("No se ha podido cargar toda la lista de piezas."),
+  ).toBeVisible()
+  await page
+    .getByRole("menuitem", { name: "LEGACY - Existing piece", exact: true })
+    .click()
+  await page.waitForFunction(() =>
+    window.review.feature.parts.some((part) => part.id === "legacy"),
+  )
+  assert.deepEqual(
+    await page.evaluate(() => window.review.folderRequests ?? []),
+    [],
+  )
+})
+
+test("a part takes its folder name and its file picker opens in that folder", async (t) => {
+  const { page } = await mount(t)
+  await addPart(page)
+  await page.waitForFunction(
+    () => window.review.feature.parts[1]?.folder_path === "2820 Pump Housing",
+  )
+  await page
+    .getByRole("button", { name: "Anadir fichero", exact: true })
+    .last()
+    .click()
+  await page.getByPlaceholder("Nombre del fichero").nth(1).waitFor()
+  await page
+    .getByRole("button", { name: "Vincular archivo existente", exact: true })
+    .last()
+    .click()
+  await page.getByRole("button", { name: /drawing.pdf/ }).waitFor()
+  assert.ok(
+    await page.evaluate(() =>
+      window.review.sourceRequests.some(
+        (request) =>
+          request.path === "2820 Pump Housing" && !request.directoriesOnly,
+      ),
+    ),
+  )
+  assert.equal(
+    await page.getByRole("button", { name: "drawings", exact: true }).count(),
+    0,
+  )
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Cancelar", exact: true })
+    .click()
+  await page
+    .getByRole("textbox", { name: "Nombre de la pieza", exact: true })
+    .last()
+    .fill("Custom part name")
+  await page
+    .getByRole("button", { name: "Opciones de la pieza", exact: true })
+    .last()
+    .click()
+  await page
+    .getByRole("menuitem", { name: "Cambiar carpeta de la pieza", exact: true })
+    .click()
+  await page
+    .getByRole("button", { name: "Carpeta superior", exact: true })
+    .click()
+  await page
+    .getByRole("button", { name: "Usar esta carpeta", exact: true })
+    .click()
+  await page.getByRole("dialog").waitFor({ state: "hidden" })
+  assert.equal(
+    await page
+      .getByRole("textbox", { name: "Nombre de la pieza", exact: true })
+      .last()
+      .inputValue(),
+    "Custom part name",
+  )
+})
+
+test("removing a part removes its full card and files but leaves the part reusable", async (t) => {
+  const { page } = await mount(t)
+  await page.getByRole("button", { name: "Quitar 3212", exact: true }).click()
+  await page.getByPlaceholder("Nombre del fichero").waitFor({ state: "hidden" })
+  assert.equal(
+    await page
+      .getByRole("textbox", { name: "Nombre de la pieza", exact: true })
+      .count(),
+    0,
+  )
+  assert.equal(await page.evaluate(() => window.review.parts.length), 1)
+  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await page
+    .getByRole("menuitem", { name: "3212 - Pump Housing", exact: true })
+    .click()
+  await page
+    .getByRole("textbox", { name: "Nombre de la pieza", exact: true })
+    .waitFor()
+  assert.equal(await page.getByPlaceholder("Nombre del fichero").count(), 0)
+})
+
+test("the file type menu contains only types", async (t) => {
+  const { page } = await mount(t)
+  await page.getByTitle("Cambiar el tipo", { exact: true }).click()
+  assert.equal(await page.getByRole("menuitem").count(), 5)
+  assert.equal(
+    await page
+      .getByRole("menu")
+      .getByText("Sin pieza", { exact: true })
+      .count(),
+    0,
+  )
+  assert.equal(
+    await page.getByRole("menu").getByText("3212", { exact: true }).count(),
+    0,
+  )
+})
+
+test("part cards reorder by keyboard, retain drafts and persist after a refresh", async (t) => {
+  const { page } = await mount(t)
+  await addPart(page)
+  await page
+    .getByRole("textbox", { name: "Nombre de la pieza", exact: true })
+    .last()
+    .fill("Reordered part")
+  const handle = page.getByRole("button", { name: "Mover pieza 2820" })
+  await handle.focus()
+  await page.keyboard.press("Space")
+  await page.keyboard.press("ArrowUp")
+  await page.keyboard.press("Space")
+  await page.waitForFunction(
+    () =>
+      window.review.feature.part_order?.[0] ===
+      window.review.feature.parts[1].id,
+  )
+  await page.evaluate(() => window.review.refetch())
+  assert.equal(
+    await page
+      .getByRole("textbox", { name: "Nombre de la pieza", exact: true })
+      .first()
+      .inputValue(),
+    "Reordered part",
+  )
+  assert.equal(
+    await page.getByPlaceholder("Nombre del fichero").inputValue(),
+    "Original asset",
+  )
+})
+
 async function openCover(page, mode = "image") {
   await page.getByRole("button", { name: /^(Añadir|Editar) portada$/ }).click()
   await page
@@ -76,6 +434,161 @@ async function openCover(page, mode = "image") {
     })
     .click()
 }
+
+test("adding a part creates an open editable block, selects its default name and accepts files", async (t) => {
+  const { page } = await mount(t)
+  await page.getByPlaceholder("Nombre del feature").fill("Pending header")
+  await addPart(page)
+  const name = page
+    .getByRole("textbox", { name: "Nombre de la pieza", exact: true })
+    .last()
+  await page.waitForFunction(() => window.review.feature.parts.length === 2)
+  assert.equal(await name.inputValue(), "2820 Pump Housing")
+  assert.deepEqual(
+    await name.evaluate((input) => [
+      document.activeElement === input,
+      input.selectionStart,
+      input.selectionEnd,
+    ]),
+    [true, 0, "2820 Pump Housing".length],
+  )
+  const toggle = page.getByRole("button", { name: /2820 2820 Pump Housing/ })
+  assert.equal(await toggle.getAttribute("aria-expanded"), "true")
+  assert.equal(await page.getByRole("dialog").count(), 0)
+  assert.equal(await page.getByRole("listbox").count(), 0)
+  await name.fill("Carcasa nueva")
+  const code = page
+    .getByRole("textbox", { name: "Codigo de la pieza", exact: true })
+    .last()
+  await code.fill("1000")
+  await page.waitForFunction(() =>
+    window.review.feature.parts.some(
+      (part) => part.code === "1000" && part.name === "Carcasa nueva",
+    ),
+  )
+  assert.equal(await name.inputValue(), "Carcasa nueva")
+  await page
+    .getByRole("button", { name: "Anadir fichero", exact: true })
+    .last()
+    .click()
+  await page.waitForFunction(() => window.review.feature.assets.length === 2)
+  const feature = await page.evaluate(() => window.review.feature)
+  assert.equal(feature.assets[1].part.id, feature.parts[1].id)
+  assert.equal(feature.assets[1].kind, "mold")
+  assert.equal(feature.assets[1].name, "Nuevo fichero")
+  assert.equal(
+    await page.getByPlaceholder("Nombre del feature").inputValue(),
+    "Pending header",
+  )
+})
+
+test("adding multiple parts to an empty feature creates distinct codes and no empty-state messages", async (t) => {
+  const { page } = await mount(t)
+  await page.evaluate(async () => {
+    window.review.feature.parts = []
+    window.review.feature.assets = []
+    await window.review.refetch()
+  })
+  await addPart(page)
+  await page.waitForFunction(() => window.review.feature.parts.length === 1)
+  await addPart(page, "3051 Pump Housing")
+  await page.waitForFunction(() => window.review.feature.parts.length === 2)
+  const parts = await page.evaluate(() => window.review.feature.parts)
+  assert.notEqual(parts[0].id, parts[1].id)
+  assert.notEqual(parts[0].code, parts[1].code)
+  assert.equal(
+    await page
+      .getByRole("textbox", { name: "Nombre de la pieza", exact: true })
+      .count(),
+    2,
+  )
+  assert.equal(
+    await page
+      .getByText(/Todavia no hay (ninguna pieza|ningun fichero)/)
+      .count(),
+    0,
+  )
+})
+
+test("adding a folder reuses the registered part when retrying a failed feature link", async (t) => {
+  const { page } = await mount(t)
+  await page.evaluate(() => {
+    window.review.failPartLinks = true
+  })
+  await addPart(page)
+  await page.getByText("Simulated link failure", { exact: true }).waitFor()
+  assert.equal(await page.evaluate(() => window.review.parts.length), 2)
+  assert.equal(await page.evaluate(() => window.review.feature.parts.length), 1)
+  await page.evaluate(() => {
+    window.review.failPartLinks = false
+  })
+  await page.getByRole("button", { name: "Reintentar", exact: true }).click()
+  await page.waitForFunction(() => window.review.feature.parts.length === 2)
+  assert.equal(await page.evaluate(() => window.review.parts.length), 2)
+})
+
+test("part edits survive folding and failed saves, and Save flushes the corrected draft", async (t) => {
+  const { page } = await mount(t)
+  await page.evaluate(() => {
+    window.review.failParts = true
+  })
+  const name = page.getByRole("textbox", {
+    name: "Nombre de la pieza",
+    exact: true,
+  })
+  await name.fill("Retained part draft")
+  await page
+    .getByRole("button", { name: "Piezas ejemplo", exact: true })
+    .click()
+  await page.waitForFunction(() =>
+    window.review.requests.some((item) => item.kind === "part"),
+  )
+  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  assert.equal(
+    await page.getByRole("heading", { name: "Otra pagina abierta" }).count(),
+    0,
+  )
+  await page
+    .getByRole("button", { name: "Piezas ejemplo", exact: true })
+    .click()
+  await page.getByRole("alert").waitFor()
+  assert.equal(await name.inputValue(), "Retained part draft")
+  await page.evaluate(() => {
+    window.review.failParts = false
+  })
+  await name.fill("Saved part draft")
+  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
+  assert.equal(
+    await page.evaluate(() => window.review.feature.parts[0].name),
+    "Saved part draft",
+  )
+})
+
+test("existing parts can still be linked without creating another part", async (t) => {
+  const { page } = await mount(t)
+  await page.evaluate(async () => {
+    window.review.parts.push({
+      id: "existing-part",
+      code: "9999",
+      name: "Existing part",
+    })
+    await window.review.refetchParts()
+  })
+  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await page
+    .getByRole("menuitem", { name: "9999 - Existing part", exact: true })
+    .click()
+  await page.waitForFunction(() => window.review.feature.parts.length === 2)
+  assert.equal(await page.evaluate(() => window.review.parts.length), 2)
+  assert.equal(
+    await page
+      .getByRole("textbox", { name: "Nombre de la pieza", exact: true })
+      .last()
+      .inputValue(),
+    "Existing part",
+  )
+})
 
 async function applyCover(page) {
   await page
@@ -233,26 +746,17 @@ test("CAD editing stays in one modal, retains selection across tabs and cancels 
   await setCover(page, true)
   await openCover(page, "cad")
   await page.getByRole("button", { name: "Limpiar selección" }).click()
-  assert.equal(
-    await page.getByRole("button", { name: "Aplicar" }).isDisabled(),
-    true,
-  )
+  await expect(page.getByRole("button", { name: "Aplicar" })).toBeDisabled()
   await page.getByRole("tab", { name: "Imagen", exact: true }).click()
   await page.getByRole("tab", { name: "CAD", exact: true }).click()
-  assert.equal(
-    await page.getByRole("button", { name: "Aplicar" }).isDisabled(),
-    true,
-  )
+  await expect(page.getByRole("button", { name: "Aplicar" })).toBeDisabled()
   assert.equal(await page.getByRole("dialog").count(), 1)
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "Cancelar", exact: true })
     .click()
   await openCover(page, "cad")
-  assert.equal(
-    await page.getByRole("button", { name: "Aplicar" }).isEnabled(),
-    true,
-  )
+  await expect(page.getByRole("button", { name: "Aplicar" })).toBeEnabled()
   assert.deepEqual(await page.evaluate(() => window.review.uploadRequests), [])
 })
 
@@ -309,7 +813,13 @@ test("linking an original preserves the header and uploads no bytes", async (t) 
     .click()
   await page.getByRole("button", { name: "drawings", exact: true }).click()
   await page.getByRole("button", { name: /drawing.pdf/ }).click()
-  await page.getByLabel("Revisión del documento (opcional)").fill("07")
+  await expect(
+    page.getByLabel("Revisión del documento (opcional)"),
+  ).toHaveCount(0)
+  await expect(page.getByText(/^Seleccionado:/)).toHaveCount(0)
+  await expect(
+    page.getByRole("button", { name: /drawing.pdf/ }),
+  ).toHaveAttribute("aria-pressed", "true")
   await page.getByRole("button", { name: "Vincular", exact: true }).click()
   await page.waitForFunction(
     () => window.review.feature.assets[0].file?.id === "document-one",
@@ -320,9 +830,61 @@ test("linking an original preserves the header and uploads no bytes", async (t) 
   )
   assert.deepEqual(await page.evaluate(() => window.review.uploadRequests), [])
   assert.deepEqual(await page.evaluate(() => window.review.referenceRequests), [
-    { path: "drawings/drawing.pdf", revision: "07" },
+    { path: "drawings/drawing.pdf" },
   ])
   assert.deepEqual(network, [])
+})
+
+test("uploading replaces a legacy label with the full filename and keeps it read-only", async (t) => {
+  const { page } = await mount(t)
+  await page
+    .getByPlaceholder("Nombre del fichero")
+    .fill("Old descriptive label")
+  await page
+    .locator('input[type="file"]')
+    .last()
+    .setInputFiles({
+      name: "20200204_3 130 516 987_AllCATPart.stp",
+      mimeType: "model/step",
+      buffer: Buffer.from("synthetic fixture"),
+    })
+  await expect(page.getByPlaceholder("Nombre del fichero")).toHaveValue(
+    "20200204_3 130 516 987_AllCATPart.stp",
+  )
+  await expect(page.getByPlaceholder("Nombre del fichero")).toHaveAttribute(
+    "readonly",
+    "",
+  )
+  assert.equal(
+    await page.evaluate(() => window.review.feature.assets[0].name),
+    "20200204_3 130 516 987_AllCATPart.stp",
+  )
+})
+
+test("legacy linked cards show the actual filename in edit and read views", async (t) => {
+  const { page } = await mount(t)
+  await page.evaluate(async () => {
+    window.review.feature.assets[0].file = {
+      id: "real-document",
+      filename: "3212.step",
+      content_type: "model/step",
+      size: 128,
+    }
+    window.review.feature.assets[0].name = "Molde 3212 (STEP, 247 MB)"
+    await window.review.refetch()
+  })
+  await expect(page.getByPlaceholder("Nombre del fichero")).toHaveValue(
+    "3212.step",
+  )
+  await expect(page.getByPlaceholder("Nombre del fichero")).toHaveAttribute(
+    "readonly",
+    "",
+  )
+  await page.evaluate(() => window.review.navigate("/previews"))
+  await expect(page.getByTitle("Ver 3212.step", { exact: true })).toBeVisible()
+  await expect(
+    page.getByText("Molde 3212 (STEP, 247 MB)", { exact: true }),
+  ).toHaveCount(0)
 })
 
 test("failed source selection can be cancelled without trapping navigation", async (t) => {
@@ -345,7 +907,7 @@ test("failed source selection can be cancelled without trapping navigation", asy
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
 })
 
-test("missing original can be relinked with its document identity intact", async (t) => {
+test("selecting a replacement links that file and uses its real filename without action options", async (t) => {
   const { page } = await mount(t)
   await page.evaluate(async () => {
     window.review.fileState = "missing"
@@ -366,30 +928,40 @@ test("missing original can be relinked with its document identity intact", async
     })
     .waitFor()
   await page
-    .getByRole("button", { name: "Vincular o cambiar archivo", exact: true })
+    .getByRole("button", { name: "Cambiar archivo vinculado", exact: true })
     .click()
-  await page.getByLabel("Acción sobre el vínculo").selectOption("relink")
+  await expect(page.getByLabel("Acción sobre el vínculo")).toHaveCount(0)
+  await expect(page.getByText("Usar otro archivo en esta ficha")).toHaveCount(0)
+  await expect(
+    page.getByText(/Selecciona un archivo de la carpeta compartida/),
+  ).toHaveCount(0)
   await page.getByRole("button", { name: "drawings", exact: true }).click()
   await page.getByRole("button", { name: /drawing.pdf/ }).click()
-  await page.getByLabel("Revisión del documento (opcional)").fill("07")
-  await page
-    .getByRole("button", { name: "Actualizar referencia", exact: true })
-    .click()
+  await expect(
+    page.getByLabel("Revisión del documento (opcional)"),
+  ).toHaveCount(0)
+  await page.getByRole("button", { name: "Vincular", exact: true }).click()
   await page.waitForFunction(
-    () => window.review.feature.assets[0].file.version === "version-two",
+    () => window.review.feature.assets[0].file.id === "document-one",
   )
-  assert.equal(
-    await page.evaluate(() => window.review.feature.assets[0].file.id),
-    "existing-document",
+  await expect(page.getByPlaceholder("Nombre del fichero")).toHaveValue(
+    "drawing.pdf",
   )
-  assert.deepEqual(await page.evaluate(() => window.review.relinkRequests), [
-    {
-      fileId: "existing-document",
-      path: "drawings/drawing.pdf",
-      revision: "07",
-      expected_version: "old-version",
-    },
+  await expect(page.getByPlaceholder("Nombre del fichero")).toHaveAttribute(
+    "readonly",
+    "",
+  )
+  assert.deepEqual(
+    await page.evaluate(() => window.review.relinkRequests ?? []),
+    [],
+  )
+  assert.deepEqual(await page.evaluate(() => window.review.referenceRequests), [
+    { path: "drawings/drawing.pdf" },
   ])
+  assert.equal(
+    await page.evaluate(() => window.review.feature.assets[0].name),
+    "drawing.pdf",
+  )
 })
 
 test("note refresh preserves dirty header fields", async (t) => {
@@ -624,7 +1196,11 @@ test("CAD cover explains the missing part STEP without discarding the header", a
     .getByRole("alert")
     .getByText(/Primero sube o vincula un STEP/)
     .waitFor()
-  await page.getByRole("button", { name: "Ir a Piezas ejemplo" }).click()
+  assert.equal(
+    await page.getByRole("button", { name: "Ir a Piezas ejemplo" }).count(),
+    0,
+  )
+  await page.keyboard.press("Escape")
   assert.equal(
     await page.getByPlaceholder("Nombre del feature").inputValue(),
     "Pending header",
@@ -811,15 +1387,23 @@ test("file list offers previews only for inline raster and PDF MIME types", asyn
     )
     await window.review.navigate("/previews")
   })
-  for (const name of ["JPEG", "PNG", "GIF", "WebP", "AVIF", "BMP", "PDF"]) {
+  for (const name of [
+    "photo.jpg",
+    "photo.png",
+    "photo.gif",
+    "photo.webp",
+    "photo.avif",
+    "photo.bmp",
+    "drawing.bin",
+  ]) {
     await page.getByTitle(`Ver ${name}`, { exact: true }).waitFor()
   }
-  for (const name of ["SVG", "TIFF", "Unverified PDF"]) {
+  for (const name of ["illustration.svg", "photo.tiff", "drawing.pdf"]) {
     assert.equal(
       await page.getByTitle(`Ver ${name}`, { exact: true }).count(),
       0,
     )
   }
-  await page.getByTitle("Descargar SVG", { exact: true }).waitFor()
-  await page.getByTitle("Descargar Unverified PDF", { exact: true }).waitFor()
+  await page.getByTitle("Descargar illustration.svg", { exact: true }).waitFor()
+  await page.getByTitle("Descargar drawing.pdf", { exact: true }).waitFor()
 })

@@ -5,6 +5,9 @@ import { cn } from "@/lib/utils"
 
 interface CollapsibleSectionProps {
   title: ReactNode
+  /** Contenido editable junto al boton de desplegar, nunca dentro de el. */
+  headerContent?: ReactNode
+  leading?: ReactNode
   icon?: ReactNode
   /** Acciones a la derecha del titulo (p. ej. el boton de anadir). */
   actions?: ReactNode
@@ -18,6 +21,8 @@ interface CollapsibleSectionProps {
 /** Panel desplegable. Hecho a mano para no anadir otra dependencia de Radix. */
 export function CollapsibleSection({
   title,
+  headerContent,
+  leading,
   icon,
   actions,
   defaultOpen = true,
@@ -38,6 +43,7 @@ export function CollapsibleSection({
   return (
     <div className={cn("rounded-lg border", className)}>
       <div className="flex items-center gap-2 px-3 py-2">
+        {leading}
         <button
           type="button"
           onClick={() =>
@@ -52,7 +58,10 @@ export function CollapsibleSection({
             })
           }
           aria-expanded={isOpen}
-          className="flex flex-1 items-center gap-2 text-left text-sm font-medium"
+          className={cn(
+            "flex items-center gap-2 text-left text-sm font-medium",
+            headerContent ? "shrink-0" : "flex-1",
+          )}
         >
           <ChevronDown
             className={cn(
@@ -61,8 +70,9 @@ export function CollapsibleSection({
             )}
           />
           {icon}
-          {title}
+          {headerContent ? <span className="sr-only">{title}</span> : title}
         </button>
+        {headerContent}
         {actions}
       </div>
       {(isOpen || keepMounted) && (

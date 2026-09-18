@@ -1,7 +1,9 @@
+import { DragDropProvider } from "@dnd-kit/react"
+import { isSortable, useSortable } from "@dnd-kit/react/sortable"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { Download, Plus, Trash2 } from "lucide-react"
-import { type ReactNode, useState } from "react"
+import { Download, GripVertical, Plus, Trash2 } from "lucide-react"
+import { type ReactNode, useMemo, useState } from "react"
 
 import {
   type FeatureAssetPublic,
@@ -12,16 +14,24 @@ import { CollapsibleSection } from "@/components/Common/CollapsibleSection"
 import { FileLink } from "@/components/Common/FileLink"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
+import { cn } from "@/lib/utils"
 import { formatFileSize, handleError } from "@/utils"
 import { AssetEditRow, NEW_ASSET_NAME } from "./AssetEditRow"
 import { ASSET_ICONS, ASSET_KIND_SHORT, ASSET_KINDS } from "./constants"
 import { DocumentStatus } from "./DocumentStatus"
-import { featureParts, type PartRow, partRows } from "./parts"
+import { PartActions } from "./PartActions"
+import { PartIdentityEditor } from "./PartIdentityEditor"
+import { assetName, featureParts, type PartRow, partRows } from "./parts"
+import { SaveStatus } from "./SaveStatus"
+import { SortableEditorList } from "./SortableEditorList"
+import { useAutosave } from "./useAutosave"
 import { fileAction } from "./viewers"
 
-/** Los adjuntos de una pieza, en el orden de los tipos, aplanados. */
+/** El orden elegido se conserva tambien en la ficha de lectura. */
 const assetsOf = (row: PartRow) =>
-  ASSET_KINDS.flatMap((kind) => row.assets[kind])
+  ASSET_KINDS.flatMap((kind) => row.assets[kind]).sort(
+    (a, b) => (a.position ?? 0) - (b.position ?? 0),
+  )
 
 /**
  * Una fila = un fichero, en modo lectura.
@@ -39,6 +49,7 @@ function AssetRow({
 }) {
   const Icon = ASSET_ICONS[asset.kind]
   const file = asset.file
+  const name = assetName(asset)
   const { action, reason } = fileAction(file)
 
   const body = (
@@ -47,7 +58,9 @@ function AssetRow({
       <span className="w-16 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
         {ASSET_KIND_SHORT[asset.kind]}
       </span>
-      <span className="min-w-0 flex-1 truncate">{asset.name}</span>
+      <span className="min-w-0 flex-1 truncate" title={name}>
+        {name}
+      </span>
       {file ? (
         <span className="shrink-0 text-xs text-muted-foreground">
           {formatFileSize(file.size)}
@@ -68,11 +81,7 @@ function AssetRow({
             to="/features/$featureId/fichero/$assetId"
             params={{ featureId, assetId: asset.id }}
             className="flex min-w-0 flex-1 items-center gap-2 hover:underline"
-            title={
-              action === "view"
-                ? `Ver ${asset.name}`
-                : `Detalles de ${asset.name}`
-            }
+            title={action === "view" ? `Ver ${name}` : `Detalles de ${name}`}
           >
             {body}
           </Link>
@@ -86,11 +95,11 @@ function AssetRow({
             variant="ghost"
             size="icon"
             className="size-7 shrink-0"
-            title={`Descargar ${asset.name}`}
+            title={`Descargar ${name}`}
           >
             <FileLink fileId={file.id} downloadFile download={file.filename}>
               <Download className="size-3.5" />
-              <span className="sr-only">Descargar {asset.name}</span>
+              <span className="sr-only">Descargar {name}</span>
             </FileLink>
           </Button>
         )}
@@ -112,15 +121,16 @@ function PartGroup({
   feature,
   row,
   defaultOpen,
-  declared,
+  dragHandle,
   editable,
+  isNew,
 }: {
   feature: FeaturePublic
   row: PartRow
   defaultOpen: boolean
-  /** La pieza esta en `feature.parts`, no solo aportando ficheros. */
-  declared: boolean
+  dragHandle?: ReactNode
   editable?: boolean
+  isNew: boolean
 }) {
   const queryClient = useQueryClient()
   const { showErrorToast } = useCustomToast()
@@ -164,13 +174,19 @@ function PartGroup({
 
   return (
     <CollapsibleSection
+      leading={dragHandle}
       keepMounted={editable}
       storageKey={`feature-piece:${feature.id}:${row.part?.id ?? "unassigned"}`}
       defaultOpen={defaultOpen}
+      headerContent={
+        editable && row.part ? (
+          <PartIdentityEditor part={row.part} isNew={isNew} />
+        ) : undefined
+      }
       title={
         row.part ? (
           <span className="flex flex-wrap items-baseline gap-x-2">
-            <span className="font-mono font-semibold">{row.part.code}</span>
+            <span className="font-mono font-semibold">{row.part.code}</span>{" "}
             {row.part.name && (
               <span className="text-muted-foreground">{row.part.name}</span>
             )}
@@ -182,18 +198,19 @@ function PartGroup({
       }
       actions={
         <div className="flex shrink-0 items-center gap-1">
-          <span className="text-xs text-muted-foreground">
+          <span className="hidden text-xs text-muted-foreground sm:inline">
             {assets.length} fichero{assets.length === 1 ? "" : "s"} · {uploaded}{" "}
             vinculado{uploaded === 1 ? "" : "s"}
           </span>
-          {editable && declared && row.part && (
+          {editable && row.part && (
             <Button
               type="button"
               variant="ghost"
               size="icon"
               className="size-7 text-destructive"
-              title="Quitar la pieza. Sus ficheros no se borran, y si los hay la pieza se sigue viendo."
+              title="Quitar esta pieza y sus adjuntos del feature"
               onClick={() => row.part && unlink.mutate(row.part.id)}
+              disabled={unlink.isPending}
             >
               <Trash2 className="size-3.5" />
               <span className="sr-only">Quitar {row.part.code}</span>
@@ -202,22 +219,29 @@ function PartGroup({
         </div>
       }
     >
-      {assets.length === 0 && (
-        <p className="text-sm text-muted-foreground">
-          Todavia no hay ningun fichero de esta pieza.
-        </p>
-      )}
-      {assets.map((asset) =>
-        editable ? (
-          <AssetEditRow
-            key={asset.id}
-            asset={asset}
-            parts={featureParts(feature)}
-            isNew={asset.id === newAssetId}
-          />
-        ) : (
+      {editable ? (
+        <SortableEditorList
+          items={assets}
+          saveOrder={(ids) =>
+            FeaturesService.reorderFeatureAssets({
+              featureId: feature.id,
+              requestBody: { part_id: row.part?.id ?? null, asset_ids: ids },
+            })
+          }
+          dragLabel={(asset) => `Mover fichero ${assetName(asset)}`}
+        >
+          {(asset, handle) => (
+            <AssetEditRow
+              asset={asset}
+              isNew={asset.id === newAssetId}
+              dragHandle={handle}
+            />
+          )}
+        </SortableEditorList>
+      ) : (
+        assets.map((asset) => (
           <AssetRow key={asset.id} featureId={feature.id} asset={asset} />
-        ),
+        ))
       )}
       {editable && (
         <Button
@@ -232,6 +256,56 @@ function PartGroup({
         </Button>
       )}
     </CollapsibleSection>
+  )
+}
+
+function SortablePart({
+  feature,
+  row,
+  index,
+  isNew,
+  disabled,
+}: {
+  feature: FeaturePublic
+  row: PartRow
+  index: number
+  isNew: boolean
+  disabled: boolean
+}) {
+  const { ref, handleRef, isDragging } = useSortable({
+    id: row.part!.id,
+    index,
+    disabled,
+    transition: { duration: 220, easing: "ease", idle: true },
+  })
+  return (
+    <div
+      ref={ref}
+      data-part-id={row.part!.id}
+      className={cn(
+        "rounded-lg bg-background",
+        isDragging && "shadow-xl ring-2 ring-primary/30",
+      )}
+    >
+      <PartGroup
+        feature={feature}
+        row={row}
+        editable
+        isNew={isNew}
+        defaultOpen={isNew || featureParts(feature).length === 1}
+        dragHandle={
+          <button
+            ref={handleRef}
+            type="button"
+            disabled={disabled}
+            className="touch-none cursor-grab rounded p-0.5 text-muted-foreground hover:bg-accent active:cursor-grabbing"
+            aria-label={`Mover pieza ${row.part!.code}`}
+          >
+            <GripVertical className="size-4" />
+          </button>
+        }
+      />
+    </div>
   )
 }
 
@@ -252,25 +326,60 @@ function PartGroup({
 export function PartAssetList({
   feature,
   editable,
-  footer,
+  ensureFeatureId,
 }: {
   feature: FeaturePublic
   editable?: boolean
-  /** Se pinta al final de la lista: el selector de «anadir pieza». */
-  footer?: ReactNode
+  ensureFeatureId?: () => Promise<string>
 }) {
+  const [newPartId, setNewPartId] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const { showErrorToast } = useCustomToast()
   const rows = partRows(feature)
-  const declaredIds = new Set((feature.parts ?? []).map((part) => part.id))
+  const signature = rows
+    .flatMap((row) => (row.part ? [row.part.id] : []))
+    .join(",")
+  const server = useMemo(
+    () => ({ ids: signature ? signature.split(",") : [] }),
+    [signature],
+  )
+  const reorder = useMutation({
+    mutationFn: (ids: string[]) =>
+      FeaturesService.reorderFeatureParts({
+        featureId: feature.id,
+        requestBody: { part_ids: ids },
+      }),
+    onError: handleError.bind(showErrorToast),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["features"] }),
+  })
+  const order = useAutosave(server, (patch) => {
+    const current = new Set(server.ids)
+    const ids = (patch.ids ?? server.ids).filter((id) => current.has(id))
+    return reorder.mutateAsync([
+      ...ids,
+      ...server.ids.filter((id) => !ids.includes(id)),
+    ])
+  })
+  const [dragRows, setDragRows] = useState<PartRow[] | null>(null)
+  if (editable) {
+    const positions = new Map(order.values.ids.map((id, index) => [id, index]))
+    rows.sort(
+      (a, b) =>
+        (positions.get(a.part?.id ?? "") ?? Infinity) -
+        (positions.get(b.part?.id ?? "") ?? Infinity),
+    )
+  }
+  const displayRows = dragRows ?? rows
+  const footer = editable ? (
+    <PartActions
+      feature={feature}
+      onAdded={setNewPartId}
+      ensureFeatureId={ensureFeatureId}
+    />
+  ) : null
 
   if (rows.length === 0) {
-    return (
-      <div className="space-y-2">
-        <p className="text-sm text-muted-foreground">
-          Todavia no hay ninguna pieza asociada a este feature.
-        </p>
-        {footer}
-      </div>
-    )
+    return footer ?? null
   }
 
   const assets = feature.assets ?? []
@@ -284,17 +393,53 @@ export function PartAssetList({
         {assets.length === 1 ? "" : "s"} · {uploaded} vinculado
         {uploaded === 1 ? "" : "s"}
       </p>
-      {rows.map((row) => (
-        <PartGroup
-          key={row.part?.id ?? "sin-pieza"}
-          feature={feature}
-          row={row}
-          declared={row.part ? declaredIds.has(row.part.id) : false}
-          // Con una sola pieza, tenerla cerrada es un clic tonto.
-          defaultOpen={rows.length === 1}
-          editable={editable}
+      <DragDropProvider
+        onDragStart={() => setDragRows(rows)}
+        onDragEnd={(event) => {
+          if (!event.canceled && isSortable(event.operation.source)) {
+            const { initialIndex, index } = event.operation.source
+            const ids = displayRows.flatMap((row) =>
+              row.part ? [row.part.id] : [],
+            )
+            if (index !== initialIndex) {
+              const [moved] = ids.splice(initialIndex, 1)
+              ids.splice(index, 0, moved)
+              order.change({ ids })
+            }
+          }
+          setDragRows(null)
+        }}
+      >
+        {displayRows.map((row, index) =>
+          editable && row.part ? (
+            <SortablePart
+              key={row.part.id}
+              feature={feature}
+              row={row}
+              index={index}
+              isNew={row.part.id === newPartId}
+              disabled={order.saving}
+            />
+          ) : (
+            <PartGroup
+              key={row.part?.id ?? "sin-pieza"}
+              feature={feature}
+              row={row}
+              // Con una sola pieza, tenerla cerrada es un clic tonto.
+              defaultOpen={rows.length === 1 || row.part?.id === newPartId}
+              editable={editable}
+              isNew={row.part?.id === newPartId}
+            />
+          ),
+        )}
+      </DragDropProvider>
+      {editable && (
+        <SaveStatus
+          error={order.error}
+          saving={order.saving}
+          retry={order.flush}
         />
-      ))}
+      )}
       {footer}
     </div>
   )

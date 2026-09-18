@@ -3,7 +3,7 @@
 > **Antes de preguntar algo a INTEPLAST, mirar aquí.** Varias de las preguntas originales se
 > han resuelto leyendo los datos, sin necesidad de consultar.
 >
-> Última revisión: **2026-09-15**
+> Última revisión: **2026-09-17**
 
 ---
 
@@ -12,7 +12,8 @@
 **Prioridad 1 para la próxima reunión: [A10 — acceso a los originales](#a10-acceso-originales).**
 Eduard cree que están en OneDrive/SharePoint/Teams de empresa; todavía no está confirmado ni
 tenemos acceso. Conseguir un contacto de informática y una biblioteca/carpeta de prueba.
-El desarrollo continúa mientras tanto con la carpeta local del 3212 en solo lectura.
+El desarrollo continúa mientras tanto con el origen local de ejemplos en solo lectura.
+La organización de las carpetas de piezas queda pendiente en A12.
 
 > ⚠️ **Cómo se escriben estas preguntas.** El interlocutor de INTEPLAST no se acuerda de lo que
 > hizo — estos datos son de 2024 y 2025 — y tiene poca paciencia para leer. Cada pregunta va en
@@ -80,13 +81,21 @@ pin en el agujero del bolt eye a 0,1 mm/s y se registra la fuerza máxima, que d
 **Pregunta: ¿cuál es el pin que se usa realmente, y los otros dos números qué son?**
 (¿un pin distinto, un desgaste, una medida de otra cosa?)
 
-### Revisión interna pendiente · Signo de tolerancia de N266
+### Contraste de N266 y del método de medida — 17/09/2026
 
-Las tablas de correcciones 1.24 y 2.8 transcriben `67,1−0,1`, pero el resumen de `intern.08`
-recogía `67,1+0,1` y clasificaba sus medidas como OK. **Hay que contrastar CSV, plano/revisión
-y diapositivas antes de usar ese veredicto**. No se han reabierto los originales en esta revisión.
-También queda por reconciliar el recuento de imágenes del método de medida (55 declaradas;
-43 PNG + 8 JPEG suman 51). Son comprobaciones de fuente, no hechos resueltos.
+CSV y tablas XLS usan **67,1 +0,1**; el título PPTX de 1.24/2.8 dice **67,1 −0,1**.
+El contraste ya está hecho. Falta confirmar cuál es la especificación en el plano rev.06,
+no volver a deducir el signo por la frase sobre añadir acero. Según CSV/XLS, `.08` cumple.
+El DOCX tiene **55 imágenes: 43 PNG + 8 JPEG + 4 JPG**; el desglose anterior omitía `.JPG`.
+
+### A11 · Uso exacto de PUNTS_NOUS y trazabilidad de ejecución
+
+**Recordatorio:** en los doce pares, `PUNTS_NOUS` coincide exactamente con los últimos
+150 puntos de `PUNTS`. Xavier explicó que se envía al proveedor una nube hecha con la CMM.
+**Pregunta:** ¿para qué se separan esos 150 puntos y qué archivo corresponde a cada acción?
+¿Dónde se confirma qué retoques se ejecutaron y en qué fecha? Un `OK` en el PPTX no permite
+asumir esa confirmación. N170 mejora en GX, pero mantiene LP máximos fuera (30/32 en `.03`).
+Su aceptación o eventual concesión también debe aclararse, junto a A1.
 
 ---
 
@@ -121,11 +130,11 @@ N-number aparece **junto al punto de la pieza al que se refiere** es el plano.
 
 O sea: **la petición no es un lujo, es la única salida.** Hoy el mapeo `N-number → zona de la
 pieza` solo se puede hacer **a mano, ampliando globo a globo**, sobre 178 globos y para cada una
-de las cuatro piezas. Con el plano en vectorial sería inmediato y exacto.
+de las cuatro piezas. Con texto seleccionable, incluidos los globos, sería mucho más fiable; habría que validar el mapeo.
 
 **Y si el CAD nativo no es posible, nos vale una alternativa más sencilla: el mismo plano
 escaneado a más resolución.** El actual son 3276×2317 px (~198 DPI) y las cifras de los globos
-miden 9 píxeles. A 600 DPI se leerían todas sin problema.
+miden 9 píxeles. Una digitalización real a 600 DPI podría ayudar, pero su precisión debe auditarse; reescalar la imagen actual no recupera detalles.
 
 Y además **no es el plano de vuestros informes**: todos los informes, hasta `intern.09` de abril
 de 2025, dicen `Drawing nº Level: 06`. El PDF que tenemos es la **rev. 07, del 23/05/2025** —
@@ -306,6 +315,25 @@ la vista web por sí sola no permite concluir que falten superficies en el CAD o
 
 ---
 
+### A12 · Ubicación de las carpetas de piezas
+
+**Recordatorio:** cada pieza tiene una carpeta ya preparada por INTEPLAST, con sus CAD,
+planos 2D, moldes y demás ficheros; por ejemplo, `3212 Pump Housing`.
+
+**Qué no nos cuadra:** todavía no sabemos si esa organización se mantiene bajo una única
+carpeta principal en Microsoft 365 o si las piezas están repartidas entre proyectos,
+bibliotecas o ubicaciones. Esto determina dónde debe buscar el selector de piezas.
+
+**Pregunta: ¿Todas las carpetas de piezas cuelgan de una misma carpeta principal o están
+repartidas entre distintos proyectos o ubicaciones?**
+
+**Contexto interno (2026-09-17):** hasta confirmarlo, la aplicación asume una carpeta principal
+común y presenta sus subcarpetas directas. Seleccionar una registra o reutiliza la pieza sin
+crear ni modificar carpetas originales. El adaptador local es temporal; acceso y permisos
+de SharePoint/OneDrive siguen pendientes en A10.
+
+---
+
 ## Historial de conclusiones revisadas
 
 <a id="r10--hubo-una-tercera-corrección-de-molde-era-a1"></a>
@@ -413,32 +441,29 @@ Además la corrección 2 **audita explícitamente** la 1 en el texto de sus diap
 (14/03/2024) y `intern.04` (15/04/2024)**. Ambos comparten lote, así que el escaneado
 corresponde a esa tirada — la **posterior a la corrección nº1**.
 
-### R3 · ¿Cuál es la versión buena entre `rev0` / `rev1` / `rev1_`?
+### R3 · ¿Cuál es la versión buena entre rev0 / rev1 / rev1_?
 
-**Resuelto por comparación.** En el 3212:
-- Corrección 1: `rev1` (es la única con PDF acompañante).
-- Corrección 2: `rev1` y `rev1_` son **idénticos** (mismo tamaño, 7,65 MB) → da igual cuál.
-- `2N/Old/` contiene la versión superada del `.xls`.
+El prototipo usa corrección 1 `rev1` y corrección 2 `rev1` sin guion bajo final.
+**Rectificado 17/09/2026:** los dos PPTX de corrección 2 no son idénticos byte a byte:
+8.024.315 y 8.024.918 B. No asumir equivalencia por tamaño redondeado o nombre.
+`Old/` conserva una versión anterior del XLS. Falta auditar diferencias entre variantes
+si se quiere automatizar su selección; guardar siempre qué archivo se utilizó.
 
-**Regla:** mayor `rev`, descartar `Old/` y `Copia de`.
+### R4 · ¿Dónde se documenta la corrección? (Dubte 5)
 
-### R4 · ¿Dónde está la acción que se hizo en el molde? *(Dubte 5)*
-
-**Resuelto.** En los PPTX de `5- Retoques de molde`, una diapositiva por cota, con la magnitud
-en mm y la zona marcada en rojo. Para las geometrías no circulares, INTEPLAST pasa al proveedor
-una **nube de puntos** (`_PUNTS_NOUS.txt`, 150 puntos objetivo) en vez de una cota.
-
-🆕 **Ampliado el 2026-08-13**: esos 150 puntos no son una nube suelta sino **6 contornos de 25
-puntos** a alturas Y concretas (≈ uno cada 14,4°), y **los 12 ficheros del 3212 son todos
-distintos** — hay un objetivo **por cavidad y por muestreo**, y las alturas cambian entre
-muestreos. Es decir: **la corrección se especifica cavidad a cavidad**, no para el molde entero.
-→ [3212/4-metrologia.md §4](3212/4-metrologia.md#los-txt-son-tres-familias-distintas-no-una)
+En **PPTX + XLS de retoques**. El PPTX explica la propuesta y muestra la zona; `DR(100%)`
+del XLS aporta retoques, previsiones por cavidad y fórmulas encadenadas. La ejecución debe
+confirmarse por separado. La respuesta de Xavier habla de nubes hechas con CMM, sin
+identificar un archivo como geometría objetivo. `PUNTS_NOUS` es un subconjunto de PUNTS;
+su uso exacto y vínculo a acciones se recogen en A11.
 
 ### R5 · ¿Funcionó el retoque del Bolt Eye?
 
-**Resuelto y cuantificado.** N170 Ø4−0,1, cavidad 13, bolt 1 @ H=1,5 mm:
-`3,429` (NOK) → **corrección 1.33** → `3,974` (OK) → `3,981` → `3,978` un año después.
-**+0,545 mm**, y N170 desaparece de la corrección nº2.
+**Mejora parcial, no resolución completa.** GX de N170, c13 B1 H=1,5:
+3,429 → 3,974 → 3,981 → 3,978. LP máximo del mismo elemento:
+3,477 → 4,018 → 4,023 → 4,023, frente a máximo admisible 4,000.
+En `.03`, 0/32 GX están fuera, pero sí 30/32 LP máximos. No concluir que quedó aceptado
+porque desaparezca del segundo PPTX. [Fuentes](3212/revision-2026-09-17.md).
 
 ### R6 · ¿Cómo se calcula la posición ⌖? *(Dubte 2)*
 

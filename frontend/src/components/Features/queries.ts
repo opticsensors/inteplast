@@ -1,6 +1,7 @@
 import {
   type FeaturesReadFeaturesData,
   FeaturesService,
+  FilesService,
   PartsService,
 } from "@/client"
 
@@ -28,5 +29,40 @@ export const featureFiltersQueryOptions = () => ({
 
 export const partsQueryOptions = () => ({
   queryKey: ["parts"] as const,
-  queryFn: () => PartsService.readParts(),
+  queryFn: async () => {
+    const result = await PartsService.readParts({ limit: 100 })
+    while (result.data.length < result.count) {
+      const next = await PartsService.readParts({
+        skip: result.data.length,
+        limit: 100,
+      })
+      if (!next.data.length) break
+      result.data.push(...next.data)
+      result.count = next.count
+    }
+    return result
+  },
+})
+
+export const partFoldersQueryOptions = () => ({
+  queryKey: ["part-folders"] as const,
+  queryFn: async () => {
+    const result = await FilesService.listSource({
+      path: "",
+      directoriesOnly: true,
+      limit: 200,
+    })
+    while (result.entries.length < result.count) {
+      const next = await FilesService.listSource({
+        path: "",
+        directoriesOnly: true,
+        skip: result.entries.length,
+        limit: 200,
+      })
+      if (!next.entries.length) break
+      result.entries.push(...next.entries)
+      result.count = next.count
+    }
+    return result
+  },
 })

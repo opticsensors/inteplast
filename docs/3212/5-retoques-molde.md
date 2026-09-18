@@ -17,10 +17,10 @@ Son las decisiones de retoque tomadas en reunión, una diapositiva por cota.
 ├── 20240124-Mold correction_1_P3212_rev0.pptx      18,62 MB   ← versión vieja
 ├── 20240124-Mold correction_1_P3212_rev1.pptx      18,54 MB   ← 🔑 CORRECCIÓN 1 (la buena)
 ├── 20240124-Mold correction_1_P3212_rev1.pdf        6,45 MB   ← misma, en PDF
-├── 3212-00_intern.01_mold_correction.xls            0,70 MB   ← ⚠️ clon de intern.01.xls
+├── 3212-00_intern.01_mold_correction.xls            0,70 MB   ← medidas y previsiones en DR(100%)
 └── 2N/                                                        ← "2ª corrección"
     ├── 20240318-Mold correction_2_P3212_rev1.pptx   7,65 MB   ← 🔑 CORRECCIÓN 2
-    ├── 20240318-Mold correction_2_P3212_rev1_.pptx  7,65 MB   ← duplicado exacto
+    ├── 20240318-Mold correction_2_P3212_rev1_.pptx  7,65 MB   ← variante, no idéntica byte a byte
     ├── 3212-00_intern.03_correction_2_.xls          0,67 MB
     └── Old/
         └── 3212-00_intern.03_correction_2.xls       0,66 MB   ← versión superada
@@ -34,24 +34,25 @@ abril de 2025 → pregunta abierta A1 en [preguntas-abiertas.md](../preguntas-ab
 | Quiero… | Uso |
 |---|---|
 | El contenido de la corrección 1 | `20240124-…_rev1.pptx` |
-| El contenido de la corrección 2 | `2N/20240318-…_rev1.pptx` (el `rev1_` es idéntico) |
+| El contenido de la corrección 2 | `2N/20240318-…_rev1.pptx` (variante elegida explícitamente) |
 | Leerlo a ojo rápido | El `.pdf` de la corrección 1 |
-| Datos de los `.xls` | **Nada** — ver abajo |
+| Previsiones y efectos encadenados | `DR(100%)` de los XLS: H:K medidas, O retoque, P:S previsiones |
 
-### ⚠️ Los `.xls` de esta carpeta no aportan contenido
+### Los XLS contienen el efecto previsto de los retoques
 
-Comprobado celda a celda el 2026-08-11:
+**Rectificado el 17/09/2026:** no son clones sin valor adicional. En `DR(100%)` hay
+columnas `Retoc/Retocs` y resultados previstos por cavidad, con fórmulas. Se localizaron
+114 y 68 filas con retoque numérico en los libros de corrección 1 y 2; no equivalen
+a ese número de acciones, porque hay varias evaluaciones y pasos por característica.
 
-- **`3212-00_intern.01_mold_correction.xls` es un clon exacto** de
-  `4- Metrologia/3212-00_intern.01.xls`: mismo texto en `DR(3D)`, **mismos colores de relleno y
-  de fuente, mismas 21 formas, 0 comentarios**. No hay ni una anotación.
-- **`2N/3212-00_intern.03_correction_2_.xls`** sí tiene columnas extra (15–26), pero contienen
-  una **re-ordenación de los mismos datos de N242** separados por el comentario A/B. No son
-  anotaciones nuevas.
+En corrección 2, N161 ocupa 101–102: `P101=H101+$O$101`. N240 usa 224–225:
+`P224=H224+$O$224`, después `P225=P224+$O$225`. N165 GLOBAL usa 111–112 y la previsión
+final 116–117. Los efectos del plano A y del retoque local están encadenados.
 
-> 🔑 **Su único valor es el nombre del fichero**: dice de qué muestreo salió cada corrección.
-> Es lo que permitió reconstruir la cadena muestreo ↔ corrección.
-> **Todo el contenido real de la corrección está en los PPTX.**
+Los PPTX aportan explicación y zona; los XLS, previsión cuantitativa; los CSV posteriores,
+observación. **Ninguna fuente por sí sola acredita la ejecución de todas las acciones.**
+El nombre del XLS también identifica el muestreo origen. Evidencia, fórmulas y resultados en
+[revisión del 17/09/2026](revision-2026-09-17.md).
 
 ---
 
@@ -108,7 +109,7 @@ Campos a extraer y sus regex → [formatos-parsing.md](../formatos-parsing.md#3-
 *(Resuelto el 2026-08-11 — era la pregunta abierta A2, ahora R9.)*
 
 Las diapositivas huérfanas **no dicen** su N-number en el texto, pero **sí lo enseñan en la
-imagen**: el bloque *Current situation* es un recorte del `DR(3D)` cuya **primera columna es la
+imagen**: el bloque *Current situation* es un recorte de las tablas XLS cuya **primera columna es la
 columna `Nr`**. Basta con extraer las imágenes de esa diapositiva y mirarlas.
 
 | Slide | Fichero | `Retoc` | N-numbers |
@@ -134,7 +135,7 @@ Eso es exactamente el `0,29 mm` que citan de pasada las otras diapositivas:
 - **1.28 (N243)**: *"si toquem **0,29 mm** en el pla A, tocar aquí 0,27"*
 
 > 🔑 **Modelo de datos:** estas diapositivas no son una `ACCION` sobre un N-number, sino una
-> **acción sobre una referencia (datum) con N cotas afectadas**. El `DR(3D)` recortado que
+> **acción sobre una referencia (datum) con N cotas afectadas**. El `DR(100%)` de retoques recortado que
 > acompaña lleva una columna `Retoc` con el valor propuesto y **el resultado simulado por
 > cavidad** — es decir, INTEPLAST ya calcula *a priori* el efecto del retoque. Esa columna es
 > ingerible como `ACCION.efecto_previsto`.
@@ -229,15 +230,15 @@ las cotas que seguían mal.
 | 2.17 | N242 | 0,05 | Segons núvol de punts, *tenint en compte que mourem el pla A 0,02 mm* | |
 | 2.18 | N288 | 15N–50N | *El pin fa **3,94**… Espera remesura* | |
 
-> 📌 **12 de las 18 diapositivas terminan con un marcador `OK`** suelto. Es el campo de estado
-> de la acción, y es directamente ingerible.
+> Algunas diapositivas llevan un marcador `OK`. Conservarlo literalmente, separado de
+> ejecución confirmada y conformidad dimensional. Su significado operativo debe confirmarse.
 
-> 📌 **La corrección 2 audita a la 1 en su propio texto** (slides 2.7, 2.8, 2.18). No hace falta
-> inferir si la corrección anterior funcionó: está escrito.
+La corrección 2 contiene observaciones sobre la 1 (2.7, 2.8, 2.18); son comentarios del
+autor que se deben contrastar con las mediciones posteriores.
 
-⚠️ **N266 necesita contraste con la fuente:** aquí se transcribió `67,1−0,1`; la tabla de
-resultado final del historial recogía `67,1+0,1`. Se conserva esta transcripción con la
-discrepancia explícita y se deja pendiente el veredicto, sin inventar cuál era la tolerancia correcta.
+**N266, contraste del 17/09/2026:** el título PPTX dice `67,1−0,1`, pero tablas XLS y CSV
+dicen `67,1+0,1`. El Excel de corrección 2 prevé +0,14 (`O266`, `P266=H266+$O$266`).
+Conservar la discrepancia y confirmar la especificación con rev.06. Según CSV, `.08` cumple.
 
 > 📌 **Slide 2.1 menciona los proyectos `3181` y `3157`**, que no están en `Exemples`. Confirma
 > que la comparación entre piezas ya se practica manualmente → pregunta abierta A8.
@@ -246,17 +247,17 @@ discrepancia explícita y se deja pendiente el veredicto, sin inventar cuál era
 
 ## 5. Vocabulario de las acciones
 
-Normalizarlo al ingerir — es el campo `sentido` del modelo de lesson learned.
+Conservar el verbo original y separar la operación sobre el molde de su efecto sobre la
+cota. El signo dimensional depende de la superficie y dirección, no solo del verbo.
 
-| Expresión (catalán) | Qué se hace en el molde | Efecto en la pieza | Signo |
-|---|---|---|:--:|
-| *Fer créixer el plàstic* / *Incrementar plàstic* | Quitar acero | La cota crece | **+** |
-| *Reduir el ferro* | Quitar acero (dicho al revés) | La cota crece | **+** |
-| *Incrementar acer* / *Reduir plàstic* | Añadir acero | La cota disminuye | **−** |
-| *Erosionar* | Electroerosión → quita acero | La cota crece | **+** |
-| *Polir* | Acabado superficial | Sin cambio dimensional | ∅ |
-| *Corregir segons núvol de punts* | Se le pasa el `.txt` de puntos al proveedor | — | ∅ |
-| *No fer res* / *No tocar res* | Decisión explícita de no actuar | — | ∅ |
+| Expresión | Operación | Efecto dimensional |
+|---|---|---|
+| *Incrementar plàstic* / *Reduir el ferro* | Retirar acero según la zona | Consultar la previsión de la cota |
+| *Incrementar acer* / *Reduir plàstic* | Añadir acero según la zona | N266, por ejemplo, prevé +0,14 |
+| *Erosionar* | Electroerosión | Depende de la dirección |
+| *Polir* | Acabado superficial | No cuantificado en estos documentos |
+| *Corregir segons núvol de punts* | Usar soporte geométrico | No identifica por sí solo archivo u objetivo |
+| *No fer res* / *No tocar res* | Decisión de no actuar | No registrar como ejecución |
 
 > Responde a la pregunta de las notas de reunión (*"¿son siempre quitar metal / añadir
 > plástico?"*): **no**. Hay ambos sentidos, más erosión, pulido y correcciones por nube de
@@ -266,11 +267,12 @@ Normalizarlo al ingerir — es el campo `sentido` del modelo de lesson learned.
 
 ## 6. Qué aporta a la base de datos
 
-**Es la fuente única de las lessons learned.** Sin esta carpeta el proyecto no tiene contenido
-que mostrar en el frontend.
+**PPTX + XLS explican la propuesta y la previsión.** La lección se obtiene contrastándolos
+con las mediciones posteriores y las decisiones de aceptación disponibles.
 
 | Fuente | Destino | Prioridad |
 |---|---|:--:|
+| XLS `DR(100%)`, columnas O y P:S, etapas y celdas | `PREVISION_CORRECCION`, separada de `MEDICION` | **1** |
 | Texto de las diapositivas | `CORRECCION_MOLDE` + `ACCION` (slide_nº, n_numbers, cota, acción, magnitud_mm, sentido, estado) | **4** |
 | Imágenes de `ppt/media/` | `ACCION.imagen_zona_roja` — son **exactamente** las imágenes de "zona en rojo" que describe el frontend de `inteplast_PADIH_fase_B.md` | **5** |
 | Nombre del `.xls` acompañante | `CORRECCION_MOLDE.muestreo_origen` | **4** |

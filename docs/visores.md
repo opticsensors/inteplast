@@ -74,7 +74,7 @@ cavidades, más dos carpetas de comparativas al final:
 
 **`ver_txt.py`** — árbol de dos niveles (muestreo → cavidad → los 3 ficheros de esa cavidad).
 Cada página trae la nube 3D girable y la vista en planta, con el nº de puntos, el bounding box y
-los niveles de altura detectados. Al final, los puntos objetivo de cada muestreo superpuestos.
+los niveles de altura detectados. Al final, los subconjuntos PUNTS_NOUS de cada muestreo superpuestos.
 
 **`ver_pdf.py`** — árbol de dos niveles (muestreo → cavidad → las 12 gráficas). Cada página lleva
 los 6 números extraídos, una barra que sitúa la desviación respecto a la banda de tolerancia, y
@@ -200,3 +200,25 @@ dice que no se puede y enciende los 178 globos para que lo busques a ojo con el 
 La página lo dice arriba del todo y trae **el texto listo para enviar**. Se pide, por orden:
 PDF vectorial / SVG / DWG / CATDrawing nativo; si no, **el mismo plano a 600 DPI o más**; y la
 **rev. 06**, que es la de los informes. → [preguntas-abiertas.md](preguntas-abiertas.md) (A4)
+
+## Prototipo independiente de correcciones (17/09/2026)
+
+`ver_correcciones.py` genera `out/correcciones-3212/index.html`, sin modificar `ver_todo.py`
+ni sus salidas. Lee CSV, previsiones de los XLS de retoques y texto/imágenes de PPTX.
+Incluye N161, N240, N170 y N165, selección de cavidad, agujero/altura en N170, evolución,
+secciones de N165 y perfiles A/B complementarios. Conserva enlaces y localizadores de origen.
+
+```powershell
+$py = "C:\Users\eduard.almar\AppData\Local\Programs\Python\Python311\python.exe"
+& $py -m pip install xlrd
+& $py data-explorer/ver_correcciones.py
+# Opcional: --no-abrir, --raiz <carpeta de la pieza>, --salida <carpeta de salida>
+```
+
+Dependencias: pandas, numpy, plotly, PyMuPDF y **xlrd**. Se leen valores guardados de XLS;
+no se ejecutan macros ni se recalculan hipótesis. Las correspondencias son explícitas para
+el 3212 y se validan; no es una ingesta genérica. Faltantes se muestran sin evaluar.
+
+La documentación antigua del visor TXT llamaba «objetivos» a PUNTS_NOUS. Esa interpretación
+está retirada: son los últimos 150 puntos de PUNTS. Los visores anteriores se conservan
+sin cambios de código por petición del usuario. [Hallazgos y límites](3212/revision-2026-09-17.md).

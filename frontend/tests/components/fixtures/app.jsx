@@ -76,6 +76,10 @@ const client = new QueryClient({
 })
 window.review.refetch = () =>
   client.invalidateQueries({ queryKey: ["features"] })
+window.review.refetchParts = () =>
+  client.invalidateQueries({ queryKey: ["parts"] })
+window.review.refetchUser = () =>
+  client.invalidateQueries({ queryKey: ["currentUser"] })
 const root = createRootRoute({ component: () => <Outlet /> })
 const editor = createRoute({
   getParentRoute: () => root,
@@ -97,6 +101,21 @@ const away = createRoute({
   getParentRoute: () => root,
   path: "/away",
   component: () => <h1>Otra pagina abierta</h1>,
+})
+const newFeature = createRoute({
+  getParentRoute: () => root,
+  path: "/new",
+  component: () => (
+    <FeatureForm
+      featureId={null}
+      onCreated={(id) => {
+        window.review.createdFeatureId = id
+        void router.navigate({ to: "/away" })
+      }}
+      onSaved={() => router.navigate({ to: "/away" })}
+      onCancel={() => router.navigate({ to: "/away" })}
+    />
+  ),
 })
 const files = createRoute({
   getParentRoute: () => root,
@@ -120,6 +139,7 @@ const cover = createRoute({
 const router = createRouter({
   routeTree: root.addChildren([
     editor,
+    newFeature,
     away,
     files,
     previews,

@@ -203,6 +203,34 @@ export const FeatureAssetCreateSchema = {
     title: 'FeatureAssetCreate'
 } as const;
 
+export const FeatureAssetOrderSchema = {
+    properties: {
+        part_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Part Id'
+        },
+        asset_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Asset Ids'
+        }
+    },
+    type: 'object',
+    required: ['asset_ids'],
+    title: 'FeatureAssetOrder'
+} as const;
+
 export const FeatureAssetPublicSchema = {
     properties: {
         kind: {
@@ -522,6 +550,14 @@ export const FeatureDetailSchema = {
                 }
             ]
         },
+        part_order: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Part Order'
+        },
         assets: {
             items: {
                 '$ref': '#/components/schemas/FeatureAssetPublic'
@@ -615,6 +651,25 @@ export const FeatureNoteCreateSchema = {
     title: 'FeatureNoteCreate'
 } as const;
 
+export const FeatureNoteOrderSchema = {
+    properties: {
+        kind: {
+            '$ref': '#/components/schemas/NoteKind'
+        },
+        note_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Note Ids'
+        }
+    },
+    type: 'object',
+    required: ['kind', 'note_ids'],
+    title: 'FeatureNoteOrder'
+} as const;
+
 export const FeatureNotePublicSchema = {
     properties: {
         kind: {
@@ -703,6 +758,22 @@ export const FeatureNoteUpdateSchema = {
     title: 'FeatureNoteUpdate'
 } as const;
 
+export const FeaturePartOrderSchema = {
+    properties: {
+        part_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Part Ids'
+        }
+    },
+    type: 'object',
+    required: ['part_ids'],
+    title: 'FeaturePartOrder'
+} as const;
+
 export const FeaturePublicSchema = {
     properties: {
         name: {
@@ -788,6 +859,14 @@ export const FeaturePublicSchema = {
                     type: 'null'
                 }
             ]
+        },
+        part_order: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Part Order'
         },
         assets: {
             items: {
@@ -1233,6 +1312,65 @@ export const NoteKindSchema = {
     title: 'NoteKind'
 } as const;
 
+export const PartCatalogPublicSchema = {
+    properties: {
+        code: {
+            type: 'string',
+            maxLength: 64,
+            minLength: 1,
+            title: 'Code'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        folder_path: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2048
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Folder Path'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        created_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Created At'
+        },
+        feature_count: {
+            type: 'integer',
+            title: 'Feature Count'
+        }
+    },
+    type: 'object',
+    required: ['code', 'id', 'feature_count'],
+    title: 'PartCatalogPublic'
+} as const;
+
 export const PartCreateSchema = {
     properties: {
         code: {
@@ -1252,11 +1390,37 @@ export const PartCreateSchema = {
                 }
             ],
             title: 'Name'
+        },
+        folder_path: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2048
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Folder Path'
         }
     },
     type: 'object',
     required: ['code'],
     title: 'PartCreate'
+} as const;
+
+export const PartFromFolderSchema = {
+    properties: {
+        folder_path: {
+            type: 'string',
+            maxLength: 2048,
+            minLength: 1,
+            title: 'Folder Path'
+        }
+    },
+    type: 'object',
+    required: ['folder_path'],
+    title: 'PartFromFolder'
 } as const;
 
 export const PartPublicSchema = {
@@ -1278,6 +1442,18 @@ export const PartPublicSchema = {
                 }
             ],
             title: 'Name'
+        },
+        folder_path: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2048
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Folder Path'
         },
         id: {
             type: 'string',
@@ -1321,6 +1497,18 @@ export const PartUpdateSchema = {
                 }
             ],
             title: 'Name'
+        },
+        folder_path: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2048
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Folder Path'
         }
     },
     type: 'object',
@@ -1331,7 +1519,7 @@ export const PartsPublicSchema = {
     properties: {
         data: {
             items: {
-                '$ref': '#/components/schemas/PartPublic'
+                '$ref': '#/components/schemas/PartCatalogPublic'
             },
             type: 'array',
             title: 'Data'

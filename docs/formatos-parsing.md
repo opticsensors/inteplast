@@ -109,7 +109,7 @@ Verificado el 2026-08-13 en `intern.01/c13`, `.01/c14`, `.03/c13`, `.05/c13` y `
 **114 cabeceras de bloque y 211 filas de dato en todos**, y el `diff` de las cabeceras entre
 `intern.01/c13` e `intern.08/C13` (aproximadamente un año después) es **vacío**.
 
-**El programa de la CMM nunca se tocó.** Por eso el emparejamiento por
+**Los exports conservan la estructura; eso no acredita que nunca cambiara el programa.** Por eso el emparejamiento por
 `cabecera + índice` de la receta siguiente es fiable, y por eso se remidió *todo* en cada
 muestreo con CMM: la "parcialidad" de `.03`/`.05` es un artefacto del XLS, no de la medición.
 
@@ -154,7 +154,7 @@ de 0,02 y 0,03 mm. El umbral sirve para describir estos tramos, no para cerrar e
 | `HISTORY` | Historial (`INFORME 1..4`) con fecha, responsable y nº de lote |
 | **`DR(3D)`** | 🔑 **La tabla principal de cotas 3D** |
 | `DR(N165)` | Desglose punto a punto de N165 (espesores locales P1…Pn) |
-| `DR(100%)` | Requisitos informativos del plano (notas, normas, acabados) → OK/NOK |
+| `DR(100%)` | Requisitos, medidas numéricas CMM y con otros equipos, ensayos y OK/NOK |
 | `DR(SKETCH)`, `DR_SKETCH(2)`, `DR_SKETCH(3)` | Croquis anotados |
 
 ⚠️ **Las hojas varían entre ficheros.** En el 3212 solo `intern.01`, `.03`, `.05` tienen
@@ -246,7 +246,7 @@ vacías y heredan. Hay que arrastrar el valor hacia abajo al parsear.
 El significado de `GX` / `GN` / `LP(2)` está en
 [3212/6-metodo-medida.md](3212/6-metodo-medida.md#2-vocabulario-de-evaluación).
 
-### El XLS no es la fuente de verdad ⚠️
+### Discrepancias entre medidas XLS y CSV
 
 1. **Datos caducados.** El bloque N117/N118 de `intern.05.xls` es copia-pega **idéntica** de
    `intern.03.xls` (`30,996 / 30,999 / 31,008 / 30,979`), mientras el CSV de `intern.05` da
@@ -255,8 +255,14 @@ El significado de `GX` / `GN` / `LP(2)` está en
    `DR(3D)` solo contiene lo que fallaba (N242 + N117 + N118). Mirando solo los XLS parecería
    que N170 nunca se volvió a medir; sí se midió, está en los CSV.
 
-→ **Prioridad de ingesta: CSV primero, XLS como fuente de metadatos** (fecha, lote, PPAP ref,
-responsable) y de la marca `NOK` consolidada.
+→ **CSV primero para medidas CMM coincidentes.** Los XLS aportan también ensayos y medidas
+de otros equipos. En los XLS de retoques, `DR(100%)` incluye O=`Retoc/Retocs`, P:S=previsiones
+y H:K=medidas iniciales. Separar previsiones de observaciones y conservar celdas/etapas.
+Ejemplo: corrección 2, N240 `P224=H224+$O$224`, `P225=P224+$O$225`.
+`xlrd` lee el valor guardado de fórmulas BIFF8; no las recalcula. Para auditar fórmulas usar
+Excel en solo lectura. Los mapeos deben comprobar característica, equipo y evaluación;
+no propagar un N-number ciegamente a filas de cálculos intermedios.
+Ver [revisión 17/09/2026](3212/revision-2026-09-17.md).
 
 ### Receta (PowerShell + Excel COM)
 
@@ -306,10 +312,10 @@ Marcador:  OK                                               ← estado (solo en 
 | `cota_nominal` | El literal tras el subtítulo (`Ø4-0,1`, `27,9±0,1`) |
 | `magnitud_mm` | `([\d,\.]+)\s*mm` en el texto de acción |
 | `sentido` | `créixer/incrementar el plàstic` = +plástico · `reduir el ferro` = −hierro · `erosionar` · `polir` |
-| `estado` | Presencia del marcador `OK` |
-| `imagen_zona_roja` | La 2ª imagen de `ppt/media/` referenciada por la diapositiva |
+| `marcador_original` | Presencia literal de `OK`; separado de ejecución confirmada y conformidad dimensional |
+| `imagen_zona_roja` | Imagen verificada de la diapositiva; no inferir su función solo por orden o tamaño |
 | `es_accion_sobre_datum` | Sin `DIM. Nr.` + varios recortes de informe + zona roja = la brida ⇒ es un retoque de **referencia** (plano A), no de cota |
-| `efecto_previsto` | La columna `Retoc`/`Retocs` del recorte del informe: valor propuesto + **resultado simulado por cavidad** |
+| `efecto_previsto` | `DR(100%)` del Excel de retoques, O y P:S; el recorte PPTX permite contrastar: valor propuesto + **resultado simulado por cavidad** |
 
 **Qué imágenes lleva una diapositiva** — `ppt/slides/_rels/slideN.xml.rels`:
 
@@ -365,16 +371,13 @@ Trivial de parsear (`awk '{print $1,$2,$3}'`). Cifras medidas en `intern.01/c13`
 |---|--:|---|---|
 | `_Cav<NN>.txt` / `_C<NN>.txt` / `_Cav_.txt` | **17.656** | X[−33,2; 33,2] Y[0; 49,2] Z[−33,2; 59,9] | La **pieza entera** escaneada |
 | `_PUNTS.txt` | **12.828** | X[−17,8; 16,9] **Y[12,0; 28,0]** Z[−17,0; 16,6] | Solo el **perfil interior** (la zona con tolerancia de contorno) |
-| `_PUNTS_NOUS.txt` | **150** | X[−16,6; 16,6] **Y[12,0; 16,7]** Z[−16,6; 16,6] | **6 contornos × 25 puntos** = los puntos **objetivo tras corrección** que INTEPLAST le pasa al proveedor del molde (respuesta al Dubte 5) |
+| `_PUNTS_NOUS.txt` | **150** | X[−16,6; 16,6] **Y[12,0; 16,7]** Z[−16,6; 16,6] | **6 grupos × 25 puntos**, iguales a los últimos 150 de PUNTS; no consta un objetivo corregido |
 
-🆕 **`_PUNTS_NOUS` tiene estructura, no es una nube suelta**: 150 puntos en **6 alturas Y**
-(en `intern.01/c13`: 16,7 · 16,0 · 14,9 · 13,9 · 12,9 · 12,0), 25 puntos por altura ≈ uno cada
-14,4°. Las alturas **cambian entre muestreos** (`intern.05/c13`: 16,6 · 15,9 · 14,8 · 13,8 ·
-12,8 · 12,0) → no asumirlas fijas; deducirlas agrupando por Y.
-
-🔴 **Los 12 `_PUNTS_NOUS.txt` del 3212 son todos distintos** (12 MD5 distintos pese a pesar los
-mismos 5.100 B — es el ancho fijo: 150 × 34 B). **Uno por cavidad y por muestreo.** No es un
-fichero de referencia replicado: **es dato ingerible**.
+**Revisión 17/09/2026:** `np.array_equal(nous, punts[-150:])` da True en los doce pares.
+Seis grupos de 25 puntos, con Y ligeramente variable dentro de cada grupo. No se demuestra
+que sean nominales ni una transformación de corrección. Los hashes diferentes solo prueban
+que los archivos difieren. Conservar origen, muestreo, cavidad y relación de subconjunto;
+el vínculo a una acción se debe confirmar. [Detalle](3212/revision-2026-09-17.md).
 
 ---
 
@@ -493,9 +496,9 @@ tenemos (el `.igs` es el *escaneado*, no el nominal).
 | 18 | 🆕 **`.igs` y `.dxf` son duplicados de los `.txt`** | El `.igs` = `_PUNTS.txt` (con offset Z −3,8807); el `.dxf` = `_Cav<NN>.txt`. No ingerirlos: mismo dato y 2,5× más peso. → [§4bis](#4bis--los-igs-y-los-dxf-son-duplicados-de-los-txt) |
 | 19 | 🆕 **Los metadatos buenos están en `HISTORY`, no en la cabecera** | Es un log **acumulativo**: `intern.09.xls!HISTORY` trae los 9 muestreos con fecha, lote, responsable y **motivo**. Rótulos `INFORME n` en filas irregulares y hasta 2 filas de dato por informe. → [§2](#-la-hoja-history--log-acumulativo-la-mejor-fuente-de-metadatos) |
 | 20 | 🆕 **Colisión de nombres al aplanar** | En `intern.05`, `c15/` y `c16/` llaman a sus ficheros **igual** (`3212_Cav_.txt`, `Perfil_3212_C.dxf`): la cavidad **solo está en el nombre de la carpeta padre**. Derivar la cavidad de la ruta completa, nunca del basename. |
-| 21 | 🆕 **Fecha del informe ≠ fecha de la medición** | El `.xls` fecha la **emisión** (25/01/2024); el `.igs` y los PDF `PA`/`PB` fechan el **escaneo** (19/01/2024). Para `MEDICION`, usar la del `.igs`/PDF. |
-| 22 | 🆕 **`_PUNTS_NOUS.txt` es dato, no adjunto** | Los 12 del 3212 son **todos distintos** (uno por cavidad y muestreo) pese a pesar los mismos 5.100 B. Contienen 6 contornos × 25 puntos objetivo. |
-| 23 | 🆕 **El CSV de la CMM no cambia nunca** | 114 bloques y 211 filas **idénticos** en los 4 muestreos del 3212 (`diff` de cabeceras `.01` ↔ `.08` = vacío). Los muestreos son comparables fila a fila; la "parcialidad" es solo del XLS. |
+| 21 | **Fecha del informe ≠ fecha de la medición** | El `.xls` fecha la **emisión** (25/01/2024); el `.igs` y los PDF `PA`/`PB` llevan 19/01/2024. Conservar fecha y fuente, sin trasladar automáticamente la fecha de un perfil a todas las filas CSV. |
+| 22 | **`_PUNTS_NOUS.txt` no demuestra un objetivo** | En los doce pares coincide exactamente con los últimos 150 puntos de PUNTS. Conservar como soporte geométrico, sin asignar una acción automáticamente. |
+| 23 | **Estructura CSV estable en los exports revisados** | 114 bloques y 211 filas en los 4 muestreos del 3212; las cabeceras coinciden. No demuestra que el programa nunca cambiara. Emparejar evaluación, aparición e ID CMM; la cabecera de B2 H=5 está mal rotulada. |
 
 ---
 

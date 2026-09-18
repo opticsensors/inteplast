@@ -52,7 +52,7 @@
 | `8- STL peça real` | 1 | 235,7 MB | Escaneado 3D de una pieza | [8-stl-pieza-real.md](8-stl-pieza-real.md) |
 
 **Análisis transversal** (cruza `4-` y `5-`): [historial-molde.md](historial-molde.md) — la
-cronología muestreo ↔ corrección y la prueba de que el retoque del Bolt Eye funcionó.
+cronología muestreo ↔ corrección y la evaluación de la mejora parcial del Bolt Eye.
 
 > ⚠️ **El esqueleto de 8 carpetas es una convención de INTEPLAST, no una garantía.** En el 3212
 > la carpeta `2- Moldflow` sencillamente **no existe** (en 3051 y 3197 existe pero está vacía).
@@ -120,3 +120,10 @@ Get-ChildItem -LiteralPath $r -Recurse -File |
 | `3212_totes.csv` | *"totes"* = todas (catalán): comparativa con una columna por cavidad |
 | `AAAAMMDD-Mold correction_N_P3212_revN.pptx` | Plan de corrección de molde nº N |
 | `3212-315346-c13.stl` | `proyecto-LOTE-cavidad` |
+
+## Revisión del 17/09/2026
+
+[Hallazgos y prototipo](revision-2026-09-17.md): los XLS de retoques sí contienen previsiones en
+`DR(100%)`; `PUNTS_NOUS` coincide con los últimos 150 puntos de PUNTS y no demuestra un
+objetivo corregido; N170 mejora en GX pero conserva LP máximos fuera. La vista nueva
+`data-explorer/ver_correcciones.py` es independiente de `ver_todo.py`.
