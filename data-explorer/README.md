@@ -234,3 +234,95 @@ a originales siguen apuntando a la carpeta externa de esta máquina.
 La documentación antigua del visor TXT llamaba «objetivos» a PUNTS_NOUS. Esa interpretación
 está retirada: son los últimos 150 puntos de PUNTS. Los visores anteriores se conservan
 sin cambios de código por petición del usuario. [Hallazgos y límites](../docs/3212/revision-2026-09-17.md).
+
+## Correcciones v2 · vista para presentación (18/09/2026)
+
+```powershell
+py -3.11 .\data-explorer\ver_correcciones_v2.py
+```
+
+Genera y abre `out/correcciones-3212-v2/index.html`. Mantiene las opciones `--raiz`,
+`--salida` y `--no-abrir`. Reutiliza los lectores de `ver_correcciones.py`; no modifica
+ese script, `ver_todo.py` ni sus salidas.
+
+- Imagen del retoque, evolución **01 → 03 → 05 → 08** y previsión sobre el muestreo posterior.
+- Tabla antes / previsto / después y comparación visual de las cuatro cavidades.
+- N170: matriz de ocho secciones por cuatro cavidades, con GX y LP separados.
+- N165: detalle de las 60 secciones. Perfiles A/B: informes 01, 03 y 05 en paralelo.
+- Modo presentación, ampliación de imágenes, zoom de tolerancia y fuentes bajo demanda.
+
+La previsión conserva su símbolo propio; los huecos siguen sin evaluar. El resultado del
+plan se refiere al muestreo posterior indicado, aunque el gráfico incluya todo el seguimiento.
+Para trasladar la vista, copiar la carpeta de salida completa; los enlaces a originales
+requieren acceso a su ubicación externa. No se requieren nuevas dependencias respecto a v1.
+
+## Correcciones v3 · perfiles y catálogo (18/09/2026)
+
+```powershell
+py -3.11 .\data-explorer\ver_correcciones_v3.py
+```
+
+Genera `out/correcciones-3212-v3/index.html`, con las mismas dependencias y opciones de v1.
+Conserva los scripts y salidas anteriores.
+
+- **Perfiles A/B:** matriz cavidad × muestreo con exceso, dos gráficas grandes y selección
+  independiente de referencia y comparación. Los 144 recortes conservan ejes, cotas y escala
+  del informe original; se detecta el marco vectorial del gráfico y se renderiza a mayor
+  resolución. No se superponen ni se fuerza una escala común. El PDF completo queda en Fuentes.
+- **Muestreos 01, 03, 05 y 08:** hay CSV en los cuatro; perfiles PDF solo en los tres primeros.
+  El 08 permanece sin informe, sin convertirlo en cero ni OK.
+- **Catálogo CSV:** 34 grupos de cotas y dos grupos de coordenadas, 3376 evaluaciones de
+  16 CSV. Búsqueda, recuentos fuera de tolerancia y evolución por evaluación/cavidad. Las
+  cabeceras compartidas, como N116/N260/N258, no se reparten entre cotas artificialmente.
+- **Documentos:** se indexan las 54 acciones de ambos PPTX. Las asociaciones se obtienen
+  de todos los campos `DIM. Nr.` del título o de correspondencias de imágenes ya revisadas;
+  el método y la diapositiva quedan en Fuentes. Una asociación no confirma ejecución.
+- **Correcciones contrastadas:** se conservan las fichas de N161, N240, N170 y N165, con sus
+  previsiones XLS. Para las demás cotas, la previsión queda **sin revisar**, no «inexistente».
+
+El catálogo descubre los bloques presentes en los CSV, pero la ingesta completa sigue
+adaptada al **3212**: rutas, planes, correspondencias XLS y reglas de identidad metrológica.
+`--raiz` permite trasladar sus datos; por sí solo no hace compatible cualquier otra pieza.
+Las unidades angulares se mantienen en grados y los valores originales de las correcciones
+de signo permanecen consultables. Los recuentos del catálogo son evaluaciones, no piezas.
+
+## Buscador independiente del plano (18/09/2026)
+
+```powershell
+py -3.11 .\data-explorer\buscar_en_plano.py --buscar N170
+# Otro documento:
+py -3.11 .\data-explorer\buscar_en_plano.py --pdf "C:\Planos\pieza.pdf" --buscar N240
+```
+
+`buscar_en_plano.py` es una implementación nueva, independiente de `ver_todo.py` y de
+`planos/ver_plano.py`. Genera `out/buscar-en-plano/index.html` e `indice.json`. El PDF del
+3212 es el valor por defecto; `--pdf` acepta otro documento, incluidas varias páginas.
+
+- Busca `N170` / `170`, permite incluir subcotas (`170.2`, `161.T`) y ofrece un modo
+  separado **Texto / valor**. No confunde la coincidencia exacta N170 con N1700.
+- Seleccionar un resultado centra y amplía el plano, con recorte de contexto. Se puede
+  desplazar, ampliar, mostrar los globos y marcar una zona manualmente.
+- **Texto PDF** procede de las palabras almacenadas en el documento. **OCR · revisar**
+  es una lectura propuesta, nunca una ubicación confirmada automáticamente. **Revisada**
+  aparece únicamente al confirmar una ubicación o importar revisiones del mismo PDF.
+- Las revisiones se guardan en `localStorage` del navegador, vinculadas al SHA-256 del PDF.
+  Exportar/importar JSON permite conservarlas o compartirlas; otra revisión del PDF se
+  rechaza. No se escriben etiquetas sobre el original ni dentro del PDF.
+
+La búsqueda utiliza PyMuPDF para texto y páginas; OpenCV para candidatos circulares verdes
+y azules; RapidOCR local para tres vistas del interior de cada globo; y Tesseract para el
+texto general del escaneo. Los números OCR sueltos de las notas no se convierten en
+identificadores N: quedan en Texto / valor. No hay coordenadas de N170/N161/N240 precargadas.
+
+El ensayo inicial con este PDF detecta **263 candidatos circulares**, no 263 cotas verificadas.
+No es directamente comparable con los 178 componentes/racimos del visor antiguo. Hay
+omisiones y lecturas incorrectas de dígitos y sufijos. La inspección comprueba ubicaciones
+base de N170, N161 y N240; **no valida el resto ni acredita una tasa de acierto global**.
+El escaneo continúa siendo la rev.07; localizar una cota no valida su equivalencia con rev.06.
+La auditoría antigua de 6/16 corresponde al método anterior y no mide este nuevo método.
+
+Dependencias: PyMuPDF, numpy, opencv-python, Pillow; OCR opcional con `pytesseract`, el
+ejecutable Tesseract y `rapidocr-onnxruntime` (instalado en este equipo). Sin esos motores
+siguen disponibles las funciones que no los requieren. Opciones: `--sin-ocr`, `--reindexar`,
+`--no-abrir` y `--salida`. La caché depende del contenido del PDF y de la versión del índice.
+Los originales permanecen fuera del repositorio y los resultados están excluidos de Git.

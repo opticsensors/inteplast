@@ -222,3 +222,57 @@ el 3212 y se validan; no es una ingesta genérica. Faltantes se muestran sin eva
 La documentación antigua del visor TXT llamaba «objetivos» a PUNTS_NOUS. Esa interpretación
 está retirada: son los últimos 150 puntos de PUNTS. Los visores anteriores se conservan
 sin cambios de código por petición del usuario. [Hallazgos y límites](3212/revision-2026-09-17.md).
+
+## Correcciones v2 · presentación (18/09/2026)
+
+`data-explorer/ver_correcciones_v2.py` → `data-explorer/out/correcciones-3212-v2/index.html`.
+Lanzamiento: `py -3.11 .\data-explorer\ver_correcciones_v2.py`.
+
+Reutiliza los lectores de v1 y conserva ambos scripts anteriores. Prioriza imagen de la acción,
+evolución completa con previsión diferenciada, resultados y comparación por cavidad. Añade
+matriz N170, detalle local N165, perfiles en paralelo y modo presentación. Textos originales,
+localizadores y límites de interpretación están en «Fuentes». [Uso](../data-explorer/README.md).
+
+## Correcciones v3 · perfiles y catálogo (18/09/2026)
+
+`data-explorer/ver_correcciones_v3.py` → `data-explorer/out/correcciones-3212-v3/index.html`.
+Lanzamiento: `py -3.11 .\data-explorer\ver_correcciones_v3.py`.
+
+Sustituye las miniaturas de páginas PDF en esta nueva vista por recortes del gráfico,
+con ejes y escala originales: matriz de exceso por cavidad/muestreo y dos gráficas grandes
+con referencia y comparación seleccionables. Conserva los PDF completos en Fuentes.
+Los perfiles del 08 siguen ausentes; no se rellenan ni se interpretan como conformes.
+
+Añade un catálogo descubierto de los 16 CSV: 34 grupos de cotas, dos de coordenadas y
+3376 evaluaciones. Cada evaluación tiene histórico, tolerancias y procedencia. Mantiene
+unidas las cabeceras compartidas, separa las coordenadas auxiliares y respeta la identidad
+CMM de N170. Indexa las 54 acciones PPTX, incluyendo los títulos que citan varias cotas.
+Las asociaciones visuales revisadas se distinguen de las extraídas del título.
+
+Las cuatro fichas anteriores siguen como comparaciones XLS contrastadas; el resto de
+previsiones queda sin revisar. El descubrimiento del catálogo es automático dentro de estos
+formatos, pero los planes, rutas y correspondencias siguen adaptados al 3212. La v3 no implica
+una ingesta genérica de cualquier pieza. [Detalle y uso](../data-explorer/README.md).
+
+## Nuevo buscador del plano (18/09/2026)
+
+Por petición del usuario se crea `data-explorer/buscar_en_plano.py` desde cero, conservando
+`ver_todo.py` y `planos/ver_plano.py`. Lanzamiento:
+`py -3.11 .\data-explorer\buscar_en_plano.py --buscar N170`.
+Salida: `data-explorer/out/buscar-en-plano/index.html`.
+
+Incluye texto nativo PDF, candidatos OCR de globos coloreados, búsqueda de números y
+sufijos, búsqueda separada de texto/valores, zoom al resultado, recortes originales y
+ubicaciones revisadas exportables como JSON. Las revisiones quedan ligadas al contenido
+exacto del PDF, sin modificarlo. Admite `--pdf` y documentos de varias páginas.
+
+La localización circular separa globos que el visor anterior agrupaba: los 263 candidatos
+actuales no equivalen a los 178 componentes anteriores ni a cotas correctamente leídas.
+La revisión visual encuentra las ubicaciones base de N170/N161/N240. Persisten omisiones
+y confusiones de dígitos/sufijos; **no se ha validado una precisión global**. Todas las lecturas
+OCR se presentan como propuestas hasta su revisión explícita. El resultado no resuelve
+automáticamente las limitaciones del PDF ni la discrepancia de revisiones del plano.
+
+La petición de un plano mejor sigue vigente. Este buscador ofrece una consulta asistida
+y una vía de revisión persistente; no sustituye la validación metrológica. Los detalles y
+opciones están en [Data Explorer](../data-explorer/README.md).
