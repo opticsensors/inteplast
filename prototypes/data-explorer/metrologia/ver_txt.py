@@ -35,10 +35,10 @@ Un INDICE con arbol de carpetas (`out/txt-3212.html`) y una PAGINA POR FICHERO e
 
 Uso
 ---
-    python data-explorer/metrologia/ver_txt.py                     # genera todo y abre el arbol
-    python data-explorer/metrologia/ver_txt.py --max-puntos 12000  # mas detalle, paginas mas pesadas
-    python data-explorer/metrologia/ver_txt.py --familia nous      # solo los puntos objetivo
-    python data-explorer/metrologia/ver_txt.py --muestreo 01 --cavidad c13
+    python prototypes/data-explorer/metrologia/ver_txt.py                     # genera todo y abre el arbol
+    python prototypes/data-explorer/metrologia/ver_txt.py --max-puntos 12000  # mas detalle, paginas mas pesadas
+    python prototypes/data-explorer/metrologia/ver_txt.py --familia nous      # solo los puntos objetivo
+    python prototypes/data-explorer/metrologia/ver_txt.py --muestreo 01 --cavidad c13
 """
 
 from __future__ import annotations
@@ -63,7 +63,7 @@ RAIZ = Path(
     r"C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\proyectos"
     r"\11. inteplast\Exemples\3212 Pump Housing\4- Metrologia"
 )
-SALIDA = Path(__file__).resolve().parent.parent / "out"   # data-explorer/out, compartida
+SALIDA = Path(__file__).resolve().parent.parent / "out"   # prototypes/data-explorer/out, compartida
 
 EN_LA_NUBE = 0x400000        # FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS (OneDrive Files On-Demand)
 

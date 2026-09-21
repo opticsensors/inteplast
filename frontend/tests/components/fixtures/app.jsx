@@ -78,6 +78,8 @@ window.review.refetch = () =>
   client.invalidateQueries({ queryKey: ["features"] })
 window.review.refetchParts = () =>
   client.invalidateQueries({ queryKey: ["parts"] })
+window.review.refetchEvidence = () =>
+  client.invalidateQueries({ queryKey: ["feature-evidence"] })
 window.review.refetchUser = () =>
   client.invalidateQueries({ queryKey: ["currentUser"] })
 const root = createRootRoute({ component: () => <Outlet /> })

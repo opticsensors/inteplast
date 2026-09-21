@@ -115,7 +115,7 @@ usan una numeración interna suya (`Contorno (21)`, `CONTORN (10)`). El único s
 N-number aparece **junto al punto de la pieza al que se refiere** es el plano.
 
 **🆕 Qué hemos podido hacer nosotros (2026-08-18).** Montamos un visor con OCR
-([`ver_plano.py`](../data-explorer/planos/ver_plano.py)) y el resultado acota mucho la petición:
+([`ver_plano.py`](../prototypes/data-explorer/planos/ver_plano.py)) y el resultado acota mucho la petición:
 
 - ✅ **Las notas se leen bien** (1.504 palabras, confianza media 74).
 - ✅ **Confirmado que los N-numbers SÍ están en el plano**, en **globos verdes y sin la `N`**:

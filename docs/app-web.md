@@ -22,8 +22,12 @@ Desde el **2026-09-15**, una ficha puede **vincular originales externos** sin su
 el STEP del 3212 están conectados y comprobados en la instalación local. Configuración, límites
 de revisión y futura conexión Graph en [ficheros-externos.md](ficheros-externos.md).
 
-🔴 **Lo que NO está**: la parte de ingesta (`MUESTREO`, `MEDICION`, `CORRECCION_MOLDE`,
-`DEPENDENCIA_COTA`). Esas tablas se alimentan de los CSV/XLS/PPTX y son la siguiente fase.
+Desde el **2026-09-18** hay catálogo de piezas, cotas por pieza/revisión, búsqueda de cotas
+en el visor PDF con revisiones compartidas y una importación piloto de mediciones/correcciones
+del 3212. Los lectores propios de `backend/app/ingestion/` guardan snapshots estructurados;
+la web no depende de los visores de `prototypes/data-explorer/`. El modelo
+completo normalizado de `MUESTREO`, `MEDICION`, `CORRECCION_MOLDE` y `DEPENDENCIA_COTA`
+sigue pendiente. Alcance y funcionamiento en [Cotas y evidencia web](cotas-y-evidencia-web.md).
 
 ---
 
@@ -192,6 +196,18 @@ el administrador. Las rutas privadas para crear usuarios de prueba requieren
 
 ## Frontend (`frontend/src/`)
 
+Las reglas compartidas de búsqueda, filtros, gráficas y navegación están en
+[Patrones de interfaz](interfaz.md). Se aplican también a nuevas pantallas.
+
+La ficha de pieza abre la consulta de cotas sin pestañas ni catálogo de documentos.
+Mediciones y correcciones comparten filtros y gráfica; los números se consultan sobre
+la gráfica. Correcciones conserva todos los muestreos; pulsar una región entre ellos la
+selecciona en gris y actualiza la propuesta, previsión y cambio medido, sin imágenes ni
+desplegable de documentos. Plano queda junto al buscador con su misma altura y alterna
+el dibujo bajo la misma cabecera de pieza. Correcciones queda debajo a la izquierda.
+Ambos conservan el contexto en el historial del navegador. La importación está en
+**Admin → Datos de piezas**.
+
 | Ruta | Fichero | Qué es |
 |---|---|---|
 | `/` | `routes/_layout/index.tsx` | Redirige a `/features`, conservando los filtros de los enlaces antiguos |
@@ -208,6 +224,7 @@ Componentes en `components/Features/`:
 | `FeatureSearch.tsx` | Buscador + tres desplegables (molde, categoría, tag) poblados desde `/features/filters`, y los ayudantes que traducen ese estado a los *search params* de la URL |
 | `FeatureCard.tsx` | La tarjeta: imagen, nombre, descripción, tags y el resumen *«2 piezas · 3197, 3212»* |
 | `PartAssetList.tsx` | 🔑 **Los ficheros agrupados por pieza**: un desplegable por pieza y dentro una fila por fichero. **El mismo componente sirve la ficha y el formulario** (`editable`) |
+| `Parts/FeaturePartEvidence.tsx` | Fila **COTAS** dentro de cada pieza, con el mismo borde/altura que los ficheros: números y acceso al plano, sin revisión/relación visibles. Añadir crea un campo al final de la fila, con guardado al terminar de escribir y papelera en edición. |
 | `viewers.ts` | Extensión → visor, carga directa hasta 50 MiB y GLB automático para STL/STEP grandes |
 | `ModelViewer.tsx` | El visor 3D (three.js + OpenCascade en WASM). Se carga con `import()` dinámico: no pesa nada hasta que alguien abre un 3D |
 | `modelControls.ts` | Giro libre en pantalla, desplazamiento y zoom 3D, sin bloqueo en los polos ni inercia al soltar |
@@ -252,6 +269,12 @@ Código, nombre y carpeta se comparten entre features; cada feature elige sus pr
 El selector de ficheros empieza en la carpeta de la pieza. **Cambiar carpeta** está en el menú
 de tres puntos y conserva los nombres personalizados. `folder_path` pertenece al adaptador
 local temporal; Graph sustituirá esa referencia por la identidad estable del origen.
+
+La fila COTAS usa el mismo patrón compacto de los ficheros. Añadir cota inserta un campo
+al final que se guarda con Intro, al salir o con Guardar el feature; los errores conservan
+el borrador. No solicita revisión ni relación. Reutiliza vínculos existentes sin cambiar
+sus metadatos; para altas toma la revisión del estudio o una única revisión conocida de
+la pieza/cota. Sin esa información queda «sin confirmar», sin asumir la revisión 06.
 
 Las piezas antiguas sin correspondencia en el origen siguen disponibles en el buscador.
 La papelera elimina directamente del catálogo las piezas sin uso, sin confirmación;

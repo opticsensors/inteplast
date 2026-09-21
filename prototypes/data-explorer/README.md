@@ -1,4 +1,7 @@
-# `data-explorer/` — visores de los datos crudos
+# `prototypes/data-explorer/` — visores de los datos crudos
+
+Herramientas experimentales para explorar los datos. No forman parte de la web ni
+de su imagen Docker. La aplicación tiene lectores propios en `backend/app/ingestion/`.
 
 Scripts para **ver** los datos en vez de leer descripciones. Generan un **índice con árbol de
 carpetas** y **una página por resultado**.
@@ -6,7 +9,7 @@ carpetas** y **una página por resultado**.
 Están repartidos en dos carpetas según de dónde salga el dato:
 
 ```
-data-explorer/
+prototypes/data-explorer/
 ├── ver_todo.py       punto de entrada: ejecuta los cuatro
 ├── metrologia/       lo que dejó la máquina de medición (4- Metrologia)
 ├── planos/           el plano 2D del cliente (1-2D y 3D Pieza)
@@ -61,7 +64,7 @@ Microsoft Store y falla. Hay que llamarlo **por ruta absoluta**:
 
 ```powershell
 $py = "C:\Users\eduard.almar\AppData\Local\Programs\Python\Python311\python.exe"
-$s  = "C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\repos\inteplast\data-explorer"
+$s  = "C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\repos\inteplast\prototypes\data-explorer"
 
 & $py "$s\metrologia\ver_csv.py"                    # genera el HTML y lo abre en el navegador
 & $py "$s\metrologia\ver_txt.py"
@@ -69,9 +72,9 @@ $s  = "C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\repos\inteplast\data-
 
 > 📁 **Dónde vive esto.** Estos visores son **utilidades de exploración de los datos crudos**, no
 > parte de la aplicación: no comparten nada con `backend/` ni con `frontend/`, y por eso están en
-> `data-explorer/` y no en `scripts/` (que es el de build y test del template FastAPI).
-> El puntero a esta carpeta está en [`../docs/visores.md`](../docs/visores.md) y en
-> [`../CLAUDE.md`](../CLAUDE.md).
+> `prototypes/data-explorer/` y no en `scripts/` (que es el de build y test del template FastAPI).
+> El puntero a esta carpeta está en [`../../docs/visores.md`](../../docs/visores.md) y en
+> [`../../CLAUDE.md`](../../CLAUDE.md).
 >
 > 🔴 Los **datos** que lee siguen fuera del repo, en
 > `…\Escritorio\proyectos\11. inteplast\Exemples` (ruta absoluta en la cabecera de cada script).
@@ -85,7 +88,7 @@ En la máquina de desarrollo se usó Python 3.11.8. Dependencias de los visores:
 
 🔴 **No sirve para los números de dentro de los globos, y RapidOCR tampoco** (acierta el 37 % y
 falla con 0,99 de confianza). Esa parte **se quitó a propósito**: ver
-[`docs/visores.md`](../docs/visores.md). No volver a intentarlo con este PDF.
+[`docs/visores.md`](../../docs/visores.md). No volver a intentarlo con este PDF.
 
 ### Opciones
 
@@ -178,8 +181,8 @@ Los 12 de cada cavidad son **2 perfiles × 6 contornos**: `PERFIL_A` (`PA_1..6`,
   salió del hueco 14 en esa tanda. Los `MIN`/`MAX` que se repiten por todo el fichero son el
   valor mínimo y máximo **del mismo elemento en la misma pieza** (así se detecta la ovalidad).
 
-Todo el detalle está en este repo: [formatos-parsing.md](../docs/formatos-parsing.md),
-[4-metrologia.md](../docs/3212/4-metrologia.md) y [visores.md](../docs/visores.md).
+Todo el detalle está en este repo: [formatos-parsing.md](../../docs/formatos-parsing.md),
+[4-metrologia.md](../../docs/3212/4-metrologia.md) y [visores.md](../../docs/visores.md).
 Las notas originales citadas por esos documentos permanecen en el vault externo.
 
 **Los PDF con campos ausentes o ilegibles quedan como estado desconocido**, con el motivo
@@ -221,7 +224,7 @@ secciones de N165 y perfiles A/B complementarios. Conserva enlaces y localizador
 ```powershell
 $py = "C:\Users\eduard.almar\AppData\Local\Programs\Python\Python311\python.exe"
 & $py -m pip install xlrd
-& $py data-explorer/ver_correcciones.py
+& $py prototypes/data-explorer/ver_correcciones.py
 # Opcional: --no-abrir, --raiz <carpeta de la pieza>, --salida <carpeta de salida>
 ```
 
@@ -233,12 +236,12 @@ a originales siguen apuntando a la carpeta externa de esta máquina.
 
 La documentación antigua del visor TXT llamaba «objetivos» a PUNTS_NOUS. Esa interpretación
 está retirada: son los últimos 150 puntos de PUNTS. Los visores anteriores se conservan
-sin cambios de código por petición del usuario. [Hallazgos y límites](../docs/3212/revision-2026-09-17.md).
+sin cambios de código por petición del usuario. [Hallazgos y límites](../../docs/3212/revision-2026-09-17.md).
 
 ## Correcciones v2 · vista para presentación (18/09/2026)
 
 ```powershell
-py -3.11 .\data-explorer\ver_correcciones_v2.py
+py -3.11 .\prototypes\data-explorer\ver_correcciones_v2.py
 ```
 
 Genera y abre `out/correcciones-3212-v2/index.html`. Mantiene las opciones `--raiz`,
@@ -259,7 +262,7 @@ requieren acceso a su ubicación externa. No se requieren nuevas dependencias re
 ## Correcciones v3 · perfiles y catálogo (18/09/2026)
 
 ```powershell
-py -3.11 .\data-explorer\ver_correcciones_v3.py
+py -3.11 .\prototypes\data-explorer\ver_correcciones_v3.py
 ```
 
 Genera `out/correcciones-3212-v3/index.html`, con las mismas dependencias y opciones de v1.
@@ -289,9 +292,9 @@ de signo permanecen consultables. Los recuentos del catálogo son evaluaciones, 
 ## Buscador independiente del plano (18/09/2026)
 
 ```powershell
-py -3.11 .\data-explorer\buscar_en_plano.py --buscar N170
+py -3.11 .\prototypes\data-explorer\buscar_en_plano.py --buscar N170
 # Otro documento:
-py -3.11 .\data-explorer\buscar_en_plano.py --pdf "C:\Planos\pieza.pdf" --buscar N240
+py -3.11 .\prototypes\data-explorer\buscar_en_plano.py --pdf "C:\Planos\pieza.pdf" --buscar N240
 ```
 
 `buscar_en_plano.py` es una implementación nueva, independiente de `ver_todo.py` y de

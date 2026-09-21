@@ -126,4 +126,4 @@ Get-ChildItem -LiteralPath $r -Recurse -File |
 [Hallazgos y prototipo](revision-2026-09-17.md): los XLS de retoques sí contienen previsiones en
 `DR(100%)`; `PUNTS_NOUS` coincide con los últimos 150 puntos de PUNTS y no demuestra un
 objetivo corregido; N170 mejora en GX pero conserva LP máximos fuera. La vista nueva
-`data-explorer/ver_correcciones.py` es independiente de `ver_todo.py`.
+`prototypes/data-explorer/ver_correcciones.py` es independiente de `ver_todo.py`.

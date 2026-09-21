@@ -68,7 +68,7 @@ after(async () => {
   await server?.close()
 })
 
-async function mount(t) {
+async function mount(t, addParts = true) {
   const page = await browser.newPage({
     viewport: { width: 1100, height: 1000 },
   })
@@ -80,7 +80,7 @@ async function mount(t) {
   await expect(page.getByPlaceholder("Nombre del feature")).toHaveValue(
     "Original header",
   )
-  for (let index = 0; index < 2; index++) {
+  for (let index = 0; addParts && index < 2; index++) {
     await page
       .getByRole("button", { name: "Anadir pieza", exact: true })
       .click()
@@ -94,6 +94,247 @@ async function mount(t) {
   }
   return page
 }
+
+async function cotas(page) {
+  await page.evaluate(async () => {
+    window.review.characteristics = ["N170", "N117", "N178"].map(
+      (code, index) => ({
+        id: `cota-${index}`,
+        part_id: "part-one",
+        code,
+        revision: "06",
+        title: "",
+        role: index === 2 ? "context" : "reference",
+      }),
+    )
+    const feature = window.review.feature
+    feature.assets[0].file = {
+      id: "mold-file",
+      filename: "mold.step",
+      size: 24000,
+      content_type: "application/step",
+      source: "upload",
+    }
+    feature.assets.push({
+      id: "drawing-asset",
+      kind: "drawing",
+      name: "Plano",
+      position: 1,
+      part: feature.parts[0],
+      file: {
+        id: "drawing-file",
+        filename: "drawing.pdf",
+        size: 10000,
+        content_type: "application/pdf",
+        source: "upload",
+      },
+    })
+    await window.review.refetch()
+    await window.review.refetchEvidence()
+  })
+  const card = page.getByRole("region", { name: "Cotas", exact: true })
+  await expect(
+    card.getByRole("link", { name: "N170", exact: true }),
+  ).toBeVisible()
+  return card
+}
+
+test("cotas use the file row style, add inline fields and wrap only when needed", async (t) => {
+  const page = await mount(t, false)
+  const card = await cotas(page)
+  const add = card.getByRole("button", { name: "Añadir cota" })
+  for (const text of [
+    "Cotas de esta pieza",
+    "Ver pieza →",
+    "Revisión",
+    "Relación",
+    "Vincular cota",
+  ])
+    assert.equal(await card.getByText(text, { exact: true }).count(), 0)
+  assert.doesNotMatch(await card.innerText(), /rev\.|referencia|contexto/)
+  const fileRow = page
+    .getByPlaceholder("Nombre del fichero")
+    .first()
+    .locator("..")
+    .first()
+  const height = (await card.boundingBox()).height
+  assert.equal(height, (await fileRow.boundingBox()).height)
+  const last = await card
+    .getByRole("link", { name: "N178", exact: true })
+    .boundingBox()
+  await add.click()
+  const input = card.getByRole("textbox", { name: "Nueva cota" })
+  await expect(input).toBeFocused()
+  assert.equal((await card.boundingBox()).height, height)
+  assert.ok((await input.boundingBox()).x > last.x + last.width)
+  await input.fill("N1")
+  // A normal typing pause must not create the prefix as a separate characteristic.
+  await page.waitForTimeout(800)
+  assert.deepEqual(
+    await page.evaluate(() => window.review.characteristicRequests ?? []),
+    [],
+  )
+  await input.fill("n 113")
+  await input.press("Enter")
+  await expect(
+    card.getByRole("link", { name: "N113", exact: true }),
+  ).toBeVisible()
+  assert.deepEqual(
+    await page.evaluate(() => window.review.characteristicRequests),
+    [{ code: "N113", revision: "06", role: "primary" }],
+  )
+  const drawing = card.getByRole("link", { name: "Buscar N113 en el plano" })
+  assert.match(
+    await drawing.getAttribute("href"),
+    /\/features\/feature-one\/fichero\/drawing-asset\?cota=N113/,
+  )
+  await add.click()
+  await input.fill("N170")
+  await input.press("Enter")
+  await expect(input).toHaveCount(0)
+  assert.equal(
+    await card.getByRole("link", { name: "N170", exact: true }).count(),
+    1,
+  )
+  assert.equal(
+    await page.evaluate(() => window.review.characteristicRequests.length),
+    1,
+  )
+  assert.equal(
+    await page.evaluate(
+      () => window.review.characteristics.find((c) => c.code === "N170").role,
+    ),
+    "reference",
+  )
+  await card.screenshot({ path: path.join(artifacts, "cotas-edit.png") })
+  for (let i = 0; i < 5; i++) await add.click()
+  await expect(input).toHaveCount(5)
+  assert.ok((await card.boundingBox()).height > height)
+  await page.setViewportSize({ width: 390, height: 844 })
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  )
+  await card.screenshot({ path: path.join(artifacts, "cotas-wrap-mobile.png") })
+})
+
+test("read-only cotas match file height and retain direct drawing and measurement links", async (t) => {
+  const page = await mount(t, false)
+  await cotas(page)
+  await page.evaluate(() => window.review.navigate("/previews"))
+  const card = page.getByRole("region", { name: "Cotas", exact: true })
+  await expect(card).toBeVisible()
+  assert.equal(await card.getByRole("button").count(), 0)
+  const fileRow = page
+    .getByRole("link", { name: "Descargar mold.step", exact: true })
+    .locator("../..")
+  assert.equal(
+    (await card.boundingBox()).height,
+    (await fileRow.boundingBox()).height,
+  )
+  assert.match(
+    await card
+      .getByRole("link", { name: "N170", exact: true })
+      .getAttribute("href"),
+    /\/parts\/part-one\?cota=N170/,
+  )
+  await page.screenshot({
+    path: path.join(artifacts, "cotas-read.png"),
+    fullPage: true,
+  })
+})
+
+test("cota drafts survive failures, can be cancelled and participate in the feature save", async (t) => {
+  const page = await mount(t, false)
+  const card = await cotas(page)
+  const add = card.getByRole("button", { name: "Añadir cota" })
+  const input = card.getByRole("textbox", { name: "Nueva cota" })
+  await add.click()
+  await input.fill("N113")
+  await card.getByRole("button", { name: "Quitar nueva cota" }).click()
+  await expect(input).toHaveCount(0)
+  assert.deepEqual(
+    await page.evaluate(() => window.review.characteristicRequests ?? []),
+    [],
+  )
+  await add.click()
+  await input.fill("incorrecta")
+  await input.press("Enter")
+  await expect(card.getByRole("alert")).toBeVisible()
+  assert.deepEqual(
+    await page.evaluate(() => window.review.characteristicRequests ?? []),
+    [],
+  )
+  await page.evaluate(() => {
+    window.review.failCharacteristics = true
+  })
+  await input.fill("N113")
+  await input.press("Enter")
+  await expect(input).toBeEnabled()
+  await expect(input).toHaveValue("N113")
+  await page.evaluate(() => {
+    window.review.failCharacteristics = false
+  })
+  await card.getByRole("button", { name: "Reintentar" }).click()
+  await expect(
+    card.getByRole("link", { name: "N113", exact: true }),
+  ).toBeVisible()
+  await page.evaluate(() => {
+    window.review.failCharacteristicRemove = true
+  })
+  await card.getByRole("button", { name: "Quitar N113", exact: true }).click()
+  await expect(card.getByRole("alert")).toBeVisible()
+  await expect(
+    card.getByRole("link", { name: "N113", exact: true }),
+  ).toBeVisible()
+  await page.evaluate(() => {
+    window.review.failCharacteristicRemove = false
+  })
+  await card.getByRole("button", { name: "Quitar N113", exact: true }).click()
+  await expect(
+    card.getByRole("link", { name: "N113", exact: true }),
+  ).toHaveCount(0)
+  await add.click()
+  await input.fill("N240")
+  await page.evaluate(() => {
+    window.review.holdCharacteristics = true
+  })
+  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await expect(
+    page.getByRole("heading", { name: "Otra pagina abierta" }),
+  ).toHaveCount(0)
+  await page.waitForFunction(() =>
+    Boolean(window.review.releaseCharacteristics),
+  )
+  await page.evaluate(() => window.review.releaseCharacteristics())
+  await expect(
+    page.getByRole("heading", { name: "Otra pagina abierta" }),
+  ).toBeVisible()
+  assert.ok(
+    await page.evaluate(() =>
+      window.review.characteristics.some((c) => c.code === "N240"),
+    ),
+  )
+})
+
+test("adding a cota with no known revision does not fabricate revision 06", async (t) => {
+  const page = await mount(t, false)
+  await page.evaluate(() => {
+    window.review.measurementRevision = null
+  })
+  const card = page.getByRole("region", { name: "Cotas", exact: true })
+  await card.getByRole("button", { name: "Añadir cota" }).click()
+  await card.getByRole("textbox", { name: "Nueva cota" }).fill("170.5")
+  await card.getByRole("textbox", { name: "Nueva cota" }).press("Enter")
+  await expect(
+    card.getByRole("link", { name: "N170.5", exact: true }),
+  ).toBeVisible()
+  assert.equal(
+    await page.evaluate(() => window.review.characteristicRequests[0].revision),
+    "sin confirmar",
+  )
+})
 
 test("folder choices and secondary folder action stay compact on desktop and mobile", async (t) => {
   const page = await mount(t)
@@ -192,7 +433,9 @@ test("pointer sorting visibly moves neighboring cards before dropping and saves 
   const ids = await cards.evaluateAll((items) =>
     items.map((item) => item.dataset.partId),
   )
-  const originalFirst = await cards.first().boundingBox()
+  const originalFirstY = await cards
+    .first()
+    .evaluate((element) => element.getBoundingClientRect().top + window.scrollY)
   const handle = page.getByRole("button", {
     name: "Mover pieza 3051",
     exact: true,
@@ -208,13 +451,16 @@ test("pointer sorting visibly moves neighboring cards before dropping and saves 
       cards.evaluateAll((items) => items.map((item) => item.dataset.partId)),
     )
     .toEqual([ids[2], ids[0], ids[1]])
-  const movedFirst = await page
-    .locator(`[data-part-id="${ids[0]}"]`)
-    .boundingBox()
-  assert.ok(
-    movedFirst.y > originalFirst.y,
-    "The neighboring card must leave a visible insertion space during dragging",
-  )
+  // Compare document positions: scrolling to the handle must not offset this check.
+  await expect
+    .poll(() =>
+      page
+        .locator(`[data-part-id="${ids[0]}"]`)
+        .evaluate(
+          (element) => element.getBoundingClientRect().top + window.scrollY,
+        ),
+    )
+    .toBeGreaterThan(originalFirstY)
   await page
     .locator("#example-parts-editor")
     .screenshot({ path: path.join(artifacts, "dragging.png") })

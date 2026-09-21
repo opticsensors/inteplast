@@ -12,6 +12,7 @@ import {
 } from "@/client"
 import { CollapsibleSection } from "@/components/Common/CollapsibleSection"
 import { FileLink } from "@/components/Common/FileLink"
+import { FeaturePartEvidence } from "@/components/Parts/FeaturePartEvidence"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
@@ -219,6 +220,13 @@ function PartGroup({
         </div>
       }
     >
+      {row.part && (
+        <FeaturePartEvidence
+          feature={feature}
+          partId={row.part.id}
+          editable={editable}
+        />
+      )}
       {editable ? (
         <SortableEditorList
           items={assets}

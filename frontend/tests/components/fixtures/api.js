@@ -1,6 +1,64 @@
 // In-memory API only. The harness aborts every browser network request.
 export const OpenAPI = { BASE: "https://files.invalid" }
 export class ApiError extends Error {}
+export const EvidenceService = {
+  readFeatureEvidence: async ({ partId }) => ({
+    characteristics: clone(
+      (state().characteristics ?? []).filter((item) => item.part_id === partId),
+    ),
+    pending: [],
+    cases: [],
+  }),
+  readPartEvidence: async ({ partId }) => ({
+    characteristics: clone(
+      (state().characteristics ?? []).filter((item) => item.part_id === partId),
+    ),
+    study: {
+      state: "ready",
+      payload: {
+        measurement_revision:
+          state().measurementRevision === undefined
+            ? "06"
+            : state().measurementRevision,
+      },
+    },
+  }),
+  assignCharacteristic: async ({ partId, requestBody }) => {
+    state().characteristicRequests ??= []
+    state().characteristicRequests.push(clone(requestBody))
+    if (state().failCharacteristics)
+      throw new Error("Simulated characteristic save failure")
+    if (state().holdCharacteristics)
+      await new Promise((resolve) => {
+        state().releaseCharacteristics = resolve
+      })
+    state().characteristics ??= []
+    let item = state().characteristics.find(
+      (item) =>
+        item.part_id === partId &&
+        item.code === requestBody.code &&
+        item.revision === requestBody.revision,
+    )
+    if (!item) {
+      item = {
+        ...requestBody,
+        part_id: partId,
+        id: crypto.randomUUID(),
+        title: "",
+      }
+      state().characteristics.push(item)
+    }
+    item.role = requestBody.role
+    return clone(item)
+  },
+  unassignCharacteristic: async ({ characteristicId }) => {
+    if (state().failCharacteristicRemove)
+      throw new Error("Simulated characteristic removal failure")
+    state().characteristics = state().characteristics.filter(
+      (item) => item.id !== characteristicId,
+    )
+  },
+}
 const clone = (value) => structuredClone(value)
 const state = () => window.review
 

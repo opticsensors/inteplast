@@ -21,9 +21,9 @@ Lo que hay que hacer: que INTEPLAST nos de otro PDF del plano que NO sea una ima
 
 Uso
 ---
-    python data-explorer/planos/ver_plano.py                # genera la pagina y la abre
-    python data-explorer/planos/ver_plano.py --buscar "40,3"
-    python data-explorer/planos/ver_plano.py --reocr        # ignora la cache del OCR
+    python prototypes/data-explorer/planos/ver_plano.py                # genera la pagina y la abre
+    python prototypes/data-explorer/planos/ver_plano.py --buscar "40,3"
+    python prototypes/data-explorer/planos/ver_plano.py --reocr        # ignora la cache del OCR
 
 Genera
 ------
@@ -66,7 +66,7 @@ RAIZ = Path(
 )
 CARPETA_PLANO = "1-2D y 3D Pieza"
 PROYECTO = "3212 Pump Housing"      # el unico que se trabaja -> CLAUDE.md
-SALIDA = Path(__file__).resolve().parent.parent / "out"   # data-explorer/out, compartida
+SALIDA = Path(__file__).resolve().parent.parent / "out"   # prototypes/data-explorer/out, compartida
 
 # Tesseract esta instalado pero NO en el PATH (por eso pytesseract da TesseractNotFoundError
 # si no se le dice donde esta). Se busca en las dos ubicaciones conocidas de este equipo.

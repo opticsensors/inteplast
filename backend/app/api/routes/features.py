@@ -1,3 +1,4 @@
+import re
 import uuid
 from collections.abc import Sequence
 from typing import Any
@@ -108,6 +109,13 @@ def create_feature(
     """
     Crear un feature.
     """
+    if feature_in.tags and any(
+        re.fullmatch(r"N\s*\d+(?:\.\d+)?", tag.strip(), re.I) for tag in feature_in.tags
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="Vincula los números de cota dentro de su pieza; los tags son globales.",
+        )
     if feature_in.image_id and not session.get(StoredFile, feature_in.image_id):
         raise HTTPException(status_code=404, detail="File not found")
     feature = crud.create_feature(
@@ -129,6 +137,13 @@ def update_feature(
     conocimiento es colaborativa.
     """
     feature = get_feature_or_404(session, feature_id)
+    if feature_in.tags and any(
+        re.fullmatch(r"N\s*\d+(?:\.\d+)?", tag.strip(), re.I) for tag in feature_in.tags
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="Vincula los números de cota dentro de su pieza; los tags son globales.",
+        )
     if feature_in.image_id and not session.get(StoredFile, feature_in.image_id):
         raise HTTPException(status_code=404, detail="File not found")
     changes = feature_in.model_dump(exclude_unset=True)
@@ -373,10 +388,24 @@ def unlink_feature_part(
     Quitar la tarjeta y sus adjuntos de este feature. La pieza compartida y
     los documentos originales se conservan.
     """
+    session.exec(
+        select(Feature).where(Feature.id == feature_id).with_for_update()
+    ).first()
     feature = get_feature_or_404(session, feature_id)
     part = session.get(Part, part_id)
     if not part:
         raise HTTPException(status_code=404, detail="Part not found")
+    from app.knowledge_models import FeatureCharacteristicLink, PartCharacteristic
+
+    for link in session.exec(
+        select(FeatureCharacteristicLink)
+        .join(PartCharacteristic)
+        .where(
+            FeatureCharacteristicLink.feature_id == feature_id,
+            PartCharacteristic.part_id == part_id,
+        )
+    ):
+        session.delete(link)
     if part in feature.parts:
         feature.parts.remove(part)
     removed = [asset for asset in feature.assets if asset.part_id == part_id]

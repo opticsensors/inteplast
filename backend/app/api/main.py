@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.routes import (
+    evidence,
     features,
     files,
     items,
@@ -19,6 +20,7 @@ api_router.include_router(utils.router)
 api_router.include_router(items.router)
 api_router.include_router(features.router)
 api_router.include_router(parts.router)
+api_router.include_router(evidence.router)
 api_router.include_router(files.router)
 
 

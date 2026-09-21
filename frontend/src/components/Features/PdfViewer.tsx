@@ -21,19 +21,39 @@ const toolbarButton =
 export default function PdfViewer({
   file,
   title,
+  focus,
 }: {
   file: FilePublic
   title: string
+  focus?: { id: string; page: number; box: number[] }
 }) {
   const surfaceRef = useRef<HTMLDivElement>(null)
   const sheetRef = useRef<HTMLCanvasElement>(null)
-  const actions = useRef({ fit: () => {}, zoom: (_factor: number) => {} })
+  const overlayRef = useRef<HTMLDivElement>(null)
+  const focusRef = useRef(focus)
+  focusRef.current = focus
+  const actions = useRef({
+    fit: () => {},
+    zoom: (_factor: number) => {},
+    focus: (_box: number[]) => {},
+  })
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null)
   const [pageNumber, setPageNumber] = useState(1)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState("")
 
   useEffect(() => {
+    if (focus) {
+      setPageNumber(focus.page)
+      actions.current.focus(focus.box)
+    }
+  }, [focus])
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Relinking a file changes its bytes without changing its ID.
+  useEffect(() => {
+    setPdf(null)
+    setPageNumber(focusRef.current?.page ?? 1)
+    setReady(false)
     let active = true
     let loading: ReturnType<typeof getDocument> | undefined
     const load = async () => {
@@ -57,7 +77,7 @@ export default function PdfViewer({
       active = false
       void loading?.destroy().catch(() => {})
     }
-  }, [file.id])
+  }, [file.id, file.version])
 
   useEffect(() => {
     const surface = surfaceRef.current
@@ -126,6 +146,16 @@ export default function PdfViewer({
         const apply = (next: View, redraw = false) => {
           view = next
           canvas.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`
+          const marker = overlayRef.current
+            ?.firstElementChild as HTMLElement | null
+          const box = focusRef.current?.box
+          if (marker && box) {
+            // Position in screen pixels so zoom never thickens the outline.
+            marker.style.left = `${view.x + box[0] * base.width * view.scale}px`
+            marker.style.top = `${view.y + box[1] * base.height * view.scale}px`
+            marker.style.width = `${(box[2] - box[0]) * base.width * view.scale}px`
+            marker.style.height = `${(box[3] - box[1]) * base.height * view.scale}px`
+          }
           if (redraw) {
             clearTimeout(timer)
             timer = setTimeout(() => void render(), 120)
@@ -262,12 +292,43 @@ export default function PdfViewer({
         surface.addEventListener("pointercancel", up)
         surface.addEventListener("lostpointercapture", up)
         surface.addEventListener("keydown", key)
+        const focusBox = (box: number[]) => {
+          fitted = false
+          const width = Math.max(
+            (box[2] - box[0]) * base.width * 9,
+            base.width * 0.12,
+          )
+          const height = Math.max(
+            (box[3] - box[1]) * base.height * 9,
+            base.height * 0.12,
+          )
+          const scale = Math.min(
+            surface.clientWidth / width,
+            surface.clientHeight / height,
+            8,
+          )
+          apply(
+            {
+              x:
+                surface.clientWidth / 2 -
+                (((box[0] + box[2]) * base.width) / 2) * scale,
+              y:
+                surface.clientHeight / 2 -
+                (((box[1] + box[3]) * base.height) / 2) * scale,
+              scale,
+            },
+            true,
+          )
+        }
         actions.current = {
           fit,
+          focus: focusBox,
           zoom: (factor) =>
             zoomAt(factor, surface.clientWidth / 2, surface.clientHeight / 2),
         }
-        fit()
+        if (focusRef.current?.page === pageNumber)
+          focusBox(focusRef.current.box)
+        else fit()
         cleanup = () => {
           resize.disconnect()
           surface.removeEventListener("wheel", wheel)
@@ -291,7 +352,7 @@ export default function PdfViewer({
       clearTimeout(timer)
       rendering?.cancel()
       cleanup()
-      actions.current = { fit: () => {}, zoom: () => {} }
+      actions.current = { fit: () => {}, zoom: () => {}, focus: () => {} }
     }
   }, [pdf, pageNumber])
 
@@ -313,6 +374,15 @@ export default function PdfViewer({
           className="pointer-events-none absolute left-0 top-0 origin-top-left bg-white shadow-md"
           style={{ visibility: ready && !error ? "visible" : "hidden" }}
         />
+        <div
+          ref={overlayRef}
+          className="pointer-events-none absolute inset-0"
+          style={{ visibility: ready && !error ? "visible" : "hidden" }}
+        >
+          {focus?.page === pageNumber && (
+            <div className="absolute rounded-sm border-2 border-orange-500 bg-orange-400/15" />
+          )}
+        </div>
       </div>
       {!ready && !error && (
         <output className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">

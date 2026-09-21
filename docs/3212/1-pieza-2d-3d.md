@@ -53,14 +53,14 @@ Es **poco para OCR fiable de cotas pequeñas** con símbolos GD&T (⌖, Ø, ⊥,
 - **En la aplicación**: Bolt Eye → Piezas ejemplo → 3212 → Plano 2D rev. 07. El original
   está vinculado en la instalación local y se puede ampliar, abrir en otra pestaña y descargar.
   La resolución sigue siendo la del escaneo. Ver [ficheros externos](../ficheros-externos.md).
-- 📊 **Con el visor: [`data-explorer/planos/ver_plano.py`](../../data-explorer/planos/ver_plano.py)**.
+- 📊 **Con el visor: [`prototypes/data-explorer/planos/ver_plano.py`](../../prototypes/data-explorer/planos/ver_plano.py)**.
   Para buscar texto exploratoriamente. Abre el plano en una página, se teclea una cota y **la marca sobre la
   imagen**, con zoom y arrastre. → [visores.md](../visores.md)
   ```powershell
-  & $py "…\data-explorer\planos\ver_plano.py"
-  & $py "…\data-explorer\planos\ver_plano.py" --buscar "40,3"
+  & $py "…\prototypes\data-explorer\planos\ver_plano.py"
+  & $py "…\prototypes\data-explorer\planos\ver_plano.py" --buscar "40,3"
   ```
-- **El texto ya está extraído** en `data-explorer/out/plano/texto-3212.txt` (se regenera solo).
+- **El texto ya está extraído** en `prototypes/data-explorer/out/plano/texto-3212.txt` (se regenera solo).
 - **A ojo**: abrirlo en cualquier visor.
 
 ### 🆕 Sí se puede extraer texto — con matices (2026-08-18)

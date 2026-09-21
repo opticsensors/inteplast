@@ -17,9 +17,9 @@ enlaces entre paginas sigan siendo relativos y la pantalla inicial sea una sola.
 
 Uso
 ---
-    python data-explorer/ver_todo.py                 # genera los cuatro y abre el inicio
-    python data-explorer/ver_todo.py --solo pdf      # regenera solo uno (y el inicio)
-    python data-explorer/ver_todo.py --solo csv,txt
+    python prototypes/data-explorer/ver_todo.py                 # genera los cuatro y abre el inicio
+    python prototypes/data-explorer/ver_todo.py --solo pdf      # regenera solo uno (y el inicio)
+    python prototypes/data-explorer/ver_todo.py --solo csv,txt
 """
 
 from __future__ import annotations

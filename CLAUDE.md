@@ -10,7 +10,7 @@ cliente y las notas de Obsidian (ver rutas abajo).
 |---|---|
 | `backend/` `frontend/` | La **aplicación** (FastAPI + React, sobre el template `full-stack-fastapi-template`). → [docs/app-web.md](docs/app-web.md) |
 | `scripts/` | Lanzadores de **Compose, build y tests**. ⚠️ Nada que ver con los visores de datos |
-| `data-explorer/` | 📊 Los **visores de los datos crudos** (Python): `metrologia/` (CMM) y `planos/` (el plano 2D). → [docs/visores.md](docs/visores.md) |
+| `prototypes/data-explorer/` | 📊 Los **visores de los datos crudos** (Python): `metrologia/` (CMM) y `planos/` (el plano 2D). → [docs/visores.md](docs/visores.md) |
 | `docs/` | 🔑 El **conocimiento del dominio**: análisis de los datos, modelo de la BD, preguntas abiertas |
 | `compose*.yml` `deployment.md` `development.md` | Docker y despliegue |
 
@@ -33,16 +33,21 @@ Cliente final: **Robert Bosch** (división BueP). Informes en formato **PPAP / Q
 | Qué | Ruta |
 |---|---|
 | **Este repo** (código + docs) | `C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\repos\inteplast` |
-| 📊 **Visores** de los datos | `…\repos\inteplast\data-explorer` *(dentro de este repo)* |
+| 📊 **Visores** de los datos | `…\repos\inteplast\prototypes\data-explorer` *(dentro de este repo)* |
 | 🔴 **Datos** de INTEPLAST | `C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\proyectos\11. inteplast\Exemples` |
 | 🔴 **Notas** de Obsidian | `C:\edu\projects\Inteplast` *(vault en `C:\edu`)* |
 
 > 🔴 **Los datos crudos del cliente NO se copian al repo** — se leen in situ desde `Exemples`
-> (rutas absolutas en la cabecera de cada script de `data-explorer/`). Son gigas, están en
+> (rutas absolutas en la cabecera de cada script de `prototypes/data-explorer/`). Son gigas, están en
 > OneDrive Files On-Demand y no son nuestros.
 >
-> ⚠️ Un script nuevo **de exploración de datos** va a `data-explorer/`, **no** a `scripts/`
+> ⚠️ Un script nuevo **de exploración de datos** va a `prototypes/data-explorer/`, **no** a `scripts/`
 > (que es el de build y test del template). Y en `docs/` se anota qué hace y dónde está.
+
+> **Separación de producto:** `prototypes/` es solo exploración. La aplicación no debe
+> importar, ejecutar ni copiar sus scripts. Los lectores de la web se implementan y
+> mantienen en `backend/app/ingestion/`, tomando los prototipos como referencia cuando
+> sea útil. La imagen Docker excluye `prototypes/` por completo.
 
 ## Foco actual
 
@@ -66,8 +71,10 @@ ficheros dentro** (desde el 2026-08-25; antes era una matriz pieza × tipo).
 Un feature puede además estar **declarado** en una pieza sin tener ningún fichero subido todavía
 (`FeaturePartLink`, embrión de `INSTANCIA_EN_PROYECTO`).
 
-🔴 **No está la ingesta** (`MUESTREO`, `MEDICION`, `CORRECCION_MOLDE`): eso se alimenta de los
-CSV/XLS/PPTX y es la siguiente fase.
+Desde el **2026-09-18** existe ingesta piloto del 3212 (snapshots de CSV/XLS/PPTX), cotas por
+pieza/revisión, ficha de pieza y buscador PDF con revisiones compartidas. El modelo completo
+normalizado de mediciones y ejecución de correcciones sigue pendiente. Ver
+[docs/cotas-y-evidencia-web.md](docs/cotas-y-evidencia-web.md).
 
 ```powershell
 docker compose up -d --build db prestart backend   # backend + BD (aplica migraciones)
@@ -77,6 +84,9 @@ docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bo
 
 - 🔑 **Antes de tocar `backend/` o `frontend/`, leer [docs/app-web.md](docs/app-web.md)**: modelo,
   endpoints, permisos, decisiones y cabos sueltos.
+- **Antes de diseñar o modificar una pantalla, leer [docs/interfaz.md](docs/interfaz.md)**.
+  Features es la referencia visual. Reutilizar buscador, controles y composición;
+  no inventar un diseño distinto por página ni añadir botones de retorno.
 - 🔴 **Tras tocar `backend/`, reconstruir con `--build` o mantener `docker compose watch backend`
   activo.** `up -d` por sí solo reutiliza la imagen y no sincroniza el código local. Alembic
   `current` comprueba la revisión de la BD, **no** que el código de los endpoints esté actualizado.
@@ -98,7 +108,7 @@ docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bo
   `.env` contiene toda la configuración personal y queda fuera de Git; `.env.example` es la
   plantilla versionada. `docker compose` carga el origen directamente, sin lanzadores ni
   variables manuales en la terminal. No sobrescribir el `.env` de una instalación. Graph, revisiones
-  históricas e ingesta siguen pendientes. Escaneo y molde grandes usan GLB automáticos en
+  históricas de originales e ingesta para otras piezas siguen pendientes. Escaneo y molde grandes usan GLB automáticos en
   caché; ver [docs/vistas-3d.md](docs/vistas-3d.md) y [docs/ficheros-externos.md](docs/ficheros-externos.md).
   **La pregunta A10 sobre acceso a originales es prioridad 1 de la reunión con INTEPLAST.**
 - **Portadas CAD:** pulsar la cabecera abre la ampliación de imagen/3D; en edición abre una
@@ -154,7 +164,7 @@ docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bo
 
   🔴 **Tampoco está en el PATH**: `pytesseract` da `TesseractNotFoundError` hasta que se le dice
   dónde está. Se arregla con `pytesseract.pytesseract.tesseract_cmd = <ruta>` — ya resuelto en
-  `data-explorer/planos/ver_plano.py`, copiar de ahí.
+  `prototypes/data-explorer/planos/ver_plano.py`, copiar de ahí.
 
   ⚠️ **Tesseract sirve para texto grande, NO para texto pequeño.** Para cifras de ~9 px (los
   globos del plano) devuelve basura. Está instalado también `rapidocr-onnxruntime` (2026-08-18),
@@ -168,19 +178,20 @@ docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bo
   Sigue siendo válido: para leer `.xls` lo más cómodo es **Excel vía COM desde PowerShell**, y
   para CSV/TXT/PPTX la **Bash tool** (Git Bash tiene `unzip`, `iconv`, `awk`, `find`).
 
-- 📊 **Para VER los datos crudos ya hay visores hechos**, en este repo, en `data-explorer/`
-  (ver [docs/visores.md](docs/visores.md) y [data-explorer/README.md](data-explorer/README.md)):
+- 📊 **Para VER los datos crudos ya hay visores hechos**, en este repo, en `prototypes/data-explorer/`
+  (ver [docs/visores.md](docs/visores.md) y [prototypes/data-explorer/README.md](prototypes/data-explorer/README.md)):
 
   ```powershell
   $py = "C:\Users\eduard.almar\AppData\Local\Programs\Python\Python311\python.exe"
-  $s  = "C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\repos\inteplast\data-explorer"
+  $s  = "C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\repos\inteplast\prototypes\data-explorer"
   & $py "$s\ver_todo.py"    # genera los cuatro visores y abre out/index.html
   ```
 
   `metrologia/ver_csv.py` (16 informes de la CMM), `metrologia/ver_txt.py` (40 nubes de puntos),
   `metrologia/ver_pdf.py` (144 gráficas de contorno) y `planos/ver_plano.py` (el plano 2D con OCR
-  y buscador) generan un índice navegable con una página por fichero. **Úsalos antes de escribir
-  un parser nuevo**: el código de parseo ya resuelto está ahí.
+  y buscador) generan un índice navegable con una página por fichero. **Consúltalos como
+  referencia al estudiar los formatos**. Los lectores de producción pertenecen al backend;
+  no se importan ni se ejecutan los scripts de exploración desde la web.
 - **Los CSV de la CMM son cp1252**, no UTF-8. Sin `iconv -f cp1252` salen `C�lculo de f�rmula`.
 - 🔴 **OneDrive Files On-Demand**: hay ficheros que son *placeholders*. Leer un solo byte dispara
   la descarga completa y en los grandes **da timeout**. **El estado cambia solo**: el 2026-08-13
@@ -266,7 +277,7 @@ for f in $(ls "$D"/slide*.xml | sort -V); do sed 's/<[^>]*>/\n/g' "$f" | grep -v
 7. **Cavidades no empiezan en 1**: el 3212 usa **c13–c16** (molde de 16, se controlan 4).
 8. 🔴 **El plano 2D no tiene texto: es un escaneo.** El PDF es una imagen JPEG de 3276×2317 px
    impresa con *"Microsoft: Print To PDF"*, con **0 fuentes**. `pdftotext` devuelve 1 byte.
-   **Ya hay OCR hecho**: `data-explorer/planos/ver_plano.py` saca 1.504 palabras (confianza media
+   **Ya hay OCR hecho**: `prototypes/data-explorer/planos/ver_plano.py` saca 1.504 palabras (confianza media
    74) y las deja en `out/plano/texto-3212.txt`. Las notas se leen bien; la `Ø` sale como
    `9`/`@`/`$` (`Ø40,3` → `940.3`) y los marcos GD&T son ilegibles.
    🔑 **Los N-numbers están en el plano**, en **globos verdes sin la `N`** (`170`, `170.2`… =
@@ -321,7 +332,7 @@ hidratación en OneDrive y por dónde empezar.
 |---|---|
 | [docs/app-web.md](docs/app-web.md) | vayas a tocar la **aplicación** (`backend/`, `frontend/`): modelo, endpoints, permisos, cómo levantarla y qué falta |
 | [docs/ficheros-externos.md](docs/ficheros-externos.md) | vayas a vincular originales, configurar la carpeta local, revisar los visores o preparar Graph |
-| [docs/visores.md](docs/visores.md) | quieras **ver los datos** en vez de leer sobre ellos: qué hace cada visor de `data-explorer/` y qué decisiones lleva dentro |
+| [docs/visores.md](docs/visores.md) | quieras **ver los datos** en vez de leer sobre ellos: qué hace cada visor de `prototypes/data-explorer/` y qué decisiones lleva dentro |
 | [docs/formatos-parsing.md](docs/formatos-parsing.md) | vayas a **escribir un parser**: esquemas exactos de CSV/XLS/PPTX, columna a columna |
 | [docs/modelo-datos.md](docs/modelo-datos.md) | trabajes en el **esquema de la BD** o en la ingesta |
 | [docs/preguntas-abiertas.md](docs/preguntas-abiertas.md) | vayas a **preguntar algo a INTEPLAST** — mira antes si ya está resuelto |
@@ -341,4 +352,4 @@ hidratación en OneDrive y por dónde empezar.
 [Hallazgos y prototipo](docs/3212/revision-2026-09-17.md): los XLS de retoques sí contienen previsiones en
 `DR(100%)`; `PUNTS_NOUS` coincide con los últimos 150 puntos de PUNTS y no demuestra un
 objetivo corregido; N170 mejora en GX pero conserva LP máximos fuera. La vista nueva
-`data-explorer/ver_correcciones.py` es independiente de `ver_todo.py`.
+`prototypes/data-explorer/ver_correcciones.py` es independiente de `ver_todo.py`.

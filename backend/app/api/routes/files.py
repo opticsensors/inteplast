@@ -174,6 +174,15 @@ def relink_file(
             status_code=409,
             detail="Otra persona ha actualizado el vínculo. Recarga la ficha.",
         )
+    from app.knowledge_models import PartDocument
+
+    if session.exec(
+        select(PartDocument).where(PartDocument.file_id == file_id)
+    ).first():
+        raise HTTPException(
+            status_code=409,
+            detail="Este original conserva evidencia importada. Registra la nueva versión como otro documento y actualiza los datos de la pieza.",
+        )
     assets = session.exec(
         select(FeatureAsset).where(FeatureAsset.file_id == file_id)
     ).all()
@@ -456,6 +465,14 @@ def delete_file(
     stored = session.get(StoredFile, file_id)
     if not stored:
         raise HTTPException(status_code=404, detail="File not found")
+    from app.knowledge_models import PartDocument
+
+    if session.exec(
+        select(PartDocument).where(PartDocument.file_id == file_id)
+    ).first():
+        raise HTTPException(
+            status_code=409, detail="Documento utilizado como evidencia de una pieza"
+        )
     session.delete(stored)
     session.commit()
     if stored.source == "upload":

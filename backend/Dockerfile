@@ -4,7 +4,7 @@ ENV PYTHONUNBUFFERED=1
 ENV UPLOADS_DIR=/app/uploads
 
 # OCP/VTK wheels link OpenGL even though tessellation runs without a display.
-RUN apt-get update && apt-get install -y --no-install-recommends libgl1 libxrender1 libsm6 \
+RUN apt-get update && apt-get install -y --no-install-recommends libgl1 libxrender1 libsm6 tesseract-ocr \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv

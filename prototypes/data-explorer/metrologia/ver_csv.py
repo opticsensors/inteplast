@@ -35,9 +35,9 @@ Un INDICE con arbol de carpetas (`out/csv-3212.html`) y una PAGINA POR RESULTADO
 
 Uso
 ---
-    python data-explorer/metrologia/ver_csv.py                  # genera todo y abre el arbol
-    python data-explorer/metrologia/ver_csv.py --no-abrir
-    python data-explorer/metrologia/ver_csv.py --corregir-signo # invierte el error de signo de B2/B4
+    python prototypes/data-explorer/metrologia/ver_csv.py                  # genera todo y abre el arbol
+    python prototypes/data-explorer/metrologia/ver_csv.py --no-abrir
+    python prototypes/data-explorer/metrologia/ver_csv.py --corregir-signo # invierte el error de signo de B2/B4
 """
 
 from __future__ import annotations
@@ -61,7 +61,7 @@ RAIZ = Path(
     r"C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\proyectos"
     r"\11. inteplast\Exemples\3212 Pump Housing\4- Metrologia"
 )
-SALIDA = Path(__file__).resolve().parent.parent / "out"   # data-explorer/out, compartida
+SALIDA = Path(__file__).resolve().parent.parent / "out"   # prototypes/data-explorer/out, compartida
 
 ENCODING = "cp1252"          # los CSV de la CMM NO son utf-8
 LIMITE_FRAC = 3.0            # el grafico corta en +-3 x tolerancia; el hover da el valor real

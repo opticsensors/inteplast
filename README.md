@@ -2,7 +2,8 @@
 
 Base colaborativa de conocimiento para el diseño de piezas inyectadas: features, warnings,
 lessons learned y ficheros agrupados por pieza. Piloto actual: **3212 Pump Housing**.
-La ingesta de mediciones y correcciones de molde todavía no está implementada.
+Existe una importación piloto de mediciones y correcciones del 3212; el modelo completo
+normalizado y la conexión con Microsoft Graph siguen pendientes.
 
 ## Documentación
 
@@ -12,7 +13,7 @@ La ingesta de mediciones y correcciones de molde todavía no está implementada.
   configuración local y futura integración con OneDrive.
 - [Vistas 3D ligeras](docs/vistas-3d.md): GLB automáticos del escaneo y el molde, con caché.
 - [Portadas CAD](docs/portadas-cad.md): superficies en rojo, captura y portada 3D interactiva.
-- [Datos del 3212](docs/3212/README.md) y [visores](data-explorer/README.md).
+- [Datos del 3212](docs/3212/README.md) y [visores](prototypes/data-explorer/README.md).
 - [Desarrollo](development.md), [backend](backend/README.md), [frontend](frontend/README.md).
 - [Despliegue](deployment.md) y [correcciones de la revisión](docs/revision-2026-09-15.md).
 
@@ -66,8 +67,11 @@ volúmenes compartidos con la aplicación. No ejecutar suites contra la BD de tr
 
 ## Visores de datos
 
+Los visores experimentales viven en `prototypes/data-explorer/`. No forman parte
+de la aplicación web ni de Docker; los lectores de la web están en `backend/app/ingestion/`.
+
 ```powershell
-& 'C:\Users\eduard.almar\AppData\Local\Programs\Python\Python311\python.exe' .\data-explorer\ver_todo.py
+& 'C:\Users\eduard.almar\AppData\Local\Programs\Python\Python311\python.exe' .\prototypes\data-explorer\ver_todo.py
 ```
 
 Los datos del cliente permanecen fuera del repositorio. Revisar los atributos de OneDrive antes
@@ -81,4 +85,3 @@ docker compose down
 
 Este comando conserva la BD y las subidas. No añadir `-v`: eliminaría los volúmenes persistentes.
 No hace falta borrar imágenes ni limpiar el builder para un arranque normal.
-

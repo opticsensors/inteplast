@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { createFileRoute, Link } from "@tanstack/react-router"
+import { createFileRoute } from "@tanstack/react-router"
 import { Download, ExternalLink, FileQuestion } from "lucide-react"
 import { lazy, Suspense } from "react"
 
@@ -22,12 +22,15 @@ const ModelViewer = lazy(() => import("@/components/Features/ModelViewer"))
 const WebModelViewer = lazy(
   () => import("@/components/Features/WebModelViewer"),
 )
-const PdfViewer = lazy(() => import("@/components/Features/PdfViewer"))
+const PdfViewer = lazy(() => import("@/components/Features/DrawingSearch"))
 
 export const Route = createFileRoute(
   "/_layout/features_/$featureId_/fichero/$assetId",
 )({
   component: AssetDetail,
+  validateSearch: (search: Record<string, unknown>): { cota?: string } => ({
+    cota: typeof search.cota === "string" ? search.cota : undefined,
+  }),
   head: () => ({
     meta: [
       {
@@ -65,7 +68,7 @@ function EmptyState({
  *
  * - **Verlo**: el plano PDF y las imagenes se pintan aqui; el 3D (STL, GLB,
  *   STEP, IGES) se abre en el visor; STL/STEP grandes usan un GLB del servidor.
- * - **Bajarlo**: siempre, sea cual sea el formato.
+ * - **Bajarlo**: para los formatos distintos del plano PDF.
  * - **Saber que necesita**: cuando no hay visor posible —Moldflow, SolidWorks,
  *   CATIA— la pagina lo dice con palabras.
  *
@@ -74,6 +77,7 @@ function EmptyState({
  */
 function AssetDetail() {
   const { featureId, assetId } = Route.useParams()
+  const { cota } = Route.useSearch()
   const queryClient = useQueryClient()
 
   const {
@@ -102,16 +106,7 @@ function AssetDetail() {
   if (!asset) {
     return (
       <EmptyState title="Este fichero ya no esta en la ficha">
-        <p>
-          Puede que se haya borrado.{" "}
-          <Link
-            to="/features/$featureId"
-            params={{ featureId }}
-            className="underline"
-          >
-            Volver a {feature.name}
-          </Link>
-        </p>
+        <p>Puede que se haya borrado.</p>
       </EmptyState>
     )
   }
@@ -127,16 +122,9 @@ function AssetDetail() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          {/* Migas: de donde viene y de que pieza es. No es un boton Volver,
-              es saber donde estas. */}
+          {/* Contexto del documento; el retorno corresponde al navegador. */}
           <p className="text-sm text-muted-foreground">
-            <Link
-              to="/features/$featureId"
-              params={{ featureId }}
-              className="hover:underline"
-            >
-              {feature.name}
-            </Link>
+            <span>{feature.name}</span>
             {asset.part && (
               <>
                 {" · "}
@@ -180,7 +168,7 @@ function AssetDetail() {
                 </a>
               </Button>
             )}
-            {access.downloadUrl && !unavailable && (
+            {viewer !== "pdf" && access.downloadUrl && !unavailable && (
               <Button size="sm" asChild>
                 <a href={access.downloadUrl} download={file.filename}>
                   <Download className="mr-2" />
@@ -241,6 +229,7 @@ function AssetDetail() {
           fallback={<Skeleton className="h-[75vh] w-full rounded-lg" />}
         >
           <PdfViewer
+            initialQuery={cota}
             key={`${file.id}:${file.version}`}
             file={file}
             title={name}

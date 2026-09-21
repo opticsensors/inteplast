@@ -236,6 +236,19 @@ def delete_part(
             detail=f"Pieza usada en {count} feature{'s' if count != 1 else ''}. "
             "Desvinculala antes de eliminarla del catalogo.",
         )
+    from app.knowledge_models import PartCharacteristic, PartDocument
+
+    if (
+        session.exec(
+            select(PartCharacteristic).where(PartCharacteristic.part_id == part_id)
+        ).first()
+        or session.exec(
+            select(PartDocument).where(PartDocument.part_id == part_id)
+        ).first()
+    ):
+        raise HTTPException(
+            status_code=409, detail="La pieza conserva cotas o documentos de evidencia"
+        )
     session.delete(part)
     session.commit()
     return Message(message="Part deleted successfully")

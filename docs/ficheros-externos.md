@@ -177,6 +177,13 @@ según su biblioteca y usuarios; no presuponer acceso a todos los archivos del t
 **Graph todavía no está implementado.** Esta separación permite incorporarlo sin reescribir
 el renderizado PDF/3D; el selector y la gestión del origen sí necesitarán esa integración.
 
+Como opción pendiente de acordar con IT, se prefiere acceso automático del servidor, de solo
+lectura y limitado al proyecto, si todos los usuarios autorizados pueden consultar los mismos
+archivos. Si hay restricciones por persona, evaluar acceso delegado con su cuenta.
+Los conversores y el importador actuales esperan rutas locales (`file_sources.py`,
+`evidence.py` y `evidence_converter.py`): la integración también deberá proporcionar las
+entradas temporales necesarias y comprobar la autorización al servir los derivados.
+
 ## Verificación con el 3212
 
 En la instalación local se han vinculado a las filas existentes del Bolt Eye:

@@ -16,11 +16,14 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
+import { Route as LayoutPartsRouteImport } from './routes/_layout/parts'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutFeaturesRouteImport } from './routes/_layout/features'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
+import { Route as LayoutPartsPartIdRouteImport } from './routes/_layout/parts_.$partId'
 import { Route as LayoutFeaturesNuevoRouteImport } from './routes/_layout/features_.nuevo'
 import { Route as LayoutFeaturesFeatureIdRouteImport } from './routes/_layout/features_.$featureId'
+import { Route as LayoutPartsPartIdFicheroFileIdRouteImport } from './routes/_layout/parts_.$partId_.fichero.$fileId'
 import { Route as LayoutFeaturesFeatureIdFicheroAssetIdRouteImport } from './routes/_layout/features_.$featureId_.fichero.$assetId'
 
 const SignupRoute = SignupRouteImport.update({
@@ -57,6 +60,11 @@ const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutPartsRoute = LayoutPartsRouteImport.update({
+  id: '/parts',
+  path: '/parts',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutItemsRoute = LayoutItemsRouteImport.update({
   id: '/items',
   path: '/items',
@@ -72,6 +80,11 @@ const LayoutAdminRoute = LayoutAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutPartsPartIdRoute = LayoutPartsPartIdRouteImport.update({
+  id: '/parts_/$partId',
+  path: '/parts/$partId',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutFeaturesNuevoRoute = LayoutFeaturesNuevoRouteImport.update({
   id: '/features_/nuevo',
   path: '/features/nuevo',
@@ -82,6 +95,12 @@ const LayoutFeaturesFeatureIdRoute = LayoutFeaturesFeatureIdRouteImport.update({
   path: '/features/$featureId',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutPartsPartIdFicheroFileIdRoute =
+  LayoutPartsPartIdFicheroFileIdRouteImport.update({
+    id: '/parts_/$partId_/fichero/$fileId',
+    path: '/parts/$partId/fichero/$fileId',
+    getParentRoute: () => LayoutRoute,
+  } as any)
 const LayoutFeaturesFeatureIdFicheroAssetIdRoute =
   LayoutFeaturesFeatureIdFicheroAssetIdRouteImport.update({
     id: '/features_/$featureId_/fichero/$assetId',
@@ -98,10 +117,13 @@ export interface FileRoutesByFullPath {
   '/admin': typeof LayoutAdminRoute
   '/features': typeof LayoutFeaturesRoute
   '/items': typeof LayoutItemsRoute
+  '/parts': typeof LayoutPartsRoute
   '/settings': typeof LayoutSettingsRoute
   '/features/$featureId': typeof LayoutFeaturesFeatureIdRoute
   '/features/nuevo': typeof LayoutFeaturesNuevoRoute
+  '/parts/$partId': typeof LayoutPartsPartIdRoute
   '/features/$featureId/fichero/$assetId': typeof LayoutFeaturesFeatureIdFicheroAssetIdRoute
+  '/parts/$partId/fichero/$fileId': typeof LayoutPartsPartIdFicheroFileIdRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -111,11 +133,14 @@ export interface FileRoutesByTo {
   '/admin': typeof LayoutAdminRoute
   '/features': typeof LayoutFeaturesRoute
   '/items': typeof LayoutItemsRoute
+  '/parts': typeof LayoutPartsRoute
   '/settings': typeof LayoutSettingsRoute
   '/': typeof LayoutIndexRoute
   '/features/$featureId': typeof LayoutFeaturesFeatureIdRoute
   '/features/nuevo': typeof LayoutFeaturesNuevoRoute
+  '/parts/$partId': typeof LayoutPartsPartIdRoute
   '/features/$featureId/fichero/$assetId': typeof LayoutFeaturesFeatureIdFicheroAssetIdRoute
+  '/parts/$partId/fichero/$fileId': typeof LayoutPartsPartIdFicheroFileIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -127,11 +152,14 @@ export interface FileRoutesById {
   '/_layout/admin': typeof LayoutAdminRoute
   '/_layout/features': typeof LayoutFeaturesRoute
   '/_layout/items': typeof LayoutItemsRoute
+  '/_layout/parts': typeof LayoutPartsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
   '/_layout/': typeof LayoutIndexRoute
   '/_layout/features_/$featureId': typeof LayoutFeaturesFeatureIdRoute
   '/_layout/features_/nuevo': typeof LayoutFeaturesNuevoRoute
+  '/_layout/parts_/$partId': typeof LayoutPartsPartIdRoute
   '/_layout/features_/$featureId_/fichero/$assetId': typeof LayoutFeaturesFeatureIdFicheroAssetIdRoute
+  '/_layout/parts_/$partId_/fichero/$fileId': typeof LayoutPartsPartIdFicheroFileIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -144,10 +172,13 @@ export interface FileRouteTypes {
     | '/admin'
     | '/features'
     | '/items'
+    | '/parts'
     | '/settings'
     | '/features/$featureId'
     | '/features/nuevo'
+    | '/parts/$partId'
     | '/features/$featureId/fichero/$assetId'
+    | '/parts/$partId/fichero/$fileId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -157,11 +188,14 @@ export interface FileRouteTypes {
     | '/admin'
     | '/features'
     | '/items'
+    | '/parts'
     | '/settings'
     | '/'
     | '/features/$featureId'
     | '/features/nuevo'
+    | '/parts/$partId'
     | '/features/$featureId/fichero/$assetId'
+    | '/parts/$partId/fichero/$fileId'
   id:
     | '__root__'
     | '/_layout'
@@ -172,11 +206,14 @@ export interface FileRouteTypes {
     | '/_layout/admin'
     | '/_layout/features'
     | '/_layout/items'
+    | '/_layout/parts'
     | '/_layout/settings'
     | '/_layout/'
     | '/_layout/features_/$featureId'
     | '/_layout/features_/nuevo'
+    | '/_layout/parts_/$partId'
     | '/_layout/features_/$featureId_/fichero/$assetId'
+    | '/_layout/parts_/$partId_/fichero/$fileId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -238,6 +275,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutSettingsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/parts': {
+      id: '/_layout/parts'
+      path: '/parts'
+      fullPath: '/parts'
+      preLoaderRoute: typeof LayoutPartsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/items': {
       id: '/_layout/items'
       path: '/items'
@@ -259,6 +303,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/parts_/$partId': {
+      id: '/_layout/parts_/$partId'
+      path: '/parts/$partId'
+      fullPath: '/parts/$partId'
+      preLoaderRoute: typeof LayoutPartsPartIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/features_/nuevo': {
       id: '/_layout/features_/nuevo'
       path: '/features/nuevo'
@@ -271,6 +322,13 @@ declare module '@tanstack/react-router' {
       path: '/features/$featureId'
       fullPath: '/features/$featureId'
       preLoaderRoute: typeof LayoutFeaturesFeatureIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/parts_/$partId_/fichero/$fileId': {
+      id: '/_layout/parts_/$partId_/fichero/$fileId'
+      path: '/parts/$partId/fichero/$fileId'
+      fullPath: '/parts/$partId/fichero/$fileId'
+      preLoaderRoute: typeof LayoutPartsPartIdFicheroFileIdRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/features_/$featureId_/fichero/$assetId': {
@@ -287,23 +345,29 @@ interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
   LayoutFeaturesRoute: typeof LayoutFeaturesRoute
   LayoutItemsRoute: typeof LayoutItemsRoute
+  LayoutPartsRoute: typeof LayoutPartsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutFeaturesFeatureIdRoute: typeof LayoutFeaturesFeatureIdRoute
   LayoutFeaturesNuevoRoute: typeof LayoutFeaturesNuevoRoute
+  LayoutPartsPartIdRoute: typeof LayoutPartsPartIdRoute
   LayoutFeaturesFeatureIdFicheroAssetIdRoute: typeof LayoutFeaturesFeatureIdFicheroAssetIdRoute
+  LayoutPartsPartIdFicheroFileIdRoute: typeof LayoutPartsPartIdFicheroFileIdRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
   LayoutFeaturesRoute: LayoutFeaturesRoute,
   LayoutItemsRoute: LayoutItemsRoute,
+  LayoutPartsRoute: LayoutPartsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutFeaturesFeatureIdRoute: LayoutFeaturesFeatureIdRoute,
   LayoutFeaturesNuevoRoute: LayoutFeaturesNuevoRoute,
+  LayoutPartsPartIdRoute: LayoutPartsPartIdRoute,
   LayoutFeaturesFeatureIdFicheroAssetIdRoute:
     LayoutFeaturesFeatureIdFicheroAssetIdRoute,
+  LayoutPartsPartIdFicheroFileIdRoute: LayoutPartsPartIdFicheroFileIdRoute,
 }
 
 const LayoutRouteWithChildren =

@@ -36,9 +36,9 @@ Que genera
 
 Uso
 ---
-    python data-explorer/metrologia/ver_pdf.py
-    python data-explorer/metrologia/ver_pdf.py --muestreo 01 --cavidad c13
-    python data-explorer/metrologia/ver_pdf.py --zoom 2.0        # render mas grande (y mas pesado)
+    python prototypes/data-explorer/metrologia/ver_pdf.py
+    python prototypes/data-explorer/metrologia/ver_pdf.py --muestreo 01 --cavidad c13
+    python prototypes/data-explorer/metrologia/ver_pdf.py --zoom 2.0        # render mas grande (y mas pesado)
 """
 
 from __future__ import annotations
@@ -63,7 +63,7 @@ RAIZ = Path(
     r"C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\proyectos"
     r"\11. inteplast\Exemples\3212 Pump Housing\4- Metrologia"
 )
-SALIDA = Path(__file__).resolve().parent.parent / "out"   # data-explorer/out, compartida
+SALIDA = Path(__file__).resolve().parent.parent / "out"   # prototypes/data-explorer/out, compartida
 
 # Lote y contexto de cada muestreo. De la hoja HISTORY de los .xls.
 # Las fechas se dejan fuera de la interfaz: los muestreos ya se ordenan por numero.

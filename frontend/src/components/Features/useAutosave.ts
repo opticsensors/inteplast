@@ -7,6 +7,7 @@ export function useAutosave<T extends Record<string, unknown>>(
   server: T,
   persist: (patch: Partial<T>) => Promise<unknown>,
   valid: (values: T) => boolean = () => true,
+  delayMs: number | null = 700,
 ) {
   const session = useEditingSession()
   const [values, setValues] = useState(server)
@@ -75,11 +76,12 @@ export function useAutosave<T extends Record<string, unknown>>(
       }
       setValues(draft.current)
       clearTimeout(timer.current)
-      timer.current = setTimeout(() => {
-        void flush()
-      }, 700)
+      if (delayMs !== null)
+        timer.current = setTimeout(() => {
+          void flush()
+        }, delayMs)
     },
-    [flush],
+    [flush, delayMs],
   )
 
   const pending = useCallback(

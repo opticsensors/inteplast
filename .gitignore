@@ -7,7 +7,7 @@ node_modules/
 /playwright/.cache/
 
 # data-explorer: HTML/PNG generados por los visores (~42 MB, se rehacen con ver_todo.py)
-/data-explorer/out/
+/prototypes/data-explorer/out/
 __pycache__/
 /.env
 /.env.local

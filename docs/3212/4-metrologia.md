@@ -493,11 +493,11 @@ Eye, y en un dato que el CSV no contiene.
 ### 📊 Para ver todo esto hay visores hechos
 
 En vez de leer descripciones, ejecútalos: generan un índice navegable con una página por fichero.
-Están en este mismo repo, en `data-explorer/`:
+Están en este mismo repo, en `prototypes/data-explorer/`:
 
 ```powershell
 $py = "C:\Users\eduard.almar\AppData\Local\Programs\Python\Python311\python.exe"
-$s  = "C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\repos\inteplast\data-explorer"
+$s  = "C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\repos\inteplast\prototypes\data-explorer"
 & $py "$s\metrologia\ver_csv.py"     # los 16 informes de la CMM + comparativas
 & $py "$s\metrologia\ver_txt.py"     # las 40 nubes de puntos en 3D
 ```

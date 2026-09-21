@@ -157,6 +157,198 @@ export const CadFaceSelectionSchema = {
     title: 'CadFaceSelection'
 } as const;
 
+export const CharacteristicAssignmentSchema = {
+    properties: {
+        code: {
+            type: 'string',
+            maxLength: 64,
+            pattern: '^N\\d{1,6}(?:\\.\\d{1,3})?$',
+            title: 'Code'
+        },
+        revision: {
+            type: 'string',
+            maxLength: 64,
+            minLength: 1,
+            title: 'Revision'
+        },
+        role: {
+            type: 'string',
+            enum: ['primary', 'reference', 'context'],
+            title: 'Role',
+            default: 'primary'
+        }
+    },
+    type: 'object',
+    required: ['code', 'revision'],
+    title: 'CharacteristicAssignment'
+} as const;
+
+export const CharacteristicPublicSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        part_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Part Id'
+        },
+        code: {
+            type: 'string',
+            title: 'Code'
+        },
+        revision: {
+            type: 'string',
+            title: 'Revision'
+        },
+        title: {
+            type: 'string',
+            title: 'Title'
+        },
+        role: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Role'
+        }
+    },
+    type: 'object',
+    required: ['id', 'part_id', 'code', 'revision', 'title'],
+    title: 'CharacteristicPublic'
+} as const;
+
+export const DrawingPublicSchema = {
+    properties: {
+        state: {
+            type: 'string',
+            title: 'State'
+        },
+        message: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Message'
+        },
+        updated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Updated At'
+        },
+        payload: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Payload',
+            default: {}
+        },
+        reviews: {
+            items: {
+                '$ref': '#/components/schemas/LocationPublic'
+            },
+            type: 'array',
+            title: 'Reviews',
+            default: []
+        }
+    },
+    type: 'object',
+    required: ['state'],
+    title: 'DrawingPublic'
+} as const;
+
+export const EvidenceDocumentSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        filename: {
+            type: 'string',
+            title: 'Filename'
+        },
+        content_type: {
+            type: 'string',
+            title: 'Content Type'
+        },
+        size: {
+            type: 'integer',
+            title: 'Size'
+        },
+        created_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Created At'
+        },
+        source: {
+            type: 'string',
+            title: 'Source',
+            default: 'upload'
+        },
+        version: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Version'
+        },
+        revision: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Revision'
+        },
+        relative_path: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Relative Path'
+        }
+    },
+    type: 'object',
+    required: ['id', 'filename', 'content_type', 'size'],
+    title: 'EvidenceDocument'
+} as const;
+
 export const FeatureAssetCreateSchema = {
     properties: {
         kind: {
@@ -586,6 +778,35 @@ export const FeatureDetailSchema = {
     type: 'object',
     required: ['name', 'id'],
     title: 'FeatureDetail'
+} as const;
+
+export const FeatureEvidencePublicSchema = {
+    properties: {
+        characteristics: {
+            items: {
+                '$ref': '#/components/schemas/CharacteristicPublic'
+            },
+            type: 'array',
+            title: 'Characteristics'
+        },
+        pending: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Pending'
+        },
+        cases: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Cases'
+        }
+    },
+    type: 'object',
+    required: ['characteristics', 'pending', 'cases'],
+    title: 'FeatureEvidencePublic'
 } as const;
 
 export const FeatureFiltersSchema = {
@@ -1250,6 +1471,47 @@ export const ItemsPublicSchema = {
     title: 'ItemsPublic'
 } as const;
 
+export const JobPublicSchema = {
+    properties: {
+        state: {
+            type: 'string',
+            title: 'State'
+        },
+        message: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Message'
+        },
+        updated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Updated At'
+        },
+        payload: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Payload',
+            default: {}
+        }
+    },
+    type: 'object',
+    required: ['state'],
+    title: 'JobPublic'
+} as const;
+
 export const LocalFileReferenceSchema = {
     properties: {
         path: {
@@ -1274,6 +1536,80 @@ export const LocalFileReferenceSchema = {
     type: 'object',
     required: ['path'],
     title: 'LocalFileReference'
+} as const;
+
+export const LocationPublicSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        candidate_id: {
+            type: 'string',
+            title: 'Candidate Id'
+        },
+        label: {
+            type: 'string',
+            title: 'Label'
+        },
+        page: {
+            type: 'integer',
+            title: 'Page'
+        },
+        box: {
+            items: {
+                type: 'number'
+            },
+            type: 'array',
+            title: 'Box'
+        },
+        reviewed_by: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Reviewed By'
+        },
+        reviewed_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Reviewed At'
+        }
+    },
+    type: 'object',
+    required: ['id', 'candidate_id', 'label', 'page', 'box', 'reviewed_by', 'reviewed_at'],
+    title: 'LocationPublic'
+} as const;
+
+export const LocationReviewSchema = {
+    properties: {
+        sha256: {
+            type: 'string',
+            pattern: '^[0-9a-f]{64}$',
+            title: 'Sha256'
+        },
+        candidate_id: {
+            type: 'string',
+            maxLength: 96,
+            minLength: 1,
+            title: 'Candidate Id'
+        },
+        label: {
+            type: 'string',
+            maxLength: 64,
+            pattern: '^N\\d{1,6}(?:\\.\\d{1,3})?$',
+            title: 'Label'
+        }
+    },
+    type: 'object',
+    required: ['sha256', 'candidate_id', 'label'],
+    title: 'LocationReview'
 } as const;
 
 export const MessageSchema = {
@@ -1407,6 +1743,38 @@ export const PartCreateSchema = {
     type: 'object',
     required: ['code'],
     title: 'PartCreate'
+} as const;
+
+export const PartEvidencePublicSchema = {
+    properties: {
+        part: {
+            '$ref': '#/components/schemas/PartPublic'
+        },
+        documents: {
+            items: {
+                '$ref': '#/components/schemas/EvidenceDocument'
+            },
+            type: 'array',
+            title: 'Documents'
+        },
+        characteristics: {
+            items: {
+                '$ref': '#/components/schemas/CharacteristicPublic'
+            },
+            type: 'array',
+            title: 'Characteristics'
+        },
+        study: {
+            '$ref': '#/components/schemas/JobPublic'
+        },
+        import_available: {
+            type: 'boolean',
+            title: 'Import Available'
+        }
+    },
+    type: 'object',
+    required: ['part', 'documents', 'characteristics', 'study', 'import_available'],
+    title: 'PartEvidencePublic'
 } as const;
 
 export const PartFromFolderSchema = {

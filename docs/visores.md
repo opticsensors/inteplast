@@ -1,14 +1,17 @@
 # Visores de los datos crudos — dónde está el código
 
-> 📁 **El código vive en este mismo repo**, en `data-explorer/` (raíz del repo). No en
+> 📁 **El código vive en este mismo repo**, en `prototypes/data-explorer/`. No en
 > `scripts/`, que es el de build y test del template FastAPI.
 >
 > ```
-> C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\repos\inteplast\data-explorer
+> C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\repos\inteplast\prototypes\data-explorer
 > ```
 >
 > Este documento es el resumen: qué hay allí, qué hace y qué decisiones lleva dentro.
-> La documentación de uso completa está en el [`README.md` de esa carpeta](../data-explorer/README.md).
+> La documentación de uso completa está en el [`README.md` de esa carpeta](../prototypes/data-explorer/README.md).
+
+Son prototipos independientes de la web. Los lectores de la aplicación se mantienen
+en `backend/app/ingestion/`; Docker no incluye la carpeta `prototypes/`.
 >
 > 🔴 Los **datos** que lee sí están fuera del repo, en
 > `…\Escritorio\proyectos\11. inteplast\Exemples`.
@@ -42,7 +45,7 @@ y falla. Hay que llamarlo por ruta absoluta:
 
 ```powershell
 $py = "C:\Users\eduard.almar\AppData\Local\Programs\Python\Python311\python.exe"
-$s  = "C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\repos\inteplast\data-explorer"
+$s  = "C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\repos\inteplast\prototypes\data-explorer"
 
 & $py "$s\ver_todo.py"                 # genera los cuatro y abre la pantalla inicial
 & $py "$s\ver_todo.py" --solo pdf      # regenera solo uno
@@ -211,7 +214,7 @@ secciones de N165 y perfiles A/B complementarios. Conserva enlaces y localizador
 ```powershell
 $py = "C:\Users\eduard.almar\AppData\Local\Programs\Python\Python311\python.exe"
 & $py -m pip install xlrd
-& $py data-explorer/ver_correcciones.py
+& $py prototypes/data-explorer/ver_correcciones.py
 # Opcional: --no-abrir, --raiz <carpeta de la pieza>, --salida <carpeta de salida>
 ```
 
@@ -225,18 +228,18 @@ sin cambios de código por petición del usuario. [Hallazgos y límites](3212/re
 
 ## Correcciones v2 · presentación (18/09/2026)
 
-`data-explorer/ver_correcciones_v2.py` → `data-explorer/out/correcciones-3212-v2/index.html`.
-Lanzamiento: `py -3.11 .\data-explorer\ver_correcciones_v2.py`.
+`prototypes/data-explorer/ver_correcciones_v2.py` → `prototypes/data-explorer/out/correcciones-3212-v2/index.html`.
+Lanzamiento: `py -3.11 .\prototypes\data-explorer\ver_correcciones_v2.py`.
 
 Reutiliza los lectores de v1 y conserva ambos scripts anteriores. Prioriza imagen de la acción,
 evolución completa con previsión diferenciada, resultados y comparación por cavidad. Añade
 matriz N170, detalle local N165, perfiles en paralelo y modo presentación. Textos originales,
-localizadores y límites de interpretación están en «Fuentes». [Uso](../data-explorer/README.md).
+localizadores y límites de interpretación están en «Fuentes». [Uso](../prototypes/data-explorer/README.md).
 
 ## Correcciones v3 · perfiles y catálogo (18/09/2026)
 
-`data-explorer/ver_correcciones_v3.py` → `data-explorer/out/correcciones-3212-v3/index.html`.
-Lanzamiento: `py -3.11 .\data-explorer\ver_correcciones_v3.py`.
+`prototypes/data-explorer/ver_correcciones_v3.py` → `prototypes/data-explorer/out/correcciones-3212-v3/index.html`.
+Lanzamiento: `py -3.11 .\prototypes\data-explorer\ver_correcciones_v3.py`.
 
 Sustituye las miniaturas de páginas PDF en esta nueva vista por recortes del gráfico,
 con ejes y escala originales: matriz de exceso por cavidad/muestreo y dos gráficas grandes
@@ -252,14 +255,14 @@ Las asociaciones visuales revisadas se distinguen de las extraídas del título.
 Las cuatro fichas anteriores siguen como comparaciones XLS contrastadas; el resto de
 previsiones queda sin revisar. El descubrimiento del catálogo es automático dentro de estos
 formatos, pero los planes, rutas y correspondencias siguen adaptados al 3212. La v3 no implica
-una ingesta genérica de cualquier pieza. [Detalle y uso](../data-explorer/README.md).
+una ingesta genérica de cualquier pieza. [Detalle y uso](../prototypes/data-explorer/README.md).
 
 ## Nuevo buscador del plano (18/09/2026)
 
-Por petición del usuario se crea `data-explorer/buscar_en_plano.py` desde cero, conservando
+Por petición del usuario se crea `prototypes/data-explorer/buscar_en_plano.py` desde cero, conservando
 `ver_todo.py` y `planos/ver_plano.py`. Lanzamiento:
-`py -3.11 .\data-explorer\buscar_en_plano.py --buscar N170`.
-Salida: `data-explorer/out/buscar-en-plano/index.html`.
+`py -3.11 .\prototypes\data-explorer\buscar_en_plano.py --buscar N170`.
+Salida: `prototypes/data-explorer/out/buscar-en-plano/index.html`.
 
 Incluye texto nativo PDF, candidatos OCR de globos coloreados, búsqueda de números y
 sufijos, búsqueda separada de texto/valores, zoom al resultado, recortes originales y
@@ -275,4 +278,4 @@ automáticamente las limitaciones del PDF ni la discrepancia de revisiones del p
 
 La petición de un plano mejor sigue vigente. Este buscador ofrece una consulta asistida
 y una vía de revisión persistente; no sustituye la validación metrológica. Los detalles y
-opciones están en [Data Explorer](../data-explorer/README.md).
+opciones están en [Data Explorer](../prototypes/data-explorer/README.md).

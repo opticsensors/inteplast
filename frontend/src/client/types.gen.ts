@@ -38,6 +38,45 @@ export type CadFaceSelection = {
     face: number;
 };
 
+export type CharacteristicAssignment = {
+    code: string;
+    revision: string;
+    role?: 'primary' | 'reference' | 'context';
+};
+
+export type role = 'primary' | 'reference' | 'context';
+
+export type CharacteristicPublic = {
+    id: string;
+    part_id: string;
+    code: string;
+    revision: string;
+    title: string;
+    role?: (string | null);
+};
+
+export type DrawingPublic = {
+    state: string;
+    message?: (string | null);
+    updated_at?: (string | null);
+    payload?: {
+        [key: string]: unknown;
+    };
+    reviews?: Array<LocationPublic>;
+};
+
+export type EvidenceDocument = {
+    id: string;
+    filename: string;
+    content_type: string;
+    size: number;
+    created_at?: (string | null);
+    source?: string;
+    version?: (string | null);
+    revision?: (string | null);
+    relative_path?: (string | null);
+};
+
 export type FeatureAssetCreate = {
     kind: AssetKind;
     name: string;
@@ -109,6 +148,12 @@ export type FeatureDetail = {
     assets?: Array<FeatureAssetPublic>;
     parts?: Array<PartPublic>;
     notes?: Array<FeatureNotePublic>;
+};
+
+export type FeatureEvidencePublic = {
+    characteristics: Array<CharacteristicPublic>;
+    pending: Array<(string)>;
+    cases: Array<(string)>;
 };
 
 export type FeatureFilters = {
@@ -238,9 +283,34 @@ export type ItemUpdate = {
     description?: (string | null);
 };
 
+export type JobPublic = {
+    state: string;
+    message?: (string | null);
+    updated_at?: (string | null);
+    payload?: {
+        [key: string]: unknown;
+    };
+};
+
 export type LocalFileReference = {
     path: string;
     revision?: (string | null);
+};
+
+export type LocationPublic = {
+    id: string;
+    candidate_id: string;
+    label: string;
+    page: number;
+    box: Array<(number)>;
+    reviewed_by: (string | null);
+    reviewed_at: string;
+};
+
+export type LocationReview = {
+    sha256: string;
+    candidate_id: string;
+    label: string;
 };
 
 export type Message = {
@@ -267,6 +337,14 @@ export type PartCreate = {
     code: string;
     name?: (string | null);
     folder_path?: (string | null);
+};
+
+export type PartEvidencePublic = {
+    part: PartPublic;
+    documents: Array<EvidenceDocument>;
+    characteristics: Array<CharacteristicPublic>;
+    study: JobPublic;
+    import_available: boolean;
 };
 
 export type PartFromFolder = {
@@ -380,6 +458,59 @@ export type ValidationError = {
         [key: string]: unknown;
     };
 };
+
+export type EvidenceReadPartEvidenceData = {
+    partId: string;
+};
+
+export type EvidenceReadPartEvidenceResponse = (PartEvidencePublic);
+
+export type EvidenceImportPartEvidenceData = {
+    partId: string;
+};
+
+export type EvidenceImportPartEvidenceResponse = (JobPublic);
+
+export type EvidenceReadFeatureEvidenceData = {
+    featureId: string;
+    partId: string;
+};
+
+export type EvidenceReadFeatureEvidenceResponse = (FeatureEvidencePublic);
+
+export type EvidenceAssignCharacteristicData = {
+    featureId: string;
+    partId: string;
+    requestBody: CharacteristicAssignment;
+};
+
+export type EvidenceAssignCharacteristicResponse = (CharacteristicPublic);
+
+export type EvidenceUnassignCharacteristicData = {
+    characteristicId: string;
+    featureId: string;
+};
+
+export type EvidenceUnassignCharacteristicResponse = (Message);
+
+export type EvidenceReadDrawingIndexData = {
+    fileId: string;
+};
+
+export type EvidenceReadDrawingIndexResponse = (DrawingPublic);
+
+export type EvidenceIndexDrawingData = {
+    fileId: string;
+};
+
+export type EvidenceIndexDrawingResponse = (JobPublic);
+
+export type EvidenceReviewDrawingLocationData = {
+    fileId: string;
+    requestBody: LocationReview;
+};
+
+export type EvidenceReviewDrawingLocationResponse = (LocationPublic);
 
 export type FeaturesReadFeaturesData = {
     category?: (FeatureCategory | null);

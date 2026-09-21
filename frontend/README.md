@@ -2,6 +2,11 @@
 
 React + TypeScript, Vite, TanStack Router/Query and Tailwind CSS. Read [the application guide](../docs/app-web.md) before changing feature workflows or the API client.
 
+For all UI changes, follow [the shared interface patterns](../docs/interfaz.md).
+Features is the visual reference. Reuse `SearchField`, the application Select controls,
+and the shared measurements/corrections layout; preserve browser history instead of
+adding return buttons.
+
 ## Local development
 
 Use Node.js 22.13+ on the 22.x branch, or Node.js 24+, as required by PDF.js. Run these commands from the repository root:

@@ -17,7 +17,7 @@ from tests.utils.utils import random_lower_string
 def test_create_feature(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
-    data = {"name": "Bolt Eye", "description": "agujero", "tags": ["3212", "N170"]}
+    data = {"name": "Bolt Eye", "description": "agujero", "tags": ["Bosch", "agujero"]}
     response = client.post(
         f"{settings.API_V1_STR}/features/",
         headers=superuser_token_headers,

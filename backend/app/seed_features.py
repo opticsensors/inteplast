@@ -71,10 +71,11 @@ BOLT_EYE_WARNINGS = [
 BOLT_EYE_LESSONS = [
     (
         "Retoque de molde 1.33 sobre N170 (correccion 1)",
-        "Se actuo sobre el macho del bolt segun la desviacion medida en el "
-        "muestreo. La cota volvio a tolerancia en el muestreo siguiente: es el "
-        "par antes/despues que demuestra que el retoque funciono. "
-        "Ver `docs/3212/historial-molde.md`.",
+        "La mejora entre intern.01 e intern.03 es parcial: hay que evaluar GX "
+        "y LP máximo por separado, en cada cavidad y altura. El Excel guarda "
+        "una previsión de +0,500 mm; el PowerPoint propone usar expulsores de "
+        "Ø4. El marcador no confirma su ejecución ni acredita el cierre de "
+        "N170. Consultar el caso N170 en Correcciones de la pieza 3212.",
     ),
     (
         "Tocar el plano A arrastra el resto de cotas",
@@ -120,7 +121,7 @@ def _seed(session: Session) -> bool:
             "(fuerza de insercion del pin)."
         ),
         category=FeatureCategory.hole,
-        tags=["3212", "Pump Housing", "N170", "N117", "N178", "N288", "Bosch"],
+        tags=["Bosch"],
     )
     session.add(feature)
     session.flush()
@@ -150,6 +151,30 @@ def _seed(session: Session) -> bool:
         part = Part(code="3212", name="Pump Housing")
         session.add(part)
         session.flush()
+
+    from app.knowledge_models import FeatureCharacteristicLink, PartCharacteristic
+
+    for code in ("N170", "N117", "N178", "N288"):
+        characteristic = session.exec(
+            select(PartCharacteristic).where(
+                PartCharacteristic.part_id == part.id,
+                PartCharacteristic.code == code,
+                PartCharacteristic.revision == "06",
+            )
+        ).first()
+        if characteristic is None:
+            characteristic = PartCharacteristic(
+                part_id=part.id, code=code, revision="06"
+            )
+            session.add(characteristic)
+            session.flush()
+        session.add(
+            FeatureCharacteristicLink(
+                feature_id=feature.id,
+                characteristic_id=characteristic.id,
+                role="reference" if code == "N178" else "primary",
+            )
+        )
 
     # El feature esta declarado en la pieza aunque no haya ficheros subidos.
     feature.parts.append(part)

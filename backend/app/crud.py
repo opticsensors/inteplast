@@ -6,6 +6,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, or_, select
 
 from app.core.security import get_password_hash, verify_password
+from app.knowledge_models import FeatureCharacteristicLink, PartCharacteristic
 from app.models import (
     Feature,
     FeatureAsset,
@@ -138,6 +139,11 @@ def _search_conditions(
         # relacionado (piezas, adjuntos, warnings y lessons learned).
         conditions.append(
             or_(
+                col(Feature.id).in_(
+                    select(FeatureCharacteristicLink.feature_id)
+                    .join(PartCharacteristic)
+                    .where(col(PartCharacteristic.code).ilike(like))
+                ),
                 col(Feature.name).ilike(like),
                 col(Feature.description).ilike(like),
                 func.array_to_string(col(Feature.tags), " ").ilike(like),

@@ -1,7 +1,7 @@
 """Catalogo de cotas y comparacion visual de perfiles del 3212 Pump Housing.
 
-    py -3.11 data-explorer/ver_correcciones_v3.py
-    py -3.11 data-explorer/ver_correcciones_v3.py --no-abrir
+    py -3.11 prototypes/data-explorer/ver_correcciones_v3.py
+    py -3.11 prototypes/data-explorer/ver_correcciones_v3.py --no-abrir
 
 Reutiliza los lectores y correspondencias revisados de ver_correcciones.py.
 Lee los originales en modo consulta y genera out/correcciones-3212-v3/index.html.

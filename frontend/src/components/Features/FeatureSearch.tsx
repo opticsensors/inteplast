@@ -1,9 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
-import { Search, X } from "lucide-react"
 
 import type { FeatureCategory } from "@/client"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { SearchField } from "@/components/Common/SearchField"
 import {
   Select,
   SelectContent,
@@ -108,26 +106,13 @@ export function FeatureSearch({ value, onChange }: FeatureSearchProps) {
 
   return (
     <div className="space-y-3">
-      <div className="relative">
-        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={value.q}
-          onChange={(event) => set({ q: event.target.value })}
-          placeholder="Feature / pieza / codigo / tag..."
-          className="pl-9"
-        />
-        {isSearchActive(value) && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-1/2 right-1 size-7 -translate-y-1/2"
-            onClick={() => onChange(EMPTY_SEARCH)}
-          >
-            <X className="size-4" />
-            <span className="sr-only">Limpiar busqueda</span>
-          </Button>
-        )}
-      </div>
+      <SearchField
+        value={value.q}
+        onValueChange={(q) => set({ q })}
+        placeholder="Feature / pieza / codigo / tag..."
+        active={isSearchActive(value)}
+        onClear={() => onChange(EMPTY_SEARCH)}
+      />
 
       <div className="grid gap-2 sm:grid-cols-3">
         <Select

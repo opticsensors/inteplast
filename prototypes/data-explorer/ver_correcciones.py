@@ -3,9 +3,9 @@
 Lee los originales del 3212 sin modificarlos. Genera out/correcciones-3212/index.html;
 no ejecuta ni modifica ver_todo.py ni las salidas de los visores anteriores.
 
-    python data-explorer/ver_correcciones.py
-    python data-explorer/ver_correcciones.py --no-abrir
-    python data-explorer/ver_correcciones.py --raiz "D:/datos/3212 Pump Housing"
+    python prototypes/data-explorer/ver_correcciones.py
+    python prototypes/data-explorer/ver_correcciones.py --no-abrir
+    python prototypes/data-explorer/ver_correcciones.py --raiz "D:/datos/3212 Pump Housing"
 
 Dependencias: pandas, numpy, plotly, PyMuPDF, xlrd (pip install xlrd).
 Las correspondencias de acciones/celdas son revisadas para esta pieza, no inferidas.

@@ -443,7 +443,7 @@ function FeatureFormContent({
                       <FormLabel>Tags</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="3212, N170, Bosch (separados por comas)"
+                          placeholder="Bosch, fijación (separados por comas)"
                           {...field}
                         />
                       </FormControl>

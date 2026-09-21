@@ -4,6 +4,10 @@
 > Contexto de arquitectura (FastAPI + React + PostgreSQL) → `inteplast_PADIH_fase_B.md`.
 > Discusión Neo4j vs PostgreSQL → `inteplast_database.md`.
 
+> Implementación web del 18/09/2026: [cotas por pieza/revisión, índice de planos y snapshots
+> de mediciones/correcciones](cotas-y-evidencia-web.md). El diagrama siguiente describe el
+> dominio completo, no implica que todas sus tablas estén ya implementadas.
+
 ---
 
 ## 1. El N-number es la clave del conocimiento
@@ -190,7 +194,7 @@ De `inteplast_notas_reunion_20_2_2026.md` + `inteplast_resposta_dubtes.md` + los
 ## Revisión de interpretación del 17/09/2026
 
 La primera experiencia se centra en antes → acción propuesta → previsión XLS → después.
-Prototipo independiente: `data-explorer/ver_correcciones.py` (N161, N240, N170, N165 y perfiles).
+Prototipo independiente: `prototypes/data-explorer/ver_correcciones.py` (N161, N240, N170, N165 y perfiles).
 No hay ingesta en la web todavía. [Evidencia y decisiones](3212/revision-2026-09-17.md).
 
 No agregar N170 como conforme si solo entra GX; conservar LP máximo, agujero y altura.

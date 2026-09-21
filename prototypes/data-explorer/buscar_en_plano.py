@@ -1,7 +1,7 @@
 """Buscador independiente de cotas en PDF, con plano ampliable y revisión local.
 
-    py -3.11 data-explorer/buscar_en_plano.py --buscar N170
-    py -3.11 data-explorer/buscar_en_plano.py --pdf "otro plano.pdf"
+    py -3.11 prototypes/data-explorer/buscar_en_plano.py --buscar N170
+    py -3.11 prototypes/data-explorer/buscar_en_plano.py --pdf "otro plano.pdf"
 
 Texto PDF si existe; OCR de texto y de globos coloreados en planos escaneados.
 El OCR siempre propone candidatos: su confianza no equivale a una verificación.

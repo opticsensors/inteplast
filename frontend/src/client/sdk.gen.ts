@@ -3,7 +3,181 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { FeaturesReadFeaturesData, FeaturesReadFeaturesResponse, FeaturesCreateFeatureData, FeaturesCreateFeatureResponse, FeaturesReadFeatureFiltersResponse, FeaturesReadFeatureData, FeaturesReadFeatureResponse, FeaturesUpdateFeatureData, FeaturesUpdateFeatureResponse, FeaturesDeleteFeatureData, FeaturesDeleteFeatureResponse, FeaturesReorderFeatureNotesData, FeaturesReorderFeatureNotesResponse, FeaturesReorderFeatureAssetsData, FeaturesReorderFeatureAssetsResponse, FeaturesCreateFeatureNoteData, FeaturesCreateFeatureNoteResponse, FeaturesUpdateFeatureNoteData, FeaturesUpdateFeatureNoteResponse, FeaturesDeleteFeatureNoteData, FeaturesDeleteFeatureNoteResponse, FeaturesReorderFeaturePartsData, FeaturesReorderFeaturePartsResponse, FeaturesLinkFeaturePartData, FeaturesLinkFeaturePartResponse, FeaturesUnlinkFeaturePartData, FeaturesUnlinkFeaturePartResponse, FeaturesCreateFeatureAssetData, FeaturesCreateFeatureAssetResponse, FeaturesUpdateFeatureAssetData, FeaturesUpdateFeatureAssetResponse, FeaturesDeleteFeatureAssetData, FeaturesDeleteFeatureAssetResponse, FilesListSourceData, FilesListSourceResponse, FilesReferenceFileData, FilesReferenceFileResponse, FilesRelinkFileData, FilesRelinkFileResponse, FilesFileStatusData, FilesFileStatusResponse, FilesUploadFileData, FilesUploadFileResponse, FilesCreateFileAccessUrlData, FilesCreateFileAccessUrlResponse, FilesPreparePreviewData, FilesPreparePreviewResponse, FilesReadPreviewData, FilesReadPreviewResponse, FilesReadFileData, FilesReadFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PartsReadPartsData, PartsReadPartsResponse, PartsCreatePartData, PartsCreatePartResponse, PartsCreatePartFromFolderData, PartsCreatePartFromFolderResponse, PartsUpdatePartData, PartsUpdatePartResponse, PartsDeletePartData, PartsDeletePartResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { EvidenceReadPartEvidenceData, EvidenceReadPartEvidenceResponse, EvidenceImportPartEvidenceData, EvidenceImportPartEvidenceResponse, EvidenceReadFeatureEvidenceData, EvidenceReadFeatureEvidenceResponse, EvidenceAssignCharacteristicData, EvidenceAssignCharacteristicResponse, EvidenceUnassignCharacteristicData, EvidenceUnassignCharacteristicResponse, EvidenceReadDrawingIndexData, EvidenceReadDrawingIndexResponse, EvidenceIndexDrawingData, EvidenceIndexDrawingResponse, EvidenceReviewDrawingLocationData, EvidenceReviewDrawingLocationResponse, FeaturesReadFeaturesData, FeaturesReadFeaturesResponse, FeaturesCreateFeatureData, FeaturesCreateFeatureResponse, FeaturesReadFeatureFiltersResponse, FeaturesReadFeatureData, FeaturesReadFeatureResponse, FeaturesUpdateFeatureData, FeaturesUpdateFeatureResponse, FeaturesDeleteFeatureData, FeaturesDeleteFeatureResponse, FeaturesReorderFeatureNotesData, FeaturesReorderFeatureNotesResponse, FeaturesReorderFeatureAssetsData, FeaturesReorderFeatureAssetsResponse, FeaturesCreateFeatureNoteData, FeaturesCreateFeatureNoteResponse, FeaturesUpdateFeatureNoteData, FeaturesUpdateFeatureNoteResponse, FeaturesDeleteFeatureNoteData, FeaturesDeleteFeatureNoteResponse, FeaturesReorderFeaturePartsData, FeaturesReorderFeaturePartsResponse, FeaturesLinkFeaturePartData, FeaturesLinkFeaturePartResponse, FeaturesUnlinkFeaturePartData, FeaturesUnlinkFeaturePartResponse, FeaturesCreateFeatureAssetData, FeaturesCreateFeatureAssetResponse, FeaturesUpdateFeatureAssetData, FeaturesUpdateFeatureAssetResponse, FeaturesDeleteFeatureAssetData, FeaturesDeleteFeatureAssetResponse, FilesListSourceData, FilesListSourceResponse, FilesReferenceFileData, FilesReferenceFileResponse, FilesRelinkFileData, FilesRelinkFileResponse, FilesFileStatusData, FilesFileStatusResponse, FilesUploadFileData, FilesUploadFileResponse, FilesCreateFileAccessUrlData, FilesCreateFileAccessUrlResponse, FilesPreparePreviewData, FilesPreparePreviewResponse, FilesReadPreviewData, FilesReadPreviewResponse, FilesReadFileData, FilesReadFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PartsReadPartsData, PartsReadPartsResponse, PartsCreatePartData, PartsCreatePartResponse, PartsCreatePartFromFolderData, PartsCreatePartFromFolderResponse, PartsUpdatePartData, PartsUpdatePartResponse, PartsDeletePartData, PartsDeletePartResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+
+export class EvidenceService {
+    /**
+     * Read Part Evidence
+     * @param data The data for the request.
+     * @param data.partId
+     * @returns PartEvidencePublic Successful Response
+     * @throws ApiError
+     */
+    public static readPartEvidence(data: EvidenceReadPartEvidenceData): CancelablePromise<EvidenceReadPartEvidenceResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/evidence/parts/{part_id}',
+            path: {
+                part_id: data.partId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Import Part Evidence
+     * @param data The data for the request.
+     * @param data.partId
+     * @returns JobPublic Successful Response
+     * @throws ApiError
+     */
+    public static importPartEvidence(data: EvidenceImportPartEvidenceData): CancelablePromise<EvidenceImportPartEvidenceResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/evidence/parts/{part_id}/import',
+            path: {
+                part_id: data.partId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Read Feature Evidence
+     * @param data The data for the request.
+     * @param data.featureId
+     * @param data.partId
+     * @returns FeatureEvidencePublic Successful Response
+     * @throws ApiError
+     */
+    public static readFeatureEvidence(data: EvidenceReadFeatureEvidenceData): CancelablePromise<EvidenceReadFeatureEvidenceResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/evidence/features/{feature_id}/parts/{part_id}',
+            path: {
+                feature_id: data.featureId,
+                part_id: data.partId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Assign Characteristic
+     * @param data The data for the request.
+     * @param data.featureId
+     * @param data.partId
+     * @param data.requestBody
+     * @returns CharacteristicPublic Successful Response
+     * @throws ApiError
+     */
+    public static assignCharacteristic(data: EvidenceAssignCharacteristicData): CancelablePromise<EvidenceAssignCharacteristicResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/evidence/features/{feature_id}/parts/{part_id}/characteristics',
+            path: {
+                feature_id: data.featureId,
+                part_id: data.partId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Unassign Characteristic
+     * @param data The data for the request.
+     * @param data.featureId
+     * @param data.characteristicId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static unassignCharacteristic(data: EvidenceUnassignCharacteristicData): CancelablePromise<EvidenceUnassignCharacteristicResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/evidence/features/{feature_id}/characteristics/{characteristic_id}',
+            path: {
+                feature_id: data.featureId,
+                characteristic_id: data.characteristicId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Read Drawing Index
+     * @param data The data for the request.
+     * @param data.fileId
+     * @returns DrawingPublic Successful Response
+     * @throws ApiError
+     */
+    public static readDrawingIndex(data: EvidenceReadDrawingIndexData): CancelablePromise<EvidenceReadDrawingIndexResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/evidence/drawings/{file_id}',
+            path: {
+                file_id: data.fileId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Index Drawing
+     * @param data The data for the request.
+     * @param data.fileId
+     * @returns JobPublic Successful Response
+     * @throws ApiError
+     */
+    public static indexDrawing(data: EvidenceIndexDrawingData): CancelablePromise<EvidenceIndexDrawingResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/evidence/drawings/{file_id}/index',
+            path: {
+                file_id: data.fileId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Review Drawing Location
+     * @param data The data for the request.
+     * @param data.fileId
+     * @param data.requestBody
+     * @returns LocationPublic Successful Response
+     * @throws ApiError
+     */
+    public static reviewDrawingLocation(data: EvidenceReviewDrawingLocationData): CancelablePromise<EvidenceReviewDrawingLocationResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/evidence/drawings/{file_id}/review',
+            path: {
+                file_id: data.fileId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
 
 export class FeaturesService {
     /**
