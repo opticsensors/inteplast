@@ -1,5 +1,6 @@
-export default function PdfViewer({ focus }) {
+export default function PdfViewer({ focus, file }) {
   window.review.drawingFocus = focus
+  window.review.drawingFile = file.id
   return (
     <section
       aria-label="Plano de prueba"

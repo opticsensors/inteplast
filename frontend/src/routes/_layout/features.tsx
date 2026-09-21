@@ -58,6 +58,7 @@ function Features() {
       category: search.category,
       tag: search.tag,
       partId: search.partId,
+      featureId: search.featureId,
     }),
   )
 

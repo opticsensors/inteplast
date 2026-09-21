@@ -2,7 +2,7 @@ import { DragDropProvider } from "@dnd-kit/react"
 import { isSortable, useSortable } from "@dnd-kit/react/sortable"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { Download, GripVertical, Plus, Trash2 } from "lucide-react"
+import { Download, GripVertical, Plus, Ruler, Trash2 } from "lucide-react"
 import { type ReactNode, useMemo, useState } from "react"
 
 import {
@@ -215,6 +215,26 @@ function PartGroup({
             >
               <Trash2 className="size-3.5" />
               <span className="sr-only">Quitar {row.part.code}</span>
+            </Button>
+          )}
+          {!editable && row.part && (
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              className="size-7 shrink-0"
+            >
+              <Link
+                to="/parts/$partId"
+                params={{ partId: row.part.id }}
+                search={{ feature: feature.id }}
+                title="Consultar metrología"
+              >
+                <Ruler className="size-3.5" />
+                <span className="sr-only">
+                  Metrología de {row.part.code} · {feature.name}
+                </span>
+              </Link>
             </Button>
           )}
         </div>

@@ -26,12 +26,18 @@ export default function DrawingSearch({
   initialQuery = "",
   searchAction,
   onQueryChange,
+  allowedCotas,
+  context,
+  searchFilters,
 }: {
   file: FilePublic
   title: string
   initialQuery?: string
   searchAction?: ReactNode
   onQueryChange?: (query: string) => void
+  allowedCotas?: string[]
+  context?: string
+  searchFilters?: ReactNode
 }) {
   const client = useQueryClient()
   const [query, setQuery] = useState(initialQuery)
@@ -73,8 +79,13 @@ export default function DrawingSearch({
           : (candidate.candidates?.map((item) => item.label) ?? [
               normalizeCota(candidate.text ?? ""),
             ])
-        const matches = labels.filter((label) =>
-          matchesCotaPrefix(label, needle),
+        const matches = labels.filter(
+          (label) =>
+            matchesCotaPrefix(label, needle) &&
+            (!allowedCotas ||
+              allowedCotas.some(
+                (code) => label === code || label.startsWith(`${code}.`),
+              )),
         )
         return matches.length
           ? [
@@ -92,7 +103,7 @@ export default function DrawingSearch({
           a.page - b.page ||
           a.box[1] - b.box[1],
       )
-  }, [data, index.data?.reviews, query])
+  }, [data, index.data?.reviews, query, allowedCotas])
   const selected =
     results.find((result) => result.id === selectedId) ?? results[0]
   // biome-ignore lint/correctness/useExhaustiveDependencies: Each document starts with its own search.
@@ -119,6 +130,8 @@ export default function DrawingSearch({
           onClear={() => changeQuery("")}
         />
       </SearchToolbar>
+      {searchFilters}
+      {context && <p className="text-sm text-muted-foreground">{context}</p>}
       {!data && (
         <div>
           <Button

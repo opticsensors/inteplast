@@ -10,18 +10,36 @@ Integración del 18/09/2026; separación de lectores y simplificación de la int
   que los ficheros. El icono abre la búsqueda de esa cota; el número abre sus mediciones.
   En edición, Añadir cota inserta un campo al final y la papelera retira el vínculo.
   Revisión y relación se conservan internamente, sin controles ni texto en esta fila.
-- **Piezas** abre directamente la consulta de cotas. Buscador superior compartido con
+- **Metrología** (`/parts`) ofrece una sola pantalla con buscador de cotas y selectores
+  de Pieza y Feature debajo. Los selectores tienen búsqueda interna y comparten el
+  componente de filtros de Features. Categoría y Tag se despliegan desde Más filtros.
+  El buscador de cotas se activa tras seleccionar una pieza. Se puede empezar por
+  un feature para limitar las piezas disponibles. No hay un catálogo intermedio.
+- La pieza abre la consulta sin seleccionar una cota arbitraria. El filtro Feature
+  permite consultar todas sus cotas (también las no vinculadas) o solo las asignadas al
+  feature de entrada. Las cotas sin mediciones siguen disponibles; pertenecer a la pieza
+  no atribuye sus cotas a un feature que no las tenga vinculadas.
+- La consulta usa el buscador superior compartido con
   Features, filtros independientes de Elemento/Altura/Evaluación y gráfica con cavidades
   activables. Plano alterna la vista desde el botón situado a la derecha del buscador,
   con la misma altura y cabecera de pieza. Correcciones queda debajo a la izquierda.
   No hay pestañas ni listas de
   documentos, perfiles o nubes de puntos. Las reglas están en [interfaz.md](interfaz.md).
-- La URL conserva búsqueda, cota, filtros, cavidades y modo de consulta. Atrás y Adelante
+- La URL conserva pieza, búsqueda, feature, categoría, tag, cota, revisión, filtros, cavidades y modo de consulta. Atrás y Adelante
   restauran el contexto al visitar otra cota, una corrección o el plano. No hay enlaces de retorno.
 - El **visor PDF existente** conserva zoom, arrastre y paginación. Su búsqueda ofrece propuestas
   OCR, texto nativo y ubicaciones revisadas; seleccionarlas encuadra y resalta la zona.
   Usa el buscador compartido; acepta prefijos y subcotas. Las coincidencias y su contador
   aparecen sobre el plano, sin columna lateral ni formulario de revisión.
+
+`GET /evidence/metrology/filters` devuelve el catálogo ligero de piezas y features con
+categoría, tags y pertenencia a piezas, sin snapshots de mediciones. La pertenencia feature/pieza une declaración explícita, ficheros y
+vínculos de cotas; los números solo se obtienen de `FeatureCharacteristicLink`.
+`GET /evidence/parts/{id}` incluye esos mismos features con sus cotas. El frontend cruza
+las asociaciones y los filtros con el snapshot de esa pieza y su revisión; categoría y
+tag deben coincidir en el mismo feature. Nunca muestra mediciones
+de otra revisión para resolver un vínculo. Los cambios no alteran las asociaciones
+ni importan datos de otras piezas.
 
 Los N-numbers ya no son tags globales. La migración convierte los cuatro tags documentados
 del Bolt Eye del 3212 en asociaciones a cotas rev. 06. Los demás números se conservan como

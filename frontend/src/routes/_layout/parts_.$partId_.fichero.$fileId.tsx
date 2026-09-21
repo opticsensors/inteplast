@@ -1,14 +1,13 @@
 import { useQuery } from "@tanstack/react-query"
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, Navigate } from "@tanstack/react-router"
 import { lazy, Suspense } from "react"
 import { EvidenceService } from "@/client"
 import { FileLink } from "@/components/Common/FileLink"
 import { fileAction, usesWebPreview } from "@/components/Features/viewers"
-import { DrawingToggle } from "@/components/Parts/DrawingToggle"
+import { validatePartSearch } from "@/components/Parts/measurementSelection"
 import { Button } from "@/components/ui/button"
 import { fileErrorMessage, useFileAccess } from "@/hooks/useFileAccess"
 
-const DrawingSearch = lazy(() => import("@/components/Features/DrawingSearch"))
 const ModelViewer = lazy(() => import("@/components/Features/ModelViewer"))
 const WebModelViewer = lazy(
   () => import("@/components/Features/WebModelViewer"),
@@ -17,14 +16,11 @@ export const Route = createFileRoute(
   "/_layout/parts_/$partId_/fichero/$fileId",
 )({
   component: PartFile,
-  validateSearch: (s: Record<string, unknown>): { cota?: string } => ({
-    cota: typeof s.cota === "string" ? s.cota : undefined,
-  }),
+  validateSearch: validatePartSearch,
 })
 function PartFile() {
   const { partId, fileId } = Route.useParams()
-  const { cota } = Route.useSearch()
-  const navigate = useNavigate()
+  const search = Route.useSearch()
   const result = useQuery({
     queryKey: ["part-evidence", partId],
     queryFn: () => EvidenceService.readPartEvidence({ partId }),
@@ -37,37 +33,17 @@ function PartFile() {
   const { viewer, action } = fileAction(file)
   if (viewer === "pdf")
     return (
-      <div className="flex flex-col gap-6">
-        <h1 className="text-2xl font-bold tracking-tight">
-          <span className="mr-3 font-mono">{result.data?.part.code}</span>
-          {result.data?.part.name}
-        </h1>
-        <Suspense
-          fallback={
-            <p className="text-sm text-muted-foreground">Cargando plano…</p>
-          }
-        >
-          <DrawingSearch
-            file={file}
-            title={file.filename}
-            initialQuery={cota}
-            searchAction={
-              <DrawingToggle
-                active
-                onClick={() =>
-                  void navigate({
-                    to: "/parts/$partId",
-                    params: { partId },
-                    search: { cota },
-                    replace: true,
-                    resetScroll: false,
-                  })
-                }
-              />
-            }
-          />
-        </Suspense>
-      </div>
+      <Navigate
+        to="/parts/$partId"
+        params={{ partId }}
+        search={{
+          ...search,
+          plano: true,
+          drawingQ: search.drawingQ ?? search.cota,
+          drawingFile: fileId,
+        }}
+        replace
+      />
     )
   return (
     <div className="space-y-5">

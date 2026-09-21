@@ -83,7 +83,12 @@ export const FeaturesService = {
     return clone(state().feature)
   },
   readFeature: async () => clone(state().feature),
-  readFeatureFilters: async () => ({ parts: [], tags: [], categories: [] }),
+  readFeatureFilters: async () => ({
+    parts: [],
+    features: [],
+    tags: [],
+    categories: [],
+  }),
   createFeatureNote: async ({ featureId, requestBody }) => {
     if (featureId !== state().feature.id) throw new Error("Unknown feature")
     const note = {

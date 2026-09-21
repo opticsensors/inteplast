@@ -186,7 +186,7 @@ test("cotas use the file row style, add inline fields and wrap only when needed"
   const drawing = card.getByRole("link", { name: "Buscar N113 en el plano" })
   assert.match(
     await drawing.getAttribute("href"),
-    /\/features\/feature-one\/fichero\/drawing-asset\?cota=N113/,
+    /\/parts\/part-one\?cota=N113&revision=06&feature=feature-one&plano=true&drawingQ=N113&drawingFile=drawing-file/,
   )
   await add.click()
   await input.fill("N170")
@@ -237,7 +237,7 @@ test("read-only cotas match file height and retain direct drawing and measuremen
     await card
       .getByRole("link", { name: "N170", exact: true })
       .getAttribute("href"),
-    /\/parts\/part-one\?cota=N170/,
+    /\/parts\/part-one\?cota=N170&revision=06&feature=feature-one/,
   )
   await page.screenshot({
     path: path.join(artifacts, "cotas-read.png"),

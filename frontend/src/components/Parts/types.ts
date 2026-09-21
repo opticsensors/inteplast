@@ -53,6 +53,7 @@ export type Series = {
   records: Record<string, Record<string, Measurement>>
 }
 export type Entry = {
+  revision?: string
   id: string
   numbers: string[]
   kind: string

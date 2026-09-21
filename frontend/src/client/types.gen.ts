@@ -156,10 +156,19 @@ export type FeatureEvidencePublic = {
     cases: Array<(string)>;
 };
 
+export type FeatureFilterOption = {
+    id: string;
+    name: string;
+    category?: (FeatureCategory | null);
+    tags?: Array<(string)>;
+    part_ids?: Array<(string)>;
+};
+
 export type FeatureFilters = {
     categories: Array<FeatureCategory>;
     tags: Array<(string)>;
     parts: Array<PartPublic>;
+    features: Array<FeatureFilterOption>;
 };
 
 export type FeatureNoteCreate = {
@@ -317,6 +326,39 @@ export type Message = {
     message: string;
 };
 
+export type MetrologyCatalog = {
+    data: Array<MetrologyPart>;
+    count: number;
+    features: Array<MetrologyFeature>;
+};
+
+export type MetrologyFeature = {
+    id: string;
+    name: string;
+    category?: (FeatureCategory | null);
+    tags?: Array<(string)>;
+    characteristics?: Array<CharacteristicPublic>;
+};
+
+export type MetrologyFeatureChoice = {
+    id: string;
+    name: string;
+    category?: (FeatureCategory | null);
+    tags?: Array<(string)>;
+    part_ids?: Array<(string)>;
+};
+
+export type MetrologyFilters = {
+    parts: Array<PartPublic>;
+    features: Array<MetrologyFeatureChoice>;
+};
+
+export type MetrologyPart = {
+    part: PartPublic;
+    features: Array<MetrologyFeature>;
+    matched_feature_ids?: Array<(string)>;
+};
+
 export type NewPassword = {
     token: string;
     new_password: string;
@@ -343,6 +385,7 @@ export type PartEvidencePublic = {
     part: PartPublic;
     documents: Array<EvidenceDocument>;
     characteristics: Array<CharacteristicPublic>;
+    features?: Array<MetrologyFeature>;
     study: JobPublic;
     import_available: boolean;
 };
@@ -459,6 +502,17 @@ export type ValidationError = {
     };
 };
 
+export type EvidenceReadMetrologyFiltersResponse = (MetrologyFilters);
+
+export type EvidenceReadMetrologyData = {
+    featureId?: (string | null);
+    limit?: number;
+    q?: string;
+    skip?: number;
+};
+
+export type EvidenceReadMetrologyResponse = (MetrologyCatalog);
+
 export type EvidenceReadPartEvidenceData = {
     partId: string;
 };
@@ -514,6 +568,7 @@ export type EvidenceReviewDrawingLocationResponse = (LocationPublic);
 
 export type FeaturesReadFeaturesData = {
     category?: (FeatureCategory | null);
+    featureId?: (string | null);
     limit?: number;
     partId?: (string | null);
     q?: (string | null);

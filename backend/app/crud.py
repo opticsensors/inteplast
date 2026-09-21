@@ -6,6 +6,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, or_, select
 
 from app.core.security import get_password_hash, verify_password
+from app.feature_links import feature_membership
 from app.knowledge_models import FeatureCharacteristicLink, PartCharacteristic
 from app.models import (
     Feature,
@@ -13,6 +14,7 @@ from app.models import (
     FeatureAssetCreate,
     FeatureCategory,
     FeatureCreate,
+    FeatureFilterOption,
     FeatureFilters,
     FeatureNote,
     FeatureNoteCreate,
@@ -105,16 +107,10 @@ def create_feature(
 
 
 def _features_with_part(part_id: uuid.UUID) -> ColumnElement[bool]:
-    """Features ligados a una pieza, por adjunto o por declaracion explicita."""
-    return or_(
-        col(Feature.id).in_(
-            select(FeatureAsset.feature_id).where(col(FeatureAsset.part_id) == part_id)
-        ),
-        col(Feature.id).in_(
-            select(FeaturePartLink.feature_id).where(
-                col(FeaturePartLink.part_id) == part_id
-            )
-        ),
+    """The same declared, asset and cota links used by both selector lists."""
+    links = feature_membership()
+    return col(Feature.id).in_(
+        select(links.c.feature_id).where(links.c.part_id == part_id)
     )
 
 
@@ -190,10 +186,13 @@ def search_features(
     category: FeatureCategory | None = None,
     tag: str | None = None,
     part_id: uuid.UUID | None = None,
+    feature_id: uuid.UUID | None = None,
     skip: int = 0,
     limit: int = 100,
 ) -> tuple[list[Feature], int]:
     conditions = _search_conditions(q=q, category=category, tag=tag, part_id=part_id)
+    if feature_id:
+        conditions.append(col(Feature.id) == feature_id)
 
     count_statement = select(func.count()).select_from(Feature)
     statement = (
@@ -227,17 +226,27 @@ def get_feature_filters(*, session: Session) -> FeatureFilters:
     )
     # Solo las piezas que algun feature usa: una pieza sin features seria una
     # opcion de filtro que no devuelve nada.
-    used = select(FeatureAsset.part_id).where(col(FeatureAsset.part_id).isnot(None))
-    linked = select(FeaturePartLink.part_id)
+    links = feature_membership()
+    by_feature: dict[uuid.UUID, list[uuid.UUID]] = {}
+    for part_id, feature_id in session.exec(
+        select(links.c.part_id, links.c.feature_id).order_by(links.c.part_id)
+    ).all():
+        by_feature.setdefault(feature_id, []).append(part_id)
     parts = session.exec(
         select(Part)
-        .where(or_(col(Part.id).in_(used), col(Part.id).in_(linked)))
+        .where(col(Part.id).in_(select(links.c.part_id)))
         .order_by(col(Part.code))
     ).all()
     return FeatureFilters(
         categories=categories,
         tags=tags,
         parts=[PartPublic.model_validate(part) for part in parts],
+        features=[
+            FeatureFilterOption.model_validate(feature).model_copy(
+                update={"part_ids": by_feature.get(feature.id, [])}
+            )
+            for feature in session.exec(select(Feature).order_by(Feature.name)).all()
+        ],
     )
 
 

@@ -298,6 +298,7 @@ function FeatureFormContent({
     <CollapsibleSection
       keepMounted
       title={kind === "warning" ? "Warnings" : "Lessons Learned"}
+      titleClassName="text-lg"
       icon={icon}
     >
       <NoteList
@@ -470,6 +471,7 @@ function FeatureFormContent({
           <CollapsibleSection
             keepMounted
             title="Piezas ejemplo"
+            titleClassName="text-lg"
             icon={<Package2 className="size-4 text-muted-foreground" />}
           >
             {/* 🔑 El MISMO componente que la ficha, en modo edicion. Antes

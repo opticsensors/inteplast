@@ -10,11 +10,15 @@ export function CotaSearch({
   query,
   onQuery,
   onSelect,
+  allowUnknown = true,
+  disabled = false,
 }: {
   entries: Entry[]
   query: string
   onQuery: (query: string) => void
   onSelect: (code: string) => void
+  allowUnknown?: boolean
+  disabled?: boolean
 }) {
   const id = useId()
   const [open, setOpen] = useState(false)
@@ -34,6 +38,7 @@ export function CotaSearch({
       }}
     >
       <SearchField
+        disabled={disabled}
         value={query}
         onValueChange={(value) => {
           onQuery(value)
@@ -45,7 +50,11 @@ export function CotaSearch({
           setActive(0)
           setOpen(false)
         }}
-        placeholder="Buscar cota por número o descripción…"
+        placeholder={
+          disabled
+            ? "Selecciona una pieza para buscar cotas"
+            : "Buscar cota por número o descripción…"
+        }
         aria-label="Buscar cota"
         role="combobox"
         aria-expanded={open}
@@ -76,7 +85,7 @@ export function CotaSearch({
           if (event.key === "Enter" && open) {
             event.preventDefault()
             if (visible[current]) choose(visible[current].id)
-            else if (/^N?\s*\d+(?:\.\d+)?$/i.test(query.trim()))
+            else if (allowUnknown && /^N?\s*\d+(?:\.\d+)?$/i.test(query.trim()))
               choose(normalizeCota(query))
           }
         }}
@@ -103,9 +112,7 @@ export function CotaSearch({
                   index === current && "bg-accent",
                 )}
               >
-                <span className="shrink-0 font-medium">
-                  {entry.kind === "diagnostic" ? "Coordenadas" : entry.id}
-                </span>
+                <span className="shrink-0 font-medium">{entry.id}</span>
                 <span className="truncate text-muted-foreground">
                   {entry.title}
                 </span>
@@ -113,7 +120,7 @@ export function CotaSearch({
             ))}
             {!visible.length && (
               <p className="p-3 text-sm text-muted-foreground">
-                Sin cotas con mediciones para esta búsqueda.
+                Sin cotas para esta búsqueda.
               </p>
             )}
           </div>

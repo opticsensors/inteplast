@@ -186,6 +186,7 @@ function FeatureDetail() {
       <div className="space-y-4">
         <CollapsibleSection
           title="Warnings"
+          titleClassName="text-lg"
           icon={<TriangleAlert className="size-4 text-amber-500" />}
         >
           {notesOf("warning").length === 0 ? (
@@ -207,6 +208,7 @@ function FeatureDetail() {
 
         <CollapsibleSection
           title="Lessons Learned"
+          titleClassName="text-lg"
           icon={<Lightbulb className="size-4 text-yellow-500" />}
         >
           {notesOf("lesson").length === 0 ? (
@@ -228,6 +230,7 @@ function FeatureDetail() {
 
         <CollapsibleSection
           title="Piezas ejemplo"
+          titleClassName="text-lg"
           icon={<Package2 className="size-4 text-muted-foreground" />}
         >
           <PartAssetList feature={feature} />

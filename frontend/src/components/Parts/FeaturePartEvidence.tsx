@@ -137,7 +137,11 @@ export function FeaturePartEvidence({
       <Link
         to="/parts/$partId"
         params={{ partId }}
-        search={{ cota: cota.code }}
+        search={{
+          cota: cota.code,
+          revision: cota.revision,
+          feature: feature.id,
+        }}
         className="px-2 font-medium hover:underline"
       >
         {cota.code}
@@ -145,9 +149,16 @@ export function FeaturePartEvidence({
       {drawing && (
         <Button asChild variant="ghost" size="icon" className="size-6 shrink-0">
           <Link
-            to="/features/$featureId/fichero/$assetId"
-            params={{ featureId: feature.id, assetId: drawing.id }}
-            search={{ cota: cota.code }}
+            to="/parts/$partId"
+            params={{ partId }}
+            search={{
+              cota: cota.code,
+              revision: cota.revision,
+              feature: feature.id,
+              plano: true,
+              drawingQ: cota.code,
+              drawingFile: drawing.file?.id,
+            }}
             title={`Buscar ${cota.code} en el plano`}
           >
             <FileSearch className="size-3.5" />

@@ -1,26 +1,8 @@
 # TODO
 
--  [ ] quiero que planeemos juntos que hacer con los datos de ver_tofo.py en data explorer.
-me dijiste que txt, que son los datos raw de los puntos medidos de cmm, permite desde el propio software configurar como extraer de esas nuves de puntos cotas y ciertos otros valores, los cuales se guardan en los csv, por lo tanto no hace falta representar los txt ya que estos no nos aprotan nada relevante apra nuestra web app de inteplast verdad?
-centrandonos en los csv, hay muchas filas, las que empiezan por point X o global X nos son de interes olos que empiezan por posicions? o solo las corerspondientes a tolerancias NXXX que son los numericos encercalsod marcados en verde en el plano 2d. De los de inetres que crees que es mas interesante ver si estan dentro de toleacias, su evolucion por cavidad o por tandas o todo? y cual es la forma mas inetersanete de representarlo?
+- [ ] cambia el icono de pieza (una caja rara) por el icono de part de SLOIDWORKS, en fromaton no relleno de color y el tonos aprecidos a los ya existentes. lo necesitas para hacerlo o lo encuentars tu? igual, los del molde y escaneo necesitan un cambio a mejor, son muy genericos y no se entienden!
 
-por otro lado los perfiles a y b que son y los pondrias en la app o no son relevantes?
-
-por otro lado crees que la app puede encontarr una forma de buscar en el pdf del plano 2d esas cotas sin tener que hacerlo manual? que necesitariamos? un pdf con svg/texto ? con el de ahora que es como una mimaghen no se podria mejorar? realmente crees que hace falta? 
-
-luego lo mas interesante de todo creo que es no tanto ve rla evolucion de las cotas sino ver en base los resultados de mediciones que modificaicon se ha hecho y como ha afectado eso a la nueva medicion. esto donde esta documentado, en los excels? en los pptx? puedes llertelos para la pieza de estudio y decirme?
-
-por otro lado, que son el fichero de punts nous? me dijiste que era algo del molde? esta realcionado/linkado con los cmabios hechos? nos interesa?
-
-haz una lectura extensa de la doc y tu mismo leete ficheros de la carpeta de la pieza de estudio para entender como funciona/esta ordenado ese proceso de modificaciones iterativas...
-
-no cambies nda del codigo, lee la doc del repo, lee tambien los ficheros de la carpeta de inteplast datos: C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\proyectos\11. inteplast\Exemples\3212 Pump Housing
-
--  [ ] 
-
-
-
-
+- [ ] 
 
 
 

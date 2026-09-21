@@ -809,6 +809,48 @@ export const FeatureEvidencePublicSchema = {
     title: 'FeatureEvidencePublic'
 } as const;
 
+export const FeatureFilterOptionSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        category: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FeatureCategory'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        tags: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Tags'
+        },
+        part_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Part Ids'
+        }
+    },
+    type: 'object',
+    required: ['id', 'name'],
+    title: 'FeatureFilterOption'
+} as const;
+
 export const FeatureFiltersSchema = {
     properties: {
         categories: {
@@ -831,10 +873,17 @@ export const FeatureFiltersSchema = {
             },
             type: 'array',
             title: 'Parts'
+        },
+        features: {
+            items: {
+                '$ref': '#/components/schemas/FeatureFilterOption'
+            },
+            type: 'array',
+            title: 'Features'
         }
     },
     type: 'object',
-    required: ['categories', 'tags', 'parts'],
+    required: ['categories', 'tags', 'parts', 'features'],
     title: 'FeatureFilters'
 } as const;
 
@@ -1624,6 +1673,168 @@ export const MessageSchema = {
     title: 'Message'
 } as const;
 
+export const MetrologyCatalogSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/MetrologyPart'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        },
+        features: {
+            items: {
+                '$ref': '#/components/schemas/MetrologyFeature'
+            },
+            type: 'array',
+            title: 'Features'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count', 'features'],
+    title: 'MetrologyCatalog'
+} as const;
+
+export const MetrologyFeatureSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        category: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FeatureCategory'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        tags: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Tags',
+            default: []
+        },
+        characteristics: {
+            items: {
+                '$ref': '#/components/schemas/CharacteristicPublic'
+            },
+            type: 'array',
+            title: 'Characteristics',
+            default: []
+        }
+    },
+    type: 'object',
+    required: ['id', 'name'],
+    title: 'MetrologyFeature'
+} as const;
+
+export const MetrologyFeatureChoiceSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        category: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FeatureCategory'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        tags: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Tags',
+            default: []
+        },
+        part_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Part Ids',
+            default: []
+        }
+    },
+    type: 'object',
+    required: ['id', 'name'],
+    title: 'MetrologyFeatureChoice'
+} as const;
+
+export const MetrologyFiltersSchema = {
+    properties: {
+        parts: {
+            items: {
+                '$ref': '#/components/schemas/PartPublic'
+            },
+            type: 'array',
+            title: 'Parts'
+        },
+        features: {
+            items: {
+                '$ref': '#/components/schemas/MetrologyFeatureChoice'
+            },
+            type: 'array',
+            title: 'Features'
+        }
+    },
+    type: 'object',
+    required: ['parts', 'features'],
+    title: 'MetrologyFilters'
+} as const;
+
+export const MetrologyPartSchema = {
+    properties: {
+        part: {
+            '$ref': '#/components/schemas/PartPublic'
+        },
+        features: {
+            items: {
+                '$ref': '#/components/schemas/MetrologyFeature'
+            },
+            type: 'array',
+            title: 'Features'
+        },
+        matched_feature_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Matched Feature Ids',
+            default: []
+        }
+    },
+    type: 'object',
+    required: ['part', 'features'],
+    title: 'MetrologyPart'
+} as const;
+
 export const NewPasswordSchema = {
     properties: {
         token: {
@@ -1763,6 +1974,14 @@ export const PartEvidencePublicSchema = {
             },
             type: 'array',
             title: 'Characteristics'
+        },
+        features: {
+            items: {
+                '$ref': '#/components/schemas/MetrologyFeature'
+            },
+            type: 'array',
+            title: 'Features',
+            default: []
         },
         study: {
             '$ref': '#/components/schemas/JobPublic'

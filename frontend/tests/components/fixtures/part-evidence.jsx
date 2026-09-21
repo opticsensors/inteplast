@@ -311,11 +311,126 @@ EvidenceService.readDrawingIndex = async () => ({
 EvidenceService.reviewDrawingLocation = async () => {
   throw new Error("The consultation must not edit readings")
 }
-EvidenceService.readPartEvidence = async () => ({
-  part,
+const secondPart = { ...part, id: "part-two", code: "3197", name: "Connector" }
+const characteristic = (code, partId = part.id, revision = "06") => ({
+  id: `${partId}-${code}-${revision}`,
+  part_id: partId,
+  revision,
+  code,
+  title: code,
+  role: "primary",
+})
+const characteristics = ["N170", "N288", "N240"].map((code) =>
+  characteristic(code),
+)
+const features = [
+  {
+    id: "bolt-eye",
+    name: "Bolt Eye",
+    category: "hole",
+    tags: ["critical"],
+    characteristics: characteristics.slice(0, 2),
+  },
+  {
+    id: "rib",
+    name: "Rib",
+    category: "rib",
+    tags: ["stiffness"],
+    characteristics: [],
+  },
+  {
+    id: "seal",
+    name: "Seal",
+    category: "hole",
+    tags: ["sealing"],
+    characteristics: [characteristic("N113")],
+  },
+]
+const catalog = [
+  { part, features },
+  {
+    part: secondPart,
+    features: [
+      {
+        id: "bolt-eye",
+        name: "Bolt Eye",
+        category: "hole",
+        tags: ["critical"],
+        characteristics: [characteristic("N170", secondPart.id, "04")],
+      },
+    ],
+  },
+]
+EvidenceService.readMetrologyFilters = async () => ({
+  parts: [
+    ...catalog.map((item) => item.part),
+    { id: "unused", code: "9000", name: "Sin features" },
+  ],
+  features: features.map(({ characteristics: _cotas, ...feature }) => ({
+    ...feature,
+    part_ids: catalog
+      .filter((item) => item.features.some((f) => f.id === feature.id))
+      .map((item) => item.part.id),
+  })),
+})
+EvidenceService.readMetrology = async ({
+  q = "",
+  featureId,
+  skip = 0,
+  limit = 24,
+}) => {
+  const needle = q.toLowerCase()
+  const foundFeatures = features.filter((feature) =>
+    featureId
+      ? feature.id === featureId
+      : needle && feature.name.toLowerCase().includes(needle),
+  )
+  const data = catalog.flatMap((item) => {
+    const linked = featureId
+      ? item.features.filter((feature) => feature.id === featureId)
+      : item.features
+    const matches = linked.filter((feature) =>
+      foundFeatures.some((match) => feature.id === match.id),
+    )
+    const pieceMatch = `${item.part.code} ${item.part.name}`
+      .toLowerCase()
+      .includes(needle)
+    return (featureId ? linked.length : pieceMatch || matches.length)
+      ? [
+          {
+            ...item,
+            features: linked,
+            matched_feature_ids:
+              !featureId && pieceMatch
+                ? []
+                : matches.map((feature) => feature.id),
+          },
+        ]
+      : []
+  })
+  return {
+    data: data.slice(skip, skip + limit),
+    count: data.length,
+    features: foundFeatures,
+  }
+}
+EvidenceService.readPartEvidence = async ({ partId }) => ({
+  part: catalog.find((item) => item.part.id === partId).part,
+  features: catalog.find((item) => item.part.id === partId).features,
+  characteristics:
+    partId === part.id
+      ? characteristics
+      : [characteristic("N170", secondPart.id, "04")],
   study: { state: "ready", payload: study },
   import_available: true,
   documents: [
+    {
+      id: "linked-drawing",
+      filename: "3212-07.pdf",
+      content_type: "application/pdf",
+      version: "v1",
+      source: "upload",
+    },
     {
       id: "drawing",
       filename: "DRW_3212.pdf",

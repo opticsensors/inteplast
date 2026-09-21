@@ -65,10 +65,79 @@ async function mount(t, initialPath = "/") {
 const readHeading = (page, name = "Bolt Eye") =>
   page.getByRole("heading", { name, exact: true }).waitFor()
 
+test("shared searchable selectors keep Features filters and support keyboard and cancellation", async (t) => {
+  const page = await mount(t)
+  assert.equal(
+    await page
+      .getByRole("combobox", { name: "Categoría", exact: true })
+      .count(),
+    0,
+  )
+  const piece = page.getByRole("combobox", { name: "Pieza", exact: true })
+  await piece.click()
+  const search = page.getByRole("combobox", {
+    name: "Buscar pieza",
+    exact: true,
+  })
+  await search.fill("pump")
+  await search.press("Enter")
+  assert.equal(
+    await page.evaluate(() => window.review.location().search.part),
+    "part-one",
+  )
+  await piece.click()
+  await search.fill("no existe")
+  await page.getByText("Sin coincidencias.", { exact: true }).waitFor()
+  await search.press("Escape")
+  assert.equal(await page.getByRole("dialog").count(), 0)
+  assert.equal(
+    await piece.evaluate((element) => element === document.activeElement),
+    true,
+  )
+  assert.equal(
+    await page.evaluate(() => window.review.location().search.part),
+    "part-one",
+  )
+  await page.getByRole("button", { name: "Más filtros", exact: true }).click()
+  await page.getByRole("combobox", { name: "Categoría", exact: true }).click()
+  const category = page.getByRole("combobox", {
+    name: "Buscar categoría",
+    exact: true,
+  })
+  await category.press("ArrowDown")
+  await category.press("Enter")
+  assert.equal(
+    await page.evaluate(() => window.review.location().search.category),
+    "hole",
+  )
+  await page.getByRole("combobox", { name: "Tag", exact: true }).click()
+  const tag = page.getByRole("combobox", { name: "Buscar tag", exact: true })
+  await tag.fill("INYECC")
+  await tag.press("Enter")
+  assert.equal(
+    await page.evaluate(() => window.review.location().search.tag),
+    "inyeccion",
+  )
+  await page
+    .getByRole("button", { name: "Más filtros (2)", exact: true })
+    .click()
+  assert.equal(
+    await page.getByRole("combobox", { name: "Tag", exact: true }).count(),
+    0,
+  )
+  await page
+    .getByRole("button", { name: "Más filtros (2)", exact: true })
+    .click()
+  assert.match(
+    await page.getByRole("combobox", { name: "Tag", exact: true }).innerText(),
+    /inyeccion/,
+  )
+})
+
 test("old home links preserve filters and cards open in read mode", async (t) => {
   const page = await mount(
     t,
-    "/?q=3212&category=hole&tag=inyeccion&part=part-one",
+    "/?q=3212&category=hole&tag=inyeccion&part=part-one&feature=feature-one",
   )
   const location = await page.evaluate(() => window.review.location())
   assert.equal(location.pathname, "/features")
@@ -76,6 +145,7 @@ test("old home links preserve filters and cards open in read mode", async (t) =>
   assert.equal(location.search.category, "hole")
   assert.equal(location.search.tag, "inyeccion")
   assert.equal(location.search.part, "part-one")
+  assert.equal(location.search.feature, "feature-one")
   assert.equal(
     await page.getByRole("link", { name: "Dashboard", exact: true }).count(),
     0,
@@ -91,6 +161,46 @@ test("old home links preserve filters and cards open in read mode", async (t) =>
   )
   await page.evaluate(() => window.review.back())
   await page.getByRole("heading", { name: "Features", exact: true }).waitFor()
+  assert.equal(
+    await page
+      .getByPlaceholder("Feature / pieza / codigo / tag...")
+      .inputValue(),
+    "3212",
+  )
+  assert.match(
+    await page
+      .getByRole("combobox", { name: "Feature", exact: true })
+      .innerText(),
+    /Bolt Eye/,
+  )
+})
+
+test("the searchable feature selector keeps the text search and sends an exact ID filter", async (t) => {
+  const page = await mount(t, "/features?q=3212")
+  await page.getByRole("combobox", { name: "Feature", exact: true }).click()
+  const search = page.getByRole("combobox", {
+    name: "Buscar feature",
+    exact: true,
+  })
+  await search.fill("bolt")
+  await search.press("Enter")
+  await page.waitForFunction(() =>
+    window.review.searchRequests.some(
+      (params) => params.featureId === "feature-one" && params.q === "3212",
+    ),
+  )
+  assert.equal(
+    await page.evaluate(() => window.review.location().search.feature),
+    "feature-one",
+  )
+  await page.getByRole("combobox", { name: "Feature", exact: true }).click()
+  await page
+    .getByRole("option", { name: "Todos los features", exact: true })
+    .click()
+  assert.equal(
+    await page.evaluate(() => window.review.location().search.feature),
+    undefined,
+  )
   assert.equal(
     await page
       .getByPlaceholder("Feature / pieza / codigo / tag...")

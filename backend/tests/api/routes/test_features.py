@@ -140,6 +140,37 @@ def test_read_features_filter_by_tag(
     assert content["data"][0]["id"] == str(feature.id)
 
 
+def test_read_features_selects_exact_feature_and_combines_filters(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    tag = random_lower_string()
+    selected = create_random_feature(db, tags=[tag])
+    create_random_feature(db, tags=[tag])
+    part = create_random_part(db)
+    create_random_asset(db, selected, part=part)
+    params = {"feature_id": str(selected.id), "tag": tag, "part_id": str(part.id)}
+    url = f"{settings.API_V1_STR}/features/"
+    response = client.get(url, params=params, headers=superuser_token_headers)
+    assert response.status_code == 200
+    result = response.json()
+    assert result["count"] == 1
+    assert [item["id"] for item in result["data"]] == [str(selected.id)]
+    for mismatch in (
+        {"feature_id": str(uuid.uuid4())},
+        {"part_id": str(uuid.uuid4())},
+        {"q": random_lower_string()},
+        {"tag": random_lower_string()},
+    ):
+        result = client.get(
+            url, params={**params, **mismatch}, headers=superuser_token_headers
+        ).json()
+        assert result["count"] == 0 and result["data"] == []
+    result = client.get(
+        url, params={**params, "skip": 1}, headers=superuser_token_headers
+    ).json()
+    assert result["count"] == 1 and result["data"] == []
+
+
 def test_read_feature_filters(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
@@ -149,6 +180,7 @@ def test_read_feature_filters(
     create_random_asset(db, feature, kind=AssetKind.mold, part=part)
     # Una pieza que no usa ningun feature no debe salir en los desplegables
     unused = create_random_part(db)
+    unlinked_feature = create_random_feature(db)
 
     response = client.get(
         f"{settings.API_V1_STR}/features/filters", headers=superuser_token_headers
@@ -160,6 +192,10 @@ def test_read_feature_filters(
     assert part.code in codes
     assert unused.code not in codes
     assert "hole" in content["categories"]
+    options = {item["id"]: item for item in content["features"]}
+    assert options[str(feature.id)]["name"] == feature.name
+    assert options[str(feature.id)]["part_ids"] == [str(part.id)]
+    assert options[str(unlinked_feature.id)]["part_ids"] == []
 
 
 def test_update_feature(

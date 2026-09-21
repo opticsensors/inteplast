@@ -1,7 +1,7 @@
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import col, select
 
 from app.api.deps import CurrentUser, SessionDep
@@ -20,11 +20,14 @@ from app.knowledge_models import (
     JobPublic,
     LocationPublic,
     LocationReview,
+    MetrologyCatalog,
+    MetrologyFilters,
     PartCharacteristic,
     PartDocument,
     PartEvidencePublic,
     PendingCharacteristic,
 )
+from app.metrology import catalog, filters, part_features
 from app.models import (
     Feature,
     FeatureAsset,
@@ -37,6 +40,25 @@ from app.models import (
 )
 
 router = APIRouter(prefix="/evidence", tags=["evidence"])
+
+
+@router.get("/metrology/filters", response_model=MetrologyFilters)
+def read_metrology_filters(
+    session: SessionDep, _current_user: CurrentUser
+) -> MetrologyFilters:
+    return filters(session)
+
+
+@router.get("/metrology", response_model=MetrologyCatalog)
+def read_metrology(
+    session: SessionDep,
+    _current_user: CurrentUser,
+    q: str = "",
+    feature_id: uuid.UUID | None = None,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=24, ge=1, le=100),
+) -> MetrologyCatalog:
+    return catalog(session, q, feature_id, skip, limit)
 
 
 def public_job(job: EvidenceJob | None) -> JobPublic:
@@ -79,6 +101,7 @@ def read_part_evidence(
     ).all()
     return PartEvidencePublic(
         part=PartPublic.model_validate(part),
+        features=part_features(session, [part_id])[part_id],
         documents=[
             EvidenceDocument.model_validate(d, update={"relative_path": d.source_path})
             for d in documents

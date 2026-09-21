@@ -9,7 +9,7 @@ from pydantic import Field as PydanticField
 from sqlalchemy import JSON, Column, DateTime, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
-from app.models import FilePublic, PartPublic, get_datetime_utc
+from app.models import FeatureCategory, FilePublic, PartPublic, get_datetime_utc
 
 
 class PartCharacteristic(SQLModel, table=True):
@@ -123,10 +123,43 @@ class EvidenceDocument(FilePublic):
     relative_path: str | None = None
 
 
+class MetrologyFeatureInfo(BaseModel):
+    id: uuid.UUID
+    name: str
+    category: FeatureCategory | None = None
+    tags: list[str] = []
+
+
+class MetrologyFeature(MetrologyFeatureInfo):
+    characteristics: list[CharacteristicPublic] = []
+
+
+class MetrologyFeatureChoice(MetrologyFeatureInfo):
+    part_ids: list[uuid.UUID] = []
+
+
+class MetrologyFilters(BaseModel):
+    parts: list[PartPublic]
+    features: list[MetrologyFeatureChoice]
+
+
+class MetrologyPart(BaseModel):
+    part: PartPublic
+    features: list[MetrologyFeature]
+    matched_feature_ids: list[uuid.UUID] = []
+
+
+class MetrologyCatalog(BaseModel):
+    data: list[MetrologyPart]
+    count: int
+    features: list[MetrologyFeature]
+
+
 class PartEvidencePublic(BaseModel):
     part: PartPublic
     documents: list[EvidenceDocument]
     characteristics: list[CharacteristicPublic]
+    features: list[MetrologyFeature] = []
     study: JobPublic
     import_available: bool
 

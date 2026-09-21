@@ -74,7 +74,7 @@ after(async () => {
 
 async function mount(
   t,
-  initial = "/parts/part-one",
+  initial = "/parts/part-one?cota=N170",
   mobile = false,
   separateCavities = false,
 ) {
@@ -103,10 +103,200 @@ async function mount(
   return page
 }
 const state = (page) => page.evaluate(() => window.review.location().search)
+
+test("a single consultation can start with a feature and then choose its piece", async (t) => {
+  const page = await mount(t, "/parts")
+  await expect(page.getByRole("heading", { name: "Metrología" })).toBeVisible()
+  await expect(
+    page.getByRole("combobox", { name: "Buscar cota", exact: true }),
+  ).toBeDisabled()
+  await expect(
+    page.getByRole("button", { name: "Plano", exact: true }),
+  ).toBeDisabled()
+  await page.getByRole("combobox", { name: "Pieza", exact: true }).click()
+  await expect(page.getByRole("option", { name: /3212/ })).toBeVisible()
+  await expect(page.getByRole("option", { name: /9000/ })).toHaveCount(0)
+  await page
+    .getByRole("combobox", { name: "Buscar pieza", exact: true })
+    .press("Escape")
+  await page.getByRole("combobox", { name: "Feature", exact: true }).click()
+  const featureSearch = page.getByRole("combobox", {
+    name: "Buscar feature",
+    exact: true,
+  })
+  await featureSearch.fill("bolt")
+  await featureSearch.press("Enter")
+  await page.getByRole("combobox", { name: "Pieza", exact: true }).click()
+  await expect(page.getByRole("option", { name: /3197/ })).toBeVisible()
+  await expect(page.getByRole("option", { name: /9000/ })).toHaveCount(0)
+  const pieceSearch = page.getByRole("combobox", {
+    name: "Buscar pieza",
+    exact: true,
+  })
+  await pieceSearch.fill("3212")
+  await pieceSearch.press("Enter")
+  await page.screenshot({
+    path: path.join(artifacts, "metrology-feature-search.png"),
+    fullPage: true,
+  })
+  await expect(
+    page.getByRole("combobox", { name: "Pieza", exact: true }),
+  ).toContainText("3212")
+  await expect(page.getByRole("combobox", { name: "Buscar cota" })).toHaveValue(
+    "",
+  )
+  assert.equal((await state(page)).feature, "bolt-eye")
+  await expect(
+    page.getByRole("region", { name: "Evolución de mediciones" }),
+  ).toHaveCount(0)
+  const choices = page.getByRole("group", { name: "Cotas disponibles" })
+  assert.deepEqual(await choices.getByRole("button").allTextContents(), [
+    "N170",
+    "N288",
+  ])
+  await choices.getByRole("button", { name: "N170", exact: true }).click()
+  await expect(
+    page.getByRole("region", { name: "Evolución de mediciones" }),
+  ).toBeVisible()
+  await page.getByRole("button", { name: "Correcciones", exact: true }).click()
+  const selected = await state(page)
+  await page.screenshot({
+    path: path.join(artifacts, "metrology-feature-detail.png"),
+    fullPage: true,
+  })
+  await page.getByRole("button", { name: "Plano", exact: true }).click()
+  await expect(page.getByRole("status")).toHaveText("3 resultados")
+  await page
+    .getByRole("textbox", { name: "Buscar cota en el plano" })
+    .fill("N113")
+  await expect(page.getByRole("status")).toHaveText("0 resultados")
+  await page.getByRole("button", { name: "Plano", exact: true }).click()
+  assert.deepEqual(await state(page), selected)
+  await page.evaluate(() => window.review.forward())
+  await expect(
+    page.getByRole("textbox", { name: "Buscar cota en el plano" }),
+  ).toHaveValue("N113")
+  await page.evaluate(() => window.review.back())
+  assert.deepEqual(await state(page), selected)
+  await choices.getByRole("button", { name: "N288", exact: true }).click()
+  await expect(
+    page.getByText(
+      "Esta cota no tiene mediciones incorporadas. Puedes consultarla en el plano.",
+    ),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Plano", exact: true }),
+  ).toBeEnabled()
+  await choose(page, "Feature", "Todos los features")
+  await choices.getByRole("button", { name: "N240", exact: true }).click()
+  await expect(
+    page.getByRole("region", { name: "Evolución con correcciones" }),
+  ).toBeVisible()
+  assert.equal((await state(page)).feature, undefined)
+  await choose(page, "Feature", "Rib")
+  await expect(
+    page.getByText(/todavía no tiene cotas vinculadas/),
+  ).toBeVisible()
+})
+
+test("a piece starts without an arbitrary cota and includes unassigned cotas on mobile", async (t) => {
+  const page = await mount(t, "/parts/part-one", true)
+  const search = page.getByRole("combobox", { name: "Buscar cota" })
+  await expect(search).toHaveValue("")
+  await expect(
+    page.getByRole("region", { name: "Evolución de mediciones" }),
+  ).toHaveCount(0)
+  await page
+    .getByRole("group", { name: "Cotas disponibles" })
+    .getByRole("button", { name: "N240", exact: true })
+    .click()
+  await expect(search).toHaveValue("N240")
+  await choose(page, "Feature", "Bolt Eye")
+  await page.screenshot({
+    path: path.join(artifacts, "metrology-feature-mobile.png"),
+    fullPage: true,
+  })
+  await page.getByRole("combobox", { name: "Feature", exact: true }).click()
+  const filterSearch = page.getByRole("combobox", {
+    name: "Buscar feature",
+    exact: true,
+  })
+  await expect(filterSearch).toBeFocused()
+  await filterSearch.fill("bolt")
+  await page.screenshot({
+    path: path.join(artifacts, "metrology-selector-mobile.png"),
+    fullPage: true,
+  })
+  await filterSearch.press("Escape")
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  )
+  await search.fill("N240")
+  await page.keyboard.press("Enter")
+  assert.equal((await state(page)).cota, undefined)
+  await expect(
+    page.getByRole("region", { name: "Evolución de mediciones" }),
+  ).toHaveCount(0)
+})
+
+test("identical numbers in another piece do not use an incompatible measurement revision", async (t) => {
+  const page = await mount(
+    t,
+    "/parts/part-two?feature=bolt-eye&cota=N170&revision=04",
+  )
+  await expect(
+    page.getByRole("combobox", { name: "Pieza", exact: true }),
+  ).toContainText("3197")
+  assert.equal((await state(page)).revision, "04")
+  await expect(
+    page.getByText(/No hay mediciones de esta cota para la revisión vinculada/),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("region", { name: "Evolución de mediciones" }),
+  ).toHaveCount(0)
+  await choose(page, "Pieza", "Seleccionar pieza")
+  await expect(
+    page.getByRole("combobox", { name: "Buscar cota", exact: true }),
+  ).toBeDisabled()
+  await expect(page.getByRole("article")).toHaveCount(0)
+})
+
+test("a direct URL cannot show an unassigned cota within a feature", async (t) => {
+  const page = await mount(t, "/parts/part-one?feature=bolt-eye&cota=N240")
+  await expect(
+    page.getByText("Esta cota no está vinculada a los filtros seleccionados."),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("region", { name: "Evolución de mediciones" }),
+  ).toHaveCount(0)
+})
+
 async function choose(page, label, value) {
   await page.getByRole("combobox", { name: label, exact: true }).click()
   await page.getByRole("option", { name: value, exact: true }).click()
 }
+
+test("a feature's drawing link keeps the actual PDF even when its filename lacks a drawing label", async (t) => {
+  const page = await mount(
+    t,
+    "/parts/part-one?feature=bolt-eye&cota=N170&plano=true&drawingFile=linked-drawing",
+  )
+  await expect(
+    page.getByRole("region", { name: "Plano de prueba" }),
+  ).toBeVisible()
+  await expect(page.getByRole("status")).toHaveText("3 resultados")
+  assert.equal(
+    await page.evaluate(() => window.review.drawingFile),
+    "linked-drawing",
+  )
+  await page.getByRole("button", { name: "Plano", exact: true }).click()
+  await expect(
+    page.getByRole("region", { name: "Evolución de mediciones" }),
+  ).toBeVisible()
+  assert.equal((await state(page)).drawingFile, "linked-drawing")
+})
 
 async function pointPosition(page, sample, cavity = "C13") {
   const point = page.getByRole("button", {
@@ -271,9 +461,7 @@ test("corrections preserve layout, evaluation and browser history, including the
   })
   await page.getByRole("button", { name: "Plano", exact: true }).click()
   await expect(page.getByText("Plano · N170", { exact: true })).toBeVisible()
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "3212Pump Housing",
-  )
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Metrología")
   const drawingQuery = page.getByRole("textbox", {
     name: "Buscar cota en el plano",
   })
@@ -347,7 +535,7 @@ test("search and corrections never substitute another cota or a local point for 
 })
 
 test("mobile layout and touch values remain within the viewport", async (t) => {
-  const page = await mount(t, "/parts/part-one", true)
+  const page = await mount(t, "/parts/part-one?cota=N170", true)
   const position = await pointPosition(page, "intern.03")
   await page.touchscreen.tap(position.x, position.y)
   await expect(page.getByRole("tooltip")).toBeVisible()
@@ -396,17 +584,85 @@ test("mobile layout and touch values remain within the viewport", async (t) => {
   )
 })
 
-test("part catalog search is restored when returning from a consultation", async (t) => {
-  const page = await mount(t, "/parts")
-  await page.getByRole("textbox", { name: "Buscar pieza" }).fill("3212")
-  await page.getByRole("link", { name: /3212 Pump Housing/ }).click()
-  await expect(
-    page.getByRole("combobox", { name: "Buscar cota" }),
-  ).toBeVisible()
-  await page.evaluate(() => window.review.back())
-  await expect(page.getByRole("textbox", { name: "Buscar pieza" })).toHaveValue(
-    "3212",
+test("changing pieces clears the measurement and browser Back restores the previous consultation", async (t) => {
+  const page = await mount(
+    t,
+    "/parts/part-one?feature=bolt-eye&cota=N170&view=correcciones&interval=03-05",
   )
+  await expect(
+    page.getByRole("region", { name: "Evolución con correcciones" }),
+  ).toBeVisible()
+  const previous = await state(page)
+  await page.getByRole("combobox", { name: "Pieza", exact: true }).click()
+  await page.getByRole("option", { name: /3197/ }).click()
+  await expect(
+    page.getByRole("combobox", { name: "Buscar cota", exact: true }),
+  ).toHaveValue("")
+  assert.equal((await state(page)).cota, undefined)
+  assert.equal((await state(page)).view, undefined)
+  assert.equal((await state(page)).feature, "bolt-eye")
+  await expect(
+    page.getByRole("region", { name: "Evolución con correcciones" }),
+  ).toHaveCount(0)
+  await page.evaluate(() => window.review.back())
+  await expect(
+    page.getByRole("combobox", { name: "Pieza", exact: true }),
+  ).toContainText("3212")
+  await expect(
+    page.getByRole("button", { name: "Tramo intern.03 a intern.05" }),
+  ).toHaveAttribute("aria-pressed", "true")
+  assert.deepEqual(await state(page), previous)
+})
+
+test("category and tag select linked cotas of matching features and persist in the drawing", async (t) => {
+  const page = await mount(t, "/parts/part-one")
+  const choices = page.getByRole("group", { name: "Cotas disponibles" })
+  await expect(
+    choices.getByRole("button", { name: "N240", exact: true }),
+  ).toBeVisible()
+  await page.getByRole("button", { name: "Más filtros", exact: true }).click()
+  await choose(page, "Categoría", "Agujero")
+  assert.deepEqual(await choices.getByRole("button").allTextContents(), [
+    "N170",
+    "N288",
+    "N113",
+  ])
+  await choose(page, "Tag", "critical")
+  assert.deepEqual(await choices.getByRole("button").allTextContents(), [
+    "N170",
+    "N288",
+  ])
+  await choices.getByRole("button", { name: "N170", exact: true }).click()
+  await page.getByRole("button", { name: "Plano", exact: true }).click()
+  await expect(
+    page.getByRole("combobox", { name: "Pieza", exact: true }),
+  ).toContainText("3212")
+  await expect(
+    page.getByRole("combobox", { name: "Tag", exact: true }),
+  ).toContainText("critical")
+  await choose(page, "Tag", "Todos los tags")
+  await page
+    .getByRole("textbox", { name: "Buscar cota en el plano" })
+    .fill("N113")
+  await expect(page.getByRole("status")).toHaveText("2 resultados")
+  await page.getByRole("button", { name: "Plano", exact: true }).click()
+  assert.equal((await state(page)).category, "hole")
+  assert.equal((await state(page)).tag, undefined)
+  assert.equal((await state(page)).cota, undefined)
+  await choose(page, "Categoría", "Todas las categorías")
+  await expect(
+    choices.getByRole("button", { name: "N240", exact: true }),
+  ).toBeVisible()
+})
+
+test("filters never combine the category of one feature with the tag of another", async (t) => {
+  const page = await mount(t, "/parts/part-one?category=hole&tag=stiffness")
+  await expect(
+    page.getByText("No hay cotas vinculadas a los features de estos filtros."),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("group", { name: "Cotas disponibles" }),
+  ).toHaveCount(0)
 })
 
 test("N170 describes the first proposal and keeps later intervals without inventing actions", async (t) => {
@@ -568,7 +824,7 @@ test("unfinished numbers suggest cotas and the selected number stays only in the
 })
 
 test("a tooltip does not include distant cavities from the same sampling", async (t) => {
-  const page = await mount(t, "/parts/part-one", false, true)
+  const page = await mount(t, "/parts/part-one?cota=N170", false, true)
   await hoverPoint(page, "intern.03", "C13")
   const tooltip = page.getByRole("tooltip")
   await expect(tooltip.getByText("C13", { exact: true })).toBeVisible()

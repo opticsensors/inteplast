@@ -146,7 +146,7 @@ Todo bajo `/api/v1`. Documentación interactiva en `http://localhost:8000/docs`.
 | Método | Ruta | Qué hace |
 |---|---|---|
 | `GET` | `/features/` | Buscar. Params: `q`, `category`, `tag`, `part_id`, `skip`, `limit` |
-| `GET` | `/features/filters` | Categorías, tags y piezas **que algún feature usa**, para los desplegables |
+| `GET` | `/features/filters` | Features con sus vínculos, categorías, tags y piezas **que algún feature usa**, para los desplegables |
 | `POST` | `/features/` | Crear |
 | `GET` | `/features/{id}` | Ficha completa: + `notes` + `assets` |
 | `PUT` `DELETE` | `/features/{id}` | Editar / borrar |
@@ -199,6 +199,19 @@ el administrador. Las rutas privadas para crear usuarios de prueba requieren
 Las reglas compartidas de búsqueda, filtros, gráficas y navegación están en
 [Patrones de interfaz](interfaz.md). Se aplican también a nuevas pantallas.
 
+**Metrología** (`/parts`) reúne buscador de cotas y selectores de Pieza/Feature en una
+misma pantalla, sin catálogo intermedio. Categoría y Tag están en Más filtros. El selector
+de pieza es obligatorio para buscar cotas; elegir primero un feature limita las piezas.
+`GET /evidence/metrology/filters` proporciona opciones ligeras con pertenencia, categoría
+y tags; `GET /evidence/parts/{id}` incluye features y sus cotas, además de los datos importados.
+Ambos selectores de piezas usan los mismos vínculos de feature (declarados, ficheros o
+cotas) y excluyen piezas sin vínculos. El catálogo completo se conserva para añadir piezas.
+`Common/SearchSelect` se reutiliza también en Features. Categoría y tag deben coincidir
+en un mismo feature y solo atribuyen a la consulta sus cotas realmente vinculadas.
+La ficha no selecciona N170 ni otra cota automáticamente. Un filtro permite consultar
+todos los features o solo el de entrada, sin ocultar las cotas sin mediciones. Los enlaces
+desde Features conservan pieza, feature, cota y revisión, también al abrir el plano.
+
 La ficha de pieza abre la consulta de cotas sin pestañas ni catálogo de documentos.
 Mediciones y correcciones comparten filtros y gráfica; los números se consultan sobre
 la gráfica. Correcciones conserva todos los muestreos; pulsar una región entre ellos la
@@ -221,7 +234,7 @@ Componentes en `components/Features/`:
 
 | Fichero | Qué |
 |---|---|
-| `FeatureSearch.tsx` | Buscador + tres desplegables (molde, categoría, tag) poblados desde `/features/filters`, y los ayudantes que traducen ese estado a los *search params* de la URL |
+| `FeatureSearch.tsx` | Buscador + Pieza y Feature; Categoría y Tag bajo Más filtros. Selectores con búsqueda interna poblados desde `/features/filters`; `feature_id` filtra por identidad exacta y se conserva como `feature` en la URL |
 | `FeatureCard.tsx` | La tarjeta: imagen, nombre, descripción, tags y el resumen *«2 piezas · 3197, 3212»* |
 | `PartAssetList.tsx` | 🔑 **Los ficheros agrupados por pieza**: un desplegable por pieza y dentro una fila por fichero. **El mismo componente sirve la ficha y el formulario** (`editable`) |
 | `Parts/FeaturePartEvidence.tsx` | Fila **COTAS** dentro de cada pieza, con el mismo borde/altura que los ficheros: números y acceso al plano, sin revisión/relación visibles. Añadir crea un campo al final de la fila, con guardado al terminar de escribir y papelera en edición. |

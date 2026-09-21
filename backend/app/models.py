@@ -556,10 +556,19 @@ class FeaturesPublic(SQLModel):
 
 
 # Valores disponibles para los filtros del dashboard
+class FeatureFilterOption(SQLModel):
+    id: uuid.UUID
+    name: str
+    category: FeatureCategory | None = None
+    tags: list[str] = Field(default_factory=list)
+    part_ids: list[uuid.UUID] = Field(default_factory=list)
+
+
 class FeatureFilters(SQLModel):
     categories: list[FeatureCategory]
     tags: list[str]
     parts: list[PartPublic]
+    features: list[FeatureFilterOption]
 
 
 # Generic message

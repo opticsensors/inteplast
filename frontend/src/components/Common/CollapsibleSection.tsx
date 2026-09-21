@@ -16,6 +16,7 @@ interface CollapsibleSectionProps {
   storageKey?: string
   children: ReactNode
   className?: string
+  titleClassName?: string
 }
 
 /** Panel desplegable. Hecho a mano para no anadir otra dependencia de Radix. */
@@ -30,6 +31,7 @@ export function CollapsibleSection({
   storageKey,
   children,
   className,
+  titleClassName,
 }: CollapsibleSectionProps) {
   const [isOpen, setIsOpen] = useState(() => {
     try {
@@ -61,6 +63,7 @@ export function CollapsibleSection({
           className={cn(
             "flex items-center gap-2 text-left text-sm font-medium",
             headerContent ? "shrink-0" : "flex-1",
+            titleClassName,
           )}
         >
           <ChevronDown

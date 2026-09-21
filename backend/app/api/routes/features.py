@@ -57,6 +57,7 @@ def read_features(
     category: FeatureCategory | None = None,
     tag: str | None = None,
     part_id: uuid.UUID | None = None,
+    feature_id: uuid.UUID | None = None,
     skip: int = 0,
     limit: int = 100,
 ) -> Any:
@@ -65,7 +66,7 @@ def read_features(
 
     `q` busca a la vez en nombre, descripcion, tags, codigo y nombre de las
     piezas, nombres de los adjuntos, y texto de warnings y lessons learned.
-    `category`, `tag` y `part_id` son los filtros adicionales del dashboard.
+    `category`, `tag`, `part_id` y `feature_id` se combinan con la búsqueda.
     """
     features, count = crud.search_features(
         session=session,
@@ -73,6 +74,7 @@ def read_features(
         category=category,
         tag=tag,
         part_id=part_id,
+        feature_id=feature_id,
         skip=skip,
         limit=limit,
     )

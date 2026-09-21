@@ -1,9 +1,15 @@
+import type { FeatureCategory } from "@/client"
+import { CATEGORIES } from "@/components/Features/constants"
 import { matchesCotaPrefix } from "@/components/Features/drawingSearchHelpers"
 import type { Entry, Series, Study } from "./types"
 
 export type PartSearch = {
   q?: string
   cota?: string
+  revision?: string
+  feature?: string
+  category?: FeatureCategory
+  tag?: string
   element?: string
   height?: string
   evaluation?: string
@@ -14,6 +20,7 @@ export type PartSearch = {
   view?: "correcciones"
   plano?: true
   drawingQ?: string
+  drawingFile?: string
 }
 const text = (value: unknown) =>
   typeof value === "string" || typeof value === "number"
@@ -26,6 +33,12 @@ export function validatePartSearch(
   return {
     q: typeof search.q === "string" ? search.q : text(search.q),
     cota: text(search.cota) ?? text(search.caso),
+    revision: text(search.revision),
+    feature: text(search.feature),
+    category: CATEGORIES.includes(search.category as FeatureCategory)
+      ? (search.category as FeatureCategory)
+      : undefined,
+    tag: text(search.tag),
     element: text(search.element),
     height: text(search.height),
     evaluation: text(search.evaluation),
@@ -35,6 +48,7 @@ export function validatePartSearch(
     cavity: text(search.cavity),
     plano: search.plano === true || search.plano === "true" ? true : undefined,
     drawingQ: typeof search.drawingQ === "string" ? search.drawingQ : undefined,
+    drawingFile: text(search.drawingFile),
     view:
       search.view === "correcciones" || search.tab === "correcciones"
         ? "correcciones"

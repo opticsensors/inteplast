@@ -35,17 +35,33 @@ window.review = {
   },
   user: { id: "test-user", email: "review@example.com", is_superuser: false },
   requests: [],
+  searchRequests: [],
   deleted: false,
 }
 const clone = (value) => structuredClone(value)
-FeaturesService.readFeatures = async () => ({
-  data: window.review.deleted ? [] : [clone(window.review.feature)],
-  count: window.review.deleted ? 0 : 1,
-})
+FeaturesService.readFeatures = async (params = {}) => {
+  window.review.searchRequests.push(clone(params))
+  const found =
+    !window.review.deleted &&
+    (!params.featureId || params.featureId === window.review.feature.id)
+  return {
+    data: found ? [clone(window.review.feature)] : [],
+    count: found ? 1 : 0,
+  }
+}
 FeaturesService.readFeatureFilters = async () => ({
   parts: clone(window.review.feature.parts),
   categories: ["hole"],
   tags: ["inyeccion"],
+  features: [
+    {
+      id: window.review.feature.id,
+      name: window.review.feature.name,
+      category: window.review.feature.category,
+      tags: clone(window.review.feature.tags),
+      part_ids: window.review.feature.parts.map((part) => part.id),
+    },
+  ],
 })
 FeaturesService.createFeature = async ({ requestBody }) => {
   Object.assign(window.review.feature, requestBody)
