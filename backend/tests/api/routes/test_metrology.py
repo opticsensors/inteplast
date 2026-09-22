@@ -48,13 +48,11 @@ def test_metrology_search_preserves_piece_feature_and_cota_scope(
     assert len(option["part_ids"]) == 2
     assert option["category"] == "hole" and option["tags"] == ["critical"]
     assert "characteristics" not in option
-    assert str(parts[2].id) not in {p["id"] for p in choices["parts"]}
+    assert str(parts[2].id) in {p["id"] for p in choices["parts"]}
     feature_choices = client.get(
         f"{settings.API_V1_STR}/features/filters", headers=headers
     ).json()
-    assert {p["id"] for p in feature_choices["parts"]} == {
-        p["id"] for p in choices["parts"]
-    }
+    assert str(parts[2].id) not in {p["id"] for p in feature_choices["parts"]}
     assert client.get(f"{API}/metrology").status_code == 401
     response = client.get(f"{API}/metrology", params={"q": bolt.name}, headers=headers)
     assert response.status_code == 200, response.text

@@ -8,15 +8,21 @@ import {
   type FeatureEvidencePublic,
   type FeaturePublic,
 } from "@/client"
+import { SearchSelect } from "@/components/Common/SearchSelect"
 import { normalizeCota } from "@/components/Features/drawingSearchHelpers"
 import { SaveStatus } from "@/components/Features/SaveStatus"
 import { useAutosave } from "@/components/Features/useAutosave"
+import { usePendingTask } from "@/components/Features/usePendingTask"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
 import { cn } from "@/lib/utils"
 
-type AddedCota = { key: string; characteristic?: CharacteristicPublic }
+type AddedCota = {
+  key: string
+  characteristic?: CharacteristicPublic
+  manual?: boolean
+}
 const validCode = (code: string) =>
   /^N\d{1,6}(?:\.\d{1,3})?$/.test(normalizeCota(code))
 const uniqueRevision = (items: CharacteristicPublic[]) => {
@@ -43,25 +49,39 @@ export function FeaturePartEvidence({
     queryFn: () =>
       EvidenceService.readFeatureEvidence({ featureId: feature.id, partId }),
   })
+  const partEvidence = useQuery({
+    queryKey: ["part-evidence", partId],
+    queryFn: () => EvidenceService.readPartEvidence({ partId }),
+    enabled: Boolean(editable),
+  })
   const invalidate = () => {
     void client.invalidateQueries({ queryKey })
     void client.invalidateQueries({ queryKey: ["part-evidence", partId] })
     void client.invalidateQueries({ queryKey: ["features"] })
   }
-  const assign = async (key: string, value: string) => {
+  const assign = async (
+    key: string,
+    value: string,
+    selectedRevision?: string,
+  ) => {
     const code = normalizeCota(value)
     const linked =
       client.getQueryData<FeatureEvidencePublic>(queryKey)?.characteristics ??
       []
-    let characteristic = linked.find((item) => item.code === code)
+    let characteristic = linked.find(
+      (item) =>
+        item.code === code &&
+        (!selectedRevision || item.revision === selectedRevision),
+    )
     if (!characteristic) {
       const evidence = await client.fetchQuery({
         queryKey: ["part-evidence", partId],
         queryFn: () => EvidenceService.readPartEvidence({ partId }),
-        staleTime: 60_000,
+        staleTime: 0,
       })
       const studyRevision = evidence.study.payload?.measurement_revision
       const revision =
+        selectedRevision ||
         (typeof studyRevision === "string" && studyRevision.trim()) ||
         uniqueRevision(
           evidence.characteristics.filter((item) => item.code === code),
@@ -203,6 +223,28 @@ export function FeaturePartEvidence({
           {added.map((item) =>
             item.characteristic ? (
               chip(item.characteristic)
+            ) : partEvidence.data?.measurement_revisions?.length &&
+              partEvidence.data.characteristics.length &&
+              !item.manual ? (
+              <ImportedCota
+                key={item.key}
+                choices={partEvidence.data.characteristics}
+                onSelect={(cota) => assign(item.key, cota.code, cota.revision)}
+                onManual={() =>
+                  setAdded((items) =>
+                    items.map((entry) =>
+                      entry.key === item.key
+                        ? { ...entry, manual: true }
+                        : entry,
+                    ),
+                  )
+                }
+                onCancel={() =>
+                  setAdded((items) =>
+                    items.filter((entry) => entry.key !== item.key),
+                  )
+                }
+              />
             ) : (
               <NewCota
                 key={item.key}
@@ -251,6 +293,60 @@ export function FeaturePartEvidence({
         </p>
       )}
     </section>
+  )
+}
+
+function ImportedCota({
+  choices,
+  onSelect,
+  onManual,
+  onCancel,
+}: {
+  choices: CharacteristicPublic[]
+  onSelect: (cota: CharacteristicPublic) => Promise<void>
+  onManual: () => void
+  onCancel: () => void
+}) {
+  const save = usePendingTask(onSelect)
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center gap-1">
+        <div className="w-44">
+          <SearchSelect
+            label="Nueva cota"
+            placeholder="Seleccionar cota"
+            emptyLabel="Seleccionar cota"
+            defaultOpen
+            compact
+            disabled={save.pending}
+            options={[
+              ...choices.map((cota) => ({
+                value: cota.id,
+                label: `${cota.code} · rev. ${cota.revision}`,
+              })),
+              { value: "manual", label: "Escribir otra cota" },
+            ]}
+            onChange={(id) => {
+              const cota = choices.find((cota) => cota.id === id)
+              if (cota) void save.run(cota)
+              else if (id === "manual") onManual()
+            }}
+          />
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-6 text-destructive"
+          disabled={save.pending}
+          onClick={onCancel}
+        >
+          <Trash2 className="size-3.5" />
+          <span className="sr-only">Quitar nueva cota</span>
+        </Button>
+      </div>
+      <SaveStatus error={save.error} saving={save.pending} retry={save.retry} />
+    </div>
   )
 }
 

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Folder, Loader2, Plus, Search, Trash2 } from "lucide-react"
+import { Loader2, Plus, Search, Trash2 } from "lucide-react"
 import { useState } from "react"
 
 import {
@@ -20,13 +20,12 @@ import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import { featureParts, partLabel } from "./parts"
-import { partFoldersQueryOptions, partsQueryOptions } from "./queries"
+import { partsQueryOptions } from "./queries"
 import { SaveStatus } from "./SaveStatus"
 import { usePendingTask } from "./usePendingTask"
 
 type PartChoice = {
   label: string
-  folderPath?: string
   part?: PartCatalogPublic
 }
 
@@ -44,36 +43,18 @@ export function PartActions({
   const { user } = useAuth()
   const catalog = useQuery(partsQueryOptions())
   const [open, setOpen] = useState(false)
-  const folders = useQuery({ ...partFoldersQueryOptions(), enabled: open })
   const [search, setSearch] = useState("")
   const linkedIds = new Set(featureParts(feature).map((part) => part.id))
   const parts = catalog.data?.data ?? []
-  const choices: PartChoice[] = (folders.data?.entries ?? []).map((folder) => {
-    const code = /^(\d{1,64})(?:[\s_-]|$)/.exec(folder.name)?.[1]
-    const part =
-      parts.find((part) => part.folder_path === folder.path) ??
-      parts.find((part) => !part.folder_path && part.code === code)
-    return {
-      label: part && part.name !== folder.name ? partLabel(part) : folder.name,
-      folderPath: folder.path,
-      part,
-    }
-  })
-  // Keep older, manually registered pieces accessible, including unused trials.
-  const matched = new Set(choices.map((choice) => choice.part?.id))
-  choices.push(
-    ...parts
-      .filter((part) => !matched.has(part.id))
-      .map((part) => ({
-        label: partLabel(part),
-        part,
-      })),
-  )
+  const choices: PartChoice[] = parts.map((part) => ({
+    label: partLabel(part),
+    part,
+  }))
   const available = choices
     .filter(
       (choice) =>
         !linkedIds.has(choice.part?.id ?? "") &&
-        `${choice.label} ${choice.folderPath ?? ""}`
+        choice.label
           .toLocaleLowerCase()
           .includes(search.trim().toLocaleLowerCase()),
     )
@@ -84,14 +65,7 @@ export function PartActions({
       const targetFeatureId = ensureFeatureId
         ? await ensureFeatureId()
         : feature.id
-      // The endpoint also deduplicates retries after a failed feature link.
-      const partId = choice.folderPath
-        ? (
-            await PartsService.createPartFromFolder({
-              requestBody: { folder_path: choice.folderPath },
-            })
-          ).id
-        : choice.part!.id
+      const partId = choice.part!.id
       await FeaturesService.linkFeaturePart({
         featureId: targetFeatureId,
         partId,
@@ -127,7 +101,6 @@ export function PartActions({
           if (open) {
             setSearch("")
             void queryClient.invalidateQueries({ queryKey: ["parts"] })
-            void queryClient.invalidateQueries({ queryKey: ["part-folders"] })
           }
         }}
       >
@@ -161,24 +134,19 @@ export function PartActions({
             />
           </div>
           <div className="max-h-60 overflow-y-auto">
-            {(folders.isLoading || catalog.isLoading) && (
+            {catalog.isLoading && (
               <output className="block px-2 py-3 text-sm text-muted-foreground">
                 Cargando piezas…
               </output>
             )}
-            {(folders.isError ||
-              catalog.isError ||
-              folders.data?.configured === false) && (
+            {catalog.isError && (
               <output className="block px-2 py-3 text-sm text-muted-foreground">
-                {folders.data?.configured === false
-                  ? "La carpeta principal de piezas no esta configurada."
-                  : "No se ha podido cargar toda la lista de piezas."}
+                No se ha podido cargar la lista de piezas.
                 <Button
                   type="button"
                   variant="link"
                   size="sm"
                   onClick={() => {
-                    void folders.refetch()
                     void catalog.refetch()
                   }}
                 >
@@ -195,10 +163,7 @@ export function PartActions({
                   ? "Solo un administrador puede eliminar piezas del catálogo"
                   : "Eliminar pieza del catálogo"
               return (
-                <div
-                  key={choice.folderPath ?? part!.id}
-                  className="flex items-center gap-1"
-                >
+                <div key={part!.id} className="flex items-center gap-1">
                   <DropdownMenuItem
                     className="min-w-0 flex-1 flex-col items-start gap-0.5"
                     aria-label={choice.label}
@@ -211,9 +176,6 @@ export function PartActions({
                     onSelect={() => void adding.run(choice)}
                   >
                     <span className="flex max-w-full items-center gap-2">
-                      {choice.folderPath && (
-                        <Folder className="size-4 shrink-0" />
-                      )}
                       <span className="truncate">{choice.label}</span>
                     </span>
                     {used && part && (
@@ -248,14 +210,12 @@ export function PartActions({
                 </div>
               )
             })}
-            {available.length === 0 &&
-              folders.isSuccess &&
-              folders.data.configured &&
-              catalog.isSuccess && (
-                <p className="px-2 py-3 text-sm text-muted-foreground">
-                  No hay piezas disponibles para esta busqueda.
-                </p>
-              )}
+            {available.length === 0 && catalog.isSuccess && (
+              <p className="px-2 py-3 text-sm text-muted-foreground">
+                No hay piezas disponibles. Crea una con Nueva pieza en
+                Metrologia.
+              </p>
+            )}
           </div>
         </DropdownMenuContent>
       </DropdownMenu>

@@ -14,6 +14,143 @@ const artifacts = path.join(
 )
 let server, browser, origin
 
+test("new piece uses native selection, editable file proposals and explicit registration", async (t) => {
+  const page = await mount(t, false)
+  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await expect(
+    page.getByRole("menuitem", { name: "2820 Pump Housing", exact: true }),
+  ).toHaveCount(0)
+  await page.keyboard.press("Escape")
+  await page.evaluate(() => window.review.navigate("/setup"))
+  assert.deepEqual(
+    await page.evaluate(() => window.review.refreshRequests ?? []),
+    [],
+  )
+  await page.route("**/__native-picker", (route) =>
+    route.fulfill({
+      json: {
+        path:
+          route.request().postDataJSON().kind === "folder"
+            ? "9001 New housing"
+            : "9001 New housing/alternative.step",
+      },
+    }),
+  )
+  await page.getByRole("button", { name: "Nueva pieza", exact: true }).click()
+  const dialog = page.getByRole("dialog")
+  await dialog
+    .getByRole("button", { name: "Seleccionar carpeta", exact: true })
+    .click()
+  await expect(
+    dialog.getByRole("textbox", { name: "Nombre de la pieza" }),
+  ).toHaveValue("9001 New housing")
+  await expect(dialog.getByText("part.step", { exact: true })).toBeVisible()
+  await expect(dialog.getByText("scan.stl", { exact: true })).toBeVisible()
+  await expect(dialog.getByText("mold.step", { exact: true })).toBeVisible()
+  await expect(dialog.getByText("drawing.pdf", { exact: true })).toBeVisible()
+  await dialog
+    .getByRole("button", { name: "Seleccionar CAD", exact: true })
+    .click()
+  await expect(
+    dialog.getByText("alternative.step", { exact: true }),
+  ).toBeVisible()
+  await page.screenshot({
+    path: path.join(artifacts, "new-piece-proposals.png"),
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  )
+  await page.screenshot({
+    path: path.join(artifacts, "new-piece-proposals-mobile.png"),
+  })
+  assert.equal(
+    await page.evaluate(() => window.review.setupRequests?.length ?? 0),
+    0,
+  )
+  await dialog.getByRole("button", { name: "Crear" }).click()
+  await expect(dialog).toHaveCount(0)
+  assert.equal(
+    await page.evaluate(() => window.review.refreshRequests.length),
+    1,
+  )
+  assert.equal(
+    await page.evaluate(
+      () =>
+        window.review.setupRequests[0].references.find((r) => r.kind === "part")
+          .path,
+    ),
+    "9001 New housing/alternative.step",
+  )
+  await page.evaluate(() => window.review.navigate("/"))
+  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await expect(
+    page.getByRole("menuitem", { name: "9001 New housing", exact: true }),
+  ).toBeVisible()
+})
+
+test("closing the Windows picker restores the form without extra cancellation controls", async (t) => {
+  const page = await mount(t, false)
+  await page.evaluate(() => window.review.navigate("/setup"))
+  let pending
+  await page.route("**/__native-picker", (route) => {
+    pending = route
+  })
+  await page.getByRole("button", { name: "Nueva pieza", exact: true }).click()
+  const dialog = page.getByRole("dialog")
+  const select = dialog.getByRole("button", {
+    name: "Seleccionar carpeta",
+    exact: true,
+  })
+  await select.click()
+  await expect(dialog.getByText("Cargando…")).toBeVisible()
+  await expect(
+    dialog.getByRole("button", { name: "Cancelar selección", exact: true }),
+  ).toHaveCount(0)
+  await pending.fulfill({ json: { path: null } })
+  await expect(select).toBeEnabled()
+  await expect(dialog.getByRole("alert")).toHaveCount(0)
+  await expect(
+    dialog.getByRole("textbox", { name: "Nombre de la pieza" }),
+  ).toHaveCount(0)
+  await page.unroute("**/__native-picker")
+  await page.route("**/__native-picker", (route) =>
+    route.fulfill({ json: { path: "9001 New housing" } }),
+  )
+  await select.click()
+  await expect(
+    dialog.getByRole("textbox", { name: "Nombre de la pieza" }),
+  ).toHaveValue("9001 New housing")
+  assert.equal(
+    await page.evaluate(() => window.review.setupRequests?.length ?? 0),
+    0,
+  )
+})
+
+test("cancelling the native folder picker creates no piece", async (t) => {
+  const page = await mount(t, false)
+  await page.evaluate(() => window.review.navigate("/setup"))
+  await page.route("**/__native-picker", (route) =>
+    route.fulfill({ json: { path: null } }),
+  )
+  await page.getByRole("button", { name: "Nueva pieza", exact: true }).click()
+  await page
+    .getByRole("button", { name: "Seleccionar carpeta", exact: true })
+    .click()
+  await expect(
+    page.getByRole("button", { name: "Seleccionar carpeta", exact: true }),
+  ).toBeEnabled()
+  await expect(
+    page.getByRole("textbox", { name: "Nombre de la pieza" }),
+  ).toHaveCount(0)
+  assert.deepEqual(
+    await page.evaluate(() => window.review.setupRequests ?? []),
+    [],
+  )
+})
+
 before(async () => {
   const [{ createServer }, { default: tailwindcss }] = await Promise.all([
     import("vite"),
@@ -80,6 +217,21 @@ async function mount(t, addParts = true) {
   await expect(page.getByPlaceholder("Nombre del feature")).toHaveValue(
     "Original header",
   )
+  if (addParts)
+    await page.evaluate(async () => {
+      window.review.parts = [
+        ...window.review.feature.parts,
+        ...["2820 Pump Housing", "3051 Pump Housing", "3197 Pot"].map(
+          (name, index) => ({
+            id: `part-${index + 2}`,
+            code: name.split(" ")[0],
+            name,
+            folder_path: name,
+          }),
+        ),
+      ]
+      await window.review.refetchParts()
+    })
   for (let index = 0; addParts && index < 2; index++) {
     await page
       .getByRole("button", { name: "Anadir pieza", exact: true })
@@ -138,6 +290,89 @@ async function cotas(page) {
   ).toBeVisible()
   return card
 }
+
+test("refresh saves only on request and closes without review logs", async (t) => {
+  const page = await mount(t, false)
+  await page.evaluate(() => window.review.navigate("/setup"))
+  await page
+    .getByRole("button", { name: "Actualizar datos", exact: true })
+    .click()
+  const dialog = page.getByRole("dialog")
+  const save = dialog.getByRole("button", { name: "Actualizar", exact: true })
+  await expect(save).toBeEnabled()
+  assert.equal(
+    await page.evaluate(() => window.review.refreshRequests?.length ?? 0),
+    0,
+  )
+  await page.waitForTimeout(200)
+  const before = await dialog.boundingBox()
+  const cancel = dialog.getByRole("button", { name: "Cancelar", exact: true })
+  assert.ok((await save.boundingBox()).x < (await cancel.boundingBox()).x)
+  await page.evaluate(() => {
+    window.review.holdRefresh = true
+  })
+  await save.click()
+  await expect(dialog.getByRole("status")).toHaveText("Cargando\u2026")
+  await expect
+    .poll(async () => (await dialog.boundingBox()).height)
+    .toBe(before.height)
+  await expect
+    .poll(async () => (await dialog.boundingBox()).width)
+    .toBe(before.width)
+  await expect(dialog.getByText("Archivos guardados.")).toHaveCount(0)
+  await page.evaluate(() => window.review.releaseRefresh())
+  await expect(dialog).toHaveCount(0)
+  assert.equal(
+    await page.evaluate(() => window.review.refreshRequests.length),
+    1,
+  )
+})
+
+test("cancelling a prepared piece discards choices and selection keeps fixed dimensions", async (t) => {
+  const page = await mount(t, false)
+  await page.evaluate(() => window.review.navigate("/setup"))
+  let pending
+  await page.route("**/__native-picker", (route) => {
+    pending = route
+  })
+  const open = page.getByRole("button", { name: "Nueva pieza", exact: true })
+  await open.click()
+  const dialog = page.getByRole("dialog")
+  await expect(dialog).toBeVisible()
+  await page.waitForTimeout(200)
+  const initial = await dialog.boundingBox()
+  await dialog
+    .getByRole("button", { name: "Seleccionar carpeta", exact: true })
+    .click()
+  const loading = dialog.getByRole("status")
+  await expect(loading).toBeVisible()
+  const loadingBox = await loading.boundingBox()
+  await pending.fulfill({ json: { path: "9001 New housing" } })
+  await expect(dialog.getByRole("textbox")).toHaveValue("9001 New housing")
+  assert.deepEqual(await dialog.boundingBox(), initial)
+  await expect(
+    dialog.getByRole("button", { name: "Elegir otra carpeta" }),
+  ).toHaveCount(0)
+  await dialog
+    .getByRole("button", { name: "Seleccionar CAD", exact: true })
+    .click()
+  await expect(loading).toBeVisible()
+  assert.deepEqual(await loading.boundingBox(), loadingBox)
+  assert.deepEqual(await dialog.boundingBox(), initial)
+  await pending.fulfill({ json: { path: null } })
+  await dialog.getByRole("textbox").fill("Discard this name")
+  await dialog.getByRole("button", { name: "Cancelar", exact: true }).click()
+  await expect(dialog).toHaveCount(0)
+  assert.equal(
+    await page.evaluate(() => window.review.setupRequests?.length ?? 0),
+    0,
+  )
+  await open.click()
+  await expect(dialog.getByRole("textbox")).toHaveCount(0)
+  await expect(
+    dialog.getByRole("button", { name: "Seleccionar carpeta", exact: true }),
+  ).toBeEnabled()
+})
 
 test("cotas use the file row style, add inline fields and wrap only when needed", async (t) => {
   const page = await mount(t, false)
@@ -393,25 +628,13 @@ test("new feature exposes every section and the file picker omits redundant meta
   await page
     .getByRole("button", { name: "Anadir fichero", exact: true })
     .click()
+  await page.route("**/__native-picker", (route) =>
+    route.fulfill({ json: { path: "drawings/drawing.pdf" } }),
+  )
   await page
     .getByRole("button", { name: "Vincular archivo existente", exact: true })
     .click()
-  await page.getByRole("button", { name: /drawing.pdf/ }).click()
-  const dialog = page.getByRole("dialog")
-  await expect(
-    dialog.getByRole("button", { name: /drawing.pdf/ }),
-  ).toHaveAttribute("aria-pressed", "true")
-  await expect(dialog.getByText(/^Seleccionado:/)).toHaveCount(0)
-  await expect(dialog.getByRole("textbox")).toHaveCount(0)
-  await expect(dialog.getByRole("combobox")).toHaveCount(0)
-  await expect(
-    dialog.getByText(/Selecciona un archivo de la carpeta compartida/),
-  ).toHaveCount(0)
-  await dialog.screenshot({
-    path: path.join(artifacts, "file-picker.png"),
-    animations: "disabled",
-  })
-  await dialog.getByRole("button", { name: "Vincular", exact: true }).click()
+  await expect(page.getByRole("dialog")).toHaveCount(0)
   await expect(page.getByPlaceholder("Nombre del fichero")).toHaveValue(
     "drawing.pdf",
   )

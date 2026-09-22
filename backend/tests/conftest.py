@@ -7,6 +7,7 @@ from sqlmodel import Session, delete
 from app.core.config import settings
 from app.core.db import engine, init_db
 from app.main import app
+from app.measurement_models import MeasurementImport
 from app.models import Feature, Item, Part, StoredFile, User
 from tests.utils.user import authentication_token_from_email
 from tests.utils.utils import get_superuser_token_headers
@@ -32,6 +33,7 @@ def db(tmp_path_factory: pytest.TempPathFactory) -> Generator[Session, None, Non
         statement = delete(Item)
         session.execute(statement)
         # Las notas, los adjuntos y los enlaces a piezas caen por CASCADE
+        session.execute(delete(MeasurementImport))
         statement = delete(Feature)
         session.execute(statement)
         statement = delete(Part)

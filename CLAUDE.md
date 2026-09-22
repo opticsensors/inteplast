@@ -21,7 +21,19 @@ cliente y las notas de Obsidian (ver rutas abajo).
 
 ## Objetivo del proyecto
 
-Construir una **base de datos interactiva de conocimiento de diseño de piezas inyectadas**.
+El proyecto tiene **tres etapas**, aclaradas por Eduard el 22/09/2026:
+
+1. **Transferencia de conocimiento mediante una GUI (actual):** facilitar que los trabajadores
+   compartan y consulten la experiencia de diseño de piezas inyectadas.
+2. **Reutilización de features en SolidWorks (futura):** extraer o crear features, insertarlos
+   o arrastrarlos sobre otra pieza y modificarlos, con adaptación automática a la geometría
+   cuando sea viable y con reglas de diseño por definir y validar.
+3. **Predicción de contracciones (futura):** utilizar los resultados históricos de las piezas
+   inyectadas para desarrollar predicciones; datos, método y validación por concretar.
+
+Alcance y antecedentes en [docs/hoja-de-ruta.md](docs/hoja-de-ruta.md).
+
+La primera etapa se materializa en una **base de datos interactiva de conocimiento**.
 El usuario introduce el **ID de un feature** (p. ej. *Bolt Eye*) y el sistema devuelve:
 **warnings** (qué vigilar al diseñarlo), **lessons learned** (qué se hizo en el molde cuando
 salió mal), **cotas**, y **piezas/moldes de referencia** con sus CAD descargables.

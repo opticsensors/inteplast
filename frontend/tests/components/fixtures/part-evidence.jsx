@@ -8,8 +8,14 @@ import {
   RouterProvider,
 } from "@tanstack/react-router"
 import { createRoot } from "react-dom/client"
-import { EvidenceService, PartsService } from "@/client"
+import {
+  CatalogService,
+  EvidenceService,
+  FeaturesService,
+  PartsService,
+} from "@/client"
 import { PartDataImports } from "../../../src/components/Admin/PartDataImports"
+import { Route as Catalog } from "../../../src/routes/_layout/features"
 import { Route as Parts } from "../../../src/routes/_layout/parts"
 import { Route as Detail } from "../../../src/routes/_layout/parts_.$partId"
 import { Route as File } from "../../../src/routes/_layout/parts_.$partId_.fichero.$fileId"
@@ -414,33 +420,93 @@ EvidenceService.readMetrology = async ({
     features: foundFeatures,
   }
 }
-EvidenceService.readPartEvidence = async ({ partId }) => ({
-  part: catalog.find((item) => item.part.id === partId).part,
-  features: catalog.find((item) => item.part.id === partId).features,
-  characteristics:
-    partId === part.id
-      ? characteristics
-      : [characteristic("N170", secondPart.id, "04")],
-  study: { state: "ready", payload: study },
-  import_available: true,
-  documents: [
-    {
-      id: "linked-drawing",
-      filename: "3212-07.pdf",
-      content_type: "application/pdf",
-      version: "v1",
-      source: "upload",
+EvidenceService.readPartEvidence = async ({ partId, revision, snapshotId }) => {
+  window.review.evidenceRequests ??= []
+  window.review.evidenceRequests.push({ partId, revision, snapshotId })
+  return {
+    part: catalog.find((item) => item.part.id === partId).part,
+    features: catalog.find((item) => item.part.id === partId).features,
+    characteristics:
+      partId === part.id
+        ? characteristics
+        : [characteristic("N170", secondPart.id, "04")],
+    study: {
+      state: "ready",
+      payload: {
+        ...study,
+        measurement_revision: window.review.measurementRevisions?.includes(
+          revision,
+        )
+          ? revision
+          : study.measurement_revision,
+      },
     },
-    {
-      id: "drawing",
-      filename: "DRW_3212.pdf",
-      content_type: "application/pdf",
-      version: "v1",
-      source: "upload",
-    },
-  ],
+    measurement_revisions: window.review.measurementRevisions ?? [],
+    import_available: true,
+    documents: [
+      {
+        id: "linked-drawing",
+        filename: "3212-07.pdf",
+        content_type: "application/pdf",
+        version: "v1",
+        source: "upload",
+      },
+      {
+        id: "drawing",
+        filename: "DRW_3212.pdf",
+        content_type: "application/pdf",
+        version: "v1",
+        source: "upload",
+      },
+    ],
+  }
+}
+PartsService.readParts = async () => ({ data: [part, secondPart], count: 2 })
+FeaturesService.readFeatureFilters = async () => ({
+  ...(await EvidenceService.readMetrologyFilters()),
+  categories: ["hole", "rib"],
+  tags: ["critical", "stiffness", "sealing"],
 })
-PartsService.readParts = async () => ({ data: [part], count: 1 })
+CatalogService.readPartDetail = async ({ partId }) => {
+  const item = catalog.find((item) => item.part.id === partId)
+  return {
+    part: {
+      ...item.part,
+      characteristic_count:
+        item.part.id === part.id ? characteristics.length : 1,
+      feature_count: item.features.length,
+    },
+    features: item.features,
+    references: [
+      {
+        kind: "drawing",
+        file: {
+          id: "drawing",
+          filename: "DRW_3212.pdf",
+          content_type: "application/pdf",
+          version: "v1",
+          source: "upload",
+        },
+      },
+    ],
+  }
+}
+CatalogService.searchCatalog = async ({ kind, featureId }) => {
+  const parts = catalog
+    .filter(
+      (item) =>
+        !featureId || item.features.some((feature) => feature.id === featureId),
+    )
+    .map((item) => item.part)
+  return {
+    parts,
+    features: kind === "part" ? [] : features,
+    cotas: [],
+    part_count: parts.length,
+    feature_count: kind === "part" ? 0 : features.length,
+    cota_count: 0,
+  }
+}
 const root = createRootRoute({ component: () => <Outlet /> })
 const layout = createRoute({
   id: "_layout",
@@ -448,6 +514,7 @@ const layout = createRoute({
   component: () => <Outlet />,
 })
 const routes = [
+  [Catalog, "/features", "/features"],
   [Parts, "/parts", "/parts"],
   [Detail, "/parts_/$partId", "/parts/$partId"],
   [File, "/parts_/$partId_/fichero/$fileId", "/parts/$partId/fichero/$fileId"],
@@ -475,11 +542,14 @@ const router = createRouter({
   }),
 })
 window.review.location = () => router.state.location
+window.review.navigate = (options) => router.navigate(options)
 window.review.back = () => router.history.back()
 window.review.forward = () => router.history.forward()
 const client = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 })
+window.review.refetchEvidence = () =>
+  client.invalidateQueries({ queryKey: ["part-evidence"] })
 createRoot(document.getElementById("root")).render(
   <QueryClientProvider client={client}>
     <RouterProvider router={router} />

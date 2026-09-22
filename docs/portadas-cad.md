@@ -1,4 +1,16 @@
-# Portadas de features desde el CAD
+# Portadas de features y piezas desde el CAD
+
+## Piezas (22/09/2026)
+
+El catálogo y `/parts/{id}` comparten una captura PNG del STEP completo, sin selección
+de superficies. Se reutilizan el lector STEP en worker, los controles, `FeatureThumbnail`,
+`CoverButton`, `CoverDialog` y `StepCoverCanvas`. Las capturas nuevas se calculan una a una
+y se guardan para que volver al catálogo no vuelva a cargar todos los STEP.
+
+`PUT /parts/{id}/cover` comprueba el CAD actual, su versión y SHA-256. La imagen derivada
+se asocia a la pieza; cambiar el CAD invalida la portada anterior. El CAD se obtiene de
+las referencias de la pieza o, para registros antiguos, de sus adjuntos en Features.
+Pulsar la portada abre el 3D interactivo completo, con giro, zoom y encuadre.
 
 ## Uso
 

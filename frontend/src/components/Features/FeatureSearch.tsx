@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query"
 import { SlidersHorizontal } from "lucide-react"
-import { useId, useState } from "react"
+import { type ReactNode, useId, useState } from "react"
 
-import type { FeatureCategory } from "@/client"
+import { EvidenceService, type FeatureCategory } from "@/client"
 import { SearchField } from "@/components/Common/SearchField"
 import { SearchSelect } from "@/components/Common/SearchSelect"
 import { Button } from "@/components/ui/button"
@@ -37,6 +37,7 @@ export const isSearchActive = (state: FeatureSearchState) =>
  * busqueda se puede compartir o guardar en favoritos.
  */
 export interface FeatureSearchParams {
+  kind?: "all" | "part" | "feature"
   q?: string
   category?: FeatureCategory
   tag?: string
@@ -63,6 +64,10 @@ export const validateFeatureSearch = (
   const category = text(search.category)
 
   return {
+    kind:
+      search.kind === "part" || search.kind === "feature"
+        ? search.kind
+        : undefined,
     q: text(search.q),
     category: CATEGORIES.includes(category as FeatureCategory)
       ? (category as FeatureCategory)
@@ -97,15 +102,29 @@ export const toSearchParams = (
 interface FeatureSearchProps {
   value: FeatureSearchState
   onChange: (value: FeatureSearchState) => void
+  catalog?: boolean
+  children?: ReactNode
 }
 
 /** Buscador global + filtros por pieza, feature, categoria y tag. */
-export function FeatureSearch({ value, onChange }: FeatureSearchProps) {
+export function FeatureSearch({
+  value,
+  onChange,
+  catalog = false,
+  children,
+}: FeatureSearchProps) {
   const [more, setMore] = useState(Boolean(value.category || value.tag))
   const moreId = useId()
   const active = Number(Boolean(value.category)) + Number(Boolean(value.tag))
   // Solo se ofrecen los valores que existen en la base de datos
-  const { data: filters } = useQuery(featureFiltersQueryOptions())
+  const { data: featureFilters } = useQuery(featureFiltersQueryOptions())
+  const all = useQuery({
+    queryKey: ["metrology-filters"],
+    queryFn: () => EvidenceService.readMetrologyFilters(),
+    enabled: catalog,
+  })
+  const filters =
+    catalog && all.data ? { ...featureFilters, ...all.data } : featureFilters
 
   const features = filters?.features ?? []
   const availableFeatures = features.filter(
@@ -139,10 +158,15 @@ export function FeatureSearch({ value, onChange }: FeatureSearchProps) {
       <SearchField
         value={value.q}
         onValueChange={(q) => set({ q })}
-        placeholder="Feature / pieza / codigo / tag..."
+        placeholder={
+          catalog
+            ? "Buscar piezas, features o cotas…"
+            : "Feature / pieza / codigo / tag..."
+        }
         active={isSearchActive(value)}
         onClear={() => onChange(EMPTY_SEARCH)}
       />
+      {children}
 
       <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
         <SearchSelect

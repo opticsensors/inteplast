@@ -45,7 +45,7 @@ export function CadCoverEditor({
   const saved = useSaved && initial?.asset_id === assetId ? initial : null
   const save = usePendingTask(async (_: undefined) => {
     if (!asset?.file || !asset.part || !controls.current)
-      throw new Error("Selecciona una pieza CAD.")
+      throw new Error("Selecciona un CAD.")
     setBusy(true)
     setError("")
     try {
@@ -86,7 +86,7 @@ export function CadCoverEditor({
   return (
     <div className={COVER_EDITOR_ROWS}>
       <select
-        aria-label="Pieza CAD para la portada"
+        aria-label="CAD para la portada"
         className="h-9 w-full min-w-0 rounded-md border bg-background px-2 text-sm"
         value={asset?.id ?? ""}
         disabled={save.pending || !assets.length}
@@ -153,9 +153,9 @@ export function CadCoverEditor({
           <div className="flex size-full flex-col items-center justify-center gap-3 rounded-lg border bg-muted p-4 text-center">
             <p role="alert" className="text-sm">
               {assets.length
-                ? "Selecciona una pieza CAD."
+                ? "Selecciona un CAD."
                 : feature
-                  ? "Primero sube o vincula un STEP de tipo Pieza CAD en Piezas ejemplo."
+                  ? "Vincula un STEP de tipo CAD en Piezas ejemplo."
                   : "Añade el STEP de la pieza en Piezas ejemplo."}
             </p>
           </div>

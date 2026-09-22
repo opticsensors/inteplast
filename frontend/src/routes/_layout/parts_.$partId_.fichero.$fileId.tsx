@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query"
-import { createFileRoute, Navigate } from "@tanstack/react-router"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { ExternalLink } from "lucide-react"
 import { lazy, Suspense } from "react"
 import { EvidenceService } from "@/client"
 import { FileLink } from "@/components/Common/FileLink"
 import { fileAction, usesWebPreview } from "@/components/Features/viewers"
+import { consultationScope } from "@/components/Parts/consultationEntries"
 import { validatePartSearch } from "@/components/Parts/measurementSelection"
 import { Button } from "@/components/ui/button"
 import { fileErrorMessage, useFileAccess } from "@/hooks/useFileAccess"
@@ -12,18 +14,26 @@ const ModelViewer = lazy(() => import("@/components/Features/ModelViewer"))
 const WebModelViewer = lazy(
   () => import("@/components/Features/WebModelViewer"),
 )
+const DrawingSearch = lazy(() => import("@/components/Features/DrawingSearch"))
 export const Route = createFileRoute(
   "/_layout/parts_/$partId_/fichero/$fileId",
 )({
   component: PartFile,
   validateSearch: validatePartSearch,
+  head: () => ({ meta: [{ title: "Fichero - INTEPLAST" }] }),
 })
 function PartFile() {
   const { partId, fileId } = Route.useParams()
   const search = Route.useSearch()
+  const navigate = useNavigate()
   const result = useQuery({
-    queryKey: ["part-evidence", partId],
-    queryFn: () => EvidenceService.readPartEvidence({ partId }),
+    queryKey: ["part-evidence", partId, search.revision, search.snapshot],
+    queryFn: () =>
+      EvidenceService.readPartEvidence({
+        partId,
+        revision: search.revision,
+        snapshotId: search.snapshot,
+      }),
   })
   const file = result.data?.documents.find((f) => f.id === fileId)
   const access = useFileAccess(file?.id)
@@ -31,32 +41,32 @@ function PartFile() {
   if (result.error) return <p role="alert">{fileErrorMessage(result.error)}</p>
   if (!file) return <p>Documento no encontrado en esta pieza.</p>
   const { viewer, action } = fileAction(file)
-  if (viewer === "pdf")
-    return (
-      <Navigate
-        to="/parts/$partId"
-        params={{ partId }}
-        search={{
-          ...search,
-          plano: true,
-          drawingQ: search.drawingQ ?? search.cota,
-          drawingFile: fileId,
-        }}
-        replace
-      />
-    )
+  const scope = consultationScope(result.data?.features ?? [], search)
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">
         {result.data?.part.code} · {result.data?.part.name}
       </p>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="break-all text-lg font-semibold">{file.filename}</h1>
-        <Button asChild size="sm" variant="outline">
-          <FileLink fileId={file.id} downloadFile>
-            Descargar original
-          </FileLink>
-        </Button>
+        <h1 className="break-words text-2xl font-bold tracking-tight">
+          {file.filename}
+        </h1>
+        {viewer === "pdf" ? (
+          access.url && (
+            <Button asChild size="sm" variant="outline">
+              <a href={access.url} target="_blank" rel="noreferrer">
+                <ExternalLink className="mr-2" />
+                Abrir en pestaña
+              </a>
+            </Button>
+          )
+        ) : (
+          <Button asChild size="sm" variant="outline">
+            <FileLink fileId={file.id} downloadFile>
+              Descargar original
+            </FileLink>
+          </Button>
+        )}
       </div>
       <Suspense
         fallback={
@@ -64,7 +74,28 @@ function PartFile() {
         }
       >
         {action === "view" ? (
-          viewer === "image" ? (
+          viewer === "pdf" ? (
+            <DrawingSearch
+              key={`${file.id}:${file.version}`}
+              file={file}
+              title={file.filename}
+              initialQuery={search.drawingQ ?? search.cota}
+              onQueryChange={(drawingQ) =>
+                void navigate({
+                  to: "/parts/$partId/fichero/$fileId",
+                  params: { partId, fileId },
+                  search: { ...search, drawingQ },
+                  replace: true,
+                  resetScroll: false,
+                })
+              }
+              allowedCotas={
+                scope === undefined
+                  ? undefined
+                  : (scope?.characteristics ?? []).map((cota) => cota.code)
+              }
+            />
+          ) : viewer === "image" ? (
             <img
               src={access.url}
               alt={file.filename}

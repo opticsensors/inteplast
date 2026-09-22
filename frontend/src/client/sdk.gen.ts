@@ -3,7 +3,86 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { EvidenceReadMetrologyFiltersResponse, EvidenceReadMetrologyData, EvidenceReadMetrologyResponse, EvidenceReadPartEvidenceData, EvidenceReadPartEvidenceResponse, EvidenceImportPartEvidenceData, EvidenceImportPartEvidenceResponse, EvidenceReadFeatureEvidenceData, EvidenceReadFeatureEvidenceResponse, EvidenceAssignCharacteristicData, EvidenceAssignCharacteristicResponse, EvidenceUnassignCharacteristicData, EvidenceUnassignCharacteristicResponse, EvidenceReadDrawingIndexData, EvidenceReadDrawingIndexResponse, EvidenceIndexDrawingData, EvidenceIndexDrawingResponse, EvidenceReviewDrawingLocationData, EvidenceReviewDrawingLocationResponse, FeaturesReadFeaturesData, FeaturesReadFeaturesResponse, FeaturesCreateFeatureData, FeaturesCreateFeatureResponse, FeaturesReadFeatureFiltersResponse, FeaturesReadFeatureData, FeaturesReadFeatureResponse, FeaturesUpdateFeatureData, FeaturesUpdateFeatureResponse, FeaturesDeleteFeatureData, FeaturesDeleteFeatureResponse, FeaturesReorderFeatureNotesData, FeaturesReorderFeatureNotesResponse, FeaturesReorderFeatureAssetsData, FeaturesReorderFeatureAssetsResponse, FeaturesCreateFeatureNoteData, FeaturesCreateFeatureNoteResponse, FeaturesUpdateFeatureNoteData, FeaturesUpdateFeatureNoteResponse, FeaturesDeleteFeatureNoteData, FeaturesDeleteFeatureNoteResponse, FeaturesReorderFeaturePartsData, FeaturesReorderFeaturePartsResponse, FeaturesLinkFeaturePartData, FeaturesLinkFeaturePartResponse, FeaturesUnlinkFeaturePartData, FeaturesUnlinkFeaturePartResponse, FeaturesCreateFeatureAssetData, FeaturesCreateFeatureAssetResponse, FeaturesUpdateFeatureAssetData, FeaturesUpdateFeatureAssetResponse, FeaturesDeleteFeatureAssetData, FeaturesDeleteFeatureAssetResponse, FilesListSourceData, FilesListSourceResponse, FilesReferenceFileData, FilesReferenceFileResponse, FilesRelinkFileData, FilesRelinkFileResponse, FilesFileStatusData, FilesFileStatusResponse, FilesUploadFileData, FilesUploadFileResponse, FilesCreateFileAccessUrlData, FilesCreateFileAccessUrlResponse, FilesPreparePreviewData, FilesPreparePreviewResponse, FilesReadPreviewData, FilesReadPreviewResponse, FilesReadFileData, FilesReadFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PartsReadPartsData, PartsReadPartsResponse, PartsCreatePartData, PartsCreatePartResponse, PartsCreatePartFromFolderData, PartsCreatePartFromFolderResponse, PartsUpdatePartData, PartsUpdatePartResponse, PartsDeletePartData, PartsDeletePartResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { CatalogSearchCatalogData, CatalogSearchCatalogResponse, CatalogReadPartDetailData, CatalogReadPartDetailResponse, CatalogSavePartCoverData, CatalogSavePartCoverResponse, EvidenceReadMetrologyFiltersResponse, EvidenceReadMetrologyData, EvidenceReadMetrologyResponse, EvidenceReadPartEvidenceData, EvidenceReadPartEvidenceResponse, EvidenceImportPartEvidenceData, EvidenceImportPartEvidenceResponse, EvidenceReadFeatureEvidenceData, EvidenceReadFeatureEvidenceResponse, EvidenceAssignCharacteristicData, EvidenceAssignCharacteristicResponse, EvidenceUnassignCharacteristicData, EvidenceUnassignCharacteristicResponse, EvidenceReadDrawingIndexData, EvidenceReadDrawingIndexResponse, EvidenceIndexDrawingData, EvidenceIndexDrawingResponse, EvidenceReviewDrawingLocationData, EvidenceReviewDrawingLocationResponse, EvidencePreviewMeasurementsData, EvidencePreviewMeasurementsResponse, EvidenceImportMeasurementsData, EvidenceImportMeasurementsResponse, EvidenceMeasurementHistoryData, EvidenceMeasurementHistoryResponse, FeaturesReadFeaturesData, FeaturesReadFeaturesResponse, FeaturesCreateFeatureData, FeaturesCreateFeatureResponse, FeaturesReadFeatureFiltersResponse, FeaturesReadFeatureData, FeaturesReadFeatureResponse, FeaturesUpdateFeatureData, FeaturesUpdateFeatureResponse, FeaturesDeleteFeatureData, FeaturesDeleteFeatureResponse, FeaturesReorderFeatureNotesData, FeaturesReorderFeatureNotesResponse, FeaturesReorderFeatureAssetsData, FeaturesReorderFeatureAssetsResponse, FeaturesCreateFeatureNoteData, FeaturesCreateFeatureNoteResponse, FeaturesUpdateFeatureNoteData, FeaturesUpdateFeatureNoteResponse, FeaturesDeleteFeatureNoteData, FeaturesDeleteFeatureNoteResponse, FeaturesReorderFeaturePartsData, FeaturesReorderFeaturePartsResponse, FeaturesLinkFeaturePartData, FeaturesLinkFeaturePartResponse, FeaturesUnlinkFeaturePartData, FeaturesUnlinkFeaturePartResponse, FeaturesCreateFeatureAssetData, FeaturesCreateFeatureAssetResponse, FeaturesUpdateFeatureAssetData, FeaturesUpdateFeatureAssetResponse, FeaturesDeleteFeatureAssetData, FeaturesDeleteFeatureAssetResponse, FilesListSourceData, FilesListSourceResponse, FilesReferenceFileData, FilesReferenceFileResponse, FilesRelinkFileData, FilesRelinkFileResponse, FilesFileStatusData, FilesFileStatusResponse, FilesUploadFileData, FilesUploadFileResponse, FilesCreateFileAccessUrlData, FilesCreateFileAccessUrlResponse, FilesPreparePreviewData, FilesPreparePreviewResponse, FilesReadPreviewData, FilesReadPreviewResponse, FilesReadFileData, FilesReadFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PartsDiscoverPartFolderData, PartsDiscoverPartFolderResponse, PartsSetupPartData, PartsSetupPartResponse, PartsRefreshPartDataData, PartsRefreshPartDataResponse, PartsReadPartsData, PartsReadPartsResponse, PartsCreatePartData, PartsCreatePartResponse, PartsCreatePartFromFolderData, PartsCreatePartFromFolderResponse, PartsUpdatePartData, PartsUpdatePartResponse, PartsDeletePartData, PartsDeletePartResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+
+export class CatalogService {
+    /**
+     * Search Catalog
+     * @param data The data for the request.
+     * @param data.q
+     * @param data.kind
+     * @param data.partId
+     * @param data.featureId
+     * @param data.category
+     * @param data.tag
+     * @param data.skip
+     * @param data.limit
+     * @returns CatalogPublic Successful Response
+     * @throws ApiError
+     */
+    public static searchCatalog(data: CatalogSearchCatalogData = {}): CancelablePromise<CatalogSearchCatalogResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/catalog',
+            query: {
+                q: data.q,
+                kind: data.kind,
+                part_id: data.partId,
+                feature_id: data.featureId,
+                category: data.category,
+                tag: data.tag,
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Part Detail
+     * @param data The data for the request.
+     * @param data.partId
+     * @returns PartDetailPublic Successful Response
+     * @throws ApiError
+     */
+    public static readPartDetail(data: CatalogReadPartDetailData): CancelablePromise<CatalogReadPartDetailResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/parts/{part_id}/detail',
+            path: {
+                part_id: data.partId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Save Part Cover
+     * @param data The data for the request.
+     * @param data.partId
+     * @param data.requestBody
+     * @returns FilePublic Successful Response
+     * @throws ApiError
+     */
+    public static savePartCover(data: CatalogSavePartCoverData): CancelablePromise<CatalogSavePartCoverResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/parts/{part_id}/cover',
+            path: {
+                part_id: data.partId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
 
 export class EvidenceService {
     /**
@@ -17,7 +96,7 @@ export class EvidenceService {
             url: '/api/v1/evidence/metrology/filters'
         });
     }
-
+    
     /**
      * Read Metrology
      * @param data The data for the request.
@@ -43,11 +122,13 @@ export class EvidenceService {
             }
         });
     }
-
+    
     /**
      * Read Part Evidence
      * @param data The data for the request.
      * @param data.partId
+     * @param data.revision
+     * @param data.snapshotId
      * @returns PartEvidencePublic Successful Response
      * @throws ApiError
      */
@@ -58,12 +139,16 @@ export class EvidenceService {
             path: {
                 part_id: data.partId
             },
+            query: {
+                revision: data.revision,
+                snapshot_id: data.snapshotId
+            },
             errors: {
                 422: 'Validation Error'
             }
         });
     }
-
+    
     /**
      * Import Part Evidence
      * @param data The data for the request.
@@ -83,7 +168,7 @@ export class EvidenceService {
             }
         });
     }
-
+    
     /**
      * Read Feature Evidence
      * @param data The data for the request.
@@ -105,7 +190,7 @@ export class EvidenceService {
             }
         });
     }
-
+    
     /**
      * Assign Characteristic
      * @param data The data for the request.
@@ -130,7 +215,7 @@ export class EvidenceService {
             }
         });
     }
-
+    
     /**
      * Unassign Characteristic
      * @param data The data for the request.
@@ -152,7 +237,7 @@ export class EvidenceService {
             }
         });
     }
-
+    
     /**
      * Read Drawing Index
      * @param data The data for the request.
@@ -172,7 +257,7 @@ export class EvidenceService {
             }
         });
     }
-
+    
     /**
      * Index Drawing
      * @param data The data for the request.
@@ -192,7 +277,7 @@ export class EvidenceService {
             }
         });
     }
-
+    
     /**
      * Review Drawing Location
      * @param data The data for the request.
@@ -210,6 +295,72 @@ export class EvidenceService {
             },
             body: data.requestBody,
             mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Preview Measurements
+     * @param data The data for the request.
+     * @param data.partId
+     * @param data.requestBody
+     * @returns MeasurementPreview Successful Response
+     * @throws ApiError
+     */
+    public static previewMeasurements(data: EvidencePreviewMeasurementsData): CancelablePromise<EvidencePreviewMeasurementsResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/evidence/parts/{part_id}/measurements/preview',
+            path: {
+                part_id: data.partId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Import Measurements
+     * @param data The data for the request.
+     * @param data.partId
+     * @param data.requestBody
+     * @returns MeasurementCommitResult Successful Response
+     * @throws ApiError
+     */
+    public static importMeasurements(data: EvidenceImportMeasurementsData): CancelablePromise<EvidenceImportMeasurementsResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/evidence/parts/{part_id}/measurements/import',
+            path: {
+                part_id: data.partId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Measurement History
+     * @param data The data for the request.
+     * @param data.partId
+     * @returns MeasurementImportSummary Successful Response
+     * @throws ApiError
+     */
+    public static measurementHistory(data: EvidenceMeasurementHistoryData): CancelablePromise<EvidenceMeasurementHistoryResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/evidence/parts/{part_id}/measurements/history',
+            path: {
+                part_id: data.partId
+            },
             errors: {
                 422: 'Validation Error'
             }
@@ -254,7 +405,7 @@ export class FeaturesService {
             }
         });
     }
-
+    
     /**
      * Create Feature
      * Crear un feature.
@@ -274,7 +425,7 @@ export class FeaturesService {
             }
         });
     }
-
+    
     /**
      * Read Feature Filters
      * Valores disponibles para los desplegables de filtrado del dashboard.
@@ -287,7 +438,7 @@ export class FeaturesService {
             url: '/api/v1/features/filters'
         });
     }
-
+    
     /**
      * Read Feature
      * Ficha completa de un feature: warnings, lessons learned y piezas ejemplo.
@@ -308,7 +459,7 @@ export class FeaturesService {
             }
         });
     }
-
+    
     /**
      * Update Feature
      * Editar un feature. Cualquier usuario autenticado puede hacerlo: la base de
@@ -333,7 +484,7 @@ export class FeaturesService {
             }
         });
     }
-
+    
     /**
      * Delete Feature
      * Borrar un feature con sus warnings, lessons learned y piezas ejemplo.
@@ -355,7 +506,7 @@ export class FeaturesService {
             }
         });
     }
-
+    
     /**
      * Reorder Feature Notes
      * @param data The data for the request.
@@ -378,7 +529,7 @@ export class FeaturesService {
             }
         });
     }
-
+    
     /**
      * Reorder Feature Assets
      * @param data The data for the request.
@@ -401,7 +552,7 @@ export class FeaturesService {
             }
         });
     }
-
+    
     /**
      * Create Feature Note
      * Anadir una advertencia (`kind=warning`) o leccion aprendida (`kind=lesson`).
@@ -425,7 +576,7 @@ export class FeaturesService {
             }
         });
     }
-
+    
     /**
      * Update Feature Note
      * Editar una advertencia o leccion aprendida.
@@ -449,7 +600,7 @@ export class FeaturesService {
             }
         });
     }
-
+    
     /**
      * Delete Feature Note
      * Borrar una advertencia o leccion aprendida.
@@ -470,7 +621,7 @@ export class FeaturesService {
             }
         });
     }
-
+    
     /**
      * Reorder Feature Parts
      * @param data The data for the request.
@@ -493,7 +644,7 @@ export class FeaturesService {
             }
         });
     }
-
+    
     /**
      * Link Feature Part
      * Declarar que el feature existe en esa pieza, tenga ficheros o no.
@@ -519,7 +670,7 @@ export class FeaturesService {
             }
         });
     }
-
+    
     /**
      * Unlink Feature Part
      * Quitar la tarjeta y sus adjuntos de este feature. La pieza compartida y
@@ -543,7 +694,7 @@ export class FeaturesService {
             }
         });
     }
-
+    
     /**
      * Create Feature Asset
      * Adjuntar el fichero de una pieza. El fichero se sube antes por `/files/` y
@@ -568,7 +719,7 @@ export class FeaturesService {
             }
         });
     }
-
+    
     /**
      * Update Feature Asset
      * Editar un fichero adjunto.
@@ -592,7 +743,7 @@ export class FeaturesService {
             }
         });
     }
-
+    
     /**
      * Delete Feature Asset
      * Quitar un fichero adjunto del feature. El fichero subido no se borra.
@@ -642,7 +793,7 @@ export class FilesService {
             }
         });
     }
-
+    
     /**
      * Reference File
      * Register a local original once. Never copy or modify its bytes.
@@ -662,7 +813,7 @@ export class FilesService {
             }
         });
     }
-
+    
     /**
      * Relink File
      * Explicitly replace a location/revision while preserving the document UUID.
@@ -686,7 +837,7 @@ export class FilesService {
             }
         });
     }
-
+    
     /**
      * File Status
      * @param data The data for the request.
@@ -706,7 +857,7 @@ export class FilesService {
             }
         });
     }
-
+    
     /**
      * Upload File
      * Subir un fichero (imagen de feature, CAD, plano PDF...).
@@ -730,7 +881,7 @@ export class FilesService {
             }
         });
     }
-
+    
     /**
      * Create File Access Url
      * Issue a short-lived link for an image, viewer or browser download.
@@ -755,7 +906,7 @@ export class FilesService {
             }
         });
     }
-
+    
     /**
      * Prepare Preview
      * Idempotently queue a web GLB, or return a signed link to its cached result.
@@ -780,7 +931,7 @@ export class FilesService {
             }
         });
     }
-
+    
     /**
      * Read Preview
      * @param data The data for the request.
@@ -804,7 +955,7 @@ export class FilesService {
             }
         });
     }
-
+    
     /**
      * Read File
      * Servir un fichero por id.
@@ -833,7 +984,7 @@ export class FilesService {
             }
         });
     }
-
+    
     /**
      * Delete File
      * Borrar un fichero. Las referencias desde features y piezas ejemplo quedan a
@@ -880,7 +1031,7 @@ export class ItemsService {
             }
         });
     }
-
+    
     /**
      * Create Item
      * Create new item.
@@ -900,7 +1051,7 @@ export class ItemsService {
             }
         });
     }
-
+    
     /**
      * Read Item
      * Get item by ID.
@@ -921,7 +1072,7 @@ export class ItemsService {
             }
         });
     }
-
+    
     /**
      * Update Item
      * Update an item.
@@ -945,7 +1096,7 @@ export class ItemsService {
             }
         });
     }
-
+    
     /**
      * Delete Item
      * Delete an item.
@@ -988,7 +1139,7 @@ export class LoginService {
             }
         });
     }
-
+    
     /**
      * Test Token
      * Test access token
@@ -1001,7 +1152,7 @@ export class LoginService {
             url: '/api/v1/login/test-token'
         });
     }
-
+    
     /**
      * Recover Password
      * Password Recovery
@@ -1022,7 +1173,7 @@ export class LoginService {
             }
         });
     }
-
+    
     /**
      * Reset Password
      * Reset password
@@ -1042,7 +1193,7 @@ export class LoginService {
             }
         });
     }
-
+    
     /**
      * Recover Password Html Content
      * HTML Content for Password Recovery
@@ -1067,6 +1218,64 @@ export class LoginService {
 
 export class PartsService {
     /**
+     * Discover Part Folder
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns FolderDiscovery Successful Response
+     * @throws ApiError
+     */
+    public static discoverPartFolder(data: PartsDiscoverPartFolderData): CancelablePromise<PartsDiscoverPartFolderResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/parts/discover',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Setup Part
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns PartSetupResult Successful Response
+     * @throws ApiError
+     */
+    public static setupPart(data: PartsSetupPartData): CancelablePromise<PartsSetupPartResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/parts/setup',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Refresh Part Data
+     * @param data The data for the request.
+     * @param data.partId
+     * @returns PartRefreshResult Successful Response
+     * @throws ApiError
+     */
+    public static refreshPartData(data: PartsRefreshPartDataData): CancelablePromise<PartsRefreshPartDataResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/parts/{part_id}/refresh',
+            path: {
+                part_id: data.partId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
      * Read Parts
      * Todas las piezas (= proyectos), ordenadas por codigo. Es lo que puebla el
      * selector de piezas, con el numero de features que utiliza cada una.
@@ -1089,7 +1298,7 @@ export class PartsService {
             }
         });
     }
-
+    
     /**
      * Create Part
      * Dar de alta una pieza. El codigo es unico: es la clave con la que se agrupan
@@ -1110,7 +1319,7 @@ export class PartsService {
             }
         });
     }
-
+    
     /**
      * Create Part From Folder
      * Register or reuse an existing part folder; never create source directories.
@@ -1130,7 +1339,7 @@ export class PartsService {
             }
         });
     }
-
+    
     /**
      * Update Part
      * Editar el codigo o el nombre de una pieza.
@@ -1154,7 +1363,7 @@ export class PartsService {
             }
         });
     }
-
+    
     /**
      * Delete Part
      * Borrar una pieza sin uso. Solo superusuario. Nunca borra documentos ni carpetas.
@@ -1222,7 +1431,7 @@ export class UsersService {
             }
         });
     }
-
+    
     /**
      * Create User
      * Create new user.
@@ -1242,7 +1451,7 @@ export class UsersService {
             }
         });
     }
-
+    
     /**
      * Read User Me
      * Get current user.
@@ -1255,7 +1464,7 @@ export class UsersService {
             url: '/api/v1/users/me'
         });
     }
-
+    
     /**
      * Delete User Me
      * Delete own user.
@@ -1268,7 +1477,7 @@ export class UsersService {
             url: '/api/v1/users/me'
         });
     }
-
+    
     /**
      * Update User Me
      * Update own user.
@@ -1288,7 +1497,7 @@ export class UsersService {
             }
         });
     }
-
+    
     /**
      * Update Password Me
      * Update own password.
@@ -1308,7 +1517,7 @@ export class UsersService {
             }
         });
     }
-
+    
     /**
      * Register User
      * Create new user without the need to be logged in.
@@ -1328,7 +1537,7 @@ export class UsersService {
             }
         });
     }
-
+    
     /**
      * Read User By Id
      * Get a specific user by id.
@@ -1349,7 +1558,7 @@ export class UsersService {
             }
         });
     }
-
+    
     /**
      * Update User
      * Update a user.
@@ -1373,7 +1582,7 @@ export class UsersService {
             }
         });
     }
-
+    
     /**
      * Delete User
      * Delete a user.
@@ -1417,7 +1626,7 @@ export class UtilsService {
             }
         });
     }
-
+    
     /**
      * Health Check
      * @returns boolean Successful Response

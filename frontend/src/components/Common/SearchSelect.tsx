@@ -16,6 +16,8 @@ export function SearchSelect({
   onChange,
   disabled = false,
   selectedLabel,
+  compact = false,
+  defaultOpen = false,
 }: {
   label: string
   value?: string | null
@@ -25,12 +27,14 @@ export function SearchSelect({
   onChange: (value: string | undefined) => void
   disabled?: boolean
   selectedLabel?: string
+  compact?: boolean
+  defaultOpen?: boolean
 }) {
   const id = useId()
   const root = useRef<HTMLFieldSetElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
   const input = useRef<HTMLInputElement>(null)
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen)
   const [query, setQuery] = useState("")
   const [active, setActive] = useState(0)
   const normalize = (text: string) =>
@@ -81,7 +85,10 @@ export function SearchSelect({
         aria-haspopup="dialog"
         aria-controls={`${id}-dialog`}
         disabled={disabled}
-        className="h-9 w-full justify-between gap-2 px-3 font-normal"
+        className={cn(
+          "h-9 w-full justify-between gap-2 px-3 font-normal",
+          compact && "h-7 px-2",
+        )}
         onClick={() => {
           setQuery("")
           setActive(0)

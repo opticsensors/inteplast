@@ -5,24 +5,30 @@ Integración del 18/09/2026; separación de lectores y simplificación de la int
 
 ## Navegación
 
-- **Features** conserva el catálogo y el conocimiento transversal. En cada bloque de pieza
+- **Catálogo** (`/features`) reúne tarjetas de piezas y features. Solo al buscar aparecen
+  también cotas con pieza y revisión. Todo/Piezas/Features limita los tipos de tarjeta;
+  Nueva pieza y Nuevo feature están juntos. `/parts` redirige al catálogo de piezas.
+- La **ficha de feature** conserva el conocimiento transversal. En cada bloque de pieza
   aparece una fila **COTAS** con icono, números y acceso al plano, del mismo estilo y altura
   que los ficheros. El icono abre la búsqueda de esa cota; el número abre sus mediciones.
-  En edición, Añadir cota inserta un campo al final y la papelera retira el vínculo.
-  Revisión y relación se conservan internamente, sin controles ni texto en esta fila.
-- **Metrología** (`/parts`) ofrece una sola pantalla con buscador de cotas y selectores
-  de Pieza y Feature debajo. Los selectores tienen búsqueda interna y comparten el
-  componente de filtros de Features. Categoría y Tag se despliegan desde Más filtros.
-  El buscador de cotas se activa tras seleccionar una pieza. Se puede empezar por
-  un feature para limitar las piezas disponibles. No hay un catálogo intermedio.
+  En edición, Añadir cota inserta al final un selector de cotas importadas con revisión,
+  o un campo manual si no hay mediciones. La papelera retira el vínculo. Los recuadros
+  guardados conservan revisión y relación internamente, sin texto adicional en la fila.
+  Las mediciones se preparan desde Nueva pieza/Actualizar datos; no crean asociaciones al feature.
+- La **ficha de pieza** (`/parts/{id}`) muestra el CAD completo con ampliación interactiva,
+  sus features y la sección Cotas, que reutiliza la consulta anterior de Metrología.
+  La pieza queda fijada por la ficha. Feature tiene búsqueda interna; Categoría y Tag se
+  despliegan desde Más filtros. Editar permite vincular features en la misma relación
+  compartida que «Añadir pieza» del editor de features.
 - La pieza abre la consulta sin seleccionar una cota arbitraria. El filtro Feature
   permite consultar todas sus cotas (también las no vinculadas) o solo las asignadas al
   feature de entrada. Las cotas sin mediciones siguen disponibles; pertenecer a la pieza
   no atribuye sus cotas a un feature que no las tenga vinculadas.
 - La consulta usa el buscador superior compartido con
   Features, filtros independientes de Elemento/Altura/Evaluación y gráfica con cavidades
-  activables. Plano alterna la vista desde el botón situado a la derecha del buscador,
-  con la misma altura y cabecera de pieza. Correcciones queda debajo a la izquierda.
+  activables. Plano, a la derecha del buscador, abre una página propia del archivo con
+  el visor de Features. El enlace del PDF en la pieza usa la misma página. Atrás conserva
+  la consulta anterior. Correcciones queda debajo a la izquierda.
   No hay pestañas ni listas de
   documentos, perfiles o nubes de puntos. Las reglas están en [interfaz.md](interfaz.md).
 - La URL conserva pieza, búsqueda, feature, categoría, tag, cota, revisión, filtros, cavidades y modo de consulta. Atrás y Adelante
@@ -59,22 +65,86 @@ features por las cotas vinculadas.
 | `PartDocument` | Original o imagen derivada compartido por la pieza. Protege su uso como evidencia. |
 | `EvidenceJob` | Cola persistente y resultado de importación/indexación por versión. |
 | `DrawingLocation` | Revisión humana de una ubicación, ligada a SHA-256, usuario y fecha. |
+| `MeasurementImport` (`measurement_models.py`) | Export CSV interpretado e inmutable, con pieza, revisión, muestreo, cavidad, hash y autor; las sustituciones añaden versiones. |
 
 El primer importador es **específico del 3212**. Sus lectores propios están en
 `backend/app/ingestion/pilot_3212/`: 16 CSV, catálogo completo de evaluaciones,
 cuatro casos contrastados, acciones PPTX, previsiones XLS, perfiles A/B y referencias a TXT.
-El modelo, la navegación, las asociaciones y el buscador PDF son reutilizables; incorporar
-otra pieza con mediciones requiere configurar y validar su adaptador. No se ejecuta el
-adaptador del 3212 sobre los otros proyectos.
+El modelo, la navegación, las asociaciones y el buscador PDF son reutilizables. El lector
+CSV por bloques de `backend/app/ingestion/measurement_csv.py` permite incorporar otra
+pieza del mismo formato, con contexto revisado. No ejecuta el adaptador del 3212 sobre
+otros proyectos ni deduce reglas de B/H/GX/LP por el número de cota.
 
 El resultado importado se conserva como **snapshot JSON estructurado** en `EvidenceJob`,
 con evaluaciones identificadas por bloque/ID CMM/fila y referencias a `StoredFile`.
-Es el resultado vigente: una nueva importación sustituye el `payload` del mismo trabajo
-(`queue` y `process_next` en `backend/app/evidence.py`). No hay un historial inmutable de
-snapshots; su conservación por entrega sigue pendiente. No se ha
+El adaptador piloto sustituye el `payload` del mismo trabajo al reimportar
+(`queue` y `process_next` en `backend/app/evidence.py`). El nuevo flujo CSV conserva
+versiones en `MeasurementImport`; antes de la primera importación guarda también el
+estudio piloto previo y lo usa como base estable. Las sucesivas reimportaciones del
+adaptador piloto no sustituyen esa base ni las mediciones incorporadas por el nuevo flujo.
+El historial general de entregas PPTX/XLS sigue pendiente. No se ha
 implementado todavía el modelo completo normalizado de `MUESTREO`/`MEDICION`/eventos de
 ejecución de retoques. El índice de acciones guarda cada acción una sola vez por identificador;
 los casos y las cotas se refieren a ella. No se crean lessons learned automáticamente.
+
+## Alta y actualización de piezas (22/09/2026)
+
+1. Nueva pieza selecciona una carpeta con el diálogo de Windows. La detección usa rutas,
+   extensiones y metadatos para proponer CAD, escaneo, molde y plano, sin leer su contenido.
+   Las cuatro propuestas se pueden cambiar antes de guardar.
+2. El usuario puede cambiar nombre y propuestas. Crear registra o reutiliza la pieza,
+   guarda sus referencias en `PartDocument` con `kind=reference_*` y prepara las mediciones.
+3. `automatic_measurements.py` incorpora CSV individuales/comparativos y tablas DR de
+   informes PPAP XLS/XLSX, sin revisión manual por archivo. Obtiene la revisión de las
+   cabeceras y conserva temperatura, presión, boquilla y repetición en el muestreo.
+   Si un contexto realmente falta, queda identificado como sin-revision/sin-cavidad;
+   nunca se inventa una revisión o cavidad. Los CSV prevalecen sobre resúmenes XLS de
+   las mismas cotas y contexto. Dos exports individuales discrepantes conservan series
+   separadas con procedencia. Las tolerancias ausentes en un CSV comparativo se recuperan
+   del XLS del mismo contexto solo si cota, nominal y límites son inequívocos.
+   Una pieza sin mediciones también se registra y aparece en el catálogo.
+4. Actualizar datos repite la lectura por acción explícita. Las mediciones existentes se
+   omiten; los cambios generan versiones consultables, incluso si se recuperan bytes de
+   una versión anterior. Abrir o cancelar el formulario no actualiza las mediciones.
+5. Las correcciones del 3212 se preparan con su adaptador cuando están los originales.
+   Los documentos de retoques de otras piezas se detectan internamente; su interpretación
+   sigue pendiente. No se inventan correspondencias ni previsiones, ni se muestran sus
+   avisos técnicos en la modal. DR(100%) y carpetas de retoques se excluyen de mediciones.
+6. Añadir pieza en Features ofrece solo registros existentes e incorpora sus referencias
+   al vincularla por primera vez, respetando las filas existentes. Añadir cota permite
+   escoger explícitamente qué cotas pertenecen al feature y de qué revisión.
+
+El lector automático limita cada tabla a 16 MB y el conjunto a 128 MB; los originales
+se leen in situ. Cada observación conserva archivo y línea CSV o celda XLS/XLSX. El
+piloto 3212 conserva sus identidades CMM y su adaptador de XLS/correcciones. Los CSV de
+puntos espaciales no son tablas de cotas y se omiten. Contraste de la 3197: 60 valores
+muestreados (30 CSV y 30 XLS) coinciden con sus fuentes. Ejemplos: `Support_intern.02/
+135ºC/500bar/3197 C1.csv`, línea 2, y cabeceras/celdas de `3197-00_intern.02.xls!DR_PAR`.
+
+El refresco explícito del estudio piloto avanza la base actual y conserva snapshots
+anteriores. Las comparaciones nuevas esperan la revisión de mediciones pendientes.
+Una publicación ordinaria del adaptador no sustituye por sí sola la base congelada.
+
+Se reconoce el export CMM con bloques de cotas N y columnas separadas por `;`, nominal,
+tolerancias y medición; decimales con punto o coma, UTF-8 o Windows-1252. Este formato
+usa mm, salvo evaluaciones Phi en grados. Otros formatos se señalan como no compatibles;
+las filas sin cota identificable no se atribuyen a otra cota. Para el 3212 rev. 06 se
+mantienen las identidades CMM/N170 y GLOBAL/POINT ya revisadas. Las evaluaciones de otras
+piezas conservan bloque, aparición, fila e ID CMM, sin fusionarlas por compartir número.
+
+Cada export representa una revisión/muestreo/cavidad completos. Dos exports distintos
+para esa misma combinación requieren elegir uno; no se combinan silenciosamente. Una
+reimportación con el mismo contenido/contexto se omite, incluso con otro nombre de archivo.
+Los nuevos muestreos se añaden, las revisiones se consultan por separado y sustituir valores
+exige confirmación. El historial conserva los datos interpretados previos, accesibles
+desde Consultar, y no vuelve a activar un archivo antiguo por importarlo de nuevo.
+
+La revisión y el hash se verifican de nuevo al incorporar; si cambia el archivo o la
+pieza/carpeta, hay que revisar de nuevo. Las importaciones de una pieza se serializan y
+se guardan en una transacción. Límites: 250 CSV detectados, 10 MB por archivo y 64 MB por
+selección. Solo se leen los CSV, sin recorrer el contenido de CAD o escaneos ni copiarlos.
+No se importa ninguna pieza real durante el despliegue. La generalización se ha probado
+con datos sintéticos; falta contrastar una segunda pieza real con metrología (A13).
 
 ## Lectura de resultados
 
@@ -85,7 +155,7 @@ los casos y las cotas se refieren a ella. No se crean lessons learned automátic
   cuatro casos cuantitativos. Los tramos sin documentación conservan las mediciones.
 - El detalle hace visible el cambio propuesto en el molde y compara, por cavidad, efecto
   previsto y cambio medido. No muestra imágenes ni «Documentos y valores de origen».
-  Los controles mantienen su selección al desactivar Plano o volver con el navegador;
+  Los controles mantienen su selección al volver del plano con el navegador;
   buscar en el dibujo no sustituye la búsqueda previa de cotas.
 - Cavidad y valor aparecen al pasar el cursor, tocar o enfocar un punto; el recuadro queda
   junto a él. No se activa sobre zonas vacías ni incluye fuentes, límites o estados.
@@ -137,7 +207,7 @@ No hay todavía herramienta para dibujar una ubicación nueva que el detector no
 - Un trabajador con bloqueo asesor PostgreSQL serializa los trabajos costosos. Cola durable,
   recuperación tras reinicio, límite de 30 minutos por subproceso y errores reintentables.
   `EVIDENCE_WORKER_ENABLED=false` lo desactiva (incluido en la configuración de tests).
-- `Reimportar archivos`, en **Admin → Datos de piezas**, calcula la firma de fuentes; si no
+- `Reimportar archivos`, en **Admin → Datos de piezas**, conserva el adaptador piloto y calcula la firma de fuentes; si no
   cambiaron reutiliza la importación. La consulta de cotas no ofrece esa operación.
   Nunca publica resultados si las fuentes cambiaron mientras se procesaban.
 - El lector prepara los ficheros de metrología y retoques en una carpeta temporal del
@@ -149,7 +219,8 @@ No hay todavía herramienta para dibujar una ubicación nueva que el detector no
 - Los originales incorporados como evidencia no se pueden borrar o volver a vincular sobre el
   mismo UUID. Si cambia el original, una nueva importación registra otro documento. Las
   referencias externas no archivan sus bytes: si el cliente reemplaza un original, la versión
-  vieja puede dejar de estar accesible. Tampoco se archiva el snapshot anterior al reimportar.
+  vieja puede dejar de estar accesible. El nuevo historial CSV sí conserva sus valores
+  interpretados, aunque el original externo se sustituya; no archiva los bytes originales.
 - La migración `f17a03c9de85` sucede a `f170a3c9de85` (nombres de adjuntos); su downgrade
   devuelve los identificadores a los tags para no perderlos.
 - `g28b14daef96` corrige la lección de ejemplo que afirmaba que N170 estaba resuelta.
@@ -161,6 +232,16 @@ El botón de importación en Admin solo aparece para la carpeta piloto configura
 originales ni los otros proyectos del cliente.
 
 ## Validación de la nueva consulta (21/09/2026)
+
+- Flujo CSV: pruebas en base aislada de contexto incompleto, hashes cambiados,
+  duplicados, sustituciones, versiones anteriores, revisiones independientes, piezas
+  compartidas sin asociaciones automáticas y conservación del estudio piloto previo.
+  Pruebas de interfaz de importación/selección, escritorio/móvil y revisión histórica
+  conservada al filtrar y navegar. TypeScript/Vite, Ruff, Mypy y Biome verificados.
+- Contraste de solo lectura del nuevo lector con el catálogo 3212: 16 CSV individuales,
+  3.120 filas asociadas a cotas, sin diferencias de valor ni límites. Las tres comparativas
+  `totes` se rechazan por su estructura de columnas. Esta comprobación no importa datos
+  en la aplicación ni valida el formato de una segunda pieza real.
 
 - Fila COTAS: comprobación de altura frente a ficheros en lectura y edición, inserción
   al final, ajuste a varias líneas en móvil, enlaces al plano, duplicados, metadatos,

@@ -9,12 +9,18 @@ import {
 } from "@tanstack/react-router"
 import { createRoot } from "react-dom/client"
 import { Toaster } from "sonner"
-import { FeaturesService, UsersService } from "@/client"
+import {
+  CatalogService,
+  EvidenceService,
+  FeaturesService,
+  UsersService,
+} from "@/client"
 import { Route as Layout } from "../../../src/routes/_layout"
 import { Route as Catalog } from "../../../src/routes/_layout/features"
 import { Route as Detail } from "../../../src/routes/_layout/features_.$featureId"
 import { Route as NewFeature } from "../../../src/routes/_layout/features_.nuevo"
 import { Route as Home } from "../../../src/routes/_layout/index"
+import { Route as PartDetail } from "../../../src/routes/_layout/parts_.$partId"
 
 localStorage.setItem(
   "access_token",
@@ -37,13 +43,23 @@ window.review = {
   requests: [],
   searchRequests: [],
   deleted: false,
+  parts: [
+    {
+      id: "part-one",
+      code: "3212",
+      name: "Pump Housing",
+      characteristic_count: 2,
+    },
+  ],
 }
 const clone = (value) => structuredClone(value)
 FeaturesService.readFeatures = async (params = {}) => {
   window.review.searchRequests.push(clone(params))
   const found =
     !window.review.deleted &&
-    (!params.featureId || params.featureId === window.review.feature.id)
+    (!params.featureId || params.featureId === window.review.feature.id) &&
+    (!params.partId ||
+      window.review.feature.parts.some((part) => part.id === params.partId))
   return {
     data: found ? [clone(window.review.feature)] : [],
     count: found ? 1 : 0,
@@ -72,6 +88,31 @@ FeaturesService.deleteFeature = async () => {
   return { message: "Deleted" }
 }
 UsersService.readUserMe = async () => clone(window.review.user)
+EvidenceService.readPartEvidence = async ({ partId }) => ({
+  part: clone(window.review.parts.find((part) => part.id === partId)),
+  features: [],
+  characteristics: [],
+  documents: [],
+  measurement_revisions: [],
+  study: { state: "empty", payload: {} },
+})
+const originalSearch = CatalogService.searchCatalog
+CatalogService.searchCatalog = async (params) => {
+  const result = await originalSearch(params)
+  const cotas =
+    params.q?.toUpperCase().includes("170") && params.kind !== "feature"
+      ? [
+          {
+            id: "cota-one",
+            code: "N170",
+            title: "",
+            revision: "06",
+            part: clone(window.review.parts[0]),
+          },
+        ]
+      : []
+  return { ...result, cotas, cota_count: cotas.length }
+}
 
 const root = createRootRoute({ component: () => <Outlet /> })
 const layout = Layout.update({ id: "/_layout", getParentRoute: () => root })
@@ -80,6 +121,7 @@ const routes = [
   [Catalog, "/features", "/features"],
   [Detail, "/features_/$featureId", "/features/$featureId"],
   [NewFeature, "/features_/nuevo", "/features/nuevo"],
+  [PartDetail, "/parts_/$partId", "/parts/$partId"],
 ].map(([route, id, path]) =>
   route.update({ id, path, getParentRoute: () => layout }),
 )

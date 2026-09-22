@@ -1,9 +1,19 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { MetrologyPage } from "@/components/Parts/MetrologyPage"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 import { validatePartSearch } from "@/components/Parts/measurementSelection"
 
 export const Route = createFileRoute("/_layout/parts")({
-  component: () => <MetrologyPage search={Route.useSearch()} />,
   validateSearch: validatePartSearch,
-  head: () => ({ meta: [{ title: "Metrología - INTEPLAST" }] }),
+  beforeLoad: ({ search }) => {
+    throw redirect({
+      to: "/features",
+      search: {
+        q: search.q ?? search.cota,
+        feature: search.feature,
+        category: search.category,
+        tag: search.tag,
+        kind: "part",
+      },
+      replace: true,
+    })
+  },
 })

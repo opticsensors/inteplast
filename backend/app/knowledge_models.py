@@ -162,6 +162,9 @@ class PartEvidencePublic(BaseModel):
     features: list[MetrologyFeature] = []
     study: JobPublic
     import_available: bool
+    measurement_revisions: list[str] = []
+    drawing_file_id: uuid.UUID | None = None
+    refresh_job: JobPublic = PydanticField(default_factory=lambda: JobPublic(state="empty"))
 
 
 class LocationReview(BaseModel):

@@ -19,6 +19,7 @@ export function MetrologyFilters({
   search,
   onPart,
   onScope,
+  hidePart = false,
 }: {
   options?: Options
   partId?: string
@@ -26,18 +27,21 @@ export function MetrologyFilters({
   search: PartSearch
   onPart: (id: string | undefined) => void
   onScope: (values: Partial<PartSearch>) => void
+  hidePart?: boolean
 }) {
   const [more, setMore] = useState(Boolean(search.category || search.tag))
   const allFeatures = options?.features ?? []
   const inPiece = allFeatures.filter(
     (feature) => !partId || feature.part_ids?.includes(partId),
   )
-  const parts = (options?.parts ?? []).filter((piece) =>
-    allFeatures.some(
-      (feature) =>
-        feature.part_ids?.includes(piece.id) &&
-        matchesFeatureFilters(feature, search),
-    ),
+  const parts = (options?.parts ?? []).filter(
+    (piece) =>
+      (!search.feature && !search.category && !search.tag) ||
+      allFeatures.some(
+        (feature) =>
+          feature.part_ids?.includes(piece.id) &&
+          matchesFeatureFilters(feature, search),
+      ),
   )
   const availableFeatures = inPiece.filter((feature) =>
     matchesFeatureFilters(feature, { ...search, feature: undefined }),
@@ -74,20 +78,28 @@ export function MetrologyFilters({
   const active = Number(Boolean(search.category)) + Number(Boolean(search.tag))
   return (
     <div className="space-y-3">
-      <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-        <SearchSelect
-          label="Pieza"
-          value={partId}
-          placeholder="Seleccionar pieza"
-          emptyLabel="Seleccionar pieza"
-          selectedLabel={part ? partLabel(part) : undefined}
-          options={parts.map((part) => ({
-            value: part.id,
-            label: partLabel(part),
-          }))}
-          onChange={onPart}
-          disabled={!options}
-        />
+      <div
+        className={
+          hidePart
+            ? "grid gap-2 sm:grid-cols-[1fr_auto]"
+            : "grid gap-2 sm:grid-cols-[1fr_1fr_auto]"
+        }
+      >
+        {!hidePart && (
+          <SearchSelect
+            label="Pieza"
+            value={partId}
+            placeholder="Seleccionar pieza"
+            emptyLabel="Seleccionar pieza"
+            selectedLabel={part ? partLabel(part) : undefined}
+            options={parts.map((part) => ({
+              value: part.id,
+              label: partLabel(part),
+            }))}
+            onChange={onPart}
+            disabled={!options}
+          />
+        )}
         <SearchSelect
           label="Feature"
           selectedLabel={

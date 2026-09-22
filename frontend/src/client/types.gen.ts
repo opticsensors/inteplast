@@ -38,6 +38,15 @@ export type CadFaceSelection = {
     face: number;
 };
 
+export type CatalogPublic = {
+    features: Array<FeaturePublic>;
+    parts: Array<PartCardPublic>;
+    cotas: Array<CotaSearchResult>;
+    feature_count: number;
+    part_count: number;
+    cota_count: number;
+};
+
 export type CharacteristicAssignment = {
     code: string;
     revision: string;
@@ -53,6 +62,14 @@ export type CharacteristicPublic = {
     revision: string;
     title: string;
     role?: (string | null);
+};
+
+export type CotaSearchResult = {
+    id: string;
+    code: string;
+    title: string;
+    revision: string;
+    part: PartPublic;
 };
 
 export type DrawingPublic = {
@@ -265,6 +282,13 @@ export type FileStatus = {
 
 export type state2 = 'available' | 'missing' | 'changed' | 'unavailable';
 
+export type FolderDiscovery = {
+    folder_path: string;
+    name: string;
+    references: Array<ReferenceProposal>;
+    notices?: Array<(string)>;
+};
+
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
 };
@@ -322,6 +346,67 @@ export type LocationReview = {
     label: string;
 };
 
+export type MeasurementCommitRequest = {
+    files?: Array<MeasurementFileSelection>;
+    context_key: string;
+};
+
+export type MeasurementCommitResult = {
+    imported: number;
+    skipped: number;
+    revisions: Array<(string)>;
+};
+
+export type MeasurementFilePreview = {
+    path: string;
+    sha256?: (string | null);
+    revision?: string;
+    sample?: string;
+    cavity?: string;
+    replace_existing?: boolean;
+    status: 'new' | 'new_sample' | 'new_revision' | 'imported' | 'replacement' | 'needs_context' | 'unsupported';
+    rows?: number;
+    cotas?: number;
+    issues?: Array<(string)>;
+    examples?: Array<{
+        [key: string]: unknown;
+    }>;
+};
+
+export type status = 'new' | 'new_sample' | 'new_revision' | 'imported' | 'replacement' | 'needs_context' | 'unsupported';
+
+export type MeasurementFileSelection = {
+    path: string;
+    sha256?: (string | null);
+    revision?: string;
+    sample?: string;
+    cavity?: string;
+    replace_existing?: boolean;
+};
+
+export type MeasurementImportSummary = {
+    id: string;
+    revision: string;
+    sample: string;
+    cavity: string;
+    source_path: string;
+    sha256: string;
+    imported_at: string;
+    rows: number;
+    active: boolean;
+    baseline?: boolean;
+};
+
+export type MeasurementPreview = {
+    context_key: string;
+    files: Array<MeasurementFilePreview>;
+    notices?: Array<(string)>;
+};
+
+export type MeasurementPreviewRequest = {
+    files?: Array<MeasurementFileSelection>;
+};
+
 export type Message = {
     message: string;
 };
@@ -366,6 +451,18 @@ export type NewPassword = {
 
 export type NoteKind = 'warning' | 'lesson';
 
+export type PartCardPublic = {
+    code: string;
+    name?: (string | null);
+    folder_path?: (string | null);
+    id: string;
+    created_at?: (string | null);
+    feature_count?: number;
+    characteristic_count?: number;
+    cad?: (FilePublic | null);
+    image?: (FilePublic | null);
+};
+
 export type PartCatalogPublic = {
     code: string;
     name?: (string | null);
@@ -375,10 +472,23 @@ export type PartCatalogPublic = {
     feature_count: number;
 };
 
+export type PartCoverRequest = {
+    file_id: string;
+    file_version?: (string | null);
+    source_sha256: string;
+    image_id: string;
+};
+
 export type PartCreate = {
     code: string;
     name?: (string | null);
     folder_path?: (string | null);
+};
+
+export type PartDetailPublic = {
+    part: PartCardPublic;
+    features: Array<FeaturePublic>;
+    references: Array<PartReferencePublic>;
 };
 
 export type PartEvidencePublic = {
@@ -388,6 +498,9 @@ export type PartEvidencePublic = {
     features?: Array<MetrologyFeature>;
     study: JobPublic;
     import_available: boolean;
+    measurement_revisions?: Array<(string)>;
+    drawing_file_id?: (string | null);
+    refresh_job?: JobPublic;
 };
 
 export type PartFromFolder = {
@@ -400,6 +513,29 @@ export type PartPublic = {
     folder_path?: (string | null);
     id: string;
     created_at?: (string | null);
+};
+
+export type PartReferencePublic = {
+    kind: AssetKind;
+    file: FilePublic;
+};
+
+export type PartRefreshResult = {
+    imported?: number;
+    skipped?: number;
+    measurements: MeasurementPreview;
+    corrections_state?: string;
+    notices?: Array<(string)>;
+};
+
+export type PartSetupRequest = {
+    folder_path: string;
+    name: string;
+    references: Array<ReferenceChoice>;
+};
+
+export type PartSetupResult = {
+    part: PartPublic;
 };
 
 export type PartsPublic = {
@@ -418,6 +554,27 @@ export type PrivateUserCreate = {
     password: string;
     full_name: string;
     is_verified?: boolean;
+};
+
+export type ReferenceCandidate = {
+    path: string;
+    source_version: string;
+    size: number;
+};
+
+export type ReferenceChoice = {
+    kind: 'part' | 'scan' | 'mold' | 'drawing';
+    path?: (string | null);
+    source_version?: (string | null);
+};
+
+export type kind = 'part' | 'scan' | 'mold' | 'drawing';
+
+export type ReferenceProposal = {
+    kind: 'part' | 'scan' | 'mold' | 'drawing';
+    path?: (string | null);
+    source_version?: (string | null);
+    candidates?: Array<ReferenceCandidate>;
 };
 
 export type RelinkFileReference = {
@@ -502,6 +659,32 @@ export type ValidationError = {
     };
 };
 
+export type CatalogSearchCatalogData = {
+    category?: (FeatureCategory | null);
+    featureId?: (string | null);
+    kind?: 'all' | 'part' | 'feature';
+    limit?: number;
+    partId?: (string | null);
+    q?: string;
+    skip?: number;
+    tag?: (string | null);
+};
+
+export type CatalogSearchCatalogResponse = (CatalogPublic);
+
+export type CatalogReadPartDetailData = {
+    partId: string;
+};
+
+export type CatalogReadPartDetailResponse = (PartDetailPublic);
+
+export type CatalogSavePartCoverData = {
+    partId: string;
+    requestBody: PartCoverRequest;
+};
+
+export type CatalogSavePartCoverResponse = (FilePublic);
+
 export type EvidenceReadMetrologyFiltersResponse = (MetrologyFilters);
 
 export type EvidenceReadMetrologyData = {
@@ -515,6 +698,8 @@ export type EvidenceReadMetrologyResponse = (MetrologyCatalog);
 
 export type EvidenceReadPartEvidenceData = {
     partId: string;
+    revision?: (string | null);
+    snapshotId?: (string | null);
 };
 
 export type EvidenceReadPartEvidenceResponse = (PartEvidencePublic);
@@ -565,6 +750,26 @@ export type EvidenceReviewDrawingLocationData = {
 };
 
 export type EvidenceReviewDrawingLocationResponse = (LocationPublic);
+
+export type EvidencePreviewMeasurementsData = {
+    partId: string;
+    requestBody: MeasurementPreviewRequest;
+};
+
+export type EvidencePreviewMeasurementsResponse = (MeasurementPreview);
+
+export type EvidenceImportMeasurementsData = {
+    partId: string;
+    requestBody: MeasurementCommitRequest;
+};
+
+export type EvidenceImportMeasurementsResponse = (MeasurementCommitResult);
+
+export type EvidenceMeasurementHistoryData = {
+    partId: string;
+};
+
+export type EvidenceMeasurementHistoryResponse = (Array<MeasurementImportSummary>);
 
 export type FeaturesReadFeaturesData = {
     category?: (FeatureCategory | null);
@@ -806,6 +1011,24 @@ export type LoginRecoverPasswordHtmlContentData = {
 };
 
 export type LoginRecoverPasswordHtmlContentResponse = (string);
+
+export type PartsDiscoverPartFolderData = {
+    requestBody: PartFromFolder;
+};
+
+export type PartsDiscoverPartFolderResponse = (FolderDiscovery);
+
+export type PartsSetupPartData = {
+    requestBody: PartSetupRequest;
+};
+
+export type PartsSetupPartResponse = (PartSetupResult);
+
+export type PartsRefreshPartDataData = {
+    partId: string;
+};
+
+export type PartsRefreshPartDataResponse = (PartRefreshResult);
 
 export type PartsReadPartsData = {
     limit?: number;

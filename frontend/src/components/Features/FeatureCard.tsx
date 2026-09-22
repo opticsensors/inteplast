@@ -85,16 +85,23 @@ interface FeatureCardProps {
   onSelect?: (feature: FeaturePublic) => void
   /** Acciones independientes del boton que abre la ficha en lectura. */
   actions?: ReactNode
+  showKind?: boolean
 }
 
 /** Tarjeta de resultado: imagen, nombre, descripcion, tags y piezas. */
-export function FeatureCard({ feature, onSelect, actions }: FeatureCardProps) {
+export function FeatureCard({
+  feature,
+  onSelect,
+  actions,
+  showKind = false,
+}: FeatureCardProps) {
   const tags = feature.tags ?? []
 
   return (
     <div
       className={cn(
         "relative flex gap-3 rounded-lg border p-3 transition-colors",
+        showKind && "border-l-4 border-l-primary/60",
         onSelect && "hover:border-primary/50 hover:bg-accent/50",
       )}
     >
@@ -129,6 +136,11 @@ export function FeatureCard({ feature, onSelect, actions }: FeatureCardProps) {
           </p>
         )}
         <div className="flex items-center gap-1 overflow-hidden">
+          {showKind && (
+            <Badge variant="outline" className="border-primary/40 text-primary">
+              Feature
+            </Badge>
+          )}
           {feature.category && (
             <Badge variant="secondary">
               {CATEGORY_LABELS[feature.category]}

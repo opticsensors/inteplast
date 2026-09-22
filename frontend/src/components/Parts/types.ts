@@ -45,6 +45,8 @@ export type Action = {
   source: EvidenceSource
 }
 export type Series = {
+  element?: string | null
+  evaluation?: string | null
   id: string
   label: string
   unit: string

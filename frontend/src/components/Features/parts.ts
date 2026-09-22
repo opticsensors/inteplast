@@ -74,5 +74,13 @@ export function partRows(feature: FeaturePublic): PartRow[] {
 }
 
 /** "3212 - Pump Housing", o solo el codigo si la pieza no tiene nombre. */
-export const partLabel = (part: PartPublic) =>
-  part.name ? `${part.code} - ${part.name}` : part.code
+export const partLabel = (part: PartPublic) => {
+  if (!part.name) return part.code
+  if (
+    part.name === part.code ||
+    (part.name.startsWith(part.code) &&
+      /^[\s_-]/.test(part.name.slice(part.code.length)))
+  )
+    return part.name
+  return `${part.code} - ${part.name}`
+}

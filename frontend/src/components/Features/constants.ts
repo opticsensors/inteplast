@@ -21,8 +21,8 @@ export const CATEGORIES = Object.keys(CATEGORY_LABELS) as FeatureCategory[]
  */
 export const ASSET_KIND_LABELS: Record<AssetKind, string> = {
   mold: "Molde",
-  part: "Pieza CAD",
-  scan: "Pieza escaneada",
+  part: "CAD",
+  scan: "Escaneo",
   drawing: "Plano 2D",
   moldflow: "Moldflow",
 }
@@ -38,8 +38,8 @@ export const ASSET_KIND_SHORT: Record<AssetKind, string> = {
 
 export const ASSET_KIND_SINGULAR: Record<AssetKind, string> = {
   mold: "molde",
-  part: "pieza CAD",
-  scan: "pieza escaneada",
+  part: "CAD",
+  scan: "escaneo",
   drawing: "plano 2D",
   moldflow: "estudio Moldflow",
 }

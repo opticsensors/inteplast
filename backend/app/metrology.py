@@ -68,7 +68,6 @@ def filters(session: Session) -> MetrologyFilters:
             PartPublic.model_validate(part)
             for part in session.exec(
                 select(Part)
-                .where(col(Part.id).in_(select(links.c.part_id)))
                 .order_by(Part.code)
             ).all()
         ],

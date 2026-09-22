@@ -145,14 +145,14 @@ def test_same_folder_cannot_be_assigned_through_create_or_edit(
     assert other.folder_path is None
 
 
-def test_only_existing_direct_child_folders_can_register_pieces(
+def test_only_existing_folders_within_source_can_register_pieces(
     client: TestClient, superuser_token_headers: dict[str, str], source: Path
 ) -> None:
     (source / "piece" / "cad").mkdir(parents=True)
     (source / "drawing.pdf").write_bytes(b"synthetic")
     for path, status in [
         ("", 422),
-        ("piece/cad", 400),
+        ("piece/cad", 200),
         ("../escape", 400),
         ("/absolute", 400),
         ("piece/", 400),

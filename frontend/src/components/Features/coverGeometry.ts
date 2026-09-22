@@ -35,7 +35,7 @@ export function loadCoverGeometry(buffer: ArrayBuffer, signal: AbortSignal) {
     worker.onerror = (event) => {
       event.preventDefault()
       dispose()
-      reject(new Error("No se ha podido preparar la pieza CAD."))
+      reject(new Error("No se ha podido preparar el CAD."))
     }
     worker.onmessageerror = () => {
       dispose()

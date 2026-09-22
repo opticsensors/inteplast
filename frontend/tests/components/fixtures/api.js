@@ -2,6 +2,7 @@
 export const OpenAPI = { BASE: "https://files.invalid" }
 export class ApiError extends Error {}
 export const EvidenceService = {
+  readMetrologyFilters: async () => FeaturesService.readFeatureFilters(),
   readFeatureEvidence: async ({ partId }) => ({
     characteristics: clone(
       (state().characteristics ?? []).filter((item) => item.part_id === partId),
@@ -10,9 +11,15 @@ export const EvidenceService = {
     cases: [],
   }),
   readPartEvidence: async ({ partId }) => ({
+    features: [],
+    documents: [],
     characteristics: clone(
-      (state().characteristics ?? []).filter((item) => item.part_id === partId),
+      [
+        ...(state().characteristics ?? []),
+        ...(state().importedCharacteristics ?? []),
+      ].filter((item) => item.part_id === partId),
     ),
+    measurement_revisions: state().measurementRevisions ?? [],
     study: {
       state: "ready",
       payload: {
@@ -23,6 +30,55 @@ export const EvidenceService = {
       },
     },
   }),
+  measurementHistory: async () => [],
+  previewMeasurements: async ({ requestBody }) => {
+    state().previewRequests ??= []
+    state().previewRequests.push(clone(requestBody))
+    return {
+      context_key: "preview-context",
+      files: (requestBody.files.length
+        ? requestBody.files
+        : (state().csvFiles ?? [])
+      ).map((file) => ({
+        ...file,
+        status:
+          file.revision && file.sample && file.cavity ? "new" : "needs_context",
+        rows: 2,
+        cotas: 1,
+        issues: [],
+        examples: [
+          {
+            numbers: ["N170"],
+            nominal: 4,
+            tol_inf: -0.1,
+            tol_sup: 0,
+            value: 3.95,
+            unit: "mm",
+          },
+        ],
+      })),
+      notices: [],
+    }
+  },
+  importMeasurements: async ({ partId, requestBody }) => {
+    state().measurementImports ??= []
+    state().measurementImports.push(clone(requestBody))
+    state().measurementRevisions = requestBody.files.map(
+      (file) => file.revision,
+    )
+    state().importedCharacteristics = requestBody.files.map((file, index) => ({
+      id: `imported-${index}`,
+      part_id: partId,
+      code: "N170",
+      revision: file.revision,
+      title: "Diámetro",
+    }))
+    return {
+      imported: requestBody.files.length,
+      skipped: 0,
+      revisions: state().measurementRevisions,
+    }
+  },
   assignCharacteristic: async ({ partId, requestBody }) => {
     state().characteristicRequests ??= []
     state().characteristicRequests.push(clone(requestBody))
@@ -288,6 +344,41 @@ export const FilesService = {
   },
 }
 export const PartsService = {
+  discoverPartFolder: async ({ requestBody }) => ({
+    folder_path: requestBody.folder_path,
+    name: requestBody.folder_path.split("/").pop(),
+    references: ["part", "scan", "mold", "drawing"].map((kind) => ({
+      kind,
+      path: `${requestBody.folder_path}/${kind}.${kind === "drawing" ? "pdf" : kind === "scan" ? "stl" : "step"}`,
+      candidates: [],
+      source_version: "1:10",
+    })),
+    notices: [],
+  }),
+  setupPart: async ({ requestBody }) => {
+    const part = await PartsService.createPartFromFolder({ requestBody })
+    part.name = requestBody.name
+    state().setupRequests ??= []
+    state().setupRequests.push(clone(requestBody))
+    return { part }
+  },
+  refreshPartData: async ({ partId }) => {
+    state().refreshRequests ??= []
+    state().refreshRequests.push(partId)
+    if (state().holdRefresh)
+      await new Promise((resolve) => {
+        state().releaseRefresh = resolve
+      })
+    return {
+      imported: 0,
+      skipped: 0,
+      corrections_state: "empty",
+      notices: [],
+      measurements: await EvidenceService.previewMeasurements({
+        requestBody: { files: [] },
+      }),
+    }
+  },
   createPartFromFolder: async ({ requestBody: { folder_path } }) => {
     state().folderRequests ??= []
     state().folderRequests.push(folder_path)
@@ -388,3 +479,31 @@ export const UsersService = {
   }),
 }
 export const LoginService = {}
+
+export const CatalogService = {
+  searchCatalog: async (params = {}) => {
+    const features =
+      params.kind === "part"
+        ? { data: [], count: 0 }
+        : await FeaturesService.readFeatures(params)
+    const parts =
+      params.kind === "feature"
+        ? { data: [], count: 0 }
+        : await PartsService.readParts()
+    return {
+      features: features.data,
+      parts: parts.data,
+      cotas: [],
+      feature_count: features.count,
+      part_count: parts.count,
+      cota_count: 0,
+    }
+  },
+  readPartDetail: async ({ partId }) => ({
+    part: (await PartsService.readParts()).data.find(
+      (part) => part.id === partId,
+    ),
+    features: (await FeaturesService.readFeatures({ partId })).data,
+    references: [],
+  }),
+}

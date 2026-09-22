@@ -5,8 +5,15 @@ lessons learned y ficheros agrupados por pieza. Piloto actual: **3212 Pump Housi
 Existe una importación piloto de mediciones y correcciones del 3212; el modelo completo
 normalizado y la conexión con Microsoft Graph siguen pendientes.
 
+El proyecto se desarrolla en **tres etapas**: (1) transferir y consultar el conocimiento
+de la empresa mediante la GUI actual; (2) extraer, crear, insertar y adaptar features
+reutilizables en SolidWorks, con ajuste manual o automático según la geometría; y
+(3) predecir contracciones de piezas inyectadas a partir de resultados históricos.
+Las etapas 2 y 3 son futuras. Ver la [hoja de ruta](docs/hoja-de-ruta.md).
+
 ## Documentación
 
+- [Hoja de ruta](docs/hoja-de-ruta.md): objetivos y alcance de las tres etapas.
 - [CLAUDE.md](CLAUDE.md): contexto, rutas y reglas del proyecto.
 - [Aplicación](docs/app-web.md): modelo, API, permisos y comportamiento.
 - [Archivos externos y visores](docs/ficheros-externos.md): vincular originales sin copiarlos,

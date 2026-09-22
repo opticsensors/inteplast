@@ -4,6 +4,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import col, select
 
+from app import measurement_imports
 from app.api.deps import CurrentUser, SessionDep
 from app.api.routes.parts import get_part_or_404
 from app.evidence import drawing_key, job_id, queue, study_key
@@ -82,9 +83,17 @@ def characteristic_public(
 
 @router.get("/parts/{part_id}", response_model=PartEvidencePublic)
 def read_part_evidence(
-    session: SessionDep, _current_user: CurrentUser, part_id: uuid.UUID
+    session: SessionDep,
+    _current_user: CurrentUser,
+    part_id: uuid.UUID,
+    revision: str | None = None,
+    snapshot_id: uuid.UUID | None = None,
 ) -> Any:
     part = get_part_or_404(session, part_id)
+    from app.part_setup import references
+
+    drawing = references(session, part_id).get("drawing")
+    study, revisions = measurement_imports.study(session, part, revision, snapshot_id)
     ids = (
         select(FeatureAsset.file_id)
         .where(FeatureAsset.part_id == part_id)
@@ -114,7 +123,10 @@ def read_part_evidence(
                 .order_by(PartCharacteristic.code)
             ).all()
         ],
-        study=public_job(session.get(EvidenceJob, job_id("study", part_id))),
+        study=study,
+        measurement_revisions=revisions,
+        drawing_file_id=drawing.id if drawing else None,
+        refresh_job=public_job(session.get(EvidenceJob, job_id("study", part_id))),
         import_available=part.code == "3212"
         and part.folder_path == "3212 Pump Housing",
     )

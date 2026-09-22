@@ -368,8 +368,24 @@ def link_feature_part(
     if not part:
         raise HTTPException(status_code=404, detail="Part not found")
     if part not in feature.parts:
+        from app.part_setup import references
+
         order = ordered_part_ids(feature)
         feature.parts.append(part)
+        existing_kinds = {
+            asset.kind for asset in feature.assets if asset.part_id == part_id
+        }
+        for kind, document in references(session, part_id).items():
+            if kind not in existing_kinds:
+                session.add(
+                    FeatureAsset(
+                        feature_id=feature_id,
+                        part_id=part_id,
+                        file_id=document.id,
+                        kind=kind,
+                        name=document.filename,
+                    )
+                )
         if str(part_id) not in order:
             order.append(str(part_id))
         feature.part_order = order

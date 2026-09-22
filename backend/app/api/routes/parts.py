@@ -133,11 +133,6 @@ def create_part_from_folder(
     """Register or reuse an existing part folder; never create source directories."""
     path = part_in.folder_path
     name = folder_name(path)
-    if "/" in path:
-        raise HTTPException(
-            status_code=400,
-            detail="Selecciona una carpeta de pieza del origen principal",
-        )
     existing = folder_part(session, path)
     if existing:
         return existing
@@ -237,9 +232,13 @@ def delete_part(
             "Desvinculala antes de eliminarla del catalogo.",
         )
     from app.knowledge_models import PartCharacteristic, PartDocument
+    from app.measurement_models import MeasurementImport
 
     if (
         session.exec(
+            select(MeasurementImport).where(MeasurementImport.part_id == part_id)
+        ).first()
+        or session.exec(
             select(PartCharacteristic).where(PartCharacteristic.part_id == part_id)
         ).first()
         or session.exec(

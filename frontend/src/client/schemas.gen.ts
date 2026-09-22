@@ -157,6 +157,47 @@ export const CadFaceSelectionSchema = {
     title: 'CadFaceSelection'
 } as const;
 
+export const CatalogPublicSchema = {
+    properties: {
+        features: {
+            items: {
+                '$ref': '#/components/schemas/FeaturePublic'
+            },
+            type: 'array',
+            title: 'Features'
+        },
+        parts: {
+            items: {
+                '$ref': '#/components/schemas/PartCardPublic'
+            },
+            type: 'array',
+            title: 'Parts'
+        },
+        cotas: {
+            items: {
+                '$ref': '#/components/schemas/CotaSearchResult'
+            },
+            type: 'array',
+            title: 'Cotas'
+        },
+        feature_count: {
+            type: 'integer',
+            title: 'Feature Count'
+        },
+        part_count: {
+            type: 'integer',
+            title: 'Part Count'
+        },
+        cota_count: {
+            type: 'integer',
+            title: 'Cota Count'
+        }
+    },
+    type: 'object',
+    required: ['features', 'parts', 'cotas', 'feature_count', 'part_count', 'cota_count'],
+    title: 'CatalogPublic'
+} as const;
+
 export const CharacteristicAssignmentSchema = {
     properties: {
         code: {
@@ -222,6 +263,34 @@ export const CharacteristicPublicSchema = {
     type: 'object',
     required: ['id', 'part_id', 'code', 'revision', 'title'],
     title: 'CharacteristicPublic'
+} as const;
+
+export const CotaSearchResultSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        code: {
+            type: 'string',
+            title: 'Code'
+        },
+        title: {
+            type: 'string',
+            title: 'Title'
+        },
+        revision: {
+            type: 'string',
+            title: 'Revision'
+        },
+        part: {
+            '$ref': '#/components/schemas/PartPublic'
+        }
+    },
+    type: 'object',
+    required: ['id', 'code', 'title', 'revision', 'part'],
+    title: 'CotaSearchResult'
 } as const;
 
 export const DrawingPublicSchema = {
@@ -1388,6 +1457,37 @@ export const FileStatusSchema = {
     title: 'FileStatus'
 } as const;
 
+export const FolderDiscoverySchema = {
+    properties: {
+        folder_path: {
+            type: 'string',
+            title: 'Folder Path'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        references: {
+            items: {
+                '$ref': '#/components/schemas/ReferenceProposal'
+            },
+            type: 'array',
+            title: 'References'
+        },
+        notices: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Notices',
+            default: []
+        }
+    },
+    type: 'object',
+    required: ['folder_path', 'name', 'references'],
+    title: 'FolderDiscovery'
+} as const;
+
 export const HTTPValidationErrorSchema = {
     properties: {
         detail: {
@@ -1661,6 +1761,272 @@ export const LocationReviewSchema = {
     title: 'LocationReview'
 } as const;
 
+export const MeasurementCommitRequestSchema = {
+    properties: {
+        files: {
+            items: {
+                '$ref': '#/components/schemas/MeasurementFileSelection'
+            },
+            type: 'array',
+            maxItems: 250,
+            title: 'Files'
+        },
+        context_key: {
+            type: 'string',
+            title: 'Context Key'
+        }
+    },
+    type: 'object',
+    required: ['context_key'],
+    title: 'MeasurementCommitRequest'
+} as const;
+
+export const MeasurementCommitResultSchema = {
+    properties: {
+        imported: {
+            type: 'integer',
+            title: 'Imported'
+        },
+        skipped: {
+            type: 'integer',
+            title: 'Skipped'
+        },
+        revisions: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Revisions'
+        }
+    },
+    type: 'object',
+    required: ['imported', 'skipped', 'revisions'],
+    title: 'MeasurementCommitResult'
+} as const;
+
+export const MeasurementFilePreviewSchema = {
+    properties: {
+        path: {
+            type: 'string',
+            maxLength: 1024,
+            minLength: 1,
+            title: 'Path'
+        },
+        sha256: {
+            anyOf: [
+                {
+                    type: 'string',
+                    pattern: '^[0-9a-f]{64}$'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Sha256'
+        },
+        revision: {
+            type: 'string',
+            maxLength: 64,
+            title: 'Revision',
+            default: ''
+        },
+        sample: {
+            type: 'string',
+            maxLength: 64,
+            title: 'Sample',
+            default: ''
+        },
+        cavity: {
+            type: 'string',
+            maxLength: 64,
+            title: 'Cavity',
+            default: ''
+        },
+        replace_existing: {
+            type: 'boolean',
+            title: 'Replace Existing',
+            default: false
+        },
+        status: {
+            type: 'string',
+            enum: ['new', 'new_sample', 'new_revision', 'imported', 'replacement', 'needs_context', 'unsupported'],
+            title: 'Status'
+        },
+        rows: {
+            type: 'integer',
+            title: 'Rows',
+            default: 0
+        },
+        cotas: {
+            type: 'integer',
+            title: 'Cotas',
+            default: 0
+        },
+        issues: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Issues',
+            default: []
+        },
+        examples: {
+            items: {
+                additionalProperties: true,
+                type: 'object'
+            },
+            type: 'array',
+            title: 'Examples',
+            default: []
+        }
+    },
+    type: 'object',
+    required: ['path', 'status'],
+    title: 'MeasurementFilePreview'
+} as const;
+
+export const MeasurementFileSelectionSchema = {
+    properties: {
+        path: {
+            type: 'string',
+            maxLength: 1024,
+            minLength: 1,
+            title: 'Path'
+        },
+        sha256: {
+            anyOf: [
+                {
+                    type: 'string',
+                    pattern: '^[0-9a-f]{64}$'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Sha256'
+        },
+        revision: {
+            type: 'string',
+            maxLength: 64,
+            title: 'Revision',
+            default: ''
+        },
+        sample: {
+            type: 'string',
+            maxLength: 64,
+            title: 'Sample',
+            default: ''
+        },
+        cavity: {
+            type: 'string',
+            maxLength: 64,
+            title: 'Cavity',
+            default: ''
+        },
+        replace_existing: {
+            type: 'boolean',
+            title: 'Replace Existing',
+            default: false
+        }
+    },
+    type: 'object',
+    required: ['path'],
+    title: 'MeasurementFileSelection'
+} as const;
+
+export const MeasurementImportSummarySchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        revision: {
+            type: 'string',
+            title: 'Revision'
+        },
+        sample: {
+            type: 'string',
+            title: 'Sample'
+        },
+        cavity: {
+            type: 'string',
+            title: 'Cavity'
+        },
+        source_path: {
+            type: 'string',
+            title: 'Source Path'
+        },
+        sha256: {
+            type: 'string',
+            title: 'Sha256'
+        },
+        imported_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Imported At'
+        },
+        rows: {
+            type: 'integer',
+            title: 'Rows'
+        },
+        active: {
+            type: 'boolean',
+            title: 'Active'
+        },
+        baseline: {
+            type: 'boolean',
+            title: 'Baseline',
+            default: false
+        }
+    },
+    type: 'object',
+    required: ['id', 'revision', 'sample', 'cavity', 'source_path', 'sha256', 'imported_at', 'rows', 'active'],
+    title: 'MeasurementImportSummary'
+} as const;
+
+export const MeasurementPreviewSchema = {
+    properties: {
+        context_key: {
+            type: 'string',
+            title: 'Context Key'
+        },
+        files: {
+            items: {
+                '$ref': '#/components/schemas/MeasurementFilePreview'
+            },
+            type: 'array',
+            title: 'Files'
+        },
+        notices: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Notices',
+            default: []
+        }
+    },
+    type: 'object',
+    required: ['context_key', 'files'],
+    title: 'MeasurementPreview'
+} as const;
+
+export const MeasurementPreviewRequestSchema = {
+    properties: {
+        files: {
+            items: {
+                '$ref': '#/components/schemas/MeasurementFileSelection'
+            },
+            type: 'array',
+            maxItems: 250,
+            title: 'Files'
+        }
+    },
+    type: 'object',
+    title: 'MeasurementPreviewRequest'
+} as const;
+
 export const MessageSchema = {
     properties: {
         message: {
@@ -1859,6 +2225,91 @@ export const NoteKindSchema = {
     title: 'NoteKind'
 } as const;
 
+export const PartCardPublicSchema = {
+    properties: {
+        code: {
+            type: 'string',
+            maxLength: 64,
+            minLength: 1,
+            title: 'Code'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        folder_path: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2048
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Folder Path'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        created_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Created At'
+        },
+        feature_count: {
+            type: 'integer',
+            title: 'Feature Count',
+            default: 0
+        },
+        characteristic_count: {
+            type: 'integer',
+            title: 'Characteristic Count',
+            default: 0
+        },
+        cad: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FilePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        image: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FilePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    type: 'object',
+    required: ['code', 'id'],
+    title: 'PartCardPublic'
+} as const;
+
 export const PartCatalogPublicSchema = {
     properties: {
         code: {
@@ -1918,6 +2369,41 @@ export const PartCatalogPublicSchema = {
     title: 'PartCatalogPublic'
 } as const;
 
+export const PartCoverRequestSchema = {
+    properties: {
+        file_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'File Id'
+        },
+        file_version: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'File Version'
+        },
+        source_sha256: {
+            type: 'string',
+            pattern: '^[0-9a-f]{64}$',
+            title: 'Source Sha256'
+        },
+        image_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Image Id'
+        }
+    },
+    type: 'object',
+    required: ['file_id', 'source_sha256', 'image_id'],
+    title: 'PartCoverRequest'
+} as const;
+
 export const PartCreateSchema = {
     properties: {
         code: {
@@ -1956,6 +2442,31 @@ export const PartCreateSchema = {
     title: 'PartCreate'
 } as const;
 
+export const PartDetailPublicSchema = {
+    properties: {
+        part: {
+            '$ref': '#/components/schemas/PartCardPublic'
+        },
+        features: {
+            items: {
+                '$ref': '#/components/schemas/FeaturePublic'
+            },
+            type: 'array',
+            title: 'Features'
+        },
+        references: {
+            items: {
+                '$ref': '#/components/schemas/PartReferencePublic'
+            },
+            type: 'array',
+            title: 'References'
+        }
+    },
+    type: 'object',
+    required: ['part', 'features', 'references'],
+    title: 'PartDetailPublic'
+} as const;
+
 export const PartEvidencePublicSchema = {
     properties: {
         part: {
@@ -1989,6 +2500,29 @@ export const PartEvidencePublicSchema = {
         import_available: {
             type: 'boolean',
             title: 'Import Available'
+        },
+        measurement_revisions: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Measurement Revisions',
+            default: []
+        },
+        drawing_file_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Drawing File Id'
+        },
+        refresh_job: {
+            '$ref': '#/components/schemas/JobPublic'
         }
     },
     type: 'object',
@@ -2063,6 +2597,93 @@ export const PartPublicSchema = {
     type: 'object',
     required: ['code', 'id'],
     title: 'PartPublic'
+} as const;
+
+export const PartReferencePublicSchema = {
+    properties: {
+        kind: {
+            '$ref': '#/components/schemas/AssetKind'
+        },
+        file: {
+            '$ref': '#/components/schemas/FilePublic'
+        }
+    },
+    type: 'object',
+    required: ['kind', 'file'],
+    title: 'PartReferencePublic'
+} as const;
+
+export const PartRefreshResultSchema = {
+    properties: {
+        imported: {
+            type: 'integer',
+            title: 'Imported',
+            default: 0
+        },
+        skipped: {
+            type: 'integer',
+            title: 'Skipped',
+            default: 0
+        },
+        measurements: {
+            '$ref': '#/components/schemas/MeasurementPreview'
+        },
+        corrections_state: {
+            type: 'string',
+            title: 'Corrections State',
+            default: 'empty'
+        },
+        notices: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Notices',
+            default: []
+        }
+    },
+    type: 'object',
+    required: ['measurements'],
+    title: 'PartRefreshResult'
+} as const;
+
+export const PartSetupRequestSchema = {
+    properties: {
+        folder_path: {
+            type: 'string',
+            maxLength: 2048,
+            minLength: 1,
+            title: 'Folder Path'
+        },
+        name: {
+            type: 'string',
+            maxLength: 255,
+            minLength: 1,
+            title: 'Name'
+        },
+        references: {
+            items: {
+                '$ref': '#/components/schemas/ReferenceChoice'
+            },
+            type: 'array',
+            maxItems: 4,
+            title: 'References'
+        }
+    },
+    type: 'object',
+    required: ['folder_path', 'name', 'references'],
+    title: 'PartSetupRequest'
+} as const;
+
+export const PartSetupResultSchema = {
+    properties: {
+        part: {
+            '$ref': '#/components/schemas/PartPublic'
+        }
+    },
+    type: 'object',
+    required: ['part'],
+    title: 'PartSetupResult'
 } as const;
 
 export const PartUpdateSchema = {
@@ -2144,6 +2765,106 @@ export const PrivateUserCreateSchema = {
     type: 'object',
     required: ['email', 'password', 'full_name'],
     title: 'PrivateUserCreate'
+} as const;
+
+export const ReferenceCandidateSchema = {
+    properties: {
+        path: {
+            type: 'string',
+            title: 'Path'
+        },
+        source_version: {
+            type: 'string',
+            title: 'Source Version'
+        },
+        size: {
+            type: 'integer',
+            title: 'Size'
+        }
+    },
+    type: 'object',
+    required: ['path', 'source_version', 'size'],
+    title: 'ReferenceCandidate'
+} as const;
+
+export const ReferenceChoiceSchema = {
+    properties: {
+        kind: {
+            type: 'string',
+            enum: ['part', 'scan', 'mold', 'drawing'],
+            title: 'Kind'
+        },
+        path: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2048
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Path'
+        },
+        source_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Version'
+        }
+    },
+    type: 'object',
+    required: ['kind'],
+    title: 'ReferenceChoice'
+} as const;
+
+export const ReferenceProposalSchema = {
+    properties: {
+        kind: {
+            type: 'string',
+            enum: ['part', 'scan', 'mold', 'drawing'],
+            title: 'Kind'
+        },
+        path: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2048
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Path'
+        },
+        source_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Version'
+        },
+        candidates: {
+            items: {
+                '$ref': '#/components/schemas/ReferenceCandidate'
+            },
+            type: 'array',
+            title: 'Candidates',
+            default: []
+        }
+    },
+    type: 'object',
+    required: ['kind'],
+    title: 'ReferenceProposal'
 } as const;
 
 export const RelinkFileReferenceSchema = {

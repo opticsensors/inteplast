@@ -1,12 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import {
-  Check,
-  ChevronDown,
-  Download,
-  Loader2,
-  Trash2,
-  Upload,
-} from "lucide-react"
+import { Check, ChevronDown, Download, Trash2 } from "lucide-react"
 import { type ReactNode, useEffect, useMemo, useRef } from "react"
 
 import {
@@ -14,7 +7,6 @@ import {
   type FeatureAssetPublic,
   type FeatureAssetUpdate,
   FeaturesService,
-  FilesService,
 } from "@/client"
 import { FileLink } from "@/components/Common/FileLink"
 import { Button } from "@/components/ui/button"
@@ -26,11 +18,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import useCustomToast from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
 import { formatFileSize, handleError } from "@/utils"
@@ -68,7 +55,7 @@ const extensionOf = (filename: string) =>
  *
  * - **el tipo**, en el desplegable que abre el icono,
  * - **el nombre**, escribiendo encima,
- * - **el fichero**, con *Subir* / *Cambiar*.
+ * - **el fichero**, con el selector de Windows para vincular el original.
  *
  * 🔑 No hay boton de editar ni modal. Y se guarda solo, como las notas: lo
  * unico que se guarda a mano en esta pagina es la cabecera del feature.
@@ -85,7 +72,6 @@ export function AssetEditRow({
   const queryClient = useQueryClient()
   const { showErrorToast } = useCustomToast()
   const nameRef = useRef<HTMLInputElement>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (isNew) nameRef.current?.select()
@@ -124,26 +110,6 @@ export function AssetEditRow({
     },
   })
 
-  const upload = useMutation({
-    mutationFn: (file: File) => FilesService.uploadFile({ formData: { file } }),
-    onError: handleError.bind(showErrorToast),
-  })
-  const fileUpload = usePendingTask(async (file: File) => {
-    const uploaded = await upload.mutateAsync(file)
-    const patch: FeatureAssetUpdate = {
-      file_id: uploaded.id,
-      name: uploaded.filename,
-    }
-    // Fila recien creada y sin tocar: la rellena el propio fichero.
-    if (name === NEW_ASSET_NAME) {
-      const guessed = KIND_BY_EXTENSION[extensionOf(uploaded.filename)]
-      if (guessed) patch.kind = guessed
-    }
-    autosave.change({ name: uploaded.filename })
-    if (!(await autosave.flush())) throw new Error("Nombre sin guardar")
-    await update.mutateAsync(patch)
-  })
-
   const Icon = ASSET_ICONS[asset.kind]
   const file = asset.file
 
@@ -159,7 +125,7 @@ export function AssetEditRow({
               size="sm"
               className="h-7 shrink-0 justify-start gap-1 px-1.5 font-normal text-muted-foreground"
               title="Cambiar el tipo"
-              disabled={metadata.pending || fileUpload.pending}
+              disabled={metadata.pending}
             >
               <Icon className="size-3.5" />
               <span className="hidden sm:inline">
@@ -193,7 +159,7 @@ export function AssetEditRow({
           value={asset.file?.filename ?? name}
           readOnly={Boolean(asset.file)}
           title={asset.file?.filename}
-          disabled={metadata.pending || fileUpload.pending}
+          disabled={metadata.pending}
           onChange={(event) => autosave.change({ name: event.target.value })}
           placeholder="Nombre del fichero"
           className={cn(
@@ -207,31 +173,6 @@ export function AssetEditRow({
             {formatFileSize(file.size)}
           </span>
         )}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-7 shrink-0"
-              onClick={() => fileRef.current?.click()}
-              disabled={fileUpload.pending || metadata.pending}
-            >
-              {upload.isPending ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <Upload className="size-3.5" />
-              )}
-              <span className="sr-only">
-                {file ? `Cambiar el fichero de ${filename}` : "Subir"}
-              </span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            {file ? "Cambiar el fichero" : "Subir fichero"}
-          </TooltipContent>
-        </Tooltip>
-
         {file && (
           <Button
             asChild
@@ -250,7 +191,7 @@ export function AssetEditRow({
           initialPath={asset.part?.folder_path ?? ""}
           compact
           document={file ?? undefined}
-          disabled={fileUpload.pending || metadata.pending}
+          disabled={metadata.pending}
           onLinked={async (linked) => {
             const patch: FeatureAssetUpdate = {
               file_id: linked.id,
@@ -273,38 +214,17 @@ export function AssetEditRow({
           size="icon"
           className="size-7 shrink-0 text-destructive"
           onClick={() => remove.mutate()}
-          disabled={
-            remove.isPending ||
-            fileUpload.pending ||
-            metadata.pending ||
-            autosave.saving
-          }
+          disabled={remove.isPending || metadata.pending || autosave.saving}
         >
           <Trash2 className="size-3.5" />
           <span className="sr-only">Borrar {filename}</span>
         </Button>
-
-        <input
-          ref={fileRef}
-          type="file"
-          className="hidden"
-          onChange={(event) => {
-            const chosen = event.target.files?.[0]
-            if (chosen) void fileUpload.run(chosen)
-            event.target.value = ""
-          }}
-        />
       </div>
       <DocumentStatus file={file} />
       <SaveStatus
         error={autosave.error}
         saving={autosave.saving}
         retry={autosave.flush}
-      />
-      <SaveStatus
-        error={fileUpload.error}
-        saving={fileUpload.pending}
-        retry={fileUpload.retry}
       />
       <SaveStatus
         error={metadata.error}

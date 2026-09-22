@@ -55,7 +55,14 @@ def study_key(part: Part) -> str:
     return digest([RECIPE, part.folder_path, sorted(manifest)])
 
 
-def queue(session: Session, kind: str, target: uuid.UUID, key: str) -> EvidenceJob:
+def queue(
+    session: Session,
+    kind: str,
+    target: uuid.UUID,
+    key: str,
+    *,
+    requested_by: uuid.UUID | None = None,
+) -> EvidenceJob:
     # Serialize creation/update for this identity, including concurrent requests.
     session.execute(
         text("SELECT pg_advisory_xact_lock(:key)"),
@@ -73,6 +80,8 @@ def queue(session: Session, kind: str, target: uuid.UUID, key: str) -> EvidenceJ
     elif job.cache_key == key and job.state != "error":
         return job
     job.cache_key, job.state, job.message = key, "queued", None
+    if requested_by is not None:
+        job.payload = {**job.payload, "_refresh_requested_by": str(requested_by)}
     job.updated_at = get_datetime_utc()
     session.add(job)
     session.commit()
@@ -259,6 +268,16 @@ def process_next(stop: threading.Event) -> bool:
                     if study_key(part) != key:
                         raise ValueError("Sources changed during import")
                     data = publish_study(session, part, data, destination)
+                    if active.payload.get("_refresh_requested_by"):
+                        from app.measurement_imports import save_refreshed_study
+
+                        save_refreshed_study(
+                            session,
+                            part,
+                            data,
+                            key,
+                            uuid.UUID(active.payload["_refresh_requested_by"]),
+                        )
                 active.payload, active.state = data, "ready"
                 active.updated_at = get_datetime_utc()
                 session.add(active)

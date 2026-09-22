@@ -11,6 +11,18 @@
 
 ## Qué hay implementado
 
+**22/09/2026:** **Catálogo** reúne piezas y features en `/features`, con cotas solo cuando
+se escribe en el buscador. Nueva pieza y Nuevo feature están juntos. Cada pieza tiene ficha
+con portada STEP completa ampliable en 3D, features vinculados y la consulta de metrología
+reutilizada. Los vínculos se editan desde cualquiera de las dos fichas.
+
+El alta se hace desde **Catálogo → Nueva pieza**. Propone nombre y
+cuatro referencias desde una carpeta seleccionada en Windows e incorpora automáticamente
+CSV CMM individuales/comparativos y tablas PPAP XLS/XLSX. **Actualizar datos** repite la lectura de forma
+explícita. Features ofrece únicamente piezas registradas y reutiliza sus referencias al
+asociarlas. La integración nativa local se describe en [ficheros-externos.md](ficheros-externos.md).
+La interpretación de correcciones de otras piezas y la conexión Graph siguen pendientes.
+
 El **bloque transversal** del modelo de datos: `FEATURE` + `WARNING` + `LESSON_LEARNED` +
 ficheros de ejemplo. Es lo que consume el frontend descrito en la fase B y lo que responde a
 *«dame todo del Bolt Eye»*.
@@ -28,6 +40,14 @@ del 3212. Los lectores propios de `backend/app/ingestion/` guardan snapshots est
 la web no depende de los visores de `prototypes/data-explorer/`. El modelo
 completo normalizado de `MUESTREO`, `MEDICION`, `CORRECCION_MOLDE` y `DEPENDENCIA_COTA`
 sigue pendiente. Alcance y funcionamiento en [Cotas y evidencia web](cotas-y-evidencia-web.md).
+
+Desde el **2026-09-22**, Metrología incorpora tablas de otras piezas sin revisión archivo a
+archivo. `MeasurementImport` conserva datos interpretados, hash,
+contexto y versiones anteriores. El lector reutilizable está en
+`backend/app/ingestion/measurement_csv.py` y `measurement_tables.py`; las reglas específicas
+del piloto no se aplican a otra pieza por tener el mismo número de cota. La lectura de la
+3197 se ha contrastado con 30 valores CSV y 30 XLS (60 coincidencias). La interpretación
+de sus retoques sigue pendiente; los puntos de coordenadas no se importan como cotas.
 
 ---
 
@@ -161,6 +181,9 @@ Todo bajo `/api/v1`. Documentación interactiva en `http://localhost:8000/docs`.
 | `POST` | `/parts/from-folder` | Registrar o reutilizar una carpeta de pieza existente, sin duplicados |
 | `GET` `POST` | `/parts/` | Listar (incluye `feature_count` por pieza) y dar de alta piezas |
 | `PUT` | `/parts/{id}` | Editar código o nombre. El código es único: choque → `409` |
+| `GET` | `/catalog` | Búsqueda paginada de piezas/features; cotas por pieza/revisión solo con texto. Filtros compartidos y `kind=all/part/feature` |
+| `GET` | `/parts/{id}/detail` | Identidad, portada/CAD, referencias y features vinculados |
+| `PUT` | `/parts/{id}/cover` | Guardar una captura del CAD actual, validando versión y SHA-256 |
 | `DELETE` | `/parts/{id}` | Borrar una pieza sin uso. **Solo superusuario**; usada → `409` |
 | `POST` | `/files/` | Subir un fichero (multipart) → devuelve el `id` que se referencia |
 | `GET` | `/files/source` | Listar una carpeta del origen configurado; `path`, `skip`, `limit` |
@@ -199,27 +222,32 @@ el administrador. Las rutas privadas para crear usuarios de prueba requieren
 Las reglas compartidas de búsqueda, filtros, gráficas y navegación están en
 [Patrones de interfaz](interfaz.md). Se aplican también a nuevas pantallas.
 
-**Metrología** (`/parts`) reúne buscador de cotas y selectores de Pieza/Feature en una
-misma pantalla, sin catálogo intermedio. Categoría y Tag están en Más filtros. El selector
-de pieza es obligatorio para buscar cotas; elegir primero un feature limita las piezas.
+**Catálogo** (`/features`) reúne tarjetas de piezas y features. Las cotas aparecen solo
+al buscar y conservan pieza/revisión en el enlace. `/parts` redirige al mismo catálogo
+filtrado por piezas. `/parts/{id}` muestra portada CAD, features, cotas y referencias.
+La sección Cotas reutiliza `MetrologyPage` con la pieza fijada por la ficha, sin otro
+selector de pieza. Categoría y Tag están en Más filtros.
 `GET /evidence/metrology/filters` proporciona opciones ligeras con pertenencia, categoría
 y tags; `GET /evidence/parts/{id}` incluye features y sus cotas, además de los datos importados.
-Ambos selectores de piezas usan los mismos vínculos de feature (declarados, ficheros o
-cotas) y excluyen piezas sin vínculos. El catálogo completo se conserva para añadir piezas.
+El catálogo ofrece todas las piezas registradas, incluidas las que no tienen features.
 `Common/SearchSelect` se reutiliza también en Features. Categoría y tag deben coincidir
 en un mismo feature y solo atribuyen a la consulta sus cotas realmente vinculadas.
 La ficha no selecciona N170 ni otra cota automáticamente. Un filtro permite consultar
 todos los features o solo el de entrada, sin ocultar las cotas sin mediciones. Los enlaces
 desde Features conservan pieza, feature, cota y revisión, también al abrir el plano.
 
-La ficha de pieza abre la consulta de cotas sin pestañas ni catálogo de documentos.
+La sección Cotas abre la consulta sin pestañas ni listados de archivos de mediciones.
 Mediciones y correcciones comparten filtros y gráfica; los números se consultan sobre
 la gráfica. Correcciones conserva todos los muestreos; pulsar una región entre ellos la
 selecciona en gris y actualiza la propuesta, previsión y cambio medido, sin imágenes ni
-desplegable de documentos. Plano queda junto al buscador con su misma altura y alterna
-el dibujo bajo la misma cabecera de pieza. Correcciones queda debajo a la izquierda.
-Ambos conservan el contexto en el historial del navegador. La importación está en
-**Admin → Datos de piezas**.
+desplegable de documentos. Plano queda junto al buscador con su misma altura y abre
+`/parts/{id}/fichero/{fileId}`, una página propia con el visor de Features. El enlace del
+PDF en Archivos abre la misma página; no redirige a la sección Cotas. Los enlaces antiguos
+con `plano=true` se resuelven al archivo. Correcciones queda debajo a la izquierda.
+Ambos conservan el contexto en el historial del navegador. La importación CSV está en
+**Catálogo → Nueva pieza / ficha de pieza → Actualizar datos**. Admin conserva la importación
+piloto de mediciones/correcciones del 3212. Metrología permite cambiar de revisión si hay
+varias, y consultar una versión anterior desde el historial de importaciones de la pieza.
 
 | Ruta | Fichero | Qué es |
 |---|---|---|
@@ -237,13 +265,14 @@ Componentes en `components/Features/`:
 | `FeatureSearch.tsx` | Buscador + Pieza y Feature; Categoría y Tag bajo Más filtros. Selectores con búsqueda interna poblados desde `/features/filters`; `feature_id` filtra por identidad exacta y se conserva como `feature` en la URL |
 | `FeatureCard.tsx` | La tarjeta: imagen, nombre, descripción, tags y el resumen *«2 piezas · 3197, 3212»* |
 | `PartAssetList.tsx` | 🔑 **Los ficheros agrupados por pieza**: un desplegable por pieza y dentro una fila por fichero. **El mismo componente sirve la ficha y el formulario** (`editable`) |
-| `Parts/FeaturePartEvidence.tsx` | Fila **COTAS** dentro de cada pieza, con el mismo borde/altura que los ficheros: números y acceso al plano, sin revisión/relación visibles. Añadir crea un campo al final de la fila, con guardado al terminar de escribir y papelera en edición. |
+| `Parts/FeaturePartEvidence.tsx` | Fila **COTAS** compacta: números, plano, añadir y papelera. Añadir permite seleccionar una cota importada con su revisión o escribir otra al final de la fila. |
+| `Parts/PartSetupDialog.tsx` | Alta y actualización automática, tamaño fijo, carga en el pie y acciones Crear/Cancelar. No asigna cotas al feature. |
 | `viewers.ts` | Extensión → visor, carga directa hasta 50 MiB y GLB automático para STL/STEP grandes |
 | `ModelViewer.tsx` | El visor 3D (three.js + OpenCascade en WASM). Se carga con `import()` dinámico: no pesa nada hasta que alguien abre un 3D |
 | `modelControls.ts` | Giro libre en pantalla, desplazamiento y zoom 3D, sin bloqueo en los polos ni inercia al soltar |
 | `PdfViewer.tsx` | PDF.js en canvas: rueda sobre el cursor, arrastre del plano, encuadre y cambio de página |
 | `parts.ts` | La unión *piezas declaradas + piezas con ficheros* y el reparto por pieza y tipo. Es la lógica de la lista |
-| `PartActions.tsx` | Buscador de carpetas existentes y piezas registradas; seleccionar registra o reutiliza la pieza |
+| `PartActions.tsx` | Buscador de piezas registradas; seleccionar vincula una al feature |
 | `PartIdentityEditor.tsx` | Código y nombre editables en la cabecera de la pieza, con autoguardado y recuperación de errores |
 | `PartFolderPicker.tsx` | Carpeta compartida de la pieza; reutiliza el explorador de originales |
 | `FeatureForm.tsx` | El formulario de alta y edición (datos básicos + warnings, lessons, **Piezas** y **Ficheros por pieza**). Lo montan `/features/nuevo` y la propia ficha en modo edición. 🔑 **Repite el reparto de la ficha** —foto a la izquierda, datos a la derecha, secciones debajo— con una casilla en el sitio de cada dato, para que entrar y salir de edición no mueva nada de sitio |
@@ -270,16 +299,15 @@ fichero**.
 **El checklist de lo que falta no se pierde**: lo dan el contador de cada pieza
 (*«5 ficheros · 2 vinculados»*) y las filas que dicen *«sin archivo vinculado»*.
 
-**Añadir pieza** busca entre las subcarpetas directas de una carpeta principal común
-(supuesto pendiente de confirmar con INTEPLAST, pregunta A12). Al seleccionar una carpeta,
-`POST /parts/from-folder` reutiliza la pieza asociada o la registra y abre su tarjeta: nombre
-completo de carpeta y código numérico inicial, ambos editables. Sin prefijo numérico se asigna
-un código provisional estable `PIEZA-…`. No se crean carpetas originales. Una pieza antigua
-sin carpeta con el mismo código se reutiliza conservando su nombre; un código ya asociado a
-otra carpeta produce conflicto. Código y carpeta son únicos, incluso ante altas simultáneas.
+**Añadir pieza** busca exclusivamente en el catálogo registrado. **Nueva pieza** está en
+Catálogo: selecciona una carpeta de Windows dentro del origen configurado, propone el
+nombre completo y los archivos y prepara datos compatibles al crearla. El código se obtiene
+del prefijo numérico de la carpeta o se asigna uno provisional estable `PIEZA-…`.
+Se reutilizan registros existentes, sin crear carpetas ni duplicar piezas. Código y carpeta
+son únicos; un código asociado a otra carpeta produce conflicto.
 
 Código, nombre y carpeta se comparten entre features; cada feature elige sus propios ficheros.
-El selector de ficheros empieza en la carpeta de la pieza. **Cambiar carpeta** está en el menú
+El selector nativo de ficheros empieza en Exemples. **Cambiar carpeta** está en el menú
 de tres puntos y conserva los nombres personalizados. `folder_path` pertenece al adaptador
 local temporal; Graph sustituirá esa referencia por la identidad estable del origen.
 
@@ -288,6 +316,24 @@ al final que se guarda con Intro, al salir o con Guardar el feature; los errores
 el borrador. No solicita revisión ni relación. Reutiliza vínculos existentes sin cambiar
 sus metadatos; para altas toma la revisión del estudio o una única revisión conocida de
 la pieza/cota. Sin esa información queda «sin confirmar», sin asumir la revisión 06.
+
+Si hay cotas importadas, Añadir cota ofrece primero un selector con búsqueda y revisión;
+la alternativa manual conserva el comportamiento anterior. Actualizar datos en Metrología
+procesa las tablas compatibles automáticamente sin asignar sus cotas al feature.
+Una pieza vinculada a varios features comparte las mismas importaciones.
+
+API autenticada de mediciones (prefijo `/api/v1`):
+
+| Método y ruta | Función |
+|---|---|
+| `POST /evidence/parts/{id}/measurements/preview` | Descubrir CSV o revisar una selección; devuelve contexto, hash, ejemplos y estado sin escribir datos. |
+| `POST /evidence/parts/{id}/measurements/import` | Verificar otra vez contexto y hashes, incorporar cotas y conservar versiones. Requiere pieza vinculada a un feature y confirmación de las sustituciones. |
+| `GET /evidence/parts/{id}/measurements/history` | Historial de importaciones, con revisiones y versión vigente por muestreo/cavidad. |
+| `GET /evidence/parts/{id}?revision=…&snapshot_id=…` | Consulta de la revisión elegida o del estado guardado hasta una importación concreta; devuelve `measurement_revisions`. |
+
+La migración `h39c25ebfa07` añade `MeasurementImport` (`measurement_models.py`). No
+importa originales durante la migración. La primera importación CSV conserva también
+una copia del estudio piloto previo, si existe, para que siga siendo consultable.
 
 Las piezas antiguas sin correspondencia en el origen siguen disponibles en el buscador.
 La papelera elimina directamente del catálogo las piezas sin uso, sin confirmación;
@@ -399,10 +445,11 @@ modal se ha borrado. El motivo no es estético:
 (ver abajo). Se mantienen confirmaciones de borrado, el diálogo de cambios pendientes,
 el selector de originales y los diálogos para crear o ampliar una portada CAD.
 
-🔑 **Un único catálogo de Features** (2026-09-16). Se unifican el dashboard y la lista de
-gestión. El menú lateral tiene una sola entrada **Features**, activa también dentro de las
-fichas y los visores; **Admin** sigue separado para los superusuarios. La cabecera muestra
-el título y *Nuevo feature*, sin saludo ni párrafos de instrucciones.
+🔑 **Un único catálogo de piezas y features** (ampliado el 2026-09-22). El menú lateral tiene
+una sola entrada **Catálogo**, activa también dentro de las fichas y los visores; **Admin**
+sigue separado para los superusuarios. La cabecera muestra el título, *Nueva pieza* y
+*Nuevo feature*, sin saludo ni párrafos de instrucciones. Las tarjetas reutilizan el diseño
+de Features. La búsqueda conserva los filtros y ofrece *Mostrar más* para paginar.
 
 La tarjeta se pulsa para consultar y su botón *Editar* abre directamente la edición. No hay
 interruptor global ni menú intermedio. La ficha en lectura también ofrece *Editar*, y
@@ -589,7 +636,6 @@ La cobertura HTML se genera dentro del stack de tests y desaparece al limpiarlo.
 | Qué | Estado |
 |---|---|
 | **La página `/items` de la plantilla sigue existiendo** | Se ha quitado del menú pero el `Item` de demo sigue en el backend, el frontend y los tests. No molesta; se puede borrar entero cuando se decida |
-| **Sin paginación en la UI** | La API ya la tiene (`skip`/`limit`); el catálogo pide hasta 100 fichas. Con más fichas hay que añadir controles |
 | **Imagen con la zona marcada en rojo** | Implementada la [portada CAD](portadas-cad.md): caras del STEP, captura, cámara y 3D interactivo. El marcado libre sobre imágenes/planos sigue pendiente |
 | **Vincular un feature con sus N-numbers y sus cotas** | La tabla ya existe (`FeaturePartLink`), pero está vacía de contenido: solo dice *feature ↔ pieza*. Añadirle los N-numbers y las tolerancias la convierte en el `INSTANCIA_EN_PROYECTO` de [modelo-datos.md](modelo-datos.md) |
 | **Vistas ligeras de escaneo y molde** | Implementadas: cola persistente, GLB en caché, original intacto y descarga íntegra; ver [vistas-3d.md](vistas-3d.md) |

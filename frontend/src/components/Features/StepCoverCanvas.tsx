@@ -33,6 +33,7 @@ export default function StepCoverCanvas({
   onSelectionChange,
   onResetSelection,
   disabled = false,
+  wholePart = false,
 }: {
   file: FilePublic
   initial?: FeatureCover3D | null
@@ -43,6 +44,7 @@ export default function StepCoverCanvas({
   onSelectionChange?: (count: number) => void
   onResetSelection?: () => void
   disabled?: boolean
+  wholePart?: boolean
 }) {
   const host = useRef<HTMLDivElement>(null)
   const callbacks = useRef({ onReady, onSelectionChange })
@@ -51,7 +53,7 @@ export default function StepCoverCanvas({
   const clearSelection = useRef<() => void>(() => {})
   const [selectedCount, setSelectedCount] = useState(0)
   const [restartable, setRestartable] = useState(false)
-  const [status, setStatus] = useState("Cargando pieza CAD…")
+  const [status, setStatus] = useState("Cargando CAD…")
   const [error, setError] = useState("")
 
   useEffect(() => {
@@ -67,7 +69,7 @@ export default function StepCoverCanvas({
     setSelectedCount(0)
     setRestartable(false)
     setError("")
-    setStatus("Cargando pieza CAD…")
+    setStatus("Cargando CAD…")
 
     const run = async () => {
       if (file.size > MAX_COVER_STEP_SIZE)
@@ -268,8 +270,10 @@ export default function StepCoverCanvas({
       canvas.setAttribute(
         "aria-label",
         editable
-          ? "Seleccionar superficies de la pieza CAD"
-          : "Portada 3D del feature",
+          ? "Seleccionar superficies del CAD"
+          : wholePart
+            ? "Modelo 3D de la pieza"
+            : "Portada 3D del feature",
       )
       canvas.setAttribute("role", "img")
       container.appendChild(canvas)
@@ -456,7 +460,7 @@ export default function StepCoverCanvas({
       callbacks.current.onReady?.(null)
       release()
     }
-  }, [file.id, file.version, file.size, initial, editable])
+  }, [file.id, file.version, file.size, initial, editable, wholePart])
 
   return (
     <div

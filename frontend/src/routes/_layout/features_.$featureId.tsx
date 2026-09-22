@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router"
 import { Lightbulb, Package2, TriangleAlert } from "lucide-react"
 
 import { ApiError, type NoteKind } from "@/client"
@@ -173,8 +173,16 @@ function FeatureDetail() {
               <span aria-hidden>·</span>
               {parts.map((part, index) => (
                 <span key={part.id}>
-                  <span className="font-mono text-foreground">{part.code}</span>
-                  {part.name && ` ${part.name}`}
+                  <Link
+                    to="/parts/$partId"
+                    params={{ partId: part.id }}
+                    className="hover:underline"
+                  >
+                    <span className="font-mono text-foreground">
+                      {part.code}
+                    </span>
+                    {part.name && ` ${part.name}`}
+                  </Link>
                   {index < parts.length - 1 && ","}
                 </span>
               ))}

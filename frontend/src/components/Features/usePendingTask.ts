@@ -40,6 +40,11 @@ export function usePendingTask<T>(task: (input: T) => Promise<unknown>) {
   }, [])
 
   const retry = useCallback(() => run(state.current.input as T), [run])
+  const dismissError = useCallback(() => {
+    if (state.current.promise) return
+    state.current.failed = false
+    setError(false)
+  }, [])
   useEffect(
     () =>
       session?.register({
@@ -52,5 +57,5 @@ export function usePendingTask<T>(task: (input: T) => Promise<unknown>) {
     [session],
   )
 
-  return { run, retry, pending, error }
+  return { run, retry, pending, error, dismissError }
 }

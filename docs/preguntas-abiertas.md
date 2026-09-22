@@ -3,7 +3,7 @@
 > **Antes de preguntar algo a INTEPLAST, mirar aquí.** Varias de las preguntas originales se
 > han resuelto leyendo los datos, sin necesidad de consultar.
 >
-> Última revisión: **2026-09-17**
+> Última revisión: **2026-09-22**
 
 ---
 
@@ -331,6 +331,59 @@ repartidas entre distintos proyectos o ubicaciones?**
 común y presenta sus subcarpetas directas. Seleccionar una registra o reutiliza la pieza sin
 crear ni modificar carpetas originales. El adaptador local es temporal; acceso y permisos
 de SharePoint/OneDrive siguen pendientes en A10.
+
+---
+
+### A13 · Incorporación de una segunda pieza con mediciones
+
+**Prioridad de reunión:** tratar después del acceso a los originales y sus revisiones (A10).
+
+**Pregunta:** ¿Podemos revisar una segunda pieza completa, con varios muestreos y sus
+revisiones identificadas, para comprobar qué estructura y formatos se repiten? ¿Quién
+de metrología podría contrastar con nosotros la primera importación?
+
+**Confirmar:** formato de exportación CMM y unidades, identificación de revisión/muestreo/
+cavidad, significado de archivos repetidos y si cada export contiene todas las mediciones
+de esa combinación o hay entregas parciales. Pedir un ejemplo de cambio de revisión.
+
+**Contexto interno (2026-09-21):** Features registra/reutiliza la pieza desde su carpeta;
+el flujo CSV permite revisar e incorporar mediciones y después asociar cotas al feature.
+Las importaciones comparten datos entre features y conservan versiones. El lector actual
+cubre el formato CMM por bloques, con pruebas sintéticas de otra pieza. Aún no se ha
+validado una segunda pieza real ni la generalización de correcciones XLS/PPTX.
+
+---
+
+### A14 · ¿Cómo se elaboran los XLS de metrología y de retoques?
+
+**Para metrología y el responsable de los planes de corrección.**
+
+**Recordatorio.** Del 3212 tenemos los CSV exportados por la CMM, los informes
+`3212-00_intern.NN.xls` y los XLS de retoques. Los informes usan una plantilla PPAP y
+añaden historial, requisitos y resultados de otros equipos o ensayos. Los XLS de retoques
+incluyen propuestas y previsiones calculadas con fórmulas.
+
+**Qué no nos cuadra.** No sabemos cómo pasan las medidas al Excel: importación automática,
+macros o copia manual. Algunos bloques conservan valores de muestreos anteriores. Por
+ejemplo, N117/N118 de `intern.05.xls` coincide con `.03`, mientras el CSV de `.05` contiene
+valores distintos. Esto no demuestra por sí solo cómo se elaboró el informe.
+
+**Pregunta: ¿Nos podéis enseñar cómo preparáis un `intern.NN.xls`, desde que termina la
+medición hasta que emitís el informe, indicando qué se importa automáticamente, qué se
+introduce a mano y qué se conserva del informe anterior?**
+
+**Para el XLS de retoques:** ¿quién introduce los valores de retoque y las fórmulas de
+previsión, y cómo indicáis después qué se ha ejecutado realmente?
+
+**Pedir:** recorrer un ejemplo real con quien lo prepara y, si se utiliza, identificar la
+plantilla, macro o herramienta de importación. Aclarar cómo distinguen medidas nuevas,
+valores heredados y previsiones.
+
+**Contexto interno (2026-09-22, no enviar):** el proceso mixto es una hipótesis, no una
+confirmación del cliente. La respuesta determinará qué podemos automatizar y qué necesita
+revisión humana. Una fórmula calcula una previsión; no acredita ejecución ni resultado.
+Ver [metrología del 3212](3212/4-metrologia.md) y
+[fórmulas y previsiones verificadas](3212/revision-2026-09-17.md).
 
 ---
 

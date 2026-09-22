@@ -1,21 +1,14 @@
 import { Folder, MoreHorizontal } from "lucide-react"
-import { useState } from "react"
-
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { SourceBrowser } from "./SourceFilePicker"
+import { pickNativePath } from "@/lib/nativePicker"
+import { SaveStatus } from "./SaveStatus"
+import { usePendingTask } from "./usePendingTask"
 
 export function PartFolderPicker({
   path,
@@ -24,19 +17,12 @@ export function PartFolderPicker({
   path: string | null | undefined
   onSelected: (path: string) => Promise<void>
 }) {
-  const [open, setOpen] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const linked = path != null
-  const label = linked
-    ? "Cambiar carpeta de la pieza"
-    : "Vincular carpeta de la pieza"
+  const selection = usePendingTask(async (_: undefined) => {
+    const folder = await pickNativePath("folder")
+    if (folder) await onSelected(folder)
+  })
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!busy) setOpen(next)
-      }}
-    >
+    <div>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -45,52 +31,25 @@ export function PartFolderPicker({
             size="icon"
             className="size-7 shrink-0"
             aria-label="Opciones de la pieza"
+            disabled={selection.pending}
           >
             <MoreHorizontal className="size-3.5" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="end"
-          onCloseAutoFocus={(event) => {
-            if (open) event.preventDefault()
-          }}
-        >
-          <DropdownMenuItem
-            onSelect={() => setOpen(true)}
-            title={path ?? undefined}
-          >
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={() => void selection.run(undefined)}>
             <Folder className="size-4" />
-            {label}
+            {path != null
+              ? "Cambiar carpeta de la pieza"
+              : "Vincular carpeta de la pieza"}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      {open && (
-        <DialogContent
-          className="sm:max-w-2xl"
-          showCloseButton={!busy}
-          onEscapeKeyDown={(event) => {
-            if (busy) event.preventDefault()
-          }}
-          onPointerDownOutside={(event) => event.preventDefault()}
-        >
-          <DialogHeader>
-            <DialogTitle>
-              {linked
-                ? "Cambiar carpeta de la pieza"
-                : "Vincular carpeta de la pieza"}
-            </DialogTitle>
-            <DialogDescription>
-              Selecciona la carpeta que contiene los ficheros de esta pieza.
-            </DialogDescription>
-          </DialogHeader>
-          <SourceBrowser
-            initialPath={path ?? ""}
-            onFolderSelected={onSelected}
-            setBusy={setBusy}
-            close={() => setOpen(false)}
-          />
-        </DialogContent>
-      )}
-    </Dialog>
+      <SaveStatus
+        error={selection.error}
+        saving={selection.pending}
+        retry={selection.retry}
+      />
+    </div>
   )
 }

@@ -260,7 +260,7 @@ Configuración, límites y pruebas en [vistas-3d.md](vistas-3d.md).
 Quedan para las siguientes fases: Graph, mediciones/N-numbers y marcado de zonas.
 El límite de carga directa de 50 MiB sigue vigente para otros formatos 3D grandes.
 
-### Alta de piezas desde carpetas existentes (2026-09-17)
+### Alta de piezas desde carpetas existentes (2026-09-17; sustituida el 22/09)
 
 El buscador de «Añadir pieza» lista las subcarpetas directas del origen común y carga todas
 las páginas antes de filtrar. Elegir una registra o reutiliza su pieza, sin leer el contenido
@@ -268,3 +268,48 @@ de los documentos ni crear carpetas. Nombre y código se rellenan automáticamen
 siendo editables. La carpeta se comparte entre features, pero sus adjuntos se eligen por feature.
 La asociación local es temporal; no implementa todavía Microsoft Graph. Se mantiene la pregunta
 [A12](preguntas-abiertas.md) sobre si esa raíz común coincide con la organización real en la nube.
+
+### Selector nativo y alta desde Metrología (2026-09-22)
+
+Nueva pieza y Vincular/Cambiar archivo vinculado abren los diálogos de Windows, con
+`ASSETS_HOST_PATH` como ubicación inicial (Exemples en el `.env` existente). El botón
+separado de subir/reemplazar archivos de la pieza se ha retirado.
+
+El backend Docker no puede abrir ventanas en el escritorio. El plugin Vite
+`frontend/native-picker.ts`, cargado por `npm run dev`, proporciona el enlace local:
+POST `/__native-picker` ejecuta `scripts/native-picker.ps1` con argumentos fijos y
+variables de entorno. Comprueba conexión local, origen del navegador y sesión en la API.
+Resuelve la selección contra la raíz real y rechaza rutas exteriores o la propia raíz.
+Cancelar no modifica asociaciones. Devuelve solo rutas relativas; el backend vuelve a
+validarlas al vincular. Los originales no se suben ni se copian.
+
+Carpetas y archivos usan el mismo explorador moderno de Windows (`IFileDialog`), con
+`FOS_PICKFOLDERS` para carpetas. `SetFolder` fuerza `ASSETS_HOST_PATH` en cada apertura,
+incluido Cambiar archivo vinculado, sin reutilizar otra ubicación recordada por Windows.
+El selector tiene una ventana propietaria y muestra explícitamente el diálogo:
+el arranque oculto de PowerShell también podía ocultar su primera ventana de selección.
+El proceso avisa cuando Windows confirma que el diálogo es visible. Si no aparece en
+20 segundos, se cierra y devuelve un error recuperable; la selección tiene un límite
+de cinco minutos. Se cierra con la X, Escape o Cancelar del propio explorador, sin
+controles adicionales en la web. El helper devuelve `null` explícito incluso en PowerShell
+5.1; cerrar no muestra errores ni modifica el vínculo o la pieza. Cerrar la conexión
+termina el selector pendiente. Cambiar la selección no crea ninguna pieza.
+La prueba optativa `INTEPLAST_TEST_NATIVE_DIALOG=1` de `native-picker.test.cjs` abre
+ambos diálogos reales, comprueba la ruta en su interfaz y los cierra sin seleccionar.
+
+**Alcance:** funciona en el servidor Vite de la instalación Windows local. Una web
+publicada con Nginx o abierta desde otro ordenador necesita un agente local o un selector
+del origen SharePoint. El build estático no implementa esta integración ni Microsoft Graph.
+
+Endpoints autenticados adicionales:
+
+- POST `/parts/discover`: propone nombre y archivos sin registrar la pieza.
+- POST `/parts/setup`: registra/reutiliza la pieza y guarda las referencias revisadas.
+- POST `/parts/{id}/refresh`: incorpora CSV inequívocos, devuelve pendientes y comprueba
+  si puede preparar el estudio de correcciones conocido.
+
+Las referencias usan `PartDocument.kind`: `reference_part`, `reference_scan`,
+`reference_mold`, `reference_drawing`. Una referencia anterior conserva su registro como
+evidencia. Vincular la pieza a un feature crea asociaciones iniciales a sus archivos, sin
+copiar bytes ni sobrescribir filas existentes. El plano elegido se usa en Metrología
+aunque el nombre del PDF no contenga DRW o Plano.

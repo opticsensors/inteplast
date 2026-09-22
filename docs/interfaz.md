@@ -1,7 +1,7 @@
 # Patrones de interfaz
 
 Estas reglas se aplican a las nuevas pantallas y a los cambios de las existentes.
-La referencia visual es el catálogo de Features. Antes de crear una composición
+La referencia visual es el catálogo y el editor de Features. Antes de crear una composición
 nueva, comprobar qué componente o patrón de la aplicación ya resuelve esa tarea.
 
 ## Búsqueda y filtros
@@ -15,8 +15,7 @@ nueva, comprobar qué componente o patrón de la aplicación ya resuelve esa tar
   búsqueda interna, igual que Metrología. Plegar los filtros conserva la selección.
 - El selector Feature filtra por identidad exacta, se combina con el texto buscado y
   se conserva en la URL. Pieza y Feature ofrecen las relaciones realmente vinculadas.
-  Ambos tabs muestran solo piezas usadas por algún feature; el catálogo completo de
-  piezas se ofrece al añadirlas en edición. No precargar piezas sin vínculos en consulta.
+  El catálogo ofrece todas las piezas registradas, también las que aún no tienen features.
 - Usar los controles `Select` de la aplicación. `Common/FilterSelect` añade una etiqueta
   visible para filtros de detalle como Elemento, Altura y Evaluación.
 - Separar variables independientes. No concatenar B, H y GX/LP en un único desplegable.
@@ -42,23 +41,42 @@ nueva, comprobar qué componente o patrón de la aplicación ya resuelve esa tar
 - Pulsar «Añadir cota» crea un campo vacío al final y lo enfoca, sin formulario aparte
   ni diálogo. Intro, salir del campo o Guardar el feature guardan el número. Una pausa
   mientras se escribe no debe guardar un prefijo incompleto como una cota nueva.
+- Si hay mediciones importadas, ese recuadro usa `Common/SearchSelect` compacto para
+  elegir una cota existente. Las opciones incluyen la revisión para distinguir números
+  iguales; «Escribir otra cota» conserva el campo manual. No asignar todas las cotas
+  importadas al feature. Los recuadros guardados mantienen su presentación compacta.
+- La fila COTAS no incluye importación. Las mediciones se preparan al registrar la pieza
+  con Nueva pieza y mediante «Actualizar datos». Aquí se eligen las cotas del feature.
+- Nueva pieza y Actualizar datos mantienen dimensiones constantes durante todos sus
+  estados, con contenido desplazable y carga/error en un hueco fijo del pie. Crear (o
+  Actualizar) va inmediatamente a la izquierda de Cancelar. Cancelar descarta el formulario.
+- No mostrar instrucciones de relleno, «Elegir otra carpeta», «Archivos guardados»,
+  resultados de importación ni formularios de revisión por archivo. La lectura es automática
+  y las sustituciones conservan historial. Abrir Actualizar datos no modifica la pieza:
+  el procesamiento empieza con Actualizar en el pie.
 - Reutilizar `Input`, el botón con Plus, la papelera, `useAutosave` y `SaveStatus` del
   editor de ficheros. Los borradores fallidos se conservan y participan en Guardar.
 - Las cotas guardadas abren sus mediciones; el icono de plano contiguo abre esa cota
   directamente en el dibujo. En edición se pueden retirar con la papelera.
 - Ocultar metadatos no los borra: conservar revisión y relación de los vínculos existentes.
 
-## Metrología: una sola consulta
+## Catálogo compartido y ficha de pieza (22/09/2026)
 
-- El menú se llama **Metrología** y conserva `/parts` para mantener enlaces existentes.
-  Features sigue siendo la entrada al conocimiento de diseño.
-- La cabecera siempre es Metrología. Un buscador de cotas con Plano a su derecha y,
-  debajo, Pieza, Feature y Más filtros. No interponer un catálogo de tarjetas de piezas.
-- Pieza selecciona una sola pieza y busca por código/nombre dentro del desplegable.
-  Hasta seleccionarla, el buscador de cotas y Plano permanecen desactivados.
-- Feature es opcional y permite empezar por un feature antes de seleccionar pieza.
-  En ese caso, Pieza ofrece solo las que lo contienen. Con pieza seleccionada, Feature
-  ofrece sus features. No elegir una pieza ni una cota automáticamente.
+- El menú **Catálogo** abre `/features`: tarjetas de piezas y features con la misma
+  composición y tamaño de portada. Etiqueta y borde de color distinguen los tipos.
+- La vista inicial solo muestra piezas y features. Las cotas aparecen al buscar,
+  identificadas por pieza y revisión; abren esa consulta dentro de la ficha de pieza.
+- Todo/Piezas/Features filtra el tipo. Nueva pieza y Nuevo feature están juntos.
+  El buscador y Pieza/Feature/Más filtros reutilizan los controles de Features.
+- `/parts` redirige al catálogo filtrado por piezas. `/parts/{id}` conserva los enlaces
+  de cotas y plano y ahora muestra portada, identidad, Features, Cotas y Archivos.
+- La portada de pieza es una captura de todo el CAD STEP sin superficies marcadas.
+  Al pulsarla abre el visor interactivo reutilizado de Features, sin edición de caras.
+- Editar permite cambiar nombre/código y añadir o desvincular features existentes.
+  La relación es la misma en ambas direcciones. Guardar/Cancelar afectan a la cabecera;
+  los vínculos se guardan en línea, como en el editor de Features.
+- Cotas integra la consulta anterior de Metrología. La pieza la fija la ficha; Feature
+  y Más filtros siguen disponibles. No elegir una cota automáticamente.
 - Los selectores usan `Common/SearchSelect`, compartido con los filtros de Features:
   misma altura y borde, búsqueda interna, teclado, limpieza y opciones con desplazamiento.
 - Categoría y Tag están en Más filtros. Son atributos de features: deben coincidir en
@@ -78,10 +96,10 @@ nueva, comprobar qué componente o patrón de la aplicación ya resuelve esa tar
 
 ## Página de cotas
 
-Metrología es la entrada a las cotas de una pieza. Su ficha abre directamente la consulta,
-sin pestañas Documentos/Mediciones/Correcciones ni listados de originales.
+La sección Cotas de la ficha de pieza contiene la consulta de metrología, sin pestañas
+Documentos/Mediciones/Correcciones ni listados de archivos de mediciones.
 
-Orden estable: Metrología, buscador con Plano a su derecha, selectores de pieza/feature,
+Orden estable dentro de Cotas: buscador con Plano a su derecha, selector de feature,
 Correcciones debajo a la izquierda, filtros de evaluación y gráfica. `Common/SearchToolbar` alinea el buscador y `Parts/DrawingToggle`
 en una fila, también en móvil; el botón tiene la misma altura que el campo.
 No repetir debajo del buscador el número o el título de la cota seleccionada, ni añadir
@@ -100,8 +118,16 @@ una previsión cuantitativa validada. Distinguir «sin acción vinculada» de «
 documentada». Una diferencia entre mediciones nunca basta para inventar una intervención.
 Mantener separadas la base del XLS para la previsión y las mediciones CSV para el cambio real.
 
-La importación pertenece a **Admin → Datos de piezas**. No añadir «Actualizar datos» ni
-acciones de importación a la consulta. Se inicia únicamente mediante una acción explícita.
+El alta de piezas parte de **Catálogo → Nueva pieza**. Se selecciona una carpeta con
+el diálogo de Windows y se proponen su nombre, CAD, escaneo, molde y plano. Las propuestas
+son editables antes de registrar la pieza. Crear procesa automáticamente los CSV/XLS/XLSX
+compatibles sin formularios de revisión por archivo.
+**Actualizar datos** inicia otra lectura únicamente al pulsarlo. Se conservan el historial
+y las revisiones. No hay vigilancia automática. La cabecera mantiene el título, con los
+botones a la derecha.
+«Añadir pieza» en Features busca exclusivamente en el catálogo registrado. Al vincular
+una pieza incorpora sus archivos de referencia como punto de partida, respetando los
+ficheros que el feature ya tenga. Las cotas se asignan explícitamente. Etiquetas: CAD y Escaneo.
 
 El plano es una referencia para localizar y comprobar la cota. El botón sigue disponible
 para cotas sin mediciones cuando existe un plano vinculado. No sustituir un plano ausente
@@ -109,12 +135,13 @@ por un informe PDF cualquiera.
 
 ## Consulta del plano
 
-Plano alterna la vista bajo la **misma cabecera, búsqueda y selectores de pieza/feature**, con el
-botón a la derecha seleccionado mientras se consulta el dibujo. Pulsarlo de nuevo recupera
-las cotas/correcciones y sus filtros. No abrir otra pestaña del navegador ni sustituir el
-título de Metrología por el nombre del PDF. Los enlaces directos anteriores siguen funcionando.
+Plano abre una **página de archivo propia**, igual que los planos de Features:
+`/parts/{id}/fichero/{fileId}`. Esto se aplica tanto al archivo de la pieza como al botón
+Plano de Cotas. La página muestra el nombre del PDF y reutiliza `DrawingSearch` y `PdfViewer`.
+No incrustar el plano en la sección Cotas de la ficha. Atrás recupera la ficha y sus filtros.
+Los enlaces antiguos con `plano=true` redirigen al archivo concreto.
 
-El buscador ocupa el ancho disponible junto al botón Plano. Las coincidencias aparecen debajo como botones en una
+El buscador ocupa todo el ancho disponible. Las coincidencias aparecen debajo como botones en una
 franja que se adapta al ancho disponible, con un contador de resultados. Seleccionar
 una enfoca su ubicación. Conservar las subcotas entre los resultados, sin casilla para
 activarlas. Si el mismo número aparece en varias ubicaciones, distinguirlas con `1/2`, `2/2`.
@@ -145,11 +172,11 @@ ya guardadas siguen siendo utilizadas al buscar.
   Atrás y Adelante corresponden al navegador. Los títulos pueden mostrar contexto.
 - Conservar pieza, búsqueda, feature, categoría, tag, cota, revisión, elemento, altura, evaluación, cavidades visibles, tramo, acción
   y cavidad del detalle en la URL. Cambiar de evaluación conserva el tramo seleccionado.
-- La vista del plano usa `plano=true` y `drawingQ` sin sobrescribir la consulta de cotas.
+- La página del plano usa `drawingQ` sin sobrescribir la consulta de cotas.
   Los enlaces desde una cota conservan además `drawingFile`, el PDF concreto vinculado
   en Features; no cambiarlo por otro documento según su nombre.
-  Cerrar con Plano vuelve a la entrada anterior si se abrió desde la consulta; un enlace
-  directo o recargado desactiva el modo conservando los filtros guardados en la URL.
+  Atrás vuelve a la entrada anterior; la búsqueda del PDF reemplaza únicamente el estado
+  de su propia página. Recargar conserva el documento y la búsqueda.
 - Escribir o ajustar evaluaciones reemplaza la entrada actual. Cambiar pieza o filtros de
   feature/categoría/tag, seleccionar otra cota o abrir
   correcciones/plano añade una entrada: Atrás restaura la consulta anterior completa.

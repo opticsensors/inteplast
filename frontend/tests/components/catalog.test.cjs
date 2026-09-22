@@ -22,8 +22,11 @@ before(async () => {
       {
         name: "isolated-api",
         setup(build) {
-          build.onResolve({ filter: /^\.\/StepCoverCanvas$/ }, () => ({
+          build.onResolve({ filter: /(?:^|\/)StepCoverCanvas$/ }, () => ({
             path: path.join(__dirname, "fixtures/cad-canvas.jsx"),
+          }))
+          build.onResolve({ filter: /^\.\/PdfViewer$/ }, () => ({
+            path: path.join(__dirname, "fixtures/evidence-drawing.jsx"),
           }))
           build.onResolve({ filter: /^\/assets\// }, ({ path: asset }) => ({
             path: path.join(frontend, "public", asset),
@@ -42,6 +45,7 @@ after(async () => browser?.close())
 
 async function mount(t, initialPath = "/") {
   const page = await browser.newPage()
+  page.on("pageerror", (error) => console.error(error.message))
   page.setDefaultTimeout(5000)
   t.after(() => page.close())
   await page.route("**/*", (route) =>
@@ -57,7 +61,7 @@ async function mount(t, initialPath = "/") {
     window.catalogInitialPath = value
   }, initialPath)
   await page.addScriptTag({ content: bundle })
-  await page.getByRole("heading", { name: "Features", exact: true }).waitFor()
+  await page.getByRole("heading", { name: "Catálogo", exact: true }).waitFor()
   await page.getByRole("button", { name: "Abrir Bolt Eye" }).waitFor()
   return page
 }
@@ -155,15 +159,15 @@ test("old home links preserve filters and cards open in read mode", async (t) =>
   assert.equal(await page.getByPlaceholder("Nombre del feature").count(), 0)
   assert.equal(
     await page
-      .getByRole("link", { name: "Features", exact: true })
+      .getByRole("link", { name: "Catálogo", exact: true })
       .getAttribute("data-active"),
     "true",
   )
   await page.evaluate(() => window.review.back())
-  await page.getByRole("heading", { name: "Features", exact: true }).waitFor()
+  await page.getByRole("heading", { name: "Catálogo", exact: true }).waitFor()
   assert.equal(
     await page
-      .getByPlaceholder("Feature / pieza / codigo / tag...")
+      .getByPlaceholder("Buscar piezas, features o cotas…")
       .inputValue(),
     "3212",
   )
@@ -203,7 +207,7 @@ test("the searchable feature selector keeps the text search and sends an exact I
   )
   assert.equal(
     await page
-      .getByPlaceholder("Feature / pieza / codigo / tag...")
+      .getByPlaceholder("Buscar piezas, features o cotas…")
       .inputValue(),
     "3212",
   )
@@ -211,8 +215,11 @@ test("the searchable feature selector keeps the text search and sends an exact I
 
 test("direct Edit saves into read mode and Back restores the search", async (t) => {
   const page = await mount(t)
-  await page.getByPlaceholder("Feature / pieza / codigo / tag...").fill("3212")
-  await page.getByRole("button", { name: "Editar", exact: true }).click()
+  await page.getByPlaceholder("Buscar piezas, features o cotas…").fill("3212")
+  await page
+    .getByRole("button", { name: "Editar", exact: true })
+    .first()
+    .click()
   await page.getByPlaceholder("Nombre del feature").fill("Bolt Eye revisado")
   await page.getByRole("button", { name: "Guardar", exact: true }).click()
   await readHeading(page, "Bolt Eye revisado")
@@ -221,10 +228,10 @@ test("direct Edit saves into read mode and Back restores the search", async (t) 
     undefined,
   )
   await page.evaluate(() => window.review.back())
-  await page.getByRole("heading", { name: "Features", exact: true }).waitFor()
+  await page.getByRole("heading", { name: "Catálogo", exact: true }).waitFor()
   assert.equal(
     await page
-      .getByPlaceholder("Feature / pieza / codigo / tag...")
+      .getByPlaceholder("Buscar piezas, features o cotas…")
       .inputValue(),
     "3212",
   )
@@ -245,7 +252,7 @@ test("Edit from a detail cancels into that detail without extra history", async 
     "Bolt Eye",
   )
   await page.evaluate(() => window.review.back())
-  await page.getByRole("heading", { name: "Features", exact: true }).waitFor()
+  await page.getByRole("heading", { name: "Catálogo", exact: true }).waitFor()
 })
 
 test("deletion is secondary, confirmed, and only offered to owner or admin", async (t) => {
@@ -278,8 +285,12 @@ test("deletion is secondary, confirmed, and only offered to owner or admin", asy
   })
   await page.getByRole("button", { name: "Eliminar", exact: true }).click()
   await dialog.getByRole("button", { name: "Eliminar", exact: true }).click()
-  await page.getByRole("heading", { name: "Features", exact: true }).waitFor()
-  await page.getByRole("heading", { name: "Todavía no hay features" }).waitFor()
+  await page.getByRole("heading", { name: "Catálogo", exact: true }).waitFor()
+  await page.getByRole("button", { name: "Abrir Pump Housing" }).waitFor()
+  assert.equal(
+    await page.getByRole("button", { name: "Abrir Bolt Eye" }).count(),
+    0,
+  )
 })
 
 test("saving a new feature opens its completed detail and replaces the creation page in history", async (t) => {
@@ -289,5 +300,84 @@ test("saving a new feature opens its completed detail and replaces the creation 
   await page.getByRole("button", { name: "Guardar", exact: true }).click()
   await readHeading(page, "Nuevo nervio")
   await page.evaluate(() => window.review.back())
-  await page.getByRole("heading", { name: "Features", exact: true }).waitFor()
+  await page.getByRole("heading", { name: "Catálogo", exact: true }).waitFor()
+})
+
+test("the initial catalogue mixes cards, filters by type, and cotas appear only when searching", async (t) => {
+  const page = await mount(t)
+  await page.getByRole("button", { name: "Abrir Pump Housing" }).waitFor()
+  assert.equal(
+    await page.getByRole("region", { name: "Cotas encontradas" }).count(),
+    0,
+  )
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Nueva pieza", exact: true })
+      .count(),
+    1,
+  )
+  await page.getByRole("button", { name: "Features", exact: true }).click()
+  await page
+    .getByRole("button", { name: "Abrir Pump Housing" })
+    .waitFor({ state: "detached" })
+  await page.getByRole("button", { name: "Piezas", exact: true }).click()
+  await page.getByRole("button", { name: "Abrir Pump Housing" }).waitFor()
+  assert.equal(
+    await page.getByRole("button", { name: "Abrir Bolt Eye" }).count(),
+    0,
+  )
+  await page.getByRole("button", { name: "Todo", exact: true }).click()
+  await page.getByPlaceholder("Buscar piezas, features o cotas…").fill("N170")
+  await page
+    .getByRole("region", { name: "Cotas encontradas" })
+    .getByRole("link")
+    .click()
+  await readHeading(page, "Pump Housing")
+  const location = await page.evaluate(() => window.review.location())
+  assert.equal(location.pathname, "/parts/part-one")
+  assert.equal(location.search.cota, "N170")
+  assert.equal(location.search.revision, "06")
+  await page.evaluate(() => window.review.back())
+  await page.getByRole("heading", { name: "Catálogo", exact: true }).waitFor()
+  assert.equal(
+    await page
+      .getByPlaceholder("Buscar piezas, features o cotas…")
+      .inputValue(),
+    "N170",
+  )
+})
+
+test("piece editing saves and cancels header changes, and feature membership works in both directions", async (t) => {
+  const page = await mount(t)
+  await page.getByRole("button", { name: "Abrir Pump Housing" }).click()
+  await readHeading(page, "Pump Housing")
+  await page.getByRole("button", { name: "Editar", exact: true }).click()
+  await page
+    .getByRole("textbox", { name: "Nombre de la pieza" })
+    .fill("Discard")
+  await page.getByRole("button", { name: "Cancelar", exact: true }).click()
+  await readHeading(page, "Pump Housing")
+  await page.getByRole("button", { name: "Editar", exact: true }).click()
+  await page.getByRole("button", { name: "Desvincular Bolt Eye" }).click()
+  await page.getByText("Sin features vinculados.").waitFor()
+  assert.equal(await page.evaluate(() => window.review.feature.parts.length), 0)
+  await page
+    .getByRole("combobox", { name: "Añadir feature", exact: true })
+    .click()
+  await page.getByRole("option", { name: "Bolt Eye", exact: true }).click()
+  await page.getByRole("button", { name: "Abrir Bolt Eye" }).waitFor()
+  assert.equal(
+    await page.evaluate(() => window.review.feature.parts[0].id),
+    "part-one",
+  )
+  await page
+    .getByRole("textbox", { name: "Nombre de la pieza" })
+    .fill("Pump Housing revisada")
+  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await readHeading(page, "Pump Housing revisada")
+  await page.getByRole("button", { name: "Abrir Bolt Eye" }).click()
+  await readHeading(page)
+  await page
+    .getByRole("link", { name: /3212.*Pump Housing revisada/ })
+    .waitFor()
 })
