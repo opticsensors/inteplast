@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query"
-import { SlidersHorizontal } from "lucide-react"
-import { type ReactNode, useId, useState } from "react"
+import { SlidersHorizontal, X } from "lucide-react"
+import { useId, useState } from "react"
 
 import { EvidenceService, type FeatureCategory } from "@/client"
 import { SearchField } from "@/components/Common/SearchField"
 import { SearchSelect } from "@/components/Common/SearchSelect"
+import { SearchToolbar } from "@/components/Common/SearchToolbar"
 import { Button } from "@/components/ui/button"
 import { CATEGORIES, CATEGORY_LABELS } from "./constants"
 import { partLabel } from "./parts"
@@ -25,11 +26,6 @@ export const EMPTY_SEARCH: FeatureSearchState = {
   partId: null,
   featureId: null,
 }
-
-export const isSearchActive = (state: FeatureSearchState) =>
-  Boolean(
-    state.q || state.category || state.tag || state.partId || state.featureId,
-  )
 
 /**
  * La busqueda tambien vive en la URL (`/features?q=bolt&part=<id>`). Asi el boton de
@@ -103,7 +99,6 @@ interface FeatureSearchProps {
   value: FeatureSearchState
   onChange: (value: FeatureSearchState) => void
   catalog?: boolean
-  children?: ReactNode
 }
 
 /** Buscador global + filtros por pieza, feature, categoria y tag. */
@@ -111,11 +106,9 @@ export function FeatureSearch({
   value,
   onChange,
   catalog = false,
-  children,
 }: FeatureSearchProps) {
-  const [more, setMore] = useState(Boolean(value.category || value.tag))
-  const moreId = useId()
-  const active = Number(Boolean(value.category)) + Number(Boolean(value.tag))
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const filtersId = useId()
   // Solo se ofrecen los valores que existen en la base de datos
   const { data: featureFilters } = useQuery(featureFiltersQueryOptions())
   const all = useQuery({
@@ -152,62 +145,116 @@ export function FeatureSearch({
       next.featureId = null
     onChange(next)
   }
+  const activeFilters = [
+    {
+      key: "partId" as const,
+      label: "Pieza",
+      text: selectedPart ? partLabel(selectedPart) : "Selección no disponible",
+    },
+    {
+      key: "featureId" as const,
+      label: "Feature",
+      text: selectedFeature?.name ?? "Selección no disponible",
+    },
+    {
+      key: "category" as const,
+      label: "Categoría",
+      text: value.category ? CATEGORY_LABELS[value.category] : "",
+    },
+    { key: "tag" as const, label: "Tag", text: value.tag },
+  ].filter((filter) => value[filter.key])
 
   return (
     <div className="space-y-3">
-      <SearchField
-        value={value.q}
-        onValueChange={(q) => set({ q })}
-        placeholder={
-          catalog
-            ? "Buscar piezas, features o cotas…"
-            : "Feature / pieza / codigo / tag..."
+      <SearchToolbar
+        action={
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 shrink-0"
+            aria-expanded={filtersOpen}
+            aria-controls={filtersId}
+            onClick={() => setFiltersOpen(!filtersOpen)}
+          >
+            <SlidersHorizontal className="size-4" /> Filtros
+            {activeFilters.length ? ` (${activeFilters.length})` : ""}
+          </Button>
         }
-        active={isSearchActive(value)}
-        onClear={() => onChange(EMPTY_SEARCH)}
-      />
-      {children}
-
-      <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-        <SearchSelect
-          label="Pieza"
-          value={value.partId}
-          placeholder="Todas las piezas"
-          emptyLabel="Todas las piezas"
-          selectedLabel={selectedPart ? partLabel(selectedPart) : undefined}
-          options={parts.map((part) => ({
-            value: part.id,
-            label: partLabel(part),
-          }))}
-          onChange={(partId) => set({ partId: partId ?? null })}
+      >
+        <SearchField
+          className="h-11"
+          value={value.q}
+          onValueChange={(q) => set({ q })}
+          placeholder={
+            catalog
+              ? "Buscar piezas, features o cotas…"
+              : "Feature / pieza / codigo / tag..."
+          }
+          onClear={() => set({ q: "" })}
         />
-        <SearchSelect
-          label="Feature"
-          value={value.featureId}
-          selectedLabel={selectedFeature?.name}
-          placeholder="Todos los features"
-          emptyLabel="Todos los features"
-          options={availableFeatures.map((feature) => ({
-            value: feature.id,
-            label: feature.name,
-          }))}
-          onChange={(featureId) => set({ featureId: featureId ?? null })}
-        />
-        <Button
-          type="button"
-          variant="outline"
-          className="h-9 font-normal"
-          aria-expanded={more}
-          aria-controls={moreId}
-          onClick={() => setMore(!more)}
+      </SearchToolbar>
+      {activeFilters.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {activeFilters.map((filter) => (
+            <Button
+              key={filter.key}
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="h-7 max-w-full gap-1.5 rounded-full text-xs font-normal"
+              aria-label={`Quitar filtro ${filter.label}: ${filter.text}`}
+              onClick={() => set({ [filter.key]: null })}
+            >
+              <span className="truncate">
+                {filter.label}: {filter.text}
+              </span>
+              <X className="size-3 shrink-0" />
+            </Button>
+          ))}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs font-normal text-muted-foreground"
+            onClick={() => onChange({ ...EMPTY_SEARCH, q: value.q })}
+          >
+            Limpiar filtros
+          </Button>
+        </div>
+      )}
+      {filtersOpen && (
+        <div
+          id={filtersId}
+          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
         >
-          <SlidersHorizontal className="size-4" /> Más filtros
-          {active ? ` (${active})` : ""}
-        </Button>
-      </div>
-      {more && (
-        <div id={moreId} className="grid gap-2 sm:grid-cols-2">
           <SearchSelect
+            showLabel
+            label="Pieza"
+            value={value.partId}
+            placeholder="Todas las piezas"
+            emptyLabel="Todas las piezas"
+            selectedLabel={selectedPart ? partLabel(selectedPart) : undefined}
+            options={parts.map((part) => ({
+              value: part.id,
+              label: partLabel(part),
+            }))}
+            onChange={(partId) => set({ partId: partId ?? null })}
+          />
+          <SearchSelect
+            showLabel
+            label="Feature"
+            value={value.featureId}
+            selectedLabel={selectedFeature?.name}
+            placeholder="Todos los features"
+            emptyLabel="Todos los features"
+            options={availableFeatures.map((feature) => ({
+              value: feature.id,
+              label: feature.name,
+            }))}
+            onChange={(featureId) => set({ featureId: featureId ?? null })}
+          />
+          <SearchSelect
+            showLabel
             label="Categoría"
             value={value.category}
             placeholder="Todas las categorías"
@@ -221,6 +268,7 @@ export function FeatureSearch({
             }
           />
           <SearchSelect
+            showLabel
             label="Tag"
             value={value.tag}
             placeholder="Todos los tags"

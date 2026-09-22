@@ -78,6 +78,8 @@ test("shared searchable selectors keep Features filters and support keyboard and
     0,
   )
   const piece = page.getByRole("combobox", { name: "Pieza", exact: true })
+  assert.equal(await piece.count(), 0)
+  await page.getByRole("button", { name: "Filtros", exact: true }).click()
   await piece.click()
   const search = page.getByRole("combobox", {
     name: "Buscar pieza",
@@ -102,7 +104,6 @@ test("shared searchable selectors keep Features filters and support keyboard and
     await page.evaluate(() => window.review.location().search.part),
     "part-one",
   )
-  await page.getByRole("button", { name: "Más filtros", exact: true }).click()
   await page.getByRole("combobox", { name: "Categoría", exact: true }).click()
   const category = page.getByRole("combobox", {
     name: "Buscar categoría",
@@ -122,19 +123,36 @@ test("shared searchable selectors keep Features filters and support keyboard and
     await page.evaluate(() => window.review.location().search.tag),
     "inyeccion",
   )
-  await page
-    .getByRole("button", { name: "Más filtros (2)", exact: true })
-    .click()
+  await page.getByRole("button", { name: "Filtros (3)", exact: true }).click()
   assert.equal(
     await page.getByRole("combobox", { name: "Tag", exact: true }).count(),
     0,
   )
-  await page
-    .getByRole("button", { name: "Más filtros (2)", exact: true })
-    .click()
+  await page.getByRole("button", { name: "Filtros (3)", exact: true }).click()
   assert.match(
     await page.getByRole("combobox", { name: "Tag", exact: true }).innerText(),
     /inyeccion/,
+  )
+  await page.getByRole("button", { name: "Filtros (3)", exact: true }).click()
+  await page
+    .getByRole("button", { name: "Quitar filtro Tag: inyeccion", exact: true })
+    .click()
+  const remaining = await page.evaluate(() => window.review.location().search)
+  assert.equal(remaining.tag, undefined)
+  assert.equal(remaining.part, "part-one")
+  assert.equal(remaining.category, "hole")
+  await page.getByRole("button", { name: "Filtros (2)", exact: true }).waitFor()
+  await page
+    .getByRole("button", { name: "Limpiar filtros", exact: true })
+    .click()
+  const cleared = await page.evaluate(() => window.review.location().search)
+  assert.equal(cleared.part, undefined)
+  assert.equal(cleared.category, undefined)
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Limpiar filtros", exact: true })
+      .count(),
+    0,
   )
 })
 
@@ -171,16 +189,18 @@ test("old home links preserve filters and cards open in read mode", async (t) =>
       .inputValue(),
     "3212",
   )
-  assert.match(
-    await page
-      .getByRole("combobox", { name: "Feature", exact: true })
-      .innerText(),
-    /Bolt Eye/,
-  )
+  await page.getByRole("button", { name: "Filtros (4)", exact: true }).waitFor()
+  await page
+    .getByRole("button", {
+      name: "Quitar filtro Feature: Bolt Eye",
+      exact: true,
+    })
+    .waitFor()
 })
 
 test("the searchable feature selector keeps the text search and sends an exact ID filter", async (t) => {
   const page = await mount(t, "/features?q=3212")
+  await page.getByRole("button", { name: "Filtros", exact: true }).click()
   await page.getByRole("combobox", { name: "Feature", exact: true }).click()
   const search = page.getByRole("combobox", {
     name: "Buscar feature",
@@ -211,6 +231,25 @@ test("the searchable feature selector keeps the text search and sends an exact I
       .inputValue(),
     "3212",
   )
+  await page.getByRole("combobox", { name: "Feature", exact: true }).click()
+  await page.getByRole("option", { name: "Bolt Eye", exact: true }).click()
+  await page.getByRole("button", { name: "Features", exact: true }).click()
+  await page
+    .getByRole("button", { name: "Limpiar filtros", exact: true })
+    .click()
+  const cleared = await page.evaluate(() => window.review.location().search)
+  assert.equal(cleared.feature, undefined)
+  assert.equal(String(cleared.q), "3212")
+  assert.equal(cleared.kind, "feature")
+  await page.getByRole("combobox", { name: "Feature", exact: true }).click()
+  await page.getByRole("option", { name: "Bolt Eye", exact: true }).click()
+  await page
+    .getByRole("button", { name: "Limpiar busqueda", exact: true })
+    .click()
+  const textCleared = await page.evaluate(() => window.review.location().search)
+  assert.equal(textCleared.q, undefined)
+  assert.equal(textCleared.feature, "feature-one")
+  assert.equal(textCleared.kind, "feature")
 })
 
 test("direct Edit saves into read mode and Back restores the search", async (t) => {

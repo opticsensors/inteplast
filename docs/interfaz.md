@@ -10,9 +10,12 @@ nueva, comprobar qué componente o patrón de la aplicación ya resuelve esa tar
   a la derecha. Features, Metrología, cotas y el visor del plano comparten este componente.
 - Colocar la búsqueda arriba, seguida de filtros horizontales que se apilan en móvil.
   No introducir listas laterales para escoger cotas.
-- En Features, dejar Pieza y Feature visibles y agrupar Categoría y Tag bajo «Más filtros», con
-  contador de filtros activos. Los cuatro desplegables usan `Common/SearchSelect` con
-  búsqueda interna, igual que Metrología. Plegar los filtros conserva la selección.
+- En el catálogo, reunir Pieza, Feature, Categoría y Tag bajo «Filtros», junto al buscador.
+  Los cuatro desplegables usan `Common/SearchSelect` con etiqueta visible y búsqueda interna.
+  Plegar los filtros conserva la selección; el botón cuenta los cuatro criterios activos.
+  Mostrar etiquetas eliminables y «Limpiar filtros» solo cuando haya filtros aplicados.
+  Limpiar filtros conserva el texto buscado y el tipo de resultado; limpiar la búsqueda
+  solo borra el texto.
 - El selector Feature filtra por identidad exacta, se combina con el texto buscado y
   se conserva en la URL. Pieza y Feature ofrecen las relaciones realmente vinculadas.
   El catálogo ofrece todas las piezas registradas, también las que aún no tienen features.
@@ -66,8 +69,9 @@ nueva, comprobar qué componente o patrón de la aplicación ya resuelve esa tar
   composición y tamaño de portada. Etiqueta y borde de color distinguen los tipos.
 - La vista inicial solo muestra piezas y features. Las cotas aparecen al buscar,
   identificadas por pieza y revisión; abren esa consulta dentro de la ficha de pieza.
-- Todo/Piezas/Features filtra el tipo. Nueva pieza y Nuevo feature están juntos.
-  El buscador y Pieza/Feature/Más filtros reutilizan los controles de Features.
+- Cabecera en tres filas: título y acciones; Todo/Piezas/Features con subrayado activo;
+  buscador y Filtros. Nuevo feature usa borde y precede a Nueva pieza, en verde sólido.
+  Los controles principales tienen 44 px de altura y reutilizan el estilo de Features.
 - `/parts` redirige al catálogo filtrado por piezas. `/parts/{id}` conserva los enlaces
   de cotas y plano y ahora muestra portada, identidad, Features, Cotas y Archivos.
 - La portada de pieza es una captura de todo el CAD STEP sin superficies marcadas.
@@ -79,7 +83,7 @@ nueva, comprobar qué componente o patrón de la aplicación ya resuelve esa tar
   y Más filtros siguen disponibles. No elegir una cota automáticamente.
 - Los selectores usan `Common/SearchSelect`, compartido con los filtros de Features:
   misma altura y borde, búsqueda interna, teclado, limpieza y opciones con desplazamiento.
-- Categoría y Tag están en Más filtros. Son atributos de features: deben coincidir en
+- En la consulta de cotas, Categoría y Tag están en Más filtros. Son atributos de features: deben coincidir en
   el mismo feature y limitar a sus cotas vinculadas. No atribuir a esos filtros todas
   las cotas de una pieza. Las opciones se ajustan a las combinaciones disponibles.
 - Sin filtros de feature/categoría/tag, están disponibles todas las cotas de la pieza,

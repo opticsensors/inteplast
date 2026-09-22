@@ -2,6 +2,7 @@ import { Search, X } from "lucide-react"
 import type { ComponentProps } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
 
 type Props = Omit<ComponentProps<typeof Input>, "value" | "onChange"> & {
   value: string
@@ -16,6 +17,7 @@ export function SearchField({
   onValueChange,
   onClear,
   active,
+  className,
   ...props
 }: Props) {
   return (
@@ -25,7 +27,7 @@ export function SearchField({
         {...props}
         value={value}
         onChange={(event) => onValueChange(event.target.value)}
-        className="pr-10 pl-9"
+        className={cn("pr-10 pl-9", className)}
       />
       {(active ?? Boolean(value)) && (
         <Button

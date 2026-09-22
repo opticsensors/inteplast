@@ -81,23 +81,27 @@ export function CatalogPage({ params }: { params: FeatureSearchParams }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold tracking-tight">Catálogo</h1>
         <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            className="h-11"
+            onClick={() => void navigate({ to: "/features/nuevo" })}
+          >
+            <Plus />
+            Nuevo feature
+          </Button>
           <PartSetupDialog
+            triggerClassName="h-11"
             onCreated={(partId) =>
               void navigate({ to: "/parts/$partId", params: { partId } })
             }
           />
-          <Button onClick={() => void navigate({ to: "/features/nuevo" })}>
-            <Plus />
-            Nuevo feature
-          </Button>
         </div>
       </div>
-      <FeatureSearch
-        catalog
-        value={search}
-        onChange={(next) => change({ ...toSearchParams(next), kind })}
-      >
-        <fieldset className="flex gap-2" aria-label="Tipo de resultado">
+      <div className="space-y-4">
+        <fieldset
+          className="flex gap-6 border-b"
+          aria-label="Tipo de resultado"
+        >
           {(
             [
               ["all", "Todo"],
@@ -107,8 +111,8 @@ export function CatalogPage({ params }: { params: FeatureSearchParams }) {
           ).map(([value, label]) => (
             <Button
               key={value}
-              variant={kind === value ? "secondary" : "ghost"}
-              size="sm"
+              variant="ghost"
+              className="-mb-px h-11 rounded-none border-b-2 border-transparent px-0 text-muted-foreground hover:bg-transparent hover:text-foreground aria-pressed:border-primary aria-pressed:text-primary"
               aria-pressed={kind === value}
               onClick={() => change({ ...params, kind: value })}
             >
@@ -116,7 +120,12 @@ export function CatalogPage({ params }: { params: FeatureSearchParams }) {
             </Button>
           ))}
         </fieldset>
-      </FeatureSearch>
+        <FeatureSearch
+          catalog
+          value={search}
+          onChange={(next) => change({ ...toSearchParams(next), kind })}
+        />
+      </div>
       {result.isPending ? (
         <PendingFeatures />
       ) : result.error ? (

@@ -22,9 +22,11 @@ import { pickNativePath } from "@/lib/nativePicker"
 export function PartSetupDialog({
   part,
   onCreated,
+  triggerClassName,
 }: {
   part?: PartPublic
   onCreated?: (partId: string) => void
+  triggerClassName?: string
 }) {
   const client = useQueryClient()
   const [open, setOpen] = useState(false)
@@ -142,6 +144,7 @@ export function PartSetupDialog({
       <Button
         type="button"
         variant={part ? "outline" : "default"}
+        className={triggerClassName}
         onClick={start}
       >
         {part ? <RefreshCw className="size-4" /> : <Plus className="size-4" />}

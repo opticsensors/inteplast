@@ -156,6 +156,7 @@ test("a single consultation can start with a feature and then choose its piece",
   await expect(
     page.getByRole("combobox", { name: "Buscar cota", exact: true }),
   ).toHaveCount(0)
+  await page.getByRole("button", { name: "Filtros", exact: true }).click()
   await page.getByRole("combobox", { name: "Feature", exact: true }).click()
   const featureSearch = page.getByRole("combobox", {
     name: "Buscar feature",

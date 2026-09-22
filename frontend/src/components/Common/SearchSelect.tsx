@@ -18,6 +18,7 @@ export function SearchSelect({
   selectedLabel,
   compact = false,
   defaultOpen = false,
+  showLabel = false,
 }: {
   label: string
   value?: string | null
@@ -29,6 +30,7 @@ export function SearchSelect({
   selectedLabel?: string
   compact?: boolean
   defaultOpen?: boolean
+  showLabel?: boolean
 }) {
   const id = useId()
   const root = useRef<HTMLFieldSetElement>(null)
@@ -75,6 +77,9 @@ export function SearchSelect({
         if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false)
       }}
     >
+      {showLabel && (
+        <legend className="mb-1.5 text-sm font-medium">{label}</legend>
+      )}
       <Button
         ref={trigger}
         type="button"
