@@ -2,6 +2,11 @@
 
 export type AssetKind = 'mold' | 'part' | 'scan' | 'drawing' | 'moldflow';
 
+export type AssistantStatus = {
+    enabled: boolean;
+    model?: (string | null);
+};
+
 export type Body_files_upload_file = {
     file: (Blob | File);
 };
@@ -62,6 +67,17 @@ export type CharacteristicPublic = {
     revision: string;
     title: string;
     role?: (string | null);
+};
+
+export type ChatMessage = {
+    role: 'user' | 'assistant';
+    content: string;
+};
+
+export type role2 = 'user' | 'assistant';
+
+export type ChatRequest = {
+    messages: Array<ChatMessage>;
 };
 
 export type CotaSearchResult = {
@@ -500,6 +516,7 @@ export type PartEvidencePublic = {
     import_available: boolean;
     measurement_revisions?: Array<(string)>;
     drawing_file_id?: (string | null);
+    drawing_reference_set?: boolean;
     refresh_job?: JobPublic;
 };
 
@@ -547,6 +564,7 @@ export type PartUpdate = {
     code?: string;
     name?: (string | null);
     folder_path?: (string | null);
+    references?: (Array<ReferenceChoice> | null);
 };
 
 export type PrivateUserCreate = {
@@ -658,6 +676,14 @@ export type ValidationError = {
         [key: string]: unknown;
     };
 };
+
+export type AssistantStatusResponse = (AssistantStatus);
+
+export type AssistantChatData = {
+    requestBody: ChatRequest;
+};
+
+export type AssistantChatResponse = (string);
 
 export type CatalogSearchCatalogData = {
     category?: (FeatureCategory | null);

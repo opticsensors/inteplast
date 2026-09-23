@@ -6,7 +6,8 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 from app.core.config import settings
-from app.models import Part
+from app.knowledge_models import PartDocument
+from app.models import Part, StoredFile
 from tests.utils.feature import create_random_feature
 
 API = f"{settings.API_V1_STR}/parts"
@@ -49,6 +50,173 @@ def register_piece(client, headers, folder):
     )
     assert response.status_code == 200, response.text
     return response.json()["part"], data
+
+
+def test_edit_references_saves_with_header_without_importing_or_changing_features(
+    client: TestClient,
+    db: Session,
+    normal_user_token_headers,
+    source,
+):
+    folder, root = source
+    originals = ["cad/part.step", "drawing/DRW.pdf", "scan.stl"]
+    for name in originals:
+        write(root, name)
+    write(root, "cad/replacement.step", b"new CAD")
+    headers = normal_user_token_headers
+    part, _ = register_piece(client, headers, folder)
+    url = f"{API}/{part['id']}"
+    feature = create_random_feature(db)
+    feature_url = f"{settings.API_V1_STR}/features/{feature.id}"
+    before_feature = client.post(
+        f"{feature_url}/parts/{part['id']}",
+        headers=headers,
+    ).json()
+    before = client.get(f"{url}/detail", headers=headers).json()
+    old_cad = next(r["file"] for r in before["references"] if r["kind"] == "part")
+    # A normal edit must not run the data-import flow, even when new data exists.
+    write(root, "rev.A/intern.01/c1/measurement.csv", csv())
+    response = client.put(
+        url,
+        headers=headers,
+        json={
+            "name": "Renamed piece",
+            "references": [
+                {"kind": "part", "path": f"{folder}/cad/replacement.step"},
+                {"kind": "drawing", "path": None},
+            ],
+        },
+    )
+    assert response.status_code == 200, response.text
+    detail = client.get(f"{url}/detail", headers=headers).json()
+    assert detail["part"]["name"] == "Renamed piece"
+    assert detail["part"]["characteristic_count"] == 0
+    refs = {r["kind"]: r["file"] for r in detail["references"]}
+    assert set(refs) == {"part", "scan"}
+    assert refs["part"]["filename"] == "replacement.step"
+    assert detail["part"]["cad"]["id"] == refs["part"]["id"]
+    after_assets = client.get(feature_url, headers=headers).json()["assets"]
+    assert [(a["id"], a["file"]) for a in after_assets] == [
+        (a["id"], a["file"]) for a in before_feature["assets"]
+    ]
+    assert db.get(StoredFile, uuid.UUID(old_cad["id"])) is not None
+    assert (
+        db.get(PartDocument, (uuid.UUID(part["id"]), uuid.UUID(old_cad["id"])))
+        is not None
+    )
+    assert all((root / name).read_bytes() == b"reference" for name in originals)
+    assert (
+        client.get(
+            f"{settings.API_V1_STR}/evidence/parts/{part['id']}",
+            headers=headers,
+        ).json()["drawing_file_id"]
+        is None
+    )
+    # Removing CAD must also suppress the old CAD copied into feature assets.
+    assert (
+        client.put(
+            url,
+            headers=headers,
+            json={
+                "references": [{"kind": "part", "path": None}],
+            },
+        ).status_code
+        == 200
+    )
+    detail = client.get(f"{url}/detail", headers=headers).json()
+    assert detail["part"]["cad"] is None
+    assert [r["kind"] for r in detail["references"]] == ["scan"]
+    discovery = client.post(
+        f"{API}/discover", headers=headers, json={"folder_path": folder}
+    ).json()
+    assert (
+        next(r for r in discovery["references"] if r["kind"] == "part")["path"] is None
+    )
+    assert (
+        client.put(
+            url,
+            headers=headers,
+            json={
+                "references": [{"kind": "part", "path": f"{folder}/cad/part.step"}],
+            },
+        ).status_code
+        == 200
+    )
+    assert (
+        client.get(f"{url}/detail", headers=headers).json()["part"]["cad"]["id"]
+        == old_cad["id"]
+    )
+
+
+@pytest.mark.parametrize(
+    "invalid", ["outside", "extension", "missing", "duplicate", "stale"]
+)
+def test_invalid_reference_keeps_header_and_all_references(
+    client: TestClient,
+    normal_user_token_headers,
+    source,
+    invalid,
+):
+    folder, root = source
+    write(root, "cad/part.step")
+    write(root, "DRW.pdf")
+    write(root, "other.step")
+    headers = normal_user_token_headers
+    part, _ = register_piece(client, headers, folder)
+    url = f"{API}/{part['id']}"
+    before = client.get(f"{url}/detail", headers=headers).json()
+    choice = {"kind": "part", "path": f"{folder}/other.step"}
+    if invalid == "outside":
+        write(root.parent, "Other/part.step")
+        choice["path"] = "Other/part.step"
+    elif invalid == "extension":
+        choice["path"] = f"{folder}/DRW.pdf"
+    elif invalid == "missing":
+        choice["path"] = f"{folder}/missing.step"
+    elif invalid == "duplicate":
+        choice = {"kind": "mold", "path": f"{folder}/cad/part.step"}
+    elif invalid == "stale":
+        choice["source_version"] = "stale"
+    response = client.put(
+        url,
+        headers=headers,
+        json={
+            "name": "Must not save",
+            "references": [{"kind": "drawing", "path": None}, choice],
+        },
+    )
+    assert response.status_code in {404, 409, 422}, response.text
+    assert client.get(f"{url}/detail", headers=headers).json() == before
+
+
+def test_removing_legacy_uploaded_cad_needs_no_source_folder(
+    client: TestClient,
+    db: Session,
+    normal_user_token_headers,
+):
+    from tests.api.routes.test_cad_covers import cover_example
+
+    headers = normal_user_token_headers
+    _, body = cover_example(client, headers, db)
+    part_id = body["cover_3d"]["part_id"]
+    url = f"{API}/{part_id}"
+    before = client.get(f"{url}/detail", headers=headers).json()
+    assert before["part"]["folder_path"] is None
+    assert before["part"]["cad"] is not None
+    assert (
+        client.put(
+            url, json={"references": [{"kind": "part", "path": None}]}
+        ).status_code
+        == 401
+    )
+    response = client.put(
+        url, headers=headers, json={"references": [{"kind": "part", "path": None}]}
+    )
+    assert response.status_code == 200, response.text
+    after = client.get(f"{url}/detail", headers=headers).json()
+    assert after["part"]["cad"] is None and not after["references"]
+    assert after["features"] == before["features"]
+    assert db.get(StoredFile, uuid.UUID(body["cover_3d"]["file_id"])) is not None
 
 
 def test_registration_proposes_references_and_populates_feature_only_when_linked(

@@ -34,15 +34,17 @@ export function MeasurementPlot({
   intervals,
   selectedInterval,
   onInterval,
+  empty = false,
 }: {
   labels: string[]
   lines: PlotLine[]
   visible: string[]
-  onVisible: (names: string[]) => void
+  onVisible?: (names: string[]) => void
   unit?: string
   intervals?: { id: string; from: number; to: number }[]
   selectedInterval?: string
   onInterval?: (id: string) => void
+  empty?: boolean
 }) {
   const tooltipId = useId()
   const [active, setActive] = useState<Hit | null>(null)
@@ -91,6 +93,8 @@ export function MeasurementPlot({
     labels.length === 1
       ? plotWidth / 2
       : 64 + (index * (plotWidth - 128)) / (labels.length - 1)
+  const compactLabels =
+    labels.length > 1 && (plotWidth - 128) / (labels.length - 1) < 64
   const y = (value: number) => 235 - ((value - min) / (max - min)) * 190
   const hits: Hit[] = lines.flatMap((line, lineIndex) =>
     visible.includes(line.name)
@@ -157,7 +161,7 @@ export function MeasurementPlot({
     : 0
   const toggle = (name: string) => {
     if (visible.includes(name) && visible.length === 1) return
-    onVisible(
+    onVisible?.(
       visible.includes(name)
         ? visible.filter((item) => item !== name)
         : [...visible, name],
@@ -181,17 +185,29 @@ export function MeasurementPlot({
           if (event.pointerType !== "touch") setActive(null)
         }}
       >
-        {values.length ? (
+        {empty || values.length ? (
           <svg
             viewBox={`0 0 ${plotWidth} 285`}
             className="w-full"
             style={{ height: 285 }}
             role="img"
-            aria-label={`Gráfica de mediciones en ${unit}`}
+            aria-label={
+              empty
+                ? "Gráfica de mediciones sin cota seleccionada"
+                : `Gráfica de mediciones en ${unit}`
+            }
           >
-            <text x="18" y="22" fontSize="11" fill="currentColor" opacity=".6">
-              {unit}
-            </text>
+            {!empty && (
+              <text
+                x="18"
+                y="22"
+                fontSize="11"
+                fill="currentColor"
+                opacity=".6"
+              >
+                {unit}
+              </text>
+            )}
             {sameLimits && finite(first.lower) && finite(first.upper) && (
               <g>
                 <rect
@@ -234,16 +250,18 @@ export function MeasurementPlot({
                   stroke="currentColor"
                   opacity=".08"
                 />
-                <text
-                  x="46"
-                  y={y(value) + 4}
-                  fontSize="11"
-                  textAnchor="end"
-                  fill="currentColor"
-                  opacity=".6"
-                >
-                  {fmt(value)}
-                </text>
+                {!empty && (
+                  <text
+                    x="46"
+                    y={y(value) + 4}
+                    fontSize="11"
+                    textAnchor="end"
+                    fill="currentColor"
+                    opacity=".6"
+                  >
+                    {fmt(value)}
+                  </text>
+                )}
               </g>
             ))}
             {lines.map(
@@ -305,11 +323,16 @@ export function MeasurementPlot({
                 fill="currentColor"
                 opacity=".65"
               >
-                {label.split(" · ").map((text, line) => (
-                  <tspan key={text} x={x(index)} dy={line ? 15 : 0}>
-                    {text}
-                  </tspan>
-                ))}
+                {(compactLabels
+                  ? label.replace(/^(intern\.)(.+)$/, "$1 · $2")
+                  : label
+                )
+                  .split(" · ")
+                  .map((text, line) => (
+                    <tspan key={text} x={x(index)} dy={line ? 15 : 0}>
+                      {text}
+                    </tspan>
+                  ))}
               </text>
             ))}
           </svg>
@@ -396,29 +419,31 @@ export function MeasurementPlot({
           </div>
         )}
       </div>
-      <fieldset className="flex flex-wrap items-center justify-center gap-2">
-        <legend className="sr-only">Cavidades visibles</legend>
-        {lines.map((line, index) => (
-          <Button
-            key={line.name}
-            type="button"
-            variant="ghost"
-            size="sm"
-            aria-pressed={visible.includes(line.name)}
-            onClick={() => toggle(line.name)}
-            className={cn(
-              "gap-2",
-              !visible.includes(line.name) && "opacity-40",
-            )}
-          >
-            <span
-              className="size-2 rounded-full"
-              style={{ backgroundColor: colors[index % colors.length] }}
-            />
-            {line.name.toUpperCase()}
-          </Button>
-        ))}
-      </fieldset>
+      {!empty && (
+        <fieldset className="flex flex-wrap items-center justify-center gap-2">
+          <legend className="sr-only">Cavidades visibles</legend>
+          {lines.map((line, index) => (
+            <Button
+              key={line.name}
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-pressed={visible.includes(line.name)}
+              onClick={() => toggle(line.name)}
+              className={cn(
+                "gap-2",
+                !visible.includes(line.name) && "opacity-40",
+              )}
+            >
+              <span
+                className="size-2 rounded-full"
+                style={{ backgroundColor: colors[index % colors.length] }}
+              />
+              {line.name.toUpperCase()}
+            </Button>
+          ))}
+        </fieldset>
+      )}
     </div>
   )
 }

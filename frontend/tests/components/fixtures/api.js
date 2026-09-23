@@ -447,6 +447,10 @@ export const PartsService = {
   },
   updatePart: async ({ partId, requestBody }) => {
     state().requests.push({ kind: "part", patch: clone(requestBody) })
+    if (state().holdPartSave)
+      await new Promise((resolve) => {
+        state().releasePartSave = resolve
+      })
     if (
       state().failParts ||
       state().parts.some(
@@ -455,6 +459,25 @@ export const PartsService = {
     )
       throw new Error("No se pudo guardar la pieza")
     const part = state().parts.find((item) => item.id === partId)
+    if (requestBody.references) {
+      state().partReferences ??= {}
+      let references = state().partReferences[partId] ?? []
+      for (const choice of requestBody.references) {
+        references = references.filter(({ kind }) => kind !== choice.kind)
+        if (choice.path)
+          references.push({
+            kind: choice.kind,
+            file: {
+              id: `file-${choice.kind}-${choice.path}`,
+              filename: choice.path.split("/").pop(),
+              source_path: choice.path,
+              size: 1024,
+              content_type: "application/octet-stream",
+            },
+          })
+      }
+      state().partReferences[partId] = references
+    }
     if (
       requestBody.folder_path != null &&
       (!part.name ||
@@ -504,6 +527,6 @@ export const CatalogService = {
       (part) => part.id === partId,
     ),
     features: (await FeaturesService.readFeatures({ partId })).data,
-    references: [],
+    references: clone(state().partReferences?.[partId] ?? []),
   }),
 }

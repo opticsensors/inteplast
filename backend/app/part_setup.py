@@ -5,7 +5,6 @@ import re
 import uuid
 from collections import defaultdict
 from pathlib import Path, PurePosixPath
-from typing import Literal
 
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
@@ -14,21 +13,14 @@ from sqlmodel import Session, col, select
 from app import automatic_measurements, measurement_imports
 from app.evidence import queue, register_document, study_key
 from app.file_sources import SourceError, local_path, stamp
-from app.knowledge_models import PartDocument
+from app.knowledge_models import PartDocument, PartReference
 from app.measurement_models import (
     MeasurementPreview,
 )
-from app.models import Part, PartPublic, StoredFile
+from app.models import Part, PartPublic, ReferenceChoice, ReferenceKind, StoredFile
 
-ReferenceKind = Literal["part", "scan", "mold", "drawing"]
 KINDS: tuple[ReferenceKind, ...] = ("part", "scan", "mold", "drawing")
 LABELS = {"part": "CAD", "scan": "Escaneo", "mold": "Molde", "drawing": "Plano"}
-
-
-class ReferenceChoice(BaseModel):
-    kind: ReferenceKind
-    path: str | None = Field(default=None, max_length=2048)
-    source_version: str | None = None
 
 
 class ReferenceCandidate(BaseModel):
@@ -106,8 +98,17 @@ def reference_kind(relative: str) -> ReferenceKind | None:
     return None
 
 
-def references(session: Session, part_id: uuid.UUID) -> dict[str, StoredFile]:
+def reference_choices(session: Session, part_id: uuid.UUID) -> dict[str, PartReference]:
     return {
+        choice.kind: choice
+        for choice in session.exec(
+            select(PartReference).where(PartReference.part_id == part_id)
+        ).all()
+    }
+
+
+def references(session: Session, part_id: uuid.UUID) -> dict[str, StoredFile]:
+    result = {
         doc.kind.removeprefix("reference_"): file
         for doc, file in session.exec(
             select(PartDocument, StoredFile)
@@ -116,6 +117,11 @@ def references(session: Session, part_id: uuid.UUID) -> dict[str, StoredFile]:
         ).all()
         if doc.kind.startswith("reference_")
     }
+    for kind, choice in reference_choices(session, part_id).items():
+        result.pop(kind, None)
+        if choice.file_id and (file := session.get(StoredFile, choice.file_id)):
+            result[kind] = file
+    return result
 
 
 def discover(session: Session, folder_path: str) -> FolderDiscovery:
@@ -144,12 +150,13 @@ def discover(session: Session, folder_path: str) -> FolderDiscovery:
             notices.append(f"No se puede vincular todavía: {relative}.")
     part = session.exec(select(Part).where(Part.folder_path == folder_path)).first()
     current = references(session, part.id) if part else {}
+    chosen = reference_choices(session, part.id) if part else {}
     proposals = []
     for kind in KINDS:
         choices = sorted(candidates[kind], key=lambda item: item.path.casefold())
         existing = current.get(kind)
         # A deterministic first approximation, explicitly reviewed before saving.
-        selected = choices[0] if choices else None
+        selected = choices[0] if choices and kind not in chosen else None
         proposals.append(
             ReferenceProposal(
                 kind=kind,
@@ -179,7 +186,11 @@ def discover(session: Session, folder_path: str) -> FolderDiscovery:
 
 
 def validate_references(folder_path: str, choices: list[ReferenceChoice]) -> None:
-    root = local_path(folder_path, directory=True)
+    root = (
+        local_path(folder_path, directory=True)
+        if any(c.path for c in choices)
+        else None
+    )
     if len({choice.kind for choice in choices}) != len(choices):
         raise HTTPException(422, "Cada tipo de archivo debe aparecer una sola vez.")
     paths = [choice.path for choice in choices if choice.path]
@@ -189,7 +200,7 @@ def validate_references(folder_path: str, choices: list[ReferenceChoice]) -> Non
         if not choice.path:
             continue
         path = local_path(choice.path)
-        if not path.is_relative_to(root):
+        if root is None or not path.is_relative_to(root):
             raise HTTPException(
                 422, "Los archivos deben estar dentro de la carpeta de la pieza."
             )
@@ -218,12 +229,28 @@ def validate_references(folder_path: str, choices: list[ReferenceChoice]) -> Non
 
 
 def save_references(
-    session: Session, part: Part, choices: list[ReferenceChoice]
+    session: Session,
+    part: Part,
+    choices: list[ReferenceChoice],
+    *,
+    remember_choices: bool = False,
 ) -> None:
     session.exec(select(Part).where(Part.id == part.id).with_for_update()).one()
     session.refresh(part)
+    if not part.folder_path and any(choice.path for choice in choices):
+        raise HTTPException(422, "Vincula primero la carpeta de esta pieza.")
     validate_references(part.folder_path or "", choices)
+    changed = {choice.kind for choice in choices}
+    current = references(session, part.id)
+    paths = {file.source_path for kind, file in current.items() if kind not in changed}
+    if any(choice.path and choice.path in paths for choice in choices):
+        raise HTTPException(422, "Selecciona un archivo distinto para cada tipo.")
     for choice in choices:
+        selected = session.get(PartReference, (part.id, choice.kind))
+        if selected is None and remember_choices:
+            selected = PartReference(part_id=part.id, kind=choice.kind)
+        if selected is not None:
+            selected.file_id = None
         for doc in session.exec(
             select(PartDocument).where(
                 PartDocument.part_id == part.id,
@@ -245,6 +272,10 @@ def save_references(
             assert document is not None
             document.kind = f"reference_{choice.kind}"
             session.add(document)
+            if selected is not None:
+                selected.file_id = file.id
+        if selected is not None:
+            session.add(selected)
 
 
 def refresh(session: Session, part: Part, user_id: uuid.UUID) -> PartRefreshResult:

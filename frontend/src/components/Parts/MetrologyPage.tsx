@@ -19,9 +19,14 @@ export function MetrologyPage({
   embedded?: boolean
 }) {
   const navigate = useNavigate()
+  // The piece shows all its cotas; catalogue filters no longer scope this page.
+  const consultationSearch = embedded
+    ? { ...search, feature: undefined, category: undefined, tag: undefined }
+    : search
   const options = useQuery({
     queryKey: ["metrology-filters"],
     queryFn: () => EvidenceService.readMetrologyFilters(),
+    enabled: !embedded,
   })
   const result = useQuery({
     queryKey: ["part-evidence", partId, search.revision, search.snapshot],
@@ -60,7 +65,7 @@ export function MetrologyPage({
       })
   }
   const change = (values: Partial<PartSearch>, replace = false) =>
-    visit(partId, { ...search, ...values }, replace)
+    visit(partId, { ...consultationSearch, ...values }, replace)
   const data = result.data
   const study =
     data?.study.state === "ready" ? (data.study.payload as Study) : undefined
@@ -71,40 +76,44 @@ export function MetrologyPage({
         document.filename.toLowerCase().endsWith(".pdf"),
     ) ??
     data?.documents.find((document) => document.id === data.drawing_file_id) ??
-    data?.documents.find((document) =>
-      /(?:DRW|plano|drawing).*\.pdf$/i.test(document.filename),
-    )
+    (data?.drawing_reference_set
+      ? undefined
+      : data?.documents.find((document) =>
+          /(?:DRW|plano|drawing).*\.pdf$/i.test(document.filename),
+        ))
   const filters = (
     <div className="space-y-3">
-      <MetrologyFilters
-        hidePart={embedded}
-        options={options.data}
-        partId={partId}
-        part={
-          data?.part ?? options.data?.parts.find((part) => part.id === partId)
-        }
-        search={search}
-        onPart={(id) => {
-          visit(id, {
-            feature: search.feature,
-            category: search.category,
-            tag: search.tag,
-          })
-        }}
-        onScope={(values) => {
-          visit(partId, {
-            revision: search.revision,
-            snapshot: search.snapshot,
-            feature: search.feature,
-            category: search.category,
-            tag: search.tag,
-            plano: search.plano,
-            drawingFile: search.drawingFile,
-            view: search.view,
-            ...values,
-          })
-        }}
-      />
+      {!embedded && (
+        <MetrologyFilters
+          hidePart={embedded}
+          options={options.data}
+          partId={partId}
+          part={
+            data?.part ?? options.data?.parts.find((part) => part.id === partId)
+          }
+          search={search}
+          onPart={(id) => {
+            visit(id, {
+              feature: search.feature,
+              category: search.category,
+              tag: search.tag,
+            })
+          }}
+          onScope={(values) => {
+            visit(partId, {
+              revision: search.revision,
+              snapshot: search.snapshot,
+              feature: search.feature,
+              category: search.category,
+              tag: search.tag,
+              plano: search.plano,
+              drawingFile: search.drawingFile,
+              view: search.view,
+              ...values,
+            })
+          }}
+        />
+      )}
       {(data?.measurement_revisions?.length ?? 0) > 1 && (
         <div className="max-w-56">
           <FilterSelect
@@ -136,7 +145,7 @@ export function MetrologyPage({
       )}
     </div>
   )
-  const error = options.error ?? (partId ? result.error : null)
+  const error = (!embedded && options.error) || (partId ? result.error : null)
   const status =
     partId && result.isPending
       ? "Cargando cotas…"
@@ -182,16 +191,24 @@ export function MetrologyPage({
         characteristics={data?.characteristics ?? []}
         features={data?.features ?? []}
         status={status}
-        filters={filters}
+        filters={
+          !embedded ||
+          (data?.measurement_revisions?.length ?? 0) > 1 ||
+          search.snapshot
+            ? filters
+            : undefined
+        }
         partSelected={Boolean(partId)}
         search={
-          partId
-            ? search
-            : {
-                feature: search.feature,
-                category: search.category,
-                tag: search.tag,
-              }
+          embedded
+            ? consultationSearch
+            : partId
+              ? search
+              : {
+                  feature: search.feature,
+                  category: search.category,
+                  tag: search.tag,
+                }
         }
         onChange={change}
         onDrawing={
@@ -200,7 +217,11 @@ export function MetrologyPage({
                 void navigate({
                   to: "/parts/$partId/fichero/$fileId",
                   params: { partId, fileId: drawing.id },
-                  search: { ...search, plano: undefined, drawingQ: code },
+                  search: {
+                    ...consultationSearch,
+                    plano: undefined,
+                    drawingQ: code,
+                  },
                 })
             : undefined
         }

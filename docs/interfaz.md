@@ -28,19 +28,32 @@ nueva, comprobar qué componente o patrón de la aplicación ya resuelve esa tar
 - La búsqueda numérica acepta prefijos: `N1` y `N11` deben ofrecer `N113`. Priorizar
   la coincidencia exacta. Al seleccionar una cota, su número queda en el buscador.
 
-## Títulos de la ficha de feature
+## Ficha de feature: consulta y edición
 
-- Los títulos principales Warnings, Lessons Learned y Piezas ejemplo usan `text-lg`
-  (18 px), frente a los 14 px de sus subtarjetas, tanto en consulta como en edición.
+- Consulta y edición comparten cabecera con portada a la izquierda y datos a la derecha.
+  La ruta Catálogo / Features / nombre queda arriba, junto a Editar feature y el menú
+  de acciones, o Cancelar / Guardar cambios. Eliminar permanece en el menú y pide confirmación.
+- En escritorio, Advertencias y Lecciones aprendidas ocupan la columna izquierda;
+  Piezas ejemplo, la derecha. En móvil se apilan. Los tres paneles muestran contadores
+  y títulos `text-lg`, con el mismo fondo y estilo sobrio en ambas clases de notas.
+- Los puntos empiezan cerrados, con chevrón a la izquierda y separadores en consulta.
+  Al abrirlos aparecen texto e imágenes. En edición se conservan los controles de
+  reordenar, título, eliminar y añadir, con el editor de texto e imágenes debajo.
+  Plegar una nota conserva su borrador y cualquier subida pendiente.
+- Nombre y descripción tienen etiquetas visibles. Los tags se añaden con Intro, coma
+  o al salir del campo, y se retiran individualmente. Cambiar imagen reutiliza el editor
+  existente de portada, incluida la selección de superficies CAD.
+- La ficha de feature muestra las piezas donde aparece y las cotas de cada una dentro
+  de una misma subtarjeta con borde, tanto en consulta como en edición. «Ver pieza»
+  abre su ficha, donde se consulta la documentación. No repetir documentos ni controles
+  para añadir archivos en la ficha del feature.
 
 ## COTAS dentro de una pieza del feature
 
-- La tarjeta usa la misma fila compacta, borde y espaciado que Molde, CAD, Escaneo,
-  Plano y Moldflow: icono de regla y etiqueta **COTAS** a la izquierda, números a su lado.
-  No tiene cabecera separada, «Ver pieza», revisión ni relación visibles.
+- Las cotas aparecen bajo «Cotas» dentro de la subtarjeta de su pieza.
+  Se mantiene el icono de regla y los botones compactos, sin revisión ni relación visibles.
 - Los recuadros de cotas y «Añadir cota» se colocan de izquierda a derecha; solo pasan
-  a otra línea cuando no caben. La altura normal coincide con las filas de ficheros,
-  tanto en consulta como en edición.
+  a otra línea cuando no caben, tanto en consulta como en edición.
 - Pulsar «Añadir cota» crea un campo vacío al final y lo enfoca, sin formulario aparte
   ni diálogo. Intro, salir del campo o Guardar el feature guardan el número. Una pausa
   mientras se escribe no debe guardar un prefijo incompleto como una cota nueva.
@@ -74,28 +87,43 @@ nueva, comprobar qué componente o patrón de la aplicación ya resuelve esa tar
   Los controles principales tienen 44 px de altura y reutilizan el estilo de Features.
 - `/parts` redirige al catálogo filtrado por piezas. `/parts/{id}` conserva los enlaces
   de cotas y plano y ahora muestra portada, identidad, Features, Cotas y Archivos.
+- La ficha de pieza comparte cabecera, navegación y secciones con la del feature.
+  Cotas y gráficas van a la izquierda; Features y, debajo, Archivos a la derecha.
+  En móvil se apilan. Los features no repiten fotos: cada subtarjeta muestra el nombre
+  enlazado y sus cotas de esta pieza. Pulsar una cota la consulta en la columna izquierda.
+- Los listados de features y piezas usan subtarjetas compactas y enlaces «Ver feature» /
+  «Ver pieza» en el color principal. En Archivos, cada fila muestra el tipo y, a su lado,
+  el tamaño en texto pequeño gris, sin nombre de fichero visible.
 - La portada de pieza es una captura de todo el CAD STEP sin superficies marcadas.
   Al pulsarla abre el visor interactivo reutilizado de Features, sin edición de caras.
 - Editar permite cambiar nombre/código y añadir o desvincular features existentes.
-  La relación es la misma en ambas direcciones. Guardar/Cancelar afectan a la cabecera;
-  los vínculos se guardan en línea, como en el editor de Features.
-- Cotas integra la consulta anterior de Metrología. La pieza la fija la ficha; Feature
-  y Más filtros siguen disponibles. No elegir una cota automáticamente.
+  La relación es la misma en ambas direcciones. «Añadir feature» utiliza un botón con
+  + y desplegable con buscador, como «Añadir pieza», excluyendo los ya vinculados.
+  Guardar/Cancelar afectan a la cabecera y a los archivos de referencia; los vínculos
+  con features se guardan en línea, como en el editor de Features.
+- En edición, Archivos muestra CAD, Escaneo, Molde y Plano 2D, incluso si están vacíos.
+  La carpeta selecciona otro archivo y la papelera quita el vínculo, sin borrar el original
+  ni su historial. No aparece Descargar hasta volver a consulta. Los cambios se guardan
+  junto al nombre/código, sin importar mediciones; un error conserva el borrador.
+- Las subtarjetas de piezas dentro de Features conservan la papelera de desvincular,
+  pero no ofrecen el menú de tres puntos para cambiar la carpeta de origen.
+- Cotas integra la consulta anterior de Metrología. La pieza la fija la ficha; no mostrar
+  Feature ni Más filtros. Mantener buscador local y controles de revisión, evaluación,
+  cavidades y correcciones. No elegir una cota automáticamente.
 - Los selectores usan `Common/SearchSelect`, compartido con los filtros de Features:
   misma altura y borde, búsqueda interna, teclado, limpieza y opciones con desplazamiento.
-- En la consulta de cotas, Categoría y Tag están en Más filtros. Son atributos de features: deben coincidir en
-  el mismo feature y limitar a sus cotas vinculadas. No atribuir a esos filtros todas
-  las cotas de una pieza. Las opciones se ajustan a las combinaciones disponibles.
-- Sin filtros de feature/categoría/tag, están disponibles todas las cotas de la pieza,
-  incluidas las que no tienen feature. Las cotas disponibles son botones compactos.
+- Feature, Categoría y Tag se filtran en el catálogo. La ficha ofrece todas las cotas de
+  la pieza, incluidas las que no tienen feature; ignora esos filtros en enlaces antiguos
+  y los limpia al seleccionar cotas o abrir el plano desde la consulta.
+  Las cotas disponibles son botones compactos.
 - «Mostrar más cotas» es un botón con aspecto de enlace gris subrayado, sin negrita.
   Excluir los diagnósticos «Coordenadas» de las opciones y sugerencias de cotas.
 - Cambiar pieza limpia cota, revisión, evaluación, cavidades, tramo y plano. El contexto
-  anterior se recupera con Atrás. Cambiar filtros limpia la cota y mantiene la pieza.
+  anterior se recupera con Atrás.
 - Un feature presente sin cotas vinculadas muestra ese estado. No atribuirle todas las
   cotas de la pieza. Las vinculadas sin mediciones siguen siendo seleccionables.
-- Conservar pieza, feature, cota y revisión en los enlaces desde Features y al navegar
-  por mediciones, correcciones y plano. El plano conserva el ámbito y sus subcotas.
+- Conservar pieza, cota y revisión al navegar por mediciones, correcciones y plano.
+  Los enlaces antiguos directos al plano de un feature conservan su ámbito y sus subcotas.
   Una revisión vinculada diferente de la importada no puede mostrar sus mediciones.
 
 ## Página de cotas
@@ -103,7 +131,7 @@ nueva, comprobar qué componente o patrón de la aplicación ya resuelve esa tar
 La sección Cotas de la ficha de pieza contiene la consulta de metrología, sin pestañas
 Documentos/Mediciones/Correcciones ni listados de archivos de mediciones.
 
-Orden estable dentro de Cotas: buscador con Plano a su derecha, selector de feature,
+Orden estable dentro de Cotas: buscador con Plano a su derecha, revisión si hay varias,
 Correcciones debajo a la izquierda, filtros de evaluación y gráfica. `Common/SearchToolbar` alinea el buscador y `Parts/DrawingToggle`
 en una fila, también en móvil; el botón tiene la misma altura que el campo.
 No repetir debajo del buscador el número o el título de la cota seleccionada, ni añadir

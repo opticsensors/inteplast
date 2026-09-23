@@ -16,6 +16,13 @@ se escribe en el buscador. Nueva pieza y Nuevo feature están juntos. Cada pieza
 con portada STEP completa ampliable en 3D, features vinculados y la consulta de metrología
 reutilizada. Los vínculos se editan desde cualquiera de las dos fichas.
 
+La ficha de feature mantiene el mismo reparto en consulta y edición: portada y datos
+arriba, advertencias/lecciones a la izquierda y piezas con sus cotas a la derecha.
+La documentación se consulta en la ficha de pieza, sin repetirla en el feature.
+Las notas permiten adjuntar imágenes a su cuerpo Markdown (`![nombre](file:id)`),
+reutilizando los archivos y las URL de acceso temporales existentes; no se guardan URL
+caducables en el texto. Plegar el punto mantiene las subidas y borradores pendientes.
+
 El alta se hace desde **Catálogo → Nueva pieza**. Propone nombre y
 cuatro referencias desde una carpeta seleccionada en Windows e incorpora automáticamente
 CSV CMM individuales/comparativos y tablas PPAP XLS/XLSX. **Actualizar datos** repite la lectura de forma
@@ -225,16 +232,20 @@ Las reglas compartidas de búsqueda, filtros, gráficas y navegación están en
 **Catálogo** (`/features`) reúne tarjetas de piezas y features. Las cotas aparecen solo
 al buscar y conservan pieza/revisión en el enlace. `/parts` redirige al mismo catálogo
 filtrado por piezas. `/parts/{id}` muestra portada CAD, features, cotas y referencias.
-La sección Cotas reutiliza `MetrologyPage` con la pieza fijada por la ficha, sin otro
-selector de pieza. Categoría y Tag están en Más filtros.
+La ficha comparte el diseño del feature: cabecera con portada y acciones, Cotas a la
+izquierda, Features y Archivos a la derecha. Cada feature aparece sin foto, con su nombre
+enlazado y las cotas de esta pieza; estas abren la medición en la misma página.
+La sección Cotas reutiliza `MetrologyPage` con la pieza fijada por la ficha, sin selectores
+de pieza, Feature ni Más filtros. Conserva buscador y controles de las mediciones.
 `GET /evidence/metrology/filters` proporciona opciones ligeras con pertenencia, categoría
 y tags; `GET /evidence/parts/{id}` incluye features y sus cotas, además de los datos importados.
 El catálogo ofrece todas las piezas registradas, incluidas las que no tienen features.
 `Common/SearchSelect` se reutiliza también en Features. Categoría y tag deben coincidir
 en un mismo feature y solo atribuyen a la consulta sus cotas realmente vinculadas.
-La ficha no selecciona N170 ni otra cota automáticamente. Un filtro permite consultar
-todos los features o solo el de entrada, sin ocultar las cotas sin mediciones. Los enlaces
-desde Features conservan pieza, feature, cota y revisión, también al abrir el plano.
+La ficha no selecciona N170 ni otra cota automáticamente. Siempre ofrece todas las cotas
+de la pieza, también las no asignadas a features o sin mediciones. Los filtros del catálogo
+en enlaces antiguos no limitan esta consulta; al interactuar se eliminan del enlace.
+Se conservan pieza, cota y revisión, también al abrir el plano.
 
 La sección Cotas abre la consulta sin pestañas ni listados de archivos de mediciones.
 Mediciones y correcciones comparten filtros y gráfica; los números se consultan sobre

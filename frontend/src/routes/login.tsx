@@ -4,6 +4,7 @@ import {
   Link as RouterLink,
   redirect,
 } from "@tanstack/react-router"
+import { ArrowRight } from "lucide-react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
@@ -23,11 +24,11 @@ import { PasswordInput } from "@/components/ui/password-input"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 
 const formSchema = z.object({
-  username: z.email(),
+  username: z.email({ message: "Introduce un correo electrónico válido" }),
   password: z
     .string()
-    .min(1, { message: "Password is required" })
-    .min(8, { message: "Password must be at least 8 characters" }),
+    .min(1, { message: "Introduce tu contraseña" })
+    .min(8, { message: "La contraseña debe tener al menos 8 caracteres" }),
 }) satisfies z.ZodType<AccessToken>
 
 type FormData = z.infer<typeof formSchema>
@@ -51,7 +52,7 @@ export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
       {
-        title: "Log In - INTEPLAST",
+        title: "Iniciar sesión - INTEPLAST",
       },
     ],
   }),
@@ -75,28 +76,37 @@ function Login() {
   }
 
   return (
-    <AuthLayout>
+    <AuthLayout contentClassName="max-w-md">
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit)}
-          className="flex flex-col gap-6"
+          className="flex flex-col gap-8"
         >
-          <div className="flex flex-col items-center gap-2 text-center">
-            <h1 className="text-2xl font-bold">Login to your account</h1>
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Inicia sesión
+            </h1>
+            <p className="text-base text-muted-foreground">
+              Ingresa tus datos para continuar.
+            </p>
           </div>
 
-          <div className="grid gap-4">
+          <div className="grid gap-5">
             <FormField
               control={form.control}
               name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>Correo electrónico</FormLabel>
                   <FormControl>
                     <Input
                       data-testid="email-input"
-                      placeholder="user@example.com"
+                      placeholder="nombre@empresa.com"
                       type="email"
+                      autoComplete="username"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      className="h-11 rounded-lg px-3.5 focus-visible:border-primary focus-visible:ring-primary/20"
                       {...field}
                     />
                   </FormControl>
@@ -110,35 +120,50 @@ function Login() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <div className="flex items-center">
-                    <FormLabel>Password</FormLabel>
-                    <RouterLink
-                      to="/recover-password"
-                      className="ml-auto text-sm underline-offset-4 hover:underline"
-                    >
-                      Forgot your password?
-                    </RouterLink>
-                  </div>
+                  <FormLabel>Contraseña</FormLabel>
                   <FormControl>
                     <PasswordInput
                       data-testid="password-input"
-                      placeholder="Password"
+                      placeholder="••••••••"
+                      autoComplete="current-password"
+                      className="h-11 rounded-lg pl-3.5 focus-visible:border-primary focus-visible:ring-primary/20"
                       {...field}
                     />
                   </FormControl>
                   <FormMessage className="text-xs" />
+                  <RouterLink
+                    to="/recover-password"
+                    className="justify-self-end text-sm font-medium text-primary underline underline-offset-4 hover:text-primary/80"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </RouterLink>
                 </FormItem>
               )}
             />
 
-            <LoadingButton type="submit" loading={loginMutation.isPending}>
-              Log In
+            <LoadingButton
+              type="submit"
+              loading={loginMutation.isPending}
+              className="relative h-12 w-full rounded-lg px-12 text-base font-semibold"
+            >
+              Iniciar sesión
+              {!loginMutation.isPending && (
+                <ArrowRight
+                  className="absolute right-4 size-5"
+                  aria-hidden="true"
+                />
+              )}
             </LoadingButton>
           </div>
 
-          <p className="text-center text-sm text-muted-foreground">
-            Contacta con el administrador para solicitar una cuenta.
-          </p>
+          <div className="border-t pt-6 text-center text-sm">
+            <RouterLink
+              to="/signup"
+              className="font-medium text-primary underline underline-offset-4 hover:text-primary/80"
+            >
+              Crear una cuenta
+            </RouterLink>
+          </div>
         </form>
       </Form>
     </AuthLayout>

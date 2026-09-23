@@ -190,7 +190,16 @@ def update_part(
             raise HTTPException(
                 status_code=409, detail="Ya existe una pieza con ese codigo"
             )
-    changes = part_in.model_dump(exclude_unset=True)
+    changes = part_in.model_dump(exclude_unset=True, exclude={"references"})
+    if part_in.references:
+        from app.part_setup import save_references
+
+        if "folder_path" in changes and part_in.folder_path != part.folder_path:
+            raise HTTPException(422, "Cambia la carpeta antes de editar sus archivos.")
+        try:
+            save_references(session, part, part_in.references, remember_choices=True)
+        except SourceError as error:
+            raise HTTPException(error.status_code, error.message)
     if "folder_path" in changes and part_in.folder_path is not None:
         name = folder_name(part_in.folder_path)
         previous_name = (

@@ -33,7 +33,7 @@ from app.models import (
     PartPublic,
     StoredFile,
 )
-from app.part_setup import references
+from app.part_setup import reference_choices, references
 
 router = APIRouter(tags=["catalog"])
 
@@ -82,6 +82,7 @@ class PartCoverRequest(BaseModel):
 
 def part_references(session: SessionDep, part_id: uuid.UUID) -> dict[str, StoredFile]:
     result = references(session, part_id)
+    chosen = reference_choices(session, part_id)
     # Older pieces store their CAD in the feature assets. Prefer the explicit piece reference.
     for asset, document in session.exec(
         select(FeatureAsset, StoredFile)
@@ -89,7 +90,8 @@ def part_references(session: SessionDep, part_id: uuid.UUID) -> dict[str, Stored
         .where(FeatureAsset.part_id == part_id)
         .order_by(col(FeatureAsset.position), col(FeatureAsset.id))
     ).all():
-        result.setdefault(AssetKind(asset.kind).value, document)
+        if asset.kind not in chosen:
+            result.setdefault(AssetKind(asset.kind).value, document)
     return result
 
 

@@ -60,8 +60,18 @@ export function Measurements({
   const selected = selection?.selected
   const correctionMode = search.view === "correcciones"
   const visible = visibleCavities(study?.cavities ?? [], search.cavities)
+  const recordedSamples = new Set(
+    entry?.series.flatMap((series) =>
+      Object.values(series.records).flatMap((records) => Object.keys(records)),
+    ),
+  )
+  const samples = (study?.samples ?? []).filter(
+    (sample) => !selected || recordedSamples.has(sample),
+  )
   const intervals =
-    study && entry && selected ? correctionTimeline(study, entry, selected) : []
+    study && entry && selected
+      ? correctionTimeline({ ...study, samples }, entry, selected)
+      : []
   const interval =
     intervals.find((item) => item.id === search.interval) ??
     intervals.find((item) => item.comparison) ??
@@ -70,12 +80,10 @@ export function Measurements({
   const cavity = visible.includes(search.cavity ?? "")
     ? search.cavity!
     : visible[0]
-  const labels = (study?.samples ?? []).map((sample) => `intern.${sample}`)
+  const labels = samples.map((sample) => `intern.${sample}`)
   const lines: PlotLine[] = (study?.cavities ?? []).map((cavity) => ({
     name: cavity,
-    points: study!.samples.map(
-      (sample) => selected?.series.records[cavity]?.[sample],
-    ),
+    points: samples.map((sample) => selected?.series.records[cavity]?.[sample]),
   }))
   const drawingCode = entry?.numbers.includes(code)
     ? code
@@ -128,7 +136,7 @@ export function Measurements({
           Correcciones
         </Button>
       </div>
-      {(scope || !code) && entries.length > 0 && (
+      {(scope || !code) && search.q?.trim() && entries.length > 0 && (
         <CotaChoices
           key={`${search.feature ?? "all"}-${search.category}-${search.tag}-${code ? "selected" : (search.q ?? "")}`}
           entries={code ? entries : findEntries(entries, search.q ?? "")}
@@ -136,7 +144,15 @@ export function Measurements({
           onSelect={choose}
         />
       )}
-      {!entry || !selected ? (
+      {!code && partSelected && entries.length > 0 ? (
+        <section
+          className="space-y-3 rounded-lg border p-4 sm:p-5"
+          aria-label="Evolución de mediciones"
+        >
+          <h3 className="text-sm font-medium">Evolución de mediciones</h3>
+          <MeasurementPlot empty labels={labels} lines={[]} visible={[]} />
+        </section>
+      ) : !entry || !selected ? (
         <div className="rounded-lg border p-8 text-center text-sm text-muted-foreground">
           {!partSelected
             ? "Selecciona una pieza para consultar sus cotas."

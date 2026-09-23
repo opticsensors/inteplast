@@ -1,6 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { ChevronDown, Plus, Trash2 } from "lucide-react"
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
+import {
+  type ReactNode,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 import {
   type FeatureNotePublic,
@@ -8,13 +15,13 @@ import {
   FeaturesService,
   type NoteKind,
 } from "@/client"
-import { RichTextEditor } from "@/components/Common/RichText"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import useCustomToast from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
 import { NOTE_KIND_SINGULAR } from "./constants"
+import { NoteBodyEditor } from "./NoteBody"
 import { SaveStatus } from "./SaveStatus"
 import { SortableEditorList } from "./SortableEditorList"
 import { useAutosave } from "./useAutosave"
@@ -47,7 +54,9 @@ function NoteRow({
   const queryClient = useQueryClient()
   const { showErrorToast } = useCustomToast()
   const [isOpen, setIsOpen] = useState(isNew)
+  const [visited, setVisited] = useState(isNew)
   const titleRef = useRef<HTMLInputElement>(null)
+  const bodyId = useId()
 
   useEffect(() => {
     if (isNew) titleRef.current?.select()
@@ -81,13 +90,18 @@ function NoteRow({
 
   return (
     <div className="rounded-md border">
-      <div className="flex items-center gap-1 px-1 py-1">
+      <div className="flex items-center gap-1 px-1 py-2">
         {dragHandle}
         <button
           type="button"
-          onClick={() => setIsOpen((open) => !open)}
+          onClick={() => {
+            setVisited(true)
+            setIsOpen((open) => !open)
+          }}
           className="shrink-0 rounded p-1 hover:bg-accent"
           title={isOpen ? "Contraer" : "Ver y editar los detalles"}
+          aria-expanded={isOpen}
+          aria-controls={bodyId}
         >
           <ChevronDown
             className={cn(
@@ -103,7 +117,7 @@ function NoteRow({
           onChange={(event) => autosave.change({ title: event.target.value })}
           placeholder="Titulo de la nota"
           className={cn(
-            "h-8 border-0 px-2 text-sm font-medium shadow-none focus-visible:ring-1",
+            "h-8 min-w-0 border-0 px-2 text-sm shadow-none focus-visible:ring-1",
             !title.trim() && "ring-1 ring-destructive",
           )}
         />
@@ -120,12 +134,12 @@ function NoteRow({
         </Button>
       </div>
 
-      {isOpen && (
-        <div className="px-2 pb-2">
-          <RichTextEditor
+      {visited && (
+        <div id={bodyId} hidden={!isOpen} className="px-3 pb-3">
+          <NoteBodyEditor
             value={body}
             onChange={(body) => autosave.change({ body })}
-            placeholder="Detalles: **negrita**, *cursiva*, `codigo` y listas con guion"
+            flush={autosave.flush}
           />
         </div>
       )}
@@ -206,7 +220,7 @@ export function NoteList({
         disabled={creating.pending}
       >
         <Plus className="mr-1 size-3.5" />
-        Anadir {NOTE_KIND_SINGULAR[kind]}
+        Añadir {NOTE_KIND_SINGULAR[kind]}
       </Button>
       <SaveStatus
         error={creating.error}

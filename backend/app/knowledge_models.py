@@ -48,6 +48,18 @@ class PartDocument(SQLModel, table=True):
     kind: str = Field(default="source", max_length=32)
 
 
+class PartReference(SQLModel, table=True):
+    """Explicit file choices; null remembers a removal without deleting evidence."""
+
+    part_id: uuid.UUID = Field(
+        foreign_key="part.id", ondelete="CASCADE", primary_key=True
+    )
+    kind: str = Field(primary_key=True, max_length=16)
+    file_id: uuid.UUID | None = Field(
+        default=None, foreign_key="storedfile.id", ondelete="RESTRICT"
+    )
+
+
 class EvidenceJob(SQLModel, table=True):
     """Durable, restartable import/index queue; stable identity, versioned payload."""
 
@@ -164,6 +176,7 @@ class PartEvidencePublic(BaseModel):
     import_available: bool
     measurement_revisions: list[str] = []
     drawing_file_id: uuid.UUID | None = None
+    drawing_reference_set: bool = False
     refresh_job: JobPublic = PydanticField(default_factory=lambda: JobPublic(state="empty"))
 
 

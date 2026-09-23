@@ -13,7 +13,6 @@ import {
   type FilePublic,
   type NoteKind,
 } from "@/client"
-import { CollapsibleSection } from "@/components/Common/CollapsibleSection"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -50,9 +49,16 @@ import {
   useNewEditingSession,
 } from "./EditingSession"
 import { FeatureCoverEditor } from "./FeatureCoverEditor"
+import {
+  FEATURE_COLUMNS,
+  FeatureBreadcrumb,
+  FeatureSection,
+} from "./FeatureLayout"
 import { NoteList } from "./NoteList"
 import { PartAssetList } from "./PartAssetList"
+import { featureParts } from "./parts"
 import { featureQueryOptions } from "./queries"
+import { TagInput } from "./TagInput"
 
 const NO_CATEGORY = "none"
 
@@ -295,49 +301,51 @@ function FeatureFormContent({
   // 🔑 Cada nota se escribe donde se lee: el titulo en su sitio y el cuerpo
   // dentro del desplegable. Ni boton de editar ni modal.
   const noteSection = (kind: NoteKind, icon: React.ReactNode) => (
-    <CollapsibleSection
-      keepMounted
-      title={kind === "warning" ? "Warnings" : "Lessons Learned"}
-      titleClassName="text-lg"
+    <FeatureSection
+      title={kind === "warning" ? "Advertencias" : "Lecciones aprendidas"}
+      count={notesOf(kind).length}
       icon={icon}
     >
-      <NoteList
-        featureId={featureId ?? ""}
-        ensureFeatureId={ensureFeatureId}
-        kind={kind}
-        notes={notesOf(kind)}
-      />
-    </CollapsibleSection>
+      <div className="space-y-2">
+        <NoteList
+          featureId={featureId ?? ""}
+          ensureFeatureId={ensureFeatureId}
+          kind={kind}
+          notes={notesOf(kind)}
+        />
+      </div>
+    </FeatureSection>
   )
 
   return (
     <fieldset
       disabled={mutation.isPending}
-      className="flex min-w-0 flex-col gap-6"
+      className="flex min-w-0 flex-col gap-5"
     >
       {/* Los botones ocupan el mismo sitio que *Editar* y *Borrar* en modo
             lectura, y estan junto a lo unico que hay que guardar a mano: las
             secciones de abajo se guardan solas. */}
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            void cancel()
-          }}
-          disabled={mutation.isPending}
-        >
-          Cancelar
-        </Button>
-        <LoadingButton
-          type="submit"
-          form="feature-form"
-          size="sm"
-          loading={mutation.isPending}
-        >
-          Guardar
-        </LoadingButton>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <FeatureBreadcrumb name={feature?.name ?? "Nuevo feature"} />
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              void cancel()
+            }}
+            disabled={mutation.isPending}
+          >
+            Cancelar
+          </Button>
+          <LoadingButton
+            type="submit"
+            form="feature-form"
+            loading={mutation.isPending}
+          >
+            {initialFeatureId ? "Guardar cambios" : "Guardar"}
+          </LoadingButton>
+        </div>
       </div>
 
       <Form {...form}>
@@ -347,7 +355,7 @@ function FeatureFormContent({
         >
           {/* Misma cabecera que la ficha —foto a la izquierda, identidad a
                 la derecha— con las casillas en el sitio de cada dato. */}
-          <div className="flex gap-4 rounded-lg border p-4 sm:gap-6 sm:p-6">
+          <div className="flex flex-col gap-4 rounded-lg border bg-card p-4 sm:flex-row sm:gap-6 sm:p-5">
             <FeatureCoverEditor
               feature={feature}
               image={image}
@@ -370,11 +378,11 @@ function FeatureFormContent({
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="sr-only">Nombre feature</FormLabel>
+                    <FormLabel>Nombre</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="Nombre del feature"
-                        className="h-auto py-1 text-2xl font-bold tracking-tight md:text-2xl"
+                        className="text-lg md:text-lg"
                         {...field}
                       />
                     </FormControl>
@@ -387,7 +395,7 @@ function FeatureFormContent({
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="sr-only">Descripcion</FormLabel>
+                    <FormLabel>Descripción</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Que es y que agrupa"
@@ -406,7 +414,7 @@ function FeatureFormContent({
                   name="category"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Categoria</FormLabel>
+                      <FormLabel>Categoría</FormLabel>
                       {/* 🔴 Radix dispara `onValueChange("")` el solo cuando el
                         Select vive dentro de un <form> y su lista todavia no
                         se ha abierto: borraba la categoria y el PUT se iba con
@@ -443,10 +451,7 @@ function FeatureFormContent({
                     <FormItem className="sm:col-span-2">
                       <FormLabel>Tags</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Bosch, fijación (separados por comas)"
-                          {...field}
-                        />
+                        <TagInput {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -458,21 +463,24 @@ function FeatureFormContent({
         </form>
       </Form>
 
-      <div className="space-y-4">
-        {noteSection(
-          "warning",
-          <TriangleAlert className="size-4 text-amber-500" />,
-        )}
-        {noteSection(
-          "lesson",
-          <Lightbulb className="size-4 text-yellow-500" />,
-        )}
-        <div id="example-parts-editor" className="scroll-mt-20">
-          <CollapsibleSection
-            keepMounted
+      <div className={FEATURE_COLUMNS}>
+        <div className="min-w-0 space-y-5">
+          {noteSection(
+            "warning",
+            <TriangleAlert className="size-5 shrink-0 text-amber-500" />,
+          )}
+          {noteSection(
+            "lesson",
+            <Lightbulb className="size-5 shrink-0 text-amber-500" />,
+          )}
+        </div>
+        <div id="example-parts-editor" className="min-w-0 scroll-mt-20">
+          <FeatureSection
             title="Piezas ejemplo"
-            titleClassName="text-lg"
-            icon={<Package2 className="size-4 text-muted-foreground" />}
+            count={feature ? featureParts(feature).length : 0}
+            icon={
+              <Package2 className="size-5 shrink-0 text-muted-foreground" />
+            }
           >
             {/* 🔑 El MISMO componente que la ficha, en modo edicion. Antes
                   aqui se agrupaba por tipo y en la ficha por pieza: dos
@@ -490,7 +498,7 @@ function FeatureFormContent({
               ensureFeatureId={ensureFeatureId}
               editable
             />
-          </CollapsibleSection>
+          </FeatureSection>
         </div>
       </div>
       <Dialog

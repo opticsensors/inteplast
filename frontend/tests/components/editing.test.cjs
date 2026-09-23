@@ -88,7 +88,7 @@ async function addPart(page, folder = "2820 Pump Housing") {
       })
     await window.review.refetchParts()
   }, folder)
-  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
   await page.getByRole("menuitem", { name: folder, exact: true }).click()
 }
 
@@ -96,13 +96,13 @@ test("new feature shows all sections immediately and opening/cancelling creates 
   const { page } = await mount(t)
   await page.evaluate(() => window.review.navigate("/new"))
   await expect(
-    page.getByRole("button", { name: "Anadir advertencia", exact: true }),
+    page.getByRole("button", { name: "Añadir advertencia", exact: true }),
   ).toBeVisible()
   await expect(
-    page.getByRole("button", { name: "Anadir leccion aprendida", exact: true }),
+    page.getByRole("button", { name: "Añadir lección aprendida", exact: true }),
   ).toBeVisible()
   await expect(
-    page.getByRole("button", { name: "Anadir pieza", exact: true }),
+    page.getByRole("button", { name: "Añadir pieza", exact: true }),
   ).toBeVisible()
   assert.deepEqual(
     await page.evaluate(() => window.review.featureCreateRequests ?? []),
@@ -116,11 +116,11 @@ test("new feature shows all sections immediately and opening/cancelling creates 
   )
 })
 
-test("new feature accepts notes, existing pieces and files before the first Save", async (t) => {
+test("new feature accepts notes and existing pieces before the first Save", async (t) => {
   const { page } = await mount(t)
   await page.evaluate(() => window.review.navigate("/new"))
   await page
-    .getByRole("button", { name: "Anadir advertencia", exact: true })
+    .getByRole("button", { name: "Añadir advertencia", exact: true })
     .click()
   await expect(page.getByPlaceholder("Titulo de la nota")).toHaveValue(
     "Nueva advertencia",
@@ -131,21 +131,16 @@ test("new feature accepts notes, existing pieces and files before the first Save
   await page.getByPlaceholder("Nombre del feature").fill("Feature with content")
   await page.getByPlaceholder("Titulo de la nota").fill("Watch the thickness")
   await page
-    .getByRole("button", { name: "Anadir leccion aprendida", exact: true })
+    .getByRole("button", { name: "Añadir lección aprendida", exact: true })
     .click()
   await expect(page.getByPlaceholder("Titulo de la nota")).toHaveCount(2)
-  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
   await page
     .getByRole("menuitem", { name: "3212 - Pump Housing", exact: true })
     .click()
   await page
-    .getByRole("button", { name: "Anadir fichero", exact: true })
+    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
     .click()
-  await expect(page.getByPlaceholder("Nombre del fichero")).toHaveValue(
-    "Nuevo fichero",
-  )
-  await page.getByPlaceholder("Nombre del fichero").fill("Mold reference")
-  await page.getByRole("button", { name: "Guardar", exact: true }).click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   const result = await page.evaluate(() => ({
     feature: window.review.feature,
@@ -157,7 +152,6 @@ test("new feature accepts notes, existing pieces and files before the first Save
   assert.equal(result.feature.name, "Feature with content")
   assert.equal(result.feature.notes.length, 2)
   assert.equal(result.feature.notes[0].title, "Watch the thickness")
-  assert.equal(result.feature.assets[0].name, "Mold reference")
   assert.equal(result.feature.parts[0].id, "part-one")
 })
 
@@ -168,17 +162,19 @@ test("concurrent first additions share one feature and retain header edits durin
     window.review.holdFeatureCreate = true
   })
   await page
-    .getByRole("button", { name: "Anadir advertencia", exact: true })
+    .getByRole("button", { name: "Añadir advertencia", exact: true })
     .click()
   await page.waitForFunction(() => Boolean(window.review.releaseFeatureCreate))
   await page
-    .getByRole("button", { name: "Anadir leccion aprendida", exact: true })
+    .getByRole("button", { name: "Añadir lección aprendida", exact: true })
     .click()
   await addPart(page)
   await page
     .getByPlaceholder("Nombre del feature")
     .fill("Written while creating")
-  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await page
+    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .click()
   assert.equal(
     await page.getByRole("heading", { name: "Otra pagina abierta" }).count(),
     0,
@@ -229,7 +225,7 @@ test("part menu searches registered pieces and existing folders without blank cr
     window.review.parts.push({ id: "shared-part", code: "3197", name: "Pot" })
     await window.review.refetchParts()
   })
-  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
   await page.getByRole("textbox", { name: "Buscar pieza" }).fill("pot")
   await page.getByRole("menuitem", { name: "3197 - Pot", exact: true }).click()
   await page
@@ -242,7 +238,7 @@ test("part menu searches registered pieces and existing folders without blank cr
     await page.evaluate(() => window.review.feature.assets.length),
     1,
   )
-  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
   assert.equal(
     await page
       .getByRole("menuitem", { name: "3197 - Pot", exact: true })
@@ -273,7 +269,7 @@ test("registered-piece search preserves names without listing the source folders
     })
     await window.review.refetchParts()
   })
-  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
   await page.getByRole("textbox", { name: "Buscar pieza" }).fill("CUSTOM")
   await page
     .getByRole("menuitem", { name: "CUSTOM - Custom housing", exact: true })
@@ -299,7 +295,7 @@ test("registered pieces remain selectable while the original folder is unavailab
     })
     await window.review.refetchParts()
   })
-  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
   await expect(
     page.getByText("No se ha podido cargar toda la lista de piezas."),
   ).toHaveCount(0)
@@ -315,25 +311,12 @@ test("registered pieces remain selectable while the original folder is unavailab
   )
 })
 
-test("a part takes its folder name and its file picker opens in that folder", async (t) => {
+test("a part takes its folder name and changing its folder preserves its edited name", async (t) => {
   const { page } = await mount(t)
   await addPart(page)
   await page.waitForFunction(
     () => window.review.feature.parts[1]?.folder_path === "2820 Pump Housing",
   )
-  await page
-    .getByRole("button", { name: "Anadir fichero", exact: true })
-    .last()
-    .click()
-  await page.getByPlaceholder("Nombre del fichero").nth(1).waitFor()
-  await page
-    .getByRole("button", { name: "Vincular archivo existente", exact: true })
-    .last()
-    .click()
-  await expect(page.getByPlaceholder("Nombre del fichero").last()).toHaveValue(
-    "drawing.pdf",
-  )
-  await expect(page.getByRole("dialog")).toHaveCount(0)
   await page
     .getByRole("textbox", { name: "Nombre de la pieza", exact: true })
     .last()
@@ -359,10 +342,12 @@ test("a part takes its folder name and its file picker opens in that folder", as
   )
 })
 
-test("removing a part removes its full card and files but leaves the part reusable", async (t) => {
+test("removing a part removes its full card but leaves the part reusable", async (t) => {
   const { page } = await mount(t)
   await page.getByRole("button", { name: "Quitar 3212", exact: true }).click()
-  await page.getByPlaceholder("Nombre del fichero").waitFor({ state: "hidden" })
+  await page
+    .getByRole("region", { name: "Pieza 3212", exact: true })
+    .waitFor({ state: "hidden" })
   assert.equal(
     await page
       .getByRole("textbox", { name: "Nombre de la pieza", exact: true })
@@ -370,7 +355,7 @@ test("removing a part removes its full card and files but leaves the part reusab
     0,
   )
   assert.equal(await page.evaluate(() => window.review.parts.length), 1)
-  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
   await page
     .getByRole("menuitem", { name: "3212 - Pump Housing", exact: true })
     .click()
@@ -378,23 +363,6 @@ test("removing a part removes its full card and files but leaves the part reusab
     .getByRole("textbox", { name: "Nombre de la pieza", exact: true })
     .waitFor()
   assert.equal(await page.getByPlaceholder("Nombre del fichero").count(), 0)
-})
-
-test("the file type menu contains only types", async (t) => {
-  const { page } = await mount(t)
-  await page.getByTitle("Cambiar el tipo", { exact: true }).click()
-  assert.equal(await page.getByRole("menuitem").count(), 5)
-  assert.equal(
-    await page
-      .getByRole("menu")
-      .getByText("Sin pieza", { exact: true })
-      .count(),
-    0,
-  )
-  assert.equal(
-    await page.getByRole("menu").getByText("3212", { exact: true }).count(),
-    0,
-  )
 })
 
 test("part cards reorder by keyboard, retain drafts and persist after a refresh", async (t) => {
@@ -423,7 +391,7 @@ test("part cards reorder by keyboard, retain drafts and persist after a refresh"
     "Reordered part",
   )
   assert.equal(
-    await page.getByPlaceholder("Nombre del fichero").inputValue(),
+    await page.evaluate(() => window.review.feature.assets[0].name),
     "Original asset",
   )
 })
@@ -438,7 +406,7 @@ async function openCover(page, mode = "image") {
     .click()
 }
 
-test("adding a part creates an open editable block, selects its default name and accepts files", async (t) => {
+test("adding a part creates an open editable block, selects its default name and saves identity edits", async (t) => {
   const { page } = await mount(t)
   await page.getByPlaceholder("Nombre del feature").fill("Pending header")
   await addPart(page)
@@ -470,15 +438,6 @@ test("adding a part creates an open editable block, selects its default name and
     ),
   )
   assert.equal(await name.inputValue(), "Carcasa nueva")
-  await page
-    .getByRole("button", { name: "Anadir fichero", exact: true })
-    .last()
-    .click()
-  await page.waitForFunction(() => window.review.feature.assets.length === 2)
-  const feature = await page.evaluate(() => window.review.feature)
-  assert.equal(feature.assets[1].part.id, feature.parts[1].id)
-  assert.equal(feature.assets[1].kind, "mold")
-  assert.equal(feature.assets[1].name, "Nuevo fichero")
   assert.equal(
     await page.getByPlaceholder("Nombre del feature").inputValue(),
     "Pending header",
@@ -541,18 +500,20 @@ test("part edits survive folding and failed saves, and Save flushes the correcte
   })
   await name.fill("Retained part draft")
   await page
-    .getByRole("button", { name: "Piezas ejemplo", exact: true })
+    .getByRole("button", { name: /3212.*Pump Housing|^Desplegar pieza$/ })
     .click()
   await page.waitForFunction(() =>
     window.review.requests.some((item) => item.kind === "part"),
   )
-  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await page
+    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .click()
   assert.equal(
     await page.getByRole("heading", { name: "Otra pagina abierta" }).count(),
     0,
   )
   await page
-    .getByRole("button", { name: "Piezas ejemplo", exact: true })
+    .getByRole("button", { name: /3212.*Pump Housing|^Desplegar pieza$/ })
     .click()
   await page.getByRole("alert").waitFor()
   assert.equal(await name.inputValue(), "Retained part draft")
@@ -560,7 +521,9 @@ test("part edits survive folding and failed saves, and Save flushes the correcte
     window.review.failParts = false
   })
   await name.fill("Saved part draft")
-  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await page
+    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   assert.equal(
     await page.evaluate(() => window.review.feature.parts[0].name),
@@ -578,7 +541,7 @@ test("existing parts can still be linked without creating another part", async (
     })
     await window.review.refetchParts()
   })
-  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
   await page
     .getByRole("menuitem", { name: "9999 - Existing part", exact: true })
     .click()
@@ -736,7 +699,9 @@ test("closing an image draft leaves the previous cover and unsaved header intact
     "cover.png",
   )
   await page.keyboard.press("Escape")
-  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await page
+    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   const feature = await page.evaluate(() => window.review.feature)
   assert.equal(feature.name, "Keep my header")
@@ -774,7 +739,9 @@ test("removing a CAD cover is a draft until the feature is saved", async (t) => 
     await page.evaluate(() => window.review.feature.image_id),
     "saved-image",
   )
-  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await page
+    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   assert.equal(await page.evaluate(() => window.review.feature.image_id), null)
   assert.equal(await page.evaluate(() => window.review.feature.cover_3d), null)
@@ -808,197 +775,11 @@ test("a failed upload can be cancelled without blocking the feature or replacing
   )
 })
 
-test("linking an original preserves the header and uploads no bytes", async (t) => {
-  const { page, network } = await mount(t)
-  await page.getByPlaceholder("Nombre del feature").fill("Unsaved header")
-  await page
-    .getByRole("button", { name: "Vincular archivo existente", exact: true })
-    .click()
-  await page.waitForFunction(
-    () => window.review.feature.assets[0].file?.id === "document-one",
-  )
-  assert.equal(
-    await page.getByPlaceholder("Nombre del feature").inputValue(),
-    "Unsaved header",
-  )
-  assert.deepEqual(await page.evaluate(() => window.review.uploadRequests), [])
-  assert.deepEqual(await page.evaluate(() => window.review.referenceRequests), [
-    { path: "drawings/drawing.pdf" },
-  ])
-  assert.deepEqual(network, [])
-})
-
-test("file rows expose only the native link action and no upload replacement", async (t) => {
-  const { page } = await mount(t)
-  await expect(
-    page.getByRole("button", {
-      name: "Vincular archivo existente",
-      exact: true,
-    }),
-  ).toBeVisible()
-  await expect(
-    page.getByRole("button", { name: /^Cambiar el fichero|^Subir$/ }),
-  ).toHaveCount(0)
-  await expect(
-    page
-      .getByPlaceholder("Nombre del fichero")
-      .locator("..")
-      .locator('input[type="file"]'),
-  ).toHaveCount(0)
-})
-
-test("legacy linked cards show the actual filename in edit and read views", async (t) => {
-  const { page } = await mount(t)
-  await page.evaluate(async () => {
-    window.review.feature.assets[0].file = {
-      id: "real-document",
-      filename: "3212.step",
-      content_type: "model/step",
-      size: 128,
-    }
-    window.review.feature.assets[0].name = "Molde 3212 (STEP, 247 MB)"
-    await window.review.refetch()
-  })
-  await expect(page.getByPlaceholder("Nombre del fichero")).toHaveValue(
-    "3212.step",
-  )
-  await expect(page.getByPlaceholder("Nombre del fichero")).toHaveAttribute(
-    "readonly",
-    "",
-  )
-  await page.evaluate(() => window.review.navigate("/previews"))
-  await expect(page.getByTitle("Ver 3212.step", { exact: true })).toBeVisible()
-  await expect(
-    page.getByText("Molde 3212 (STEP, 247 MB)", { exact: true }),
-  ).toHaveCount(0)
-})
-
-test("failed source selection can be cancelled without trapping navigation", async (t) => {
-  const { page } = await mount(t)
-  await page.evaluate(() => {
-    window.review.failReferences = true
-  })
-  await page
-    .getByRole("button", { name: "Vincular archivo existente", exact: true })
-    .click()
-  await page.getByRole("alert").getByText("Source unavailable").waitFor()
-  await page
-    .getByRole("alert")
-    .getByRole("button", { name: "Cancelar", exact: true })
-    .click()
-  await page.getByRole("link", { name: "Otra pagina", exact: true }).click()
-  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
-})
-
-test("closing the native replacement picker preserves the linked file without errors or retry controls", async (t) => {
-  const { page } = await mount(t)
-  await page.evaluate(async () => {
-    window.review.feature.assets[0].file = {
-      id: "existing-document",
-      filename: "old.pdf",
-      size: 128,
-      content_type: "application/pdf",
-      source: "local",
-      version: "old-version",
-    }
-    await window.review.refetch()
-  })
-  let pending
-  await page.route("**/__native-picker", (route) => {
-    pending = route
-  })
-  const replace = page.getByRole("button", {
-    name: "Cambiar archivo vinculado",
-    exact: true,
-  })
-  await replace.click()
-  await expect(replace).toBeDisabled()
-  await expect.poll(() => Boolean(pending)).toBe(true)
-  await pending.fulfill({ json: { path: null } })
-  await expect(replace).toBeEnabled()
-  await expect(page.getByRole("alert")).toHaveCount(0)
-  await expect(
-    replace
-      .locator("..")
-      .getByRole("button", { name: /^(Reintentar|Cancelar)$/ }),
-  ).toHaveCount(0)
-  await expect(page.getByPlaceholder("Nombre del fichero")).toHaveValue(
-    "old.pdf",
-  )
-  assert.equal(
-    await page.evaluate(() => window.review.feature.assets[0].file.id),
-    "existing-document",
-  )
-  assert.deepEqual(
-    await page.evaluate(() => window.review.referenceRequests ?? []),
-    [],
-  )
-  assert.deepEqual(
-    await page.evaluate(() =>
-      window.review.requests.filter((item) => item.kind === "asset"),
-    ),
-    [],
-  )
-  await page.getByRole("link", { name: "Otra pagina", exact: true }).click()
-  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
-})
-
-test("selecting a replacement links that file and uses its real filename without action options", async (t) => {
-  const { page } = await mount(t)
-  await page.evaluate(async () => {
-    window.review.fileState = "missing"
-    window.review.feature.assets[0].file = {
-      id: "existing-document",
-      filename: "old.pdf",
-      size: 128,
-      content_type: "application/pdf",
-      source: "local",
-      version: "old-version",
-      revision: "06",
-    }
-    await window.review.refetch()
-  })
-  await page
-    .getByText("Archivo no encontrado. Puedes volver a vincularlo.", {
-      exact: false,
-    })
-    .waitFor()
-  await page
-    .getByRole("button", { name: "Cambiar archivo vinculado", exact: true })
-    .click()
-  await expect(page.getByLabel("Acción sobre el vínculo")).toHaveCount(0)
-  await expect(page.getByText("Usar otro archivo en esta ficha")).toHaveCount(0)
-  await expect(
-    page.getByText(/Selecciona un archivo de la carpeta compartida/),
-  ).toHaveCount(0)
-  await page.waitForFunction(
-    () => window.review.feature.assets[0].file.id === "document-one",
-  )
-  await expect(page.getByPlaceholder("Nombre del fichero")).toHaveValue(
-    "drawing.pdf",
-  )
-  await expect(page.getByPlaceholder("Nombre del fichero")).toHaveAttribute(
-    "readonly",
-    "",
-  )
-  assert.deepEqual(
-    await page.evaluate(() => window.review.relinkRequests ?? []),
-    [],
-  )
-  assert.deepEqual(await page.evaluate(() => window.review.referenceRequests), [
-    { path: "drawings/drawing.pdf" },
-  ])
-  assert.equal(
-    await page.evaluate(() => window.review.feature.assets[0].name),
-    "drawing.pdf",
-  )
-})
-
 test("note refresh preserves dirty header fields", async (t) => {
   const { page } = await mount(t)
   await page.getByPlaceholder("Nombre del feature").fill("Pending header")
   await page
-    .getByRole("button", { name: "Anadir advertencia", exact: true })
+    .getByRole("button", { name: "Añadir advertencia", exact: true })
     .click()
   await page.waitForFunction(() => window.review.feature.notes.length === 2)
   await page.waitForTimeout(50)
@@ -1008,20 +789,15 @@ test("note refresh preserves dirty header fields", async (t) => {
   )
 })
 
-test("folding notes and files preserves and saves pending drafts", async (t) => {
+test("folding notes preserves and saves pending drafts", async (t) => {
   const { page } = await mount(t)
+  await page.getByRole("button", { name: /^Desplegar / }).click()
   await page.getByPlaceholder("Titulo de la nota").fill("Folded warning")
-  await page.getByRole("button", { name: "Warnings", exact: true }).click()
-  await page.getByPlaceholder("Nombre del fichero").fill("Folded asset")
-  await page
-    .getByRole("button", { name: "Piezas ejemplo", exact: true })
-    .click()
+  await page.getByRole("button", { name: /^Desplegar / }).click()
   await page.waitForFunction(
-    () =>
-      window.review.feature.notes[0].title === "Folded warning" &&
-      window.review.feature.assets[0].name === "Folded asset",
+    () => window.review.feature.notes[0].title === "Folded warning",
   )
-  await page.getByRole("button", { name: "Warnings", exact: true }).click()
+  await page.getByRole("button", { name: /^Desplegar / }).click()
   assert.equal(
     await page.getByPlaceholder("Titulo de la nota").inputValue(),
     "Folded warning",
@@ -1050,7 +826,9 @@ test("Save waits for pending autosave, then leaves", async (t) => {
     window.review.delay = 150
   })
   await page.getByPlaceholder("Titulo de la nota").fill("Saved before leaving")
-  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await page
+    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   assert.equal(
     await page.evaluate(() => window.review.feature.notes[0].title),
@@ -1058,13 +836,13 @@ test("Save waits for pending autosave, then leaves", async (t) => {
   )
 })
 
-test("navigation flushes pending notes and files", async (t) => {
+test("navigation flushes pending notes", async (t) => {
   const { page } = await mount(t)
-  await page.getByPlaceholder("Nombre del fichero").fill("Saved on navigation")
+  await page.getByPlaceholder("Titulo de la nota").fill("Saved on navigation")
   await page.getByRole("link", { name: "Otra pagina", exact: true }).click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   assert.equal(
-    await page.evaluate(() => window.review.feature.assets[0].name),
+    await page.evaluate(() => window.review.feature.notes[0].title),
     "Saved on navigation",
   )
 })
@@ -1100,7 +878,9 @@ test("cover waits for the upload, applies a draft and saves its reference with t
     await page.evaluate(() => window.review.feature.image_id),
     undefined,
   )
-  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await page
+    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   assert.equal(
     await page.evaluate(() => window.review.feature.image_id),
@@ -1127,7 +907,9 @@ test("failed save retains draft and blocks leaving until retry succeeds", async 
     window.review.failNotes = true
   })
   await page.getByPlaceholder("Titulo de la nota").fill("Retain failed draft")
-  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await page
+    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .click()
   await page.getByRole("alert").waitFor()
   assert.equal(
     await page.getByPlaceholder("Titulo de la nota").inputValue(),
@@ -1140,7 +922,9 @@ test("failed save retains draft and blocks leaving until retry succeeds", async 
   await page.evaluate(() => {
     window.review.failNotes = false
   })
-  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await page
+    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   assert.equal(
     await page.evaluate(() => window.review.feature.notes[0].title),
@@ -1193,7 +977,9 @@ test("logout flushes pending edits before removing credentials", async (t) => {
   const { page } = await mount(t)
   await page.getByPlaceholder("Titulo de la nota").fill("Saved before logout")
   await page.getByRole("button", { name: "Cerrar sesion" }).click()
-  await page.getByRole("button", { name: "Log In", exact: true }).waitFor()
+  await page
+    .getByRole("button", { name: "Iniciar sesión", exact: true })
+    .waitFor()
   assert.equal(
     await page.evaluate(() => window.review.feature.notes[0].title),
     "Saved before logout",
@@ -1224,7 +1010,7 @@ test("CAD cover explains the missing part STEP without discarding the header", a
   await openCover(page, "cad")
   await page
     .getByRole("alert")
-    .getByText("Vincula un STEP de tipo CAD en Piezas ejemplo.")
+    .getByText("Vincula el CAD desde la ficha de la pieza.")
     .waitFor()
   assert.equal(
     await page.getByRole("button", { name: "Ir a Piezas ejemplo" }).count(),
@@ -1264,7 +1050,9 @@ test("CAD cover uploads its image but waits for Save to persist the annotation a
   await page.evaluate(async () => {
     await window.review.refetch()
   })
-  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await page
+    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   const feature = await page.evaluate(() => window.review.feature)
   assert.equal(feature.name, "Pending CAD header")
@@ -1300,7 +1088,9 @@ test("pasting a local image replaces a CAD cover and leaves text fields alone", 
   await paste('button[aria-label="Seleccionar imagen"]')
   await page.waitForFunction(() => window.review.uploadRequests.length === 1)
   await applyCover(page)
-  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await page
+    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   assert.equal(await page.evaluate(() => window.review.feature.cover_3d), null)
   assert.equal(
@@ -1327,7 +1117,9 @@ test("dropping an image updates the cover through the same upload flow", async (
     })
   await page.waitForFunction(() => window.review.uploadRequests.length === 1)
   await applyCover(page)
-  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await page
+    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   assert.equal(
     await page.evaluate(() => window.review.feature.image_id),
@@ -1386,54 +1178,66 @@ test("dropping an unsupported file into the feature image is rejected", async (t
   assert.deepEqual(await page.evaluate(() => window.review.uploadRequests), [])
 })
 
-test("file list offers previews only for inline raster and PDF MIME types", async (t) => {
+test("tags are removable and a pending tag is committed before Save", async (t) => {
   const { page } = await mount(t)
-  await page.evaluate(async () => {
-    const files = [
-      ["JPEG", "photo.jpg", "image/jpeg"],
-      ["PNG", "photo.png", "IMAGE/PNG; charset=binary"],
-      ["GIF", "photo.gif", "image/gif"],
-      ["WebP", "photo.webp", "image/webp"],
-      ["AVIF", "photo.avif", "image/avif"],
-      ["BMP", "photo.bmp", "image/bmp"],
-      ["SVG", "illustration.svg", "image/svg+xml"],
-      ["TIFF", "photo.tiff", "image/tiff"],
-      ["PDF", "drawing.bin", "Application/PDF; version=1.7"],
-      ["Unverified PDF", "drawing.pdf", "application/octet-stream"],
-    ]
-    const template = window.review.feature.assets[0]
-    window.review.feature.assets = files.map(
-      ([name, filename, contentType], index) => ({
-        ...template,
-        id: `asset-${index}`,
-        name,
-        file: {
-          id: `file-${index}`,
-          filename,
-          content_type: contentType,
-          size: 128,
-        },
-      }),
-    )
-    await window.review.navigate("/previews")
+  const tags = page.getByPlaceholder("Añadir tag…")
+  await tags.fill("Bosch,pump")
+  await tags.press("Enter")
+  await page
+    .getByRole("button", { name: "Quitar tag Bosch", exact: true })
+    .click()
+  await tags.fill("nuevo")
+  await page
+    .getByRole("button", { name: "Guardar cambios", exact: true })
+    .click()
+  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
+  assert.deepEqual(await page.evaluate(() => window.review.feature.tags), [
+    "pump",
+    "nuevo",
+  ])
+})
+
+test("note images survive folding during upload and Save waits for their reference", async (t) => {
+  const { page } = await mount(t)
+  const expand = page.getByRole("button", {
+    name: "Desplegar Original warning",
+    exact: true,
   })
-  for (const name of [
-    "photo.jpg",
-    "photo.png",
-    "photo.gif",
-    "photo.webp",
-    "photo.avif",
-    "photo.bmp",
-    "drawing.bin",
-  ]) {
-    await page.getByTitle(`Ver ${name}`, { exact: true }).waitFor()
-  }
-  for (const name of ["illustration.svg", "photo.tiff", "drawing.pdf"]) {
-    assert.equal(
-      await page.getByTitle(`Ver ${name}`, { exact: true }).count(),
-      0,
-    )
-  }
-  await page.getByTitle("Descargar illustration.svg", { exact: true }).waitFor()
-  await page.getByTitle("Descargar drawing.pdf", { exact: true }).waitFor()
+  await expand.click()
+  await page.evaluate(() => {
+    window.review.holdUploads = true
+  })
+  await page.getByLabel("Imagen de la nota", { exact: true }).setInputFiles({
+    name: "detail.png",
+    mimeType: "image/png",
+    buffer: Buffer.from("image"),
+  })
+  await page.waitForFunction(() => Boolean(window.review.releaseUpload))
+  await expand.click()
+  await page
+    .getByRole("button", { name: "Guardar cambios", exact: true })
+    .click()
+  assert.equal(
+    await page.getByRole("heading", { name: "Otra pagina abierta" }).count(),
+    0,
+  )
+  await page.evaluate(() => window.review.releaseUpload())
+  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
+  assert.equal(
+    await page.evaluate(() => window.review.feature.notes[0].body),
+    "Original body\n\n![detail.png](file:uploaded-image)",
+  )
+  await page.evaluate(() => window.review.navigate("/"))
+  await expand.click()
+  await page
+    .getByRole("button", { name: "Quitar imagen detail.png", exact: true })
+    .click()
+  await page
+    .getByRole("button", { name: "Guardar cambios", exact: true })
+    .click()
+  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
+  assert.equal(
+    await page.evaluate(() => window.review.feature.notes[0].body),
+    "Original body",
+  )
 })

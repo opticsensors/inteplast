@@ -2,7 +2,7 @@
 # No host ports, env_file or application volumes. All test data is ephemeral.
 services:
   db:
-    image: postgres:18
+    image: pgvector/pgvector:0.8.2-pg18-trixie
     environment:
       POSTGRES_DB: app_test
       POSTGRES_USER: postgres

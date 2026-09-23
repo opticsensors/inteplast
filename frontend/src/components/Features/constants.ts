@@ -55,11 +55,11 @@ export const ASSET_ICONS: Record<AssetKind, typeof Box> = {
 }
 
 export const NOTE_KIND_LABELS: Record<NoteKind, string> = {
-  warning: "Warnings",
-  lesson: "Lessons Learned",
+  warning: "Advertencias",
+  lesson: "Lecciones aprendidas",
 }
 
 export const NOTE_KIND_SINGULAR: Record<NoteKind, string> = {
   warning: "advertencia",
-  lesson: "leccion aprendida",
+  lesson: "lección aprendida",
 }

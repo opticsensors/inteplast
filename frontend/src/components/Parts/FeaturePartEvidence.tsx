@@ -16,7 +16,6 @@ import { usePendingTask } from "@/components/Features/usePendingTask"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
-import { cn } from "@/lib/utils"
 
 type AddedCota = {
   key: string
@@ -36,10 +35,12 @@ export function FeaturePartEvidence({
   feature,
   partId,
   editable,
+  onSelectCota,
 }: {
   feature: FeaturePublic
   partId: string
   editable?: boolean
+  onSelectCota?: (cota: CharacteristicPublic) => void
 }) {
   const client = useQueryClient()
   const [added, setAdded] = useState<AddedCota[]>([])
@@ -148,36 +149,44 @@ export function FeaturePartEvidence({
       asset.part?.id === partId &&
       asset.kind === "drawing" &&
       asset.file?.filename.toLowerCase().endsWith(".pdf"),
-  )
+  )?.file
   const chip = (cota: CharacteristicPublic) => (
     <div
       key={cota.id}
       className="inline-flex h-7 shrink-0 items-center rounded-md border text-sm"
     >
-      <Link
-        to="/parts/$partId"
-        params={{ partId }}
-        search={{
-          cota: cota.code,
-          revision: cota.revision,
-          feature: feature.id,
-        }}
-        className="px-2 font-medium hover:underline"
-      >
-        {cota.code}
-      </Link>
+      {onSelectCota ? (
+        <button
+          type="button"
+          className="h-full rounded-md px-2 font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          onClick={() => onSelectCota(cota)}
+        >
+          {cota.code}
+        </button>
+      ) : (
+        <Link
+          to="/parts/$partId"
+          params={{ partId }}
+          search={{
+            cota: cota.code,
+            revision: cota.revision,
+            feature: feature.id,
+          }}
+          className="px-2 font-medium hover:underline"
+        >
+          {cota.code}
+        </Link>
+      )}
       {drawing && (
         <Button asChild variant="ghost" size="icon" className="size-6 shrink-0">
           <Link
-            to="/parts/$partId"
-            params={{ partId }}
+            to="/parts/$partId/fichero/$fileId"
+            params={{ partId, fileId: drawing.id }}
             search={{
               cota: cota.code,
               revision: cota.revision,
               feature: feature.id,
-              plano: true,
               drawingQ: cota.code,
-              drawingFile: drawing.file?.id,
             }}
             title={`Buscar ${cota.code} en el plano`}
           >
@@ -205,20 +214,13 @@ export function FeaturePartEvidence({
   const stored =
     result.data?.characteristics.filter((item) => !additions.has(item.id)) ?? []
   return (
-    <section aria-label="Cotas" className="rounded-md border">
-      <div
-        className={cn(
-          "flex items-start gap-2 text-sm",
-          editable ? "px-1 py-1" : "px-2 py-1.5",
-        )}
-      >
-        <div className="flex h-7 shrink-0 items-center gap-2">
-          <Ruler className="size-4 shrink-0 text-muted-foreground" />
-          <span className="w-16 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
-            Cotas
-          </span>
-        </div>
-        <div className="flex min-w-0 flex-1 flex-wrap items-start gap-2">
+    <section aria-label="Cotas" className="space-y-2">
+      <h3 className="flex items-center gap-2 text-sm font-semibold">
+        <Ruler className="size-4 shrink-0 text-muted-foreground" />
+        Cotas
+      </h3>
+      <div className="text-sm">
+        <div className="flex min-w-0 flex-1 flex-wrap items-start gap-1.5">
           {stored.map(chip)}
           {added.map((item) =>
             item.characteristic ? (

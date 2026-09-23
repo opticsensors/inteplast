@@ -33,13 +33,25 @@ export function FeatureCoverEditor(props: CoverEditorProps) {
         if (!busy) setOpen(next)
       }}
     >
-      <DialogTrigger asChild>
-        <CoverButton
-          editable
-          image={props.image}
-          name={props.feature?.name ?? "Portada del feature"}
-        />
-      </DialogTrigger>
+      <div className="flex w-32 shrink-0 flex-col gap-2 sm:w-48">
+        <DialogTrigger asChild>
+          <CoverButton
+            editable
+            image={props.image}
+            name={props.feature?.name ?? "Portada del feature"}
+          />
+        </DialogTrigger>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="px-1 text-xs has-[>svg]:px-1 sm:text-sm"
+          onClick={() => setOpen(true)}
+        >
+          <ImageIcon className="size-4" />
+          Cambiar imagen
+        </Button>
+      </div>
       {open && (
         <CoverDialog
           aria-describedby={undefined}

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Trash2 } from "lucide-react"
+import { MoreHorizontal, Trash2 } from "lucide-react"
 import { useState } from "react"
 
 import { FeaturesService } from "@/client"
@@ -13,6 +13,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
@@ -48,15 +54,26 @@ const DeleteFeature = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-        onClick={() => setIsOpen(true)}
-      >
-        <Trash2 />
-        Eliminar
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Más acciones del feature"
+          >
+            <MoreHorizontal />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            variant="destructive"
+            onSelect={() => setIsOpen(true)}
+          >
+            <Trash2 />
+            Eliminar
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Eliminar feature</DialogTitle>

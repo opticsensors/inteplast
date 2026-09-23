@@ -23,6 +23,7 @@ from app import (  # noqa: E402
     measurement_models,  # noqa: F401
 )
 from app.core.config import settings  # noqa
+from app.assistant import index_models  # noqa: F401, E402
 from app.models import SQLModel  # noqa
 
 target_metadata = SQLModel.metadata

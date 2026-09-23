@@ -21,7 +21,12 @@ import { Input } from "@/components/ui/input"
 import useCustomToast from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
 import { formatFileSize, handleError } from "@/utils"
-import { ASSET_ICONS, ASSET_KIND_LABELS, ASSET_KINDS } from "./constants"
+import {
+  ASSET_ICONS,
+  ASSET_KIND_LABELS,
+  ASSET_KIND_SHORT,
+  ASSET_KINDS,
+} from "./constants"
 import { DocumentStatus } from "./DocumentStatus"
 import { assetName } from "./parts"
 import { SaveStatus } from "./SaveStatus"
@@ -115,7 +120,7 @@ export function AssetEditRow({
 
   return (
     <div>
-      <div className="flex items-center gap-1 rounded-md border px-1 py-1 text-sm">
+      <div className="flex min-w-0 items-center gap-1 rounded-md border px-1 py-2 text-sm">
         {dragHandle}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -123,14 +128,12 @@ export function AssetEditRow({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-7 shrink-0 justify-start gap-1 px-1.5 font-normal text-muted-foreground"
+              className="h-10 shrink-0 gap-0.5 px-1.5 font-normal text-muted-foreground"
               title="Cambiar el tipo"
               disabled={metadata.pending}
             >
-              <Icon className="size-3.5" />
-              <span className="hidden sm:inline">
-                {ASSET_KIND_LABELS[asset.kind]}
-              </span>
+              <Icon className="size-5" />
+              <span className="sr-only">{ASSET_KIND_LABELS[asset.kind]}</span>
               <ChevronDown className="size-3" />
             </Button>
           </DropdownMenuTrigger>
@@ -154,25 +157,29 @@ export function AssetEditRow({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Input
-          ref={nameRef}
-          value={asset.file?.filename ?? name}
-          readOnly={Boolean(asset.file)}
-          title={asset.file?.filename}
-          disabled={metadata.pending}
-          onChange={(event) => autosave.change({ name: event.target.value })}
-          placeholder="Nombre del fichero"
-          className={cn(
-            "h-7 min-w-0 flex-1 border-0 px-2 shadow-none focus-visible:ring-1",
-            !name.trim() && "ring-1 ring-destructive",
-          )}
-        />
+        <div className="min-w-0 flex-1">
+          <p className="px-1 font-medium">{ASSET_KIND_SHORT[asset.kind]}</p>
+          <Input
+            ref={nameRef}
+            value={asset.file?.filename ?? name}
+            readOnly={Boolean(asset.file)}
+            title={asset.file?.filename}
+            disabled={metadata.pending}
+            onChange={(event) => autosave.change({ name: event.target.value })}
+            placeholder="Nombre del fichero"
+            className={cn(
+              "h-7 min-w-0 border-0 px-1 text-xs shadow-none focus-visible:ring-1 md:text-xs",
+              !name.trim() && "ring-1 ring-destructive",
+            )}
+          />
 
-        {file && (
-          <span className="shrink-0 text-xs text-muted-foreground">
-            {formatFileSize(file.size)}
-          </span>
-        )}
+          {file && (
+            <p className="px-1 text-xs text-muted-foreground">
+              {file.filename.split(".").pop()?.toUpperCase()} ·{" "}
+              {formatFileSize(file.size)}
+            </p>
+          )}
+        </div>
         {file && (
           <Button
             asChild

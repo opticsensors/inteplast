@@ -291,6 +291,7 @@ lea de ahi. Asi no hay dos copias de vuestro archivo CAD ni nada que sincronizar
 4. **¿Cómo guardáis las revisiones y reorganizáis los archivos?** Distinguir renombrado dentro
    de la misma biblioteca, traslados entre bibliotecas y copias nuevas; confirmar si debemos
    mostrar siempre la última revisión o conservar una revisión concreta para cada muestreo.
+   La elección de versiones CAD visibles en la GUI se concreta en [A15](#a15-versiones-cad-gui).
 
 *Contexto interno (no enviar):* ya está implementada la referencia local con un UUID de
 documento independiente de su ubicación. Los visores PDF/3D están comprobados con los dos
@@ -384,6 +385,34 @@ confirmación del cliente. La respuesta determinará qué podemos automatizar y 
 revisión humana. Una fórmula calcula una previsión; no acredita ejecución ni resultado.
 Ver [metrología del 3212](3212/4-metrologia.md) y
 [fórmulas y previsiones verificadas](3212/revision-2026-09-17.md).
+
+---
+
+<a id="a15-versiones-cad-gui"></a>
+### A15 · Versiones CAD de pieza y molde: ¿cuáles tenemos y cuáles queréis en la GUI?
+
+**Recordatorio.** En los ejemplos compartidos, como el 3212, tenemos el CAD de la pieza
+y el CAD del molde, además del histórico de mediciones y retoques.
+
+**Qué no nos cuadra.** No tenemos confirmado si los CAD entregados representan el diseño
+inicial, una versión intermedia o la versión final tras los retoques. Tampoco está decidido
+qué versiones deben poder consultarse desde la GUI.
+
+**Preguntas:**
+
+1. **¿Qué revisión representan los CAD de pieza y molde que nos habéis pasado: son los
+   finales o corresponden a otra etapa?** Pedir la revisión/fecha de cada uno y, si se conoce,
+   su relación con los muestreos y retoques. Confirmarlo por separado para pieza y molde.
+2. **¿Queréis consultar en la GUI todas las versiones disponibles de pieza y molde, o solo
+   la última vigente/aprobada?** Si queréis el histórico, ¿cuál debe aparecer por defecto?
+
+**Aclarar:** qué significa «última» para vosotros: archivo más reciente o última revisión
+aprobada. Si interesan las anteriores, confirmar cuáles se conservan y dónde están.
+
+**Contexto interno (2026-09-22, no enviar):** esta decisión afecta al selector de versiones,
+la vista y descarga del CAD y su relación con la metrología y las correcciones. Complementa
+la gestión técnica de originales de A10. No asumir que un CAD recibido es final ni que las
+revisiones de pieza y molde coinciden. La política de la GUI queda pendiente de su respuesta.
 
 ---
 

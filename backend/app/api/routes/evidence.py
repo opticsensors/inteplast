@@ -90,7 +90,7 @@ def read_part_evidence(
     snapshot_id: uuid.UUID | None = None,
 ) -> Any:
     part = get_part_or_404(session, part_id)
-    from app.part_setup import references
+    from app.part_setup import reference_choices, references
 
     drawing = references(session, part_id).get("drawing")
     study, revisions = measurement_imports.study(session, part, revision, snapshot_id)
@@ -126,6 +126,7 @@ def read_part_evidence(
         study=study,
         measurement_revisions=revisions,
         drawing_file_id=drawing.id if drawing else None,
+        drawing_reference_set="drawing" in reference_choices(session, part_id),
         refresh_job=public_job(session.get(EvidenceJob, job_id("study", part_id))),
         import_available=part.code == "3212"
         and part.folder_path == "3212 Pump Housing",

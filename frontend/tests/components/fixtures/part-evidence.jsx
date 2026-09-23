@@ -336,6 +336,17 @@ const features = [
     category: "hole",
     tags: ["critical"],
     characteristics: characteristics.slice(0, 2),
+    assets: [
+      {
+        id: "drawing-asset",
+        part,
+        kind: "drawing",
+        file: {
+          id: "linked-drawing",
+          filename: "3212-07.pdf",
+        },
+      },
+    ],
   },
   {
     id: "rib",
@@ -420,6 +431,15 @@ EvidenceService.readMetrology = async ({
     features: foundFeatures,
   }
 }
+EvidenceService.readFeatureEvidence = async ({ featureId, partId }) => ({
+  characteristics:
+    catalog
+      .find((item) => item.part.id === partId)
+      ?.features.find((feature) => feature.id === featureId)?.characteristics ??
+    [],
+  pending: [],
+  cases: [],
+})
 EvidenceService.readPartEvidence = async ({ partId, revision, snapshotId }) => {
   window.review.evidenceRequests ??= []
   window.review.evidenceRequests.push({ partId, revision, snapshotId })
@@ -443,6 +463,7 @@ EvidenceService.readPartEvidence = async ({ partId, revision, snapshotId }) => {
     },
     measurement_revisions: window.review.measurementRevisions ?? [],
     import_available: true,
+    drawing_reference_set: window.review.drawingRemoved ?? false,
     documents: [
       {
         id: "linked-drawing",
@@ -454,6 +475,7 @@ EvidenceService.readPartEvidence = async ({ partId, revision, snapshotId }) => {
       {
         id: "drawing",
         filename: "DRW_3212.pdf",
+        size: 123456,
         content_type: "application/pdf",
         version: "v1",
         source: "upload",
@@ -483,6 +505,7 @@ CatalogService.readPartDetail = async ({ partId }) => {
         file: {
           id: "drawing",
           filename: "DRW_3212.pdf",
+          size: 123456,
           content_type: "application/pdf",
           version: "v1",
           source: "upload",

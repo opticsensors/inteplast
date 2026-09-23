@@ -1,11 +1,13 @@
 import { Appearance } from "@/components/Common/Appearance"
 import { Logo } from "@/components/Common/Logo"
+import { cn } from "@/lib/utils"
 
 interface AuthLayoutProps {
   children: React.ReactNode
+  contentClassName?: string
 }
 
-export function AuthLayout({ children }: AuthLayoutProps) {
+export function AuthLayout({ children, contentClassName }: AuthLayoutProps) {
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
       <div className="bg-muted dark:bg-zinc-900 relative hidden lg:flex lg:items-center lg:justify-center">
@@ -16,7 +18,9 @@ export function AuthLayout({ children }: AuthLayoutProps) {
           <Appearance />
         </div>
         <div className="flex flex-1 items-center justify-center">
-          <div className="w-full max-w-xs">{children}</div>
+          <div className={cn("w-full max-w-xs", contentClassName)}>
+            {children}
+          </div>
         </div>
       </div>
     </div>

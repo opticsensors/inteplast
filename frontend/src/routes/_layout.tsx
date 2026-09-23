@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
+import { AssistantEntry } from "@/assistant/AssistantEntry"
 
 import AppSidebar from "@/components/Sidebar/AppSidebar"
 import {
@@ -33,6 +34,7 @@ function Layout() {
           </div>
         </main>
       </SidebarInset>
+      <AssistantEntry />
     </SidebarProvider>
   )
 }

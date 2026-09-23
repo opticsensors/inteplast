@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input"
 import useCustomToast from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
-import { PartFolderPicker } from "./PartFolderPicker"
 import { SaveStatus } from "./SaveStatus"
 import { useAutosave } from "./useAutosave"
 
@@ -53,18 +52,25 @@ export function PartIdentityEditor({
   return (
     <div className="min-w-0 flex-1">
       <div className="flex items-center gap-1">
-        <div className="flex min-w-0 flex-1 flex-wrap gap-1">
-          <Input
-            value={autosave.values.code}
-            onChange={(event) => autosave.change({ code: event.target.value })}
-            aria-label="Codigo de la pieza"
-            placeholder="Codigo de la pieza"
-            maxLength={64}
-            className={cn(
-              "h-8 w-28 border-0 px-2 font-mono text-sm font-semibold shadow-none focus-visible:ring-1",
-              !autosave.values.code.trim() && "ring-1 ring-destructive",
-            )}
-          />
+        <div className="flex min-w-0 flex-1 items-baseline gap-x-2">
+          <div className="relative h-8 min-w-0 max-w-[50%] shrink-0 text-lg font-semibold">
+            <span aria-hidden="true" className="invisible whitespace-pre">
+              {autosave.values.code || " "}
+            </span>
+            <Input
+              value={autosave.values.code}
+              onChange={(event) =>
+                autosave.change({ code: event.target.value })
+              }
+              aria-label="Codigo de la pieza"
+              placeholder="Codigo de la pieza"
+              maxLength={64}
+              className={cn(
+                "absolute inset-0 h-8 border-0 px-0 font-sans text-lg font-semibold shadow-none md:text-lg focus-visible:ring-1",
+                !autosave.values.code.trim() && "ring-1 ring-destructive",
+              )}
+            />
+          </div>
           <Input
             ref={nameRef}
             value={autosave.values.name}
@@ -72,19 +78,9 @@ export function PartIdentityEditor({
             aria-label="Nombre de la pieza"
             placeholder="Nombre de la pieza"
             maxLength={255}
-            className="h-8 min-w-28 flex-1 border-0 px-2 text-sm shadow-none focus-visible:ring-1"
+            className="h-8 min-w-0 flex-1 border-0 px-0 font-sans text-sm font-medium text-muted-foreground shadow-none focus-visible:ring-1"
           />
         </div>
-        <PartFolderPicker
-          path={part.folder_path}
-          onSelected={async (folderPath) => {
-            if (!(await autosave.flush()))
-              throw new Error(
-                "Guarda el nombre o codigo antes de cambiar la carpeta.",
-              )
-            await update.mutateAsync({ folder_path: folderPath })
-          }}
-        />
       </div>
       <SaveStatus
         error={autosave.error}

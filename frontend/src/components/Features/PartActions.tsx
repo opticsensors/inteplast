@@ -112,7 +112,7 @@ export function PartActions({
             disabled={adding.pending || remove.isPending}
           >
             <Plus className="mr-1 size-3.5" />
-            Anadir pieza
+            Añadir pieza
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -212,8 +212,7 @@ export function PartActions({
             })}
             {available.length === 0 && catalog.isSuccess && (
               <p className="px-2 py-3 text-sm text-muted-foreground">
-                No hay piezas disponibles. Crea una con Nueva pieza en
-                Metrologia.
+                No hay piezas disponibles. Crea una con Nueva pieza en Catálogo.
               </p>
             )}
           </div>

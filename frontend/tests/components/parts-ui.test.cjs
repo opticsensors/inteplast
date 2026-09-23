@@ -16,7 +16,7 @@ let server, browser, origin
 
 test("new piece uses native selection, editable file proposals and explicit registration", async (t) => {
   const page = await mount(t, false)
-  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
   await expect(
     page.getByRole("menuitem", { name: "2820 Pump Housing", exact: true }),
   ).toHaveCount(0)
@@ -85,7 +85,7 @@ test("new piece uses native selection, editable file proposals and explicit regi
     "9001 New housing/alternative.step",
   )
   await page.evaluate(() => window.review.navigate("/"))
-  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
   await expect(
     page.getByRole("menuitem", { name: "9001 New housing", exact: true }),
   ).toBeVisible()
@@ -234,7 +234,7 @@ async function mount(t, addParts = true) {
     })
   for (let index = 0; addParts && index < 2; index++) {
     await page
-      .getByRole("button", { name: "Anadir pieza", exact: true })
+      .getByRole("button", { name: "Añadir pieza", exact: true })
       .click()
     await page
       .getByRole("menuitem", {
@@ -374,7 +374,7 @@ test("cancelling a prepared piece discards choices and selection keeps fixed dim
   ).toBeEnabled()
 })
 
-test("cotas use the file row style, add inline fields and wrap only when needed", async (t) => {
+test("linked cotas add inline fields and wrap only when needed", async (t) => {
   const page = await mount(t, false)
   const card = await cotas(page)
   const add = card.getByRole("button", { name: "Añadir cota" })
@@ -387,13 +387,8 @@ test("cotas use the file row style, add inline fields and wrap only when needed"
   ])
     assert.equal(await card.getByText(text, { exact: true }).count(), 0)
   assert.doesNotMatch(await card.innerText(), /rev\.|referencia|contexto/)
-  const fileRow = page
-    .getByPlaceholder("Nombre del fichero")
-    .first()
-    .locator("..")
-    .first()
   const height = (await card.boundingBox()).height
-  assert.equal(height, (await fileRow.boundingBox()).height)
+  await expect(card.getByRole("heading", { name: "Cotas" })).toBeVisible()
   const last = await card
     .getByRole("link", { name: "N178", exact: true })
     .boundingBox()
@@ -421,7 +416,7 @@ test("cotas use the file row style, add inline fields and wrap only when needed"
   const drawing = card.getByRole("link", { name: "Buscar N113 en el plano" })
   assert.match(
     await drawing.getAttribute("href"),
-    /\/parts\/part-one\?cota=N113&revision=06&feature=feature-one&plano=true&drawingQ=N113&drawingFile=drawing-file/,
+    /\/parts\/part-one\/fichero\/drawing-file\?cota=N113&revision=06&feature=feature-one&drawingQ=N113/,
   )
   await add.click()
   await input.fill("N170")
@@ -454,19 +449,17 @@ test("cotas use the file row style, add inline fields and wrap only when needed"
   await card.screenshot({ path: path.join(artifacts, "cotas-wrap-mobile.png") })
 })
 
-test("read-only cotas match file height and retain direct drawing and measurement links", async (t) => {
+test("read-only cotas remain compact and retain direct drawing and measurement links", async (t) => {
   const page = await mount(t, false)
   await cotas(page)
   await page.evaluate(() => window.review.navigate("/previews"))
   const card = page.getByRole("region", { name: "Cotas", exact: true })
   await expect(card).toBeVisible()
   assert.equal(await card.getByRole("button").count(), 0)
-  const fileRow = page
-    .getByRole("link", { name: "Descargar mold.step", exact: true })
-    .locator("../..")
-  assert.equal(
-    (await card.boundingBox()).height,
-    (await fileRow.boundingBox()).height,
+  await expect(card.getByRole("heading", { name: "Cotas" })).toBeVisible()
+  assert.ok(
+    (await card.getByRole("link", { name: "N170", exact: true }).boundingBox())
+      .height <= 32,
   )
   assert.match(
     await card
@@ -535,7 +528,9 @@ test("cota drafts survive failures, can be cancelled and participate in the feat
   await page.evaluate(() => {
     window.review.holdCharacteristics = true
   })
-  await page.getByRole("button", { name: "Guardar", exact: true }).click()
+  await page
+    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .click()
   await expect(
     page.getByRole("heading", { name: "Otra pagina abierta" }),
   ).toHaveCount(0)
@@ -571,9 +566,9 @@ test("adding a cota with no known revision does not fabricate revision 06", asyn
   )
 })
 
-test("folder choices and secondary folder action stay compact on desktop and mobile", async (t) => {
+test("piece choices stay compact and linked pieces do not expose folder management", async (t) => {
   const page = await mount(t)
-  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
   await expect(
     page.getByRole("menuitem", { name: "3197 Pot", exact: true }),
   ).toBeVisible()
@@ -582,35 +577,28 @@ test("folder choices and secondary folder action stay compact on desktop and mob
     animations: "disabled",
   })
   await page.keyboard.press("Escape")
-  await page
-    .getByRole("button", { name: "Opciones de la pieza", exact: true })
-    .last()
-    .click()
   await expect(
-    page.getByRole("menuitem", {
-      name: "Cambiar carpeta de la pieza",
-      exact: true,
-    }),
+    page.getByRole("button", { name: "Opciones de la pieza", exact: true }),
+  ).toHaveCount(0)
+  await expect(
+    page
+      .locator('[data-part-id="part-3"]')
+      .getByRole("button", { name: "Quitar 3051", exact: true }),
   ).toBeVisible()
-  await page.getByRole("menu").screenshot({
-    path: path.join(artifacts, "folder-secondary-menu.png"),
-    animations: "disabled",
-  })
-  await page.keyboard.press("Escape")
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
   const bounds = await page.getByRole("menu").boundingBox()
   assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= 390)
 })
 
-test("new feature exposes every section and the file picker omits redundant metadata", async (t) => {
+test("new feature exposes every section and keeps cotas inside their piece", async (t) => {
   const page = await mount(t)
   await page.evaluate(() => window.review.navigate("/new"))
   await expect(page.getByPlaceholder("Nombre del feature")).toHaveValue("")
   for (const label of [
-    "Anadir advertencia",
-    "Anadir leccion aprendida",
-    "Anadir pieza",
+    "Añadir advertencia",
+    "Añadir lección aprendida",
+    "Añadir pieza",
   ]) {
     await expect(
       page.getByRole("button", { name: label, exact: true }),
@@ -621,31 +609,20 @@ test("new feature exposes every section and the file picker omits redundant meta
     fullPage: true,
     animations: "disabled",
   })
-  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
   await page
     .getByRole("menuitem", { name: "2820 Pump Housing", exact: true })
     .click()
-  await page
-    .getByRole("button", { name: "Anadir fichero", exact: true })
-    .click()
-  await page.route("**/__native-picker", (route) =>
-    route.fulfill({ json: { path: "drawings/drawing.pdf" } }),
-  )
-  await page
-    .getByRole("button", { name: "Vincular archivo existente", exact: true })
-    .click()
-  await expect(page.getByRole("dialog")).toHaveCount(0)
-  await expect(page.getByPlaceholder("Nombre del fichero")).toHaveValue(
-    "drawing.pdf",
-  )
-  await expect(page.getByPlaceholder("Nombre del fichero")).toHaveAttribute(
-    "readonly",
-    "",
-  )
-  await page.locator("#example-parts-editor").screenshot({
-    path: path.join(artifacts, "real-filename-card.png"),
-    animations: "disabled",
-  })
+  const piece = page.getByRole("region", { name: "Pieza 2820", exact: true })
+  await expect(
+    piece.getByRole("heading", { name: "Cotas", exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Documentación" }),
+  ).toHaveCount(0)
+  await expect(
+    page.getByRole("button", { name: "Añadir fichero", exact: true }),
+  ).toHaveCount(0)
 })
 
 test("pointer sorting visibly moves neighboring cards before dropping and saves the result", async (t) => {
@@ -694,7 +671,8 @@ test("pointer sorting visibly moves neighboring cards before dropping and saves 
   )
   await page.evaluate(() => window.review.refetch())
   await expect(cards.first()).toHaveAttribute("data-part-id", ids[2])
-  await expect(page.getByPlaceholder("Nombre del fichero")).toHaveValue(
+  assert.equal(
+    await page.evaluate(() => window.review.feature.assets[0].name),
     "Original asset",
   )
   await page
@@ -740,49 +718,25 @@ test("Escape cancels a drag and the piece cards fit a narrow screen", async (t) 
     .screenshot({ path: path.join(artifacts, "mobile.png") })
 })
 
-for (const section of ["files", "warning", "lesson"]) {
+for (const section of ["warning", "lesson"]) {
   test(`${section} animate on pointer drag, keep edits and persist independently`, async (t) => {
     const page = await mount(t)
     await page.evaluate(async (section) => {
       const feature = window.review.feature
-      if (section === "files") {
-        const original = feature.assets[0]
-        original.position = 0
-        feature.assets.push(
-          {
-            ...original,
-            id: "asset-second",
-            name: "Second file",
-            kind: "drawing",
-            position: 1,
-          },
-          {
-            ...original,
-            id: "asset-third",
-            name: "Third file",
-            kind: "part",
-            position: 2,
-          },
-        )
-      } else {
-        feature.notes = feature.notes.filter((note) => note.kind !== section)
-        for (let position = 0; position < 3; position++) {
-          feature.notes.push({
-            id: `${section}-${position}`,
-            feature_id: feature.id,
-            kind: section,
-            title: `${section} ${position}`,
-            body: "Details retained",
-            position,
-          })
-        }
+      feature.notes = feature.notes.filter((note) => note.kind !== section)
+      for (let position = 0; position < 3; position++) {
+        feature.notes.push({
+          id: `${section}-${position}`,
+          feature_id: feature.id,
+          kind: section,
+          title: `${section} ${position}`,
+          body: "Details retained",
+          position,
+        })
       }
       await window.review.refetch()
     }, section)
-    const ids =
-      section === "files"
-        ? ["asset-one", "asset-second", "asset-third"]
-        : [0, 1, 2].map((index) => `${section}-${index}`)
+    const ids = [0, 1, 2].map((index) => `${section}-${index}`)
     const cards = page.locator(
       ids
         .map((id) => `[data-sortable-id="${id}"]:not([data-dnd-placeholder])`)
@@ -815,17 +769,14 @@ for (const section of ["files", "warning", "lesson"]) {
     )
     await page.mouse.up()
     await page.waitForFunction(
-      ({ section, wanted }) => {
-        const rows =
-          section === "files"
-            ? window.review.feature.assets
-            : window.review.feature.notes
+      ({ wanted }) => {
+        const rows = window.review.feature.notes
         return wanted.every(
           (id, position) =>
             rows.find((row) => row.id === id)?.position === position,
         )
       },
-      { section, wanted },
+      { wanted },
     )
     await page.evaluate(() => window.review.refetch())
     await expect(cards.first().getByRole("textbox").first()).toHaveValue(
@@ -849,65 +800,6 @@ for (const section of ["files", "warning", "lesson"]) {
   })
 }
 
-test("file ordering cancels with Escape and a failed save retains the order for retry", async (t) => {
-  const page = await mount(t)
-  const piece = page.locator('[data-part-id="part-one"]')
-  await piece
-    .getByRole("button", { name: "Anadir fichero", exact: true })
-    .click()
-  const cards = piece.locator("[data-sortable-id]:not([data-dnd-placeholder])")
-  await expect(cards).toHaveCount(2)
-  // Wait for the new row's initial name selection before moving focus to its grip.
-  await expect(
-    piece.getByPlaceholder("Nombre del fichero").last(),
-  ).toBeFocused()
-  const handle = piece.getByRole("button", {
-    name: "Mover fichero Nuevo fichero",
-    exact: true,
-  })
-  await handle.focus()
-  await page.keyboard.press("Space")
-  await page.keyboard.press("ArrowUp")
-  await page.keyboard.press("Escape")
-  await expect(
-    page.locator(
-      "[data-dnd-dragging], [data-dnd-dropping], [data-dnd-placeholder]",
-    ),
-  ).toHaveCount(0)
-  await expect(cards.first()).toHaveAttribute("data-sortable-id", "asset-one")
-
-  await page.evaluate(() => {
-    window.review.failReorder = true
-  })
-  await handle.focus()
-  await page.keyboard.press("Space")
-  await page.keyboard.press("ArrowUp")
-  await page.keyboard.press("Space")
-  await expect(
-    piece.getByRole("button", { name: "Reintentar", exact: true }),
-  ).toBeVisible()
-  await expect(cards.first()).toHaveAttribute("data-sortable-id", "asset-2")
-  await page.getByRole("button", { name: "Guardar", exact: true }).click()
-  await expect(page.getByPlaceholder("Nombre del feature")).toBeVisible()
-  assert.equal(
-    await page.evaluate(() => window.review.feature.assets[0].position),
-    0,
-  )
-  await page.evaluate(() => {
-    window.review.failReorder = false
-  })
-  await piece.getByRole("button", { name: "Reintentar", exact: true }).click()
-  await page.waitForFunction(
-    () =>
-      window.review.feature.assets.find((asset) => asset.id === "asset-2")
-        .position === 0,
-  )
-  await page.getByRole("button", { name: "Guardar", exact: true }).click()
-  await expect(
-    page.getByRole("heading", { name: "Otra pagina abierta" }),
-  ).toBeVisible()
-})
-
 async function addCatalogParts(page, isSuperuser = true) {
   await page.evaluate(async (isSuperuser) => {
     window.review.isSuperuser = isSuperuser
@@ -921,7 +813,7 @@ async function addCatalogParts(page, isSuperuser = true) {
       window.review.refetchUser(),
     ])
   }, isSuperuser)
-  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
 }
 
 test("catalog deletion is direct, keeps the menu open and preserves the current draft", async (t) => {
@@ -992,7 +884,7 @@ test("catalog shows usage, blocks deletion and still allows reusing shared parts
     window.review.isSuperuser = false
     await window.review.refetchUser()
   })
-  await page.getByRole("button", { name: "Anadir pieza", exact: true }).click()
+  await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
   const restricted = page.getByRole("menuitem", {
     name: "Eliminar TEST - Pieza de prueba",
   })

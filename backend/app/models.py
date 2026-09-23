@@ -266,10 +266,20 @@ class PartFromFolder(SQLModel):
     folder_path: str = Field(min_length=1, max_length=2048)
 
 
+ReferenceKind = Literal["part", "scan", "mold", "drawing"]
+
+
+class ReferenceChoice(BaseModel):
+    kind: ReferenceKind
+    path: str | None = Field(default=None, max_length=2048)
+    source_version: str | None = None
+
+
 class PartUpdate(SQLModel):
     code: str = Field(default=None, min_length=1, max_length=64)
     name: str | None = Field(default=None, max_length=255)
     folder_path: str | None = Field(default=None, max_length=2048)
+    references: list[ReferenceChoice] | None = Field(default=None, max_length=4)
 
 
 class FeaturePartOrder(SQLModel):

@@ -14,6 +14,7 @@ from app.api.routes import (
     users,
     utils,
 )
+from app.assistant.router import router as assistant_router
 from app.core.config import settings
 
 api_router = APIRouter()
@@ -28,6 +29,7 @@ api_router.include_router(catalog.router)
 api_router.include_router(evidence.router)
 api_router.include_router(measurement_imports.router)
 api_router.include_router(files.router)
+api_router.include_router(assistant_router)
 
 
 if settings.ENABLE_TEST_ROUTES:

@@ -6,6 +6,29 @@ export const AssetKindSchema = {
     title: 'AssetKind'
 } as const;
 
+export const AssistantStatusSchema = {
+    properties: {
+        enabled: {
+            type: 'boolean',
+            title: 'Enabled'
+        },
+        model: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Model'
+        }
+    },
+    type: 'object',
+    required: ['enabled'],
+    title: 'AssistantStatus'
+} as const;
+
 export const Body_files_upload_fileSchema = {
     properties: {
         file: {
@@ -263,6 +286,44 @@ export const CharacteristicPublicSchema = {
     type: 'object',
     required: ['id', 'part_id', 'code', 'revision', 'title'],
     title: 'CharacteristicPublic'
+} as const;
+
+export const ChatMessageSchema = {
+    properties: {
+        role: {
+            type: 'string',
+            enum: ['user', 'assistant'],
+            title: 'Role'
+        },
+        content: {
+            type: 'string',
+            maxLength: 3000,
+            minLength: 1,
+            title: 'Content'
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    required: ['role', 'content'],
+    title: 'ChatMessage'
+} as const;
+
+export const ChatRequestSchema = {
+    properties: {
+        messages: {
+            items: {
+                '$ref': '#/components/schemas/ChatMessage'
+            },
+            type: 'array',
+            maxItems: 9,
+            minItems: 1,
+            title: 'Messages'
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    required: ['messages'],
+    title: 'ChatRequest'
 } as const;
 
 export const CotaSearchResultSchema = {
@@ -2521,6 +2582,11 @@ export const PartEvidencePublicSchema = {
             ],
             title: 'Drawing File Id'
         },
+        drawing_reference_set: {
+            type: 'boolean',
+            title: 'Drawing Reference Set',
+            default: false
+        },
         refresh_job: {
             '$ref': '#/components/schemas/JobPublic'
         }
@@ -2717,6 +2783,21 @@ export const PartUpdateSchema = {
                 }
             ],
             title: 'Folder Path'
+        },
+        references: {
+            anyOf: [
+                {
+                    items: {
+                        '$ref': '#/components/schemas/ReferenceChoice'
+                    },
+                    type: 'array',
+                    maxItems: 4
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'References'
         }
     },
     type: 'object',

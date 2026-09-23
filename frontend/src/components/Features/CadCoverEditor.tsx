@@ -155,8 +155,8 @@ export function CadCoverEditor({
               {assets.length
                 ? "Selecciona un CAD."
                 : feature
-                  ? "Vincula un STEP de tipo CAD en Piezas ejemplo."
-                  : "Añade el STEP de la pieza en Piezas ejemplo."}
+                  ? "Vincula el CAD desde la ficha de la pieza."
+                  : "Añade una pieza que tenga un CAD vinculado."}
             </p>
           </div>
         )}

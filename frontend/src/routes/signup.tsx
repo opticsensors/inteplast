@@ -1,4 +1,4 @@
-﻿import { createFileRoute, Link, redirect } from "@tanstack/react-router"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 
 import { AuthLayout } from "@/components/Common/AuthLayout"
 import { isLoggedIn } from "@/hooks/useAuth"
@@ -8,19 +8,13 @@ export const Route = createFileRoute("/signup")({
   beforeLoad: () => {
     if (isLoggedIn()) throw redirect({ to: "/" })
   },
-  head: () => ({ meta: [{ title: "Solicitar acceso - INTEPLAST" }] }),
+  head: () => ({ meta: [{ title: "Crear una cuenta - INTEPLAST" }] }),
 })
 
 function SignUp() {
   return (
     <AuthLayout>
-      <div className="space-y-4 text-center">
-        <h1 className="text-2xl font-bold">Solicitar acceso</h1>
-        <p>Contacta con el administrador para solicitar una cuenta.</p>
-        <Link to="/login" className="underline">
-          Volver al inicio de sesion
-        </Link>
-      </div>
+      <h1 className="text-center text-2xl font-bold">To be implemented</h1>
     </AuthLayout>
   )
 }
