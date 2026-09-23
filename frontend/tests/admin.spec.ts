@@ -10,6 +10,12 @@ test("Admin page is accessible and shows correct title", async ({ page }) => {
   await expect(
     page.getByText("Manage user accounts and permissions"),
   ).toBeVisible()
+  await expect(
+    page.getByRole("region", { name: "Datos de piezas" }),
+  ).toHaveCount(0)
+  await expect(
+    page.getByRole("button", { name: "Reimportar archivos" }),
+  ).toHaveCount(0)
 })
 
 test("Add User button is visible", async ({ page }) => {
@@ -139,7 +145,9 @@ test.describe("Admin user management", () => {
     await expect(page.getByRole("dialog")).not.toBeVisible()
   })
 
-  test("Email is required and must be valid", async ({ page }) => {
+  test("Email is validated only on Save without visible messages", async ({
+    page,
+  }) => {
     await page.goto("/admin")
 
     await page.getByRole("button", { name: "Add User" }).click()
@@ -147,7 +155,18 @@ test.describe("Admin user management", () => {
     await page.getByPlaceholder("Email").fill("invalid-email")
     await page.getByPlaceholder("Email").blur()
 
-    await expect(page.getByText("Invalid email address")).toBeVisible()
+    await expect(page.getByPlaceholder("Email")).toHaveAttribute(
+      "aria-invalid",
+      "false",
+    )
+    await page.getByRole("button", { name: "Save" }).click()
+    await expect(page.getByPlaceholder("Email")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    )
+    await expect(
+      page.locator('[data-slot="form-message"]:not(.sr-only)'),
+    ).toHaveCount(0)
   })
 
   test("Password must be at least 8 characters", async ({ page }) => {
@@ -160,9 +179,13 @@ test.describe("Admin user management", () => {
     await page.getByPlaceholder("Password").last().fill("short")
     await page.getByRole("button", { name: "Save" }).click()
 
+    await expect(page.getByPlaceholder("Password").first()).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    )
     await expect(
-      page.getByText("Password must be at least 8 characters"),
-    ).toBeVisible()
+      page.locator('[data-slot="form-message"]:not(.sr-only)'),
+    ).toHaveCount(0)
   })
 
   test("Passwords must match", async ({ page }) => {
@@ -175,7 +198,18 @@ test.describe("Admin user management", () => {
     await page.getByPlaceholder("Password").last().fill("different12345")
     await page.getByPlaceholder("Password").last().blur()
 
-    await expect(page.getByText("The passwords don't match")).toBeVisible()
+    await expect(page.getByPlaceholder("Password").last()).toHaveAttribute(
+      "aria-invalid",
+      "false",
+    )
+    await page.getByRole("button", { name: "Save" }).click()
+    await expect(page.getByPlaceholder("Password").last()).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    )
+    await expect(
+      page.locator('[data-slot="form-message"]:not(.sr-only)'),
+    ).toHaveCount(0)
   })
 })
 

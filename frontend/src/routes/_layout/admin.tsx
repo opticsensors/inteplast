@@ -5,7 +5,6 @@ import { Suspense } from "react"
 import { type UserPublic, UsersService } from "@/client"
 import AddUser from "@/components/Admin/AddUser"
 import { columns, type UserTableData } from "@/components/Admin/columns"
-import { PartDataImports } from "@/components/Admin/PartDataImports"
 import { DataTable } from "@/components/Common/DataTable"
 import PendingUsers from "@/components/Pending/PendingUsers"
 import useAuth from "@/hooks/useAuth"
@@ -69,7 +68,6 @@ function Admin() {
         <AddUser />
       </div>
       <UsersTable />
-      <PartDataImports />
     </div>
   )
 }

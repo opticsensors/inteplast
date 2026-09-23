@@ -62,7 +62,8 @@ function Login() {
   const { loginMutation } = useAuth()
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    mode: "onBlur",
+    mode: "onSubmit",
+    reValidateMode: "onSubmit",
     criteriaMode: "all",
     defaultValues: {
       username: "",
@@ -79,6 +80,7 @@ function Login() {
     <AuthLayout contentClassName="max-w-md">
       <Form {...form}>
         <form
+          noValidate
           onSubmit={form.handleSubmit(onSubmit)}
           className="flex flex-col gap-8"
         >
@@ -110,7 +112,7 @@ function Login() {
                       {...field}
                     />
                   </FormControl>
-                  <FormMessage className="text-xs" />
+                  <FormMessage className="sr-only" />
                 </FormItem>
               )}
             />
@@ -130,7 +132,7 @@ function Login() {
                       {...field}
                     />
                   </FormControl>
-                  <FormMessage className="text-xs" />
+                  <FormMessage className="sr-only" />
                   <RouterLink
                     to="/recover-password"
                     className="justify-self-end text-sm font-medium text-primary underline underline-offset-4 hover:text-primary/80"

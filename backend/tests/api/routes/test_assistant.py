@@ -14,7 +14,7 @@ from app.assistant.config import AssistantSettings, get_settings
 from app.assistant.providers import ModelChunk, OllamaProvider, ProviderError
 from app.assistant.retrieval import initial_read
 from app.assistant.schemas import ChatRequest
-from app.assistant.tools import KnowledgeTools
+from app.assistant.tools import KnowledgeTools, definitions
 from app.core.config import settings
 from app.evidence import job_id
 from app.knowledge_models import (
@@ -23,7 +23,7 @@ from app.knowledge_models import (
     PartCharacteristic,
 )
 from app.main import app
-from app.models import FeatureNote, User
+from app.models import FeatureNote, FeaturePartLink, User
 from tests.utils.feature import create_random_feature, create_random_part
 
 API = f"{settings.API_V1_STR}/assistant"
@@ -445,3 +445,315 @@ def test_exact_measurement_reply_keeps_counts_limits_and_sources_without_inferen
     assert "3,9–4 mm" in answer and "±" not in answer
     assert "report.csv" in answer and "c1" in answer
     assert events[-1]["type"] == "done" and events[-1]["truncated"] is False
+
+
+@pytest.fixture
+def housing(db, piece):
+    original_name = piece.name
+    piece.name = "Pump Housing"
+    db.add(piece)
+    bolt = create_random_feature(db, name="Bolt Eye")
+    ribs = create_random_feature(db, name="Nervios")
+    cota = PartCharacteristic(part_id=piece.id, code="N170", revision="06")
+    db.add(cota)
+    db.commit()
+    db.add(
+        FeatureCharacteristicLink(
+            feature_id=bolt.id, characteristic_id=cota.id, role="primary"
+        )
+    )
+    db.add(FeaturePartLink(feature_id=ribs.id, part_id=piece.id))
+    db.commit()
+    yield piece, bolt, ribs
+    db.delete(bolt)
+    db.delete(ribs)
+    piece.name = original_name
+    db.add(piece)
+    db.commit()
+
+
+ORIGINAL_QUESTION = "que correcion tiene la n170 del bold eye de la pieza pump housing?"
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        ORIGINAL_QUESTION,
+        "Qué corrección tiene N170 del Bolt Eye de Pump Housing?",
+        "Qué correción tiene N170 del Blot Eye de Pump Housng?",
+    ],
+)
+def test_typo_question_resolves_piece_feature_and_corrections(
+    knowledge, housing, question
+):
+    piece, bolt, _ = housing
+    seed = knowledge.initial_lookup(question)
+    assert seed == (
+        "read_part",
+        {
+            "part": piece.code,
+            "section": "corrections",
+            "characteristic": "N170",
+            "feature_id": str(bolt.id),
+        },
+    )
+    result = knowledge.run(*seed)
+    assert result["feature"] == "Bolt Eye"
+    assert result["actions"][0]["id"] == "1.2"
+    assert "Nervios" not in json.dumps(result)
+
+
+def test_correction_typo_with_explicit_code_does_not_read_measurements():
+    request = ChatRequest(
+        messages=[
+            {"role": "user", "content": "que correcion tiene n170 de la pieza 3212?"}
+        ]
+    )
+    assert initial_read(request)[1]["section"] == "corrections"
+
+
+def test_tool_contract_preserves_identifier_descriptions_and_validation():
+    schemas = {
+        tool["function"]["name"]: tool["function"]["parameters"]
+        for tool in definitions()
+    }
+    assert "Código" in schemas["read_part"]["properties"]["part"]["description"]
+    assert schemas["read_feature"]["properties"]["feature_id"]["format"] == "uuid"
+    assert schemas["read_part"]["properties"]["section"]["enum"] == [
+        "overview",
+        "measurements",
+        "corrections",
+    ]
+    assert schemas["read_part"]["additionalProperties"] is False
+
+
+def test_part_name_is_resolved_and_unknown_identifier_is_recoverable(
+    knowledge, housing
+):
+    piece, _, _ = housing
+    result = knowledge.run(
+        "read_part",
+        {"part": "Pump Housng", "section": "corrections", "characteristic": "N170"},
+    )
+    assert result["part"] == piece.code and result["total"] == 1
+    unknown = knowledge.run("read_part", {"part": "no-such-piece"})
+    assert unknown["error_code"] == "unresolved_part" and unknown["retryable"]
+    assert "search_catalog" in unknown["recovery"]
+
+
+def test_ambiguous_name_does_not_choose_a_piece(knowledge, housing, db):
+    piece, _, _ = housing
+    other = create_random_part(db, name="Pump Housing")
+    try:
+        seed = knowledge.initial_lookup(ORIGINAL_QUESTION)
+        result = knowledge.run(*seed)
+        assert result["error_code"] == "ambiguous_entity"
+        assert not result["retryable"]
+        assert other.code in result["error"]
+        assert piece.code in result["error"]
+        seed = knowledge.initial_lookup(
+            f"Qué corrección tiene N170 del Bolt Eye de Pump Housing, pieza {piece.code}?"
+        )
+        assert knowledge.run(*seed)["part"] == piece.code
+    finally:
+        db.delete(other)
+        db.commit()
+
+
+def test_current_question_scope_rejects_other_feature_and_cota(knowledge, housing):
+    piece, _, ribs = housing
+    knowledge.initial_lookup(ORIGINAL_QUESTION)
+    for tool, args in [
+        ("read_feature", {"feature_id": str(ribs.id)}),
+        ("read_part", {"part": piece.code, "characteristic": "N999"}),
+    ]:
+        result = knowledge.run(tool, args)
+        assert result["error_code"] == "scope_mismatch"
+        assert result["required_scope"]["characteristic"] == "N170"
+    catalog = knowledge.run("search_catalog", {"query": "Pump Housing"})
+    assert [f["name"] for f in catalog["features"]] == ["Bolt Eye"]
+    assert [c["code"] for c in catalog["characteristics"]] == ["N170"]
+
+
+def test_no_invented_link_between_feature_and_cota(knowledge, housing):
+    piece, _, ribs = housing
+    result = knowledge.run(
+        "read_part",
+        {
+            "part": piece.code,
+            "feature_id": str(ribs.id),
+            "section": "corrections",
+            "characteristic": "N170",
+        },
+    )
+    assert result["error_code"] == "unverified_relationship"
+    assert not result["retryable"]
+
+
+def test_feature_corrections_without_cota_exclude_other_features(
+    knowledge, housing, db
+):
+    piece, bolt, _ = housing
+    job = db.get(EvidenceJob, job_id("study", piece.id))
+    job.payload = {
+        **job.payload,
+        "action_index": {
+            **job.payload["action_index"],
+            "1.9": {
+                "id": "1.9",
+                "features": ["N999"],
+                "paragraphs": ["Retoque ajeno al Bolt Eye"],
+            },
+        },
+    }
+    db.add(job)
+    db.commit()
+    result = knowledge.run(
+        "read_part",
+        {"part": piece.code, "feature_id": str(bolt.id), "section": "corrections"},
+    )
+    assert [action["id"] for action in result["actions"]] == ["1.2"]
+
+
+def test_followup_preserves_explicit_cota_without_guessing_part(knowledge):
+    assert knowledge.initial_lookup("Y las correcciones de N170?") is None
+    assert knowledge.scope == {"characteristic": "N170"}
+
+
+def test_catalog_typo_and_exact_name_win_over_newer_related_feature(
+    knowledge, housing, db
+):
+    from app import crud
+
+    _, bolt, ribs = housing
+    ribs.description = "Notas relacionadas con Bolt Eye"
+    db.add(ribs)
+    db.commit()
+    result = knowledge.run("search_catalog", {"query": "bold eye"})
+    assert [f["name"] for f in result["features"]] == ["Bolt Eye"]
+    found, _ = crud.search_features(session=db, q="Bolt Eye", limit=1)
+    assert found[0].id == bolt.id
+
+
+def test_original_question_uses_corrections_and_discards_wrong_previous_answer(
+    client, normal_user_token_headers, monkeypatch, housing
+):
+    piece, _, _ = housing
+
+    class Provider:
+        async def stream(self, messages, tools):
+            raise AssertionError(
+                "A complete factual correction is rendered from its source"
+            )
+            yield
+
+    monkeypatch.setattr(assistant_router, "get_provider", lambda _: Provider())
+    response = client.post(
+        f"{API}/chat",
+        headers=normal_user_token_headers,
+        json={
+            "messages": [
+                {"role": "user", "content": "Qué pasa con los Nervios?"},
+                {"role": "assistant", "content": "Pump Housing no tiene Nervios."},
+                {"role": "user", "content": ORIGINAL_QUESTION},
+            ]
+        },
+    )
+    events = [json.loads(line) for line in response.text.splitlines()]
+    assert events[-1]["type"] == "done"
+    reply = "".join(e.get("text", "") for e in events if e["type"] == "delta")
+    assert "N170" in reply and piece.code in reply and "Bolt Eye" in reply
+    assert "Nervios" not in reply and "> Propuesta de ajuste" in reply
+    assert "3,9–4 mm" in reply and "no acredita la ejecución" in reply
+
+
+def test_three_dependent_reads_can_finish_before_drafting(
+    client, normal_user_token_headers, monkeypatch, housing
+):
+    piece, bolt, _ = housing
+    calls = []
+
+    class Provider:
+        async def stream(self, messages, tools):
+            calls.append(messages)
+            steps = [
+                ("search_catalog", {"query": piece.code}),
+                ("read_feature", {"feature_id": str(bolt.id)}),
+                (
+                    "read_part",
+                    {
+                        "part": piece.code,
+                        "section": "corrections",
+                        "characteristic": "N170",
+                    },
+                ),
+            ]
+            if len(calls) <= 3:
+                assert tools
+                name, args = steps[len(calls) - 1]
+                yield ModelChunk(
+                    content="Voy a consultar.",
+                    tool_calls=[{"function": {"name": name, "arguments": args}}],
+                )
+            else:
+                assert not tools
+                assert "Propuesta de ajuste" in messages[-1]["content"]
+                assert "Nervios" not in messages[-1]["content"]
+                yield ModelChunk(content="La corrección propone un ajuste.")
+
+    monkeypatch.setattr(assistant_router, "get_provider", lambda _: Provider())
+    response = client.post(
+        f"{API}/chat",
+        headers=normal_user_token_headers,
+        json={
+            "messages": [
+                {"role": "user", "content": "Localiza un caso y explica su corrección"}
+            ]
+        },
+    )
+    events = [json.loads(line) for line in response.text.splitlines()]
+    assert events[-1]["type"] == "done" and len(calls) == 4
+    answer = "".join(e.get("text", "") for e in events if e["type"] == "delta")
+    assert answer == "La corrección propone un ajuste."
+
+
+def test_failed_lookup_cannot_be_published_as_absence_of_corrections(
+    client, normal_user_token_headers, monkeypatch
+):
+    rounds = []
+
+    class Provider:
+        async def stream(self, messages, tools):
+            rounds.append(messages)
+            if len(rounds) == 1:
+                yield ModelChunk(
+                    tool_calls=[
+                        {
+                            "function": {
+                                "name": "read_part",
+                                "arguments": {
+                                    "part": "unknown-piece",
+                                    "section": "corrections",
+                                },
+                            }
+                        }
+                    ]
+                )
+            else:
+                yield ModelChunk(content="La pieza no existe y no tiene correcciones.")
+
+    monkeypatch.setattr(assistant_router, "get_provider", lambda _: Provider())
+    response = client.post(
+        f"{API}/chat",
+        headers=normal_user_token_headers,
+        json={
+            "messages": [
+                {"role": "user", "content": "Qué correcciones hay para unknown-piece?"}
+            ]
+        },
+    )
+    events = [json.loads(line) for line in response.text.splitlines()]
+    answer = "".join(e.get("text", "") for e in events if e["type"] == "delta")
+    assert "La pieza no existe" not in answer
+    assert "No he podido verificar" in answer
+    assert events[-1]["type"] == "done"

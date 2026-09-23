@@ -1,7 +1,7 @@
 import uuid
 from typing import Any
 
-from sqlalchemy import ColumnElement, func
+from sqlalchemy import ColumnElement, case, func
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, or_, select
 
@@ -195,15 +195,32 @@ def search_features(
         conditions.append(col(Feature.id) == feature_id)
 
     count_statement = select(func.count()).select_from(Feature)
-    statement = (
-        select(Feature)
-        .options(
-            selectinload(Feature.assets).selectinload(FeatureAsset.part),  # type: ignore[arg-type]
-            selectinload(Feature.assets).selectinload(FeatureAsset.file),  # type: ignore[arg-type]
-            selectinload(Feature.parts),  # type: ignore[arg-type]
-            selectinload(Feature.image),  # type: ignore[arg-type]
+    statement = select(Feature).options(
+        selectinload(Feature.assets).selectinload(FeatureAsset.part),  # type: ignore[arg-type]
+        selectinload(Feature.assets).selectinload(FeatureAsset.file),  # type: ignore[arg-type]
+        selectinload(Feature.parts),  # type: ignore[arg-type]
+        selectinload(Feature.image),  # type: ignore[arg-type]
+    )
+    if q:
+        escaped = (
+            q.strip().replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
         )
-        .order_by(col(Feature.created_at).desc())
+        matching_cotas = (
+            select(FeatureCharacteristicLink.feature_id)
+            .join(PartCharacteristic)
+            .where(func.lower(PartCharacteristic.code) == q.strip().lower())
+        )
+        statement = statement.order_by(
+            case(
+                (func.lower(Feature.name) == q.strip().lower(), 0),
+                (col(Feature.id).in_(matching_cotas), 1),
+                (col(Feature.name).ilike(f"%{escaped}%", escape="\\"), 2),
+                (col(Feature.description).ilike(f"%{escaped}%", escape="\\"), 3),
+                else_=4,
+            )
+        )
+    statement = (
+        statement.order_by(col(Feature.created_at).desc(), col(Feature.id))
         .offset(skip)
         .limit(limit)
     )

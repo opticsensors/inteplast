@@ -52,11 +52,12 @@ enviada como historial, manteniendo la pregunta anterior y sus identificadores.
 | API | `backend/app/assistant/router.py`, `schemas.py` | Autenticación, límites, contrato de eventos |
 | Orquestación | `service.py` | Historial acotado, instrucciones y llamadas a herramientas |
 | Redacción | `drafting.py` | Entrega textos recuperados al modelo sin nombres de herramientas ni detalles de implementación |
-| Consulta inicial | `retrieval.py` | Lectura del código de pieza explícito en la pregunta |
+| Consulta inicial | `retrieval.py`, `tools.py` | Resolución de nombres/códigos, erratas leves, intención y ámbito de la pregunta actual |
 | Modelo | `providers.py`, `config.py` | Contrato `ChatProvider` y adaptador Ollama |
 | Conocimiento | `tools.py` | Lecturas permitidas y enlaces de procedencia |
 | Estadísticas | `summaries.py` | Resúmenes de todas las mediciones filtradas, separados por serie, unidad y tolerancia |
-| Respuesta numérica | `answers.py` | Presentación directa de hechos calculados para consultas exactas, sin reinterpretación del modelo |
+| Respuestas factuales | `answers.py` | Presentación directa de mediciones calculadas y planes citados, sin reinterpretación del modelo |
+| Evidencia de correcciones | `corrections.py` | Separación de cabecera, propuesta original, límites de cotas y estado de ejecución |
 | Búsqueda híbrida | `corpus.py`, `semantic.py` | Textos actuales, filtros, BM25 y similitud coseno, combinación RRF |
 | Embeddings | `embeddings.py`, `index.py`, `index_models.py` | Adaptador local independiente, actualización incremental y caché PostgreSQL |
 
@@ -83,8 +84,71 @@ autenticación, facturación y transporte propios; no está configurado todavía
 
 Las lecturas usan los servicios/modelos existentes directamente dentro del backend;
 no se hace un viaje HTTP del backend a sí mismo. Un código de pieza explícito en la
-pregunta («pieza 3212») se consulta primero. Un nombre de feature inequívoco también
-se resuelve antes de llamar al modelo. El modelo decide las demás herramientas.
+pregunta («pieza 3212») se consulta primero. Los nombres de piezas y features también
+se resuelven antes de llamar al modelo, tolerando una errata leve en nombres largos
+(«bold eye», «Pump Housng») y variantes de «corrección». Los códigos numéricos no se
+aproximan. Un código explícito prevalece sobre nombres compartidos; si quedan varias
+fichas posibles, se pide aclaración. Las comparaciones conservan la búsqueda con herramientas.
+
+La pieza, feature, cota y revisión identificados en la pregunta actual se conservan
+durante las consultas; una herramienta no puede sustituirlos por otra ficha del historial.
+Las correcciones se leen de `read_part(section=corrections)`, comprobando los vínculos
+explícitos del feature con la pieza y sus cotas. Una consulta sin cota pero con feature
+se limita a las cotas vinculadas. Los resultados del catálogo priorizan coincidencias
+de nombre/cota antes que descripciones y relaciones indirectas, antes de paginar.
+
+El modelo recibe las descripciones, formatos y restricciones de los parámetros.
+Las herramientas admiten nombres inequívocos de pieza como recuperación, y diferencian
+errores de identificación de ausencia de datos. Hay hasta cinco llamadas de lectura y
+cinco rondas sucesivas, más la redacción final, dentro del límite global de tiempo y contexto.
+Los preámbulos de planificación no se publican. Si falla una lectura o falta consultar
+las correcciones, se permite reintentar; una respuesta del modelo que cierre esa búsqueda
+fallida como «no existe» se sustituye por una explicación de lo que no se pudo verificar.
+Las lecturas completas de correcciones pasan directamente a redacción, sin arrastrar
+respuestas anteriores ni resultados de descubrimiento que puedan cambiar el tema.
+Estas comprobaciones verifican el ámbito y la recuperación, no cada afirmación semántica
+del texto generado. Un plan sigue sin demostrar ejecución ni ausencia de ejecución.
+
+### Fidelidad de los datos técnicos
+
+La preparación y presentación factual se hacen en el servicio común, antes del
+adaptador `ChatProvider`. No dependen del nombre, tamaño o fabricante del modelo,
+no cambian sus pesos y no contienen excepciones para piezas, features, cotas o
+acciones concretas. Un futuro proveedor que implemente ese contrato recibe los
+mismos campos de evidencia y utiliza las mismas comprobaciones.
+
+Las correcciones distinguen `action_id`, cabecera documental, cita de propuesta y
+procedencia. La propuesta se separa solo cuando aparece una cabecera de sección
+reconocida; en otros formatos se conserva el texto original sin inventar esa separación.
+Los números del título no se convierten en especificaciones de herramientas.
+`recorded_limits` recoge únicamente nominal y límites numéricos ya estructurados en
+las mediciones de la revisión consultada. Mantiene separadas cotas, unidades y regímenes
+de tolerancia, con sus series, cavidades, muestreos y documentos. Una ausencia de datos
+no se rellena interpretando el título. `summary_offset` pagina estos grupos de ocho
+en ocho y `coverage.recorded_limits` indica si falta información.
+
+Las consultas directas de correcciones en español con una lectura completa se
+presentan desde esos campos, tanto tras la consulta inicial como después de una
+búsqueda con herramientas. Esta presentación utiliza la lectura completa antes del
+recorte para el contexto del modelo, por lo que un estudio con muchas series no
+pierde sus hechos por el tamaño de esa ventana. Incluyen la cita en su idioma original, la fuente y el
+límite de lo que demuestra un plan. No se pide al modelo que reescriba la propuesta,
+los números ni su significado. Se conserva el texto como una cita, sin ejecutar su
+Markdown como instrucciones. Los planes recortados o leídos parcialmente no activan
+esta vía. Los límites son contexto opcional para esta intención: si no están completos,
+se omiten sin impedir la presentación fiel de los planes completos. Solo se consultan
+límites de cotas vinculadas a las acciones recuperadas, no de toda la pieza sin relación.
+
+Las explicaciones, comparaciones, traducciones, otros idiomas y preguntas sobre
+ejecución mantienen el recorrido con el modelo, que recibe la evidencia separada.
+Esto mejora la entrada de todos los modelos, pero no garantiza la exactitud de cada
+interpretación libre. Las pruebas cubren piezas y acciones distintas, espesores,
+ángulos y fuerzas, datos ausentes, paginación, fuentes y proveedores simulados que
+no pueden intervenir en la redacción factual. No sustituyen una evaluación de las
+respuestas abiertas del modelo elegido.
+
+### Mediciones y paginación
+
 Las mediciones incluyen un resumen del conjunto completo (cavidades, muestreos,
 recuentos, tolerancias y documentos) y estadísticas por serie/unidad/tolerancia.
 Por defecto no se envían filas individuales, para evitar que el modelo confunda

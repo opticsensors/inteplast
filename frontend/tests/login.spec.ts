@@ -16,11 +16,29 @@ const verifyInput = async (page: Page, testId: string) => {
   await expect(input).toBeEditable()
 }
 
-test("Inputs are visible, empty and editable", async ({ page }) => {
+test("Empty inputs are editable and only become invalid on submit", async ({
+  page,
+}) => {
   await page.goto("/login")
 
   await verifyInput(page, "email-input")
   await verifyInput(page, "password-input")
+  for (const testId of ["email-input", "password-input"]) {
+    const input = page.getByTestId(testId)
+    await input.focus()
+    await input.blur()
+    await expect(input).toHaveAttribute("aria-invalid", "false")
+  }
+  await page.getByRole("button", { name: "Iniciar sesión" }).click()
+  for (const testId of ["email-input", "password-input"]) {
+    await expect(page.getByTestId(testId)).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    )
+  }
+  await expect(
+    page.locator('[data-slot="form-message"]:not(.sr-only)'),
+  ).toHaveCount(0)
 })
 
 test("Log In button is visible", async ({ page }) => {
@@ -56,11 +74,20 @@ test("Log in with invalid email", async ({ page }) => {
   await page.goto("/login")
 
   await fillForm(page, "invalidemail", firstSuperuserPassword)
+  await page.getByTestId("password-input").blur()
+  await expect(page.getByTestId("email-input")).toHaveAttribute(
+    "aria-invalid",
+    "false",
+  )
   await page.getByRole("button", { name: "Iniciar sesión" }).click()
 
+  await expect(page.getByTestId("email-input")).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  )
   await expect(
-    page.getByText("Introduce un correo electrónico válido"),
-  ).toBeVisible()
+    page.locator('[data-slot="form-message"]:not(.sr-only)'),
+  ).toHaveCount(0)
 })
 
 test("Log in with invalid password", async ({ page }) => {

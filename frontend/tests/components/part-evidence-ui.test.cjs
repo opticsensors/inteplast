@@ -967,20 +967,6 @@ test("both documented plans of a cota are accessible without assigning unvalidat
   await correctionValue(page, "intern.03", "Cambio medido", "−0,089")
 })
 
-test("importing files is confined to management and requires an explicit click", async (t) => {
-  const page = await mount(t, "/manage-test")
-  const button = page.getByRole("button", { name: "Reimportar archivos" })
-  await expect(button).toBeEnabled()
-  assert.deepEqual(await page.evaluate(() => window.review.imports), [])
-  await button.click()
-  await expect(page.getByRole("status")).toHaveText(
-    "Datos disponibles para consultar.",
-  )
-  assert.deepEqual(await page.evaluate(() => window.review.imports), [
-    "part-one",
-  ])
-})
-
 test("unfinished numbers suggest cotas and the selected number stays only in the search", async (t) => {
   const page = await mount(t)
   const search = page.getByRole("combobox", { name: "Buscar cota" })

@@ -59,7 +59,8 @@ const AddUser = () => {
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    mode: "onBlur",
+    mode: "onSubmit",
+    reValidateMode: "onSubmit",
     criteriaMode: "all",
     defaultValues: {
       email: "",
@@ -105,7 +106,7 @@ const AddUser = () => {
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
+          <form noValidate onSubmit={form.handleSubmit(onSubmit)}>
             <div className="grid gap-4 py-4">
               <FormField
                 control={form.control}
@@ -123,7 +124,7 @@ const AddUser = () => {
                         required
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="sr-only" />
                   </FormItem>
                 )}
               />
@@ -137,7 +138,7 @@ const AddUser = () => {
                     <FormControl>
                       <Input placeholder="Full name" type="text" {...field} />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="sr-only" />
                   </FormItem>
                 )}
               />
@@ -158,7 +159,7 @@ const AddUser = () => {
                         required
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="sr-only" />
                   </FormItem>
                 )}
               />
@@ -180,7 +181,7 @@ const AddUser = () => {
                         required
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="sr-only" />
                   </FormItem>
                 )}
               />
@@ -220,7 +221,11 @@ const AddUser = () => {
 
             <DialogFooter>
               <DialogClose asChild>
-                <Button variant="outline" disabled={mutation.isPending}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={mutation.isPending}
+                >
                   Cancel
                 </Button>
               </DialogClose>

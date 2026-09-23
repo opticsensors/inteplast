@@ -14,7 +14,6 @@ import {
   FeaturesService,
   PartsService,
 } from "@/client"
-import { PartDataImports } from "../../../src/components/Admin/PartDataImports"
 import { Route as Catalog } from "../../../src/routes/_layout/features"
 import { Route as Parts } from "../../../src/routes/_layout/parts"
 import { Route as Detail } from "../../../src/routes/_layout/parts_.$partId"
@@ -603,21 +602,7 @@ const routes = [
   route.update({ id, path, getParentRoute: () => layout }),
 )
 const router = createRouter({
-  routeTree: root.addChildren([
-    layout.addChildren([
-      ...routes,
-      createRoute({
-        path: "/manage-test",
-        getParentRoute: () => layout,
-        component: () => (
-          <>
-            <h1>Gestión de datos</h1>
-            <PartDataImports />
-          </>
-        ),
-      }),
-    ]),
-  ]),
+  routeTree: root.addChildren([layout.addChildren(routes)]),
   history: createMemoryHistory({
     initialEntries: [window.evidenceInitialPath ?? "/parts/part-one"],
   }),

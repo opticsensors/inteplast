@@ -2,7 +2,8 @@
 
 import re
 import uuid
-from typing import Any, Literal
+from collections.abc import Sequence
+from typing import Any, Literal, TypeVar
 from urllib.parse import urlencode
 
 from fastapi import HTTPException
@@ -13,12 +14,22 @@ from sqlmodel import Session, col, func, select
 from app import measurement_imports
 from app.api.routes.catalog import search_catalog
 from app.assistant.config import AssistantSettings, get_settings
-from app.assistant.schemas import Source, StrictModel
+from app.assistant.corrections import plan_evidence, recorded_limits
+from app.assistant.retrieval import (
+    correction_question,
+    initial_read,
+    name_score,
+    normalize,
+    part_read,
+)
+from app.assistant.schemas import ChatMessage, ChatRequest, Source, StrictModel
 from app.assistant.summaries import measurements, page
 from app.core.db import engine
 from app.feature_links import feature_membership
 from app.knowledge_models import FeatureCharacteristicLink, PartCharacteristic
 from app.models import Feature, FeatureNote, Part, User
+
+Entity = TypeVar("Entity", Part, Feature)
 
 
 class Search(StrictModel):
@@ -31,7 +42,9 @@ class Search(StrictModel):
 
 
 class FeatureRead(StrictModel):
-    feature_id: uuid.UUID
+    feature_id: uuid.UUID = Field(
+        description="UUID del feature devuelto por search_catalog; nunca su nombre."
+    )
     offset: int = Field(
         default=0,
         ge=0,
@@ -42,7 +55,13 @@ class FeatureRead(StrictModel):
 
 class PartRead(StrictModel):
     part: str = Field(
-        min_length=1, max_length=64, description="Código de pieza (p. ej. 3212) o UUID."
+        min_length=1,
+        max_length=64,
+        description="Código de pieza (p. ej. 3212) o UUID devuelto por search_catalog. También admite un nombre inequívoco.",
+    )
+    feature_id: uuid.UUID | None = Field(
+        default=None,
+        description="UUID del feature solicitado; comprueba su vínculo con la pieza y la cota.",
     )
     section: Literal["overview", "measurements", "corrections"] = "overview"
     characteristic: str | None = Field(
@@ -111,17 +130,21 @@ DESCRIPTIONS = {
 
 
 def definitions() -> list[dict[str, Any]]:
-    # Keep prompts small on CPU. Pydantic still validates the full schema server-side.
+    # Omit cosmetic titles, but retain the contract the model needs to call tools.
     def parameters(model: type[StrictModel]) -> dict[str, Any]:
         schema = model.model_json_schema()
         properties = {}
         for name, field in schema["properties"].items():
             kind = field.get("anyOf", [field])[0]
-            properties[name] = {k: v for k, v in kind.items() if k in {"type", "enum"}}
+            properties[name] = {k: v for k, v in kind.items() if k != "title"}
+            for key in ("description", "default"):
+                if key in field and field[key] is not None:
+                    properties[name][key] = field[key]
         return {
             "type": "object",
             "properties": properties,
             "required": schema.get("required", []),
+            "additionalProperties": False,
         }
 
     return [
@@ -165,21 +188,83 @@ class KnowledgeTools:
         self.user_id = user_id
         self.settings = settings or get_settings()
         self.sources: dict[str, Source] = {}
+        self.scope: dict[str, Any] = {}
+        self.scope_error: dict[str, Any] | None = None
 
     def initial_lookup(self, question: str) -> tuple[str, dict[str, Any]] | None:
-        """Resolve an explicit feature name without spending a small-model tool round."""
+        """Ground the current question before letting history or catalog order steer it."""
+        self.scope = {}
+        self.scope_error = None
         with Session(engine) as session:
             session.execute(text("SET TRANSACTION READ ONLY"))
+            session.execute(text("SET LOCAL statement_timeout = '5s'"))
             user = session.get(User, self.user_id)
             if user is None or not user.is_active:
                 raise HTTPException(403, "La sesión ya no está activa.")
-            matches = [
-                f
-                for f in session.exec(select(Feature)).all()
-                if re.search(r"(?<!\w)" + re.escape(f.name) + r"(?!\w)", question, re.I)
-            ]
-            if len(matches) == 1:
-                return "read_feature", {"feature_id": str(matches[0].id)}
+            parts = self.named(session.exec(select(Part)).all(), question, codes=True)
+            features = self.named(session.exec(select(Feature)).all(), question)
+            # Comparisons need multiple scopes; never silently collapse them to one.
+            if re.search(r"compar|diferencia|\bentre\b", normalize(question)):
+                return None
+            if len(parts) > 1 or len(features) > 1:
+                labels = [f"{p.code} · {p.name}" for p in parts] + [
+                    f.name for f in features
+                ]
+                self.scope_error = {
+                    "error": "La consulta coincide con varias fichas: "
+                    + ", ".join(labels)
+                    + ". Indica el código de pieza o el nombre exacto del feature.",
+                    "error_code": "ambiguous_entity",
+                    "retryable": False,
+                }
+                return "search_catalog", {"query": question[:120]}
+            seed = initial_read(
+                ChatRequest(messages=[ChatMessage(role="user", content=question)])
+            )
+            if seed is None and len(parts) == 1:
+                seed = part_read(question, parts[0].code)
+            if seed:
+                name, arguments = seed
+                if features:
+                    arguments["feature_id"] = str(features[0].id)
+                self.scope = {
+                    k: v
+                    for k, v in arguments.items()
+                    if k in {"part", "feature_id", "characteristic", "revision"}
+                }
+                return name, arguments
+            if features:
+                self.scope["feature_id"] = str(features[0].id)
+                # A feature can span multiple pieces: only infer one when unique.
+                if correction_question(question) or re.search(
+                    r"\bN\d+", question, re.I
+                ):
+                    links = feature_membership()
+                    linked = session.exec(
+                        select(Part).where(
+                            col(Part.id).in_(
+                                select(links.c.part_id).where(
+                                    links.c.feature_id == features[0].id
+                                )
+                            )
+                        )
+                    ).all()
+                    if len(linked) == 1:
+                        seed = part_read(question, linked[0].code)
+                        if seed:
+                            seed[1]["feature_id"] = str(features[0].id)
+                            self.scope.update(
+                                {
+                                    k: v
+                                    for k, v in seed[1].items()
+                                    if k in {"part", "characteristic", "revision"}
+                                }
+                            )
+                            return seed
+                return "read_feature", {"feature_id": str(features[0].id)}
+        cotas = {c.upper() for c in re.findall(r"\bN\d+(?:\.\d+)?\b", question, re.I)}
+        if len(cotas) == 1:
+            self.scope["characteristic"] = next(iter(cotas))
         if re.search(
             r"advertenc|lecci[oó]n|contracci[oó]n|problema|retoque|riesgo|experiencia",
             question,
@@ -187,6 +272,50 @@ class KnowledgeTools:
         ):
             return "search_knowledge", {"query": question}
         return None
+
+    @staticmethod
+    def named(
+        records: Sequence[Entity], query: str, *, codes: bool = False
+    ) -> list[Entity]:
+        scored = [
+            (
+                r,
+                max(
+                    name_score(query, r.name or ""),
+                    2.0
+                    * float(
+                        bool(
+                            codes
+                            and isinstance(r, Part)
+                            and re.search(
+                                r"(?<!\w)" + re.escape(r.code) + r"(?!\w)", query, re.I
+                            )
+                        )
+                    ),
+                ),
+            )
+            for r in records
+        ]
+        best = max((s for _, s in scored), default=0)
+        return [r for r, s in scored if s == best and s > 0]
+
+    def resolve_part(self, session: Session, value: str) -> Part | dict[str, Any]:
+        try:
+            part = session.get(Part, uuid.UUID(value))
+        except ValueError:
+            part = session.exec(select(Part).where(Part.code == value)).first()
+        if part is not None:
+            return part
+        matches = self.named(session.exec(select(Part)).all(), value)
+        if len(matches) == 1:
+            return matches[0]
+        return {
+            "error": "No se ha identificado una pieza única con ese identificador. Esto no demuestra que falten datos ni correcciones.",
+            "error_code": "ambiguous_part" if matches else "unresolved_part",
+            "retryable": True,
+            "recovery": "Busca la pieza con search_catalog y usa su code o id; si hay varias, pide aclaración.",
+            "candidates": [{"code": p.code, "name": p.name} for p in matches],
+        }
 
     def cite(self, label: str, url: str) -> None:
         if len(self.sources) < 12:
@@ -202,7 +331,10 @@ class KnowledgeTools:
             args = model.model_validate(arguments)
         except ValidationError:
             return {
-                "error": "Parámetros inválidos. Revisa el esquema de la herramienta."
+                "error": "Parámetros inválidos. Revisa el esquema de la herramienta; no implica ausencia de datos.",
+                "error_code": "invalid_arguments",
+                "retryable": True,
+                "recovery": "Usa los identificadores de search_catalog y vuelve a consultar.",
             }
         with Session(engine) as session:
             session.execute(text("SET TRANSACTION READ ONLY"))
@@ -211,6 +343,44 @@ class KnowledgeTools:
             user = session.get(User, self.user_id)
             if user is None or not user.is_active:
                 raise HTTPException(403, "La sesión ya no está activa.")
+            if self.scope_error:
+                return self.scope_error
+            if isinstance(args, (PartRead, KnowledgeSearch)):
+                if args.part:
+                    resolved = self.resolve_part(session, args.part)
+                    if isinstance(resolved, dict):
+                        return resolved
+                    args.part = resolved.code
+                for key in ("part", "feature_id", "characteristic", "revision"):
+                    expected, actual = self.scope.get(key), getattr(args, key)
+                    if (
+                        expected is not None
+                        and actual is not None
+                        and normalize(str(expected)) != normalize(str(actual))
+                    ):
+                        return {
+                            "error": "La consulta cambia la pieza, el feature, la cota o la revisión solicitados.",
+                            "error_code": "scope_mismatch",
+                            "retryable": True,
+                            "required_scope": self.scope,
+                        }
+                    if expected is not None:
+                        setattr(
+                            args,
+                            key,
+                            uuid.UUID(expected) if key == "feature_id" else expected,
+                        )
+            if (
+                isinstance(args, FeatureRead)
+                and self.scope.get("feature_id")
+                and str(args.feature_id) != self.scope["feature_id"]
+            ):
+                return {
+                    "error": "Ese feature no es el solicitado en la pregunta actual.",
+                    "error_code": "scope_mismatch",
+                    "retryable": True,
+                    "required_scope": self.scope,
+                }
             # Same shared, authenticated knowledge access as the existing APIs.
             # This is the only integration boundary to update if row ACLs are added.
             try:
@@ -230,15 +400,48 @@ class KnowledgeTools:
             except HTTPException as error:
                 if error.status_code == 404:
                     return {
-                        "error": "No se ha encontrado ese registro en la aplicación."
+                        "error": "No se ha podido recuperar el registro con esos identificadores; no demuestra que no exista el feature o la corrección.",
+                        "error_code": "unresolved_record",
+                        "retryable": True,
+                        "recovery": "Comprueba código/UUID, revisión y snapshot; localiza la ficha con search_catalog y reintenta.",
                     }
                 raise
         return {"error": "Lectura no disponible."}
 
     def search(self, session: Session, user: User, args: Search) -> dict[str, Any]:
-        result = search_catalog(session, user, q=args.query, skip=args.offset, limit=5)
-        for part in result.parts:
-            self.cite(f"Pieza {part.code}", f"/parts/{part.id}")
+        features = self.named(session.exec(select(Feature)).all(), args.query)
+        parts = self.named(session.exec(select(Part)).all(), args.query, codes=True)
+        feature_id = (
+            uuid.UUID(self.scope["feature_id"])
+            if self.scope.get("feature_id")
+            else (features[0].id if len(features) == 1 else None)
+        )
+        part = (
+            self.resolve_part(session, self.scope["part"])
+            if self.scope.get("part")
+            else (parts[0] if len(parts) == 1 else None)
+        )
+        cotas = re.findall(r"\bN\d+(?:\.\d+)?\b", args.query, re.I)
+        query = self.scope.get("characteristic") or (
+            cotas[0].upper()
+            if len(cotas) == 1
+            else (
+                features[0].name
+                if len(features) == 1
+                else (part.code if isinstance(part, Part) else args.query)
+            )
+        )
+        result = search_catalog(
+            session,
+            user,
+            q=query,
+            part_id=part.id if isinstance(part, Part) else None,
+            feature_id=feature_id,
+            skip=args.offset,
+            limit=5,
+        )
+        for found_part in result.parts:
+            self.cite(f"Pieza {found_part.code}", f"/parts/{found_part.id}")
         for feature in result.features:
             self.cite(feature.name, f"/features/{feature.id}")
         for cota in result.cotas:
@@ -352,12 +555,9 @@ class KnowledgeTools:
         }
 
     def part(self, session: Session, args: PartRead) -> dict[str, Any]:
-        try:
-            part = session.get(Part, uuid.UUID(args.part))
-        except ValueError:
-            part = session.exec(select(Part).where(Part.code == args.part)).first()
-        if part is None:
-            raise HTTPException(404)
+        part = self.resolve_part(session, args.part)
+        if isinstance(part, dict):
+            return part
         job, revisions = measurement_imports.study(
             session, part, args.revision, args.snapshot_id
         )
@@ -386,6 +586,36 @@ class KnowledgeTools:
         characteristic = (args.characteristic or "").strip().upper().replace(" ", "")
         if characteristic and characteristic[0].isdigit():
             characteristic = "N" + characteristic
+        allowed_characteristics: set[str] | None = None
+        if args.feature_id:
+            feature = session.get(Feature, args.feature_id)
+            links = feature_membership()
+            linked = session.exec(
+                select(links.c.part_id).where(
+                    links.c.feature_id == args.feature_id, links.c.part_id == part.id
+                )
+            ).first()
+            cota_filters = [
+                FeatureCharacteristicLink.feature_id == args.feature_id,
+                PartCharacteristic.part_id == part.id,
+            ]
+            if characteristic:
+                cota_filters.append(PartCharacteristic.code == characteristic)
+            if revision:
+                cota_filters.append(PartCharacteristic.revision == revision)
+            cota_links = session.exec(
+                select(PartCharacteristic)
+                .join(FeatureCharacteristicLink)
+                .where(*cota_filters)
+            ).all()
+            if feature is None or linked is None or (characteristic and not cota_links):
+                return {
+                    "error": "No hay un vínculo explícito registrado entre el feature, la pieza y la cota/revisión solicitados. No significa que esas fichas o sus correcciones no existan.",
+                    "error_code": "unverified_relationship",
+                    "retryable": False,
+                }
+            result["feature"] = feature.name
+            allowed_characteristics = {c.code for c in cota_links}
         result["filters"] = {
             "characteristic": characteristic or None,
             "sample": args.sample,
@@ -398,8 +628,20 @@ class KnowledgeTools:
             or characteristic in e.get("numbers", [])
             or e["id"] == characteristic
         ]
+        if allowed_characteristics is not None:
+            entries = [
+                e
+                for e in entries
+                if allowed_characteristics.intersection(
+                    [e["id"], *e.get("numbers", [])]
+                )
+            ]
         if args.section == "overview":
-            filters = [PartCharacteristic.part_id == part.id]
+            filters: list[Any] = [PartCharacteristic.part_id == part.id]
+            if allowed_characteristics is not None:
+                filters.append(
+                    col(PartCharacteristic.code).in_(allowed_characteristics)
+                )
             if revision:
                 filters.append(PartCharacteristic.revision == revision)
             if characteristic:
@@ -505,25 +747,33 @@ class KnowledgeTools:
                 for a in payload.get("action_index", {}).values()
                 if not characteristic or characteristic in a.get("features", [])
             ]
+            if allowed_characteristics is not None:
+                actions = [
+                    a
+                    for a in actions
+                    if allowed_characteristics.intersection(a.get("features", []))
+                ]
+            action_characteristics = {
+                code for action in actions for code in action.get("features", [])
+            }
+            limit_entries = [
+                entry
+                for entry in entries
+                if action_characteristics.intersection(
+                    [entry["id"], *entry.get("numbers", [])]
+                )
+            ]
+            limits = recorded_limits(
+                limit_entries, cavity=args.cavity, sample=args.sample
+            )
+            limit_page = limits[args.summary_offset : args.summary_offset + 8]
             result.update(
                 {
                     "actions": [
-                        {
-                            **{
-                                k: a.get(k)
-                                for k in (
-                                    "id",
-                                    "plan",
-                                    "title",
-                                    "features",
-                                    "link_method",
-                                )
-                            },
-                            "text": clipped("\n".join(a.get("paragraphs", [])), 1000),
-                            "source": provenance(a.get("source")),
-                        }
-                        for a in actions[args.offset : args.offset + 4]
+                        plan_evidence(a) for a in actions[args.offset : args.offset + 4]
                     ],
+                    "recorded_limits": limit_page,
+                    "limits_basis": "Límites de las cotas en las mediciones importadas de esta revisión. No son dimensiones de herramientas ni cantidades del retoque inferidas del título del plan.",
                     "total": len(actions),
                     "offset": args.offset,
                     "page_size": 4,
@@ -532,7 +782,10 @@ class KnowledgeTools:
                             len(actions),
                             args.offset,
                             len(actions[args.offset : args.offset + 4]),
-                        )
+                        ),
+                        "recorded_limits": page(
+                            len(limits), args.summary_offset, len(limit_page)
+                        ),
                     },
                     "notice": "Son planes/textos importados, no prueba de ejecución del retoque ni de conformidad final. No se han analizado imágenes o geometría.",
                 }

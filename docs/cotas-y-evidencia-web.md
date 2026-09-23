@@ -222,9 +222,10 @@ No hay todavía herramienta para dibujar una ubicación nueva que el detector no
 - Un trabajador con bloqueo asesor PostgreSQL serializa los trabajos costosos. Cola durable,
   recuperación tras reinicio, límite de 30 minutos por subproceso y errores reintentables.
   `EVIDENCE_WORKER_ENABLED=false` lo desactiva (incluido en la configuración de tests).
-- `Reimportar archivos`, en **Admin → Datos de piezas**, conserva el adaptador piloto y calcula la firma de fuentes; si no
-  cambiaron reutiliza la importación. La consulta de cotas no ofrece esa operación.
-  Nunca publica resultados si las fuentes cambiaron mientras se procesaban.
+- Las mediciones y correcciones se importan al registrar una pieza y mediante **Actualizar
+  datos** en su ficha. Admin queda reservado a la gestión de usuarios; se ha retirado el
+  bloque de importación de la pieza piloto. Nunca se publican resultados si las fuentes
+  cambiaron mientras se procesaban.
 - El lector prepara los ficheros de metrología y retoques en una carpeta temporal del
   contenedor: evita miles de accesos pequeños al montaje de Windows. Se elimina al terminar;
   no incluye los directorios de CAD/escaneados grandes.
@@ -243,8 +244,7 @@ No hay todavía herramienta para dibujar una ubicación nueva que el detector no
   Un rollback de esquema no reintroduce esa conclusión incorrecta.
 
 Despliegue local: `docker compose up -d --build db prestart backend`, frontend Vite habitual.
-El botón de importación en Admin solo aparece para la carpeta piloto configurada. No se modifican
-originales ni los otros proyectos del cliente.
+La actualización de datos se inicia desde la ficha de la pieza. No se modifican los originales.
 
 ## Validación de la nueva consulta (21/09/2026)
 
