@@ -15,6 +15,9 @@ const WebModelViewer = lazy(
   () => import("@/components/Features/WebModelViewer"),
 )
 const DrawingSearch = lazy(() => import("@/components/Features/DrawingSearch"))
+const SourceTableViewer = lazy(
+  () => import("@/components/Parts/SourceTableViewer"),
+)
 export const Route = createFileRoute(
   "/_layout/parts_/$partId_/fichero/$fileId",
 )({
@@ -45,6 +48,7 @@ function PartFile() {
   if (result.error) return <p role="alert">{fileErrorMessage(result.error)}</p>
   if (!file) return <p>Documento no encontrado en esta pieza.</p>
   const { viewer, action } = fileAction(file)
+  const table = /\.(csv|xlsx?)$/i.test(file.filename)
   const displayName =
     detail.data?.files?.find((item) => item.file.id === fileId)?.name ??
     file.filename
@@ -80,7 +84,26 @@ function PartFile() {
           <p className="text-sm text-muted-foreground">Cargando visor…</p>
         }
       >
-        {action === "view" ? (
+        {table ? (
+          <SourceTableViewer
+            key={`${file.id}:${file.version}`}
+            fileId={file.id}
+            version={file.version}
+            query={search.sourceQ ?? search.sourceLocator ?? ""}
+            locator={search.sourceLocator}
+            cavity={search.sourceCavity}
+            value={search.sourceValue}
+            onQuery={(sourceQ) =>
+              void navigate({
+                to: "/parts/$partId/fichero/$fileId",
+                params: { partId, fileId },
+                search: { ...search, sourceQ },
+                replace: true,
+                resetScroll: false,
+              })
+            }
+          />
+        ) : action === "view" ? (
           viewer === "pdf" ? (
             <DrawingSearch
               key={`${file.id}:${file.version}`}

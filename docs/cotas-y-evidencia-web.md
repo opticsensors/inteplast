@@ -158,14 +158,24 @@ con datos sintéticos; falta contrastar una segunda pieza real con metrología (
   debajo. Las acciones
   ya vinculadas de ambos planes se consultan incluso si la cota no pertenece a uno de los
   cuatro casos cuantitativos. Los tramos sin documentación conservan las mediciones.
-- El detalle hace visible el cambio propuesto en el molde y compara, por cavidad, efecto
-  previsto y cambio medido. No muestra imágenes ni «Documentos y valores de origen».
+- El detalle muestra una gráfica con los dos muestreos del tramo: original en el primero,
+  medición posterior y predicción documentada en el segundo. Comparte colores y selección
+  de cavidades con la gráfica superior; la predicción usa línea discontinua y punto vacío.
+  Sus ventanas muestran el tipo, valor y variación. Conserva «Cambio propuesto en el molde»
+  y, si falta una acción, indica brevemente «No hay una acción vinculada a N…».
   Los controles mantienen su selección al volver del plano con el navegador;
   buscar en el dibujo no sustituye la búsqueda previa de cotas.
-- Cavidad y valor aparecen al pasar el cursor, tocar o enfocar un punto; el recuadro queda
-  junto a él. No se activa sobre zonas vacías ni incluye fuentes, límites o estados.
-  No se repiten en tablas. La leyenda activa cavidades; el tramo seleccionado se resalta.
-  La previsión se muestra en el detalle, separada de los muestreos reales de la gráfica.
+- Cavidad y valor aparecen al pasar el cursor o enfocar un punto. Pulsarlo fija la ventana,
+  incluidos los puntos solapados; otro punto cambia la selección y Escape, cerrar o pulsar
+  fuera la descartan. En la gráfica de mediciones, cada valor fijado permite abrir su origen
+  en la página de fichero. La trazabilidad del detalle de correcciones sigue pendiente.
+- El visor de CSV/XLS/XLSX muestra hojas, filas y columnas originales en solo lectura, con
+  buscador precargado, salto y resaltado de la línea/celda guardada. Resuelve también los
+  bloques CMM repetidos del piloto por aparición y fila; no atribuye una coincidencia solo
+  por compartir cota. Los Excel muestran resultados guardados, sin recalcular fórmulas.
+  El historial del navegador conserva la consulta. Los originales ausentes o modificados
+  muestran un error, sin sustituirse por otra versión. La vista admite 16 MB, 20.000 filas,
+  512 columnas y 500.000 celdas en total; pagina la cuadrícula de 80 en 80 filas.
 - La previsión sigue siendo el valor **guardado** en `DR(100%)`, con celdas y deltas. No es
   una simulación ni se recalculan fórmulas de Excel en el navegador.
 - El efecto previsto usa el valor inicial del XLS; el cambio medido usa las dos mediciones

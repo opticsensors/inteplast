@@ -1,3 +1,4 @@
+import { X } from "lucide-react"
 import { useEffect, useId, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -7,12 +8,18 @@ import type { Measurement } from "./types"
 export type PlotPoint = Partial<Measurement> & {
   value: number | null
   prediction?: boolean
+  connectorOnly?: boolean
+  label?: string
+  change?: number | null
 }
 export type PlotLine = {
+  id?: string
   name: string
   points: (PlotPoint | null | undefined)[]
 }
 type Hit = {
+  id: string
+  point: PlotPoint
   name: string
   index: number
   value: number
@@ -35,6 +42,7 @@ export function MeasurementPlot({
   selectedInterval,
   onInterval,
   empty = false,
+  onSource,
 }: {
   labels: string[]
   lines: PlotLine[]
@@ -45,9 +53,11 @@ export function MeasurementPlot({
   selectedInterval?: string
   onInterval?: (id: string) => void
   empty?: boolean
+  onSource?: (point: PlotPoint, cavity: string) => void
 }) {
   const tooltipId = useId()
   const [active, setActive] = useState<Hit | null>(null)
+  const [pinned, setPinned] = useState(false)
   const plot = useRef<HTMLDivElement>(null)
   const [plotWidth, setPlotWidth] = useState(740)
   useEffect(() => {
@@ -56,17 +66,31 @@ export function MeasurementPlot({
     const observer = new ResizeObserver(() => {
       setPlotWidth(Math.max(1, node.clientWidth))
       setActive(null)
+      setPinned(false)
     })
     observer.observe(node)
     const dismiss = (event: PointerEvent) => {
-      if (!node.contains(event.target as Node)) setActive(null)
+      if (!node.contains(event.target as Node)) {
+        setActive(null)
+        setPinned(false)
+      }
+    }
+    const dismissOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setActive(null)
+        setPinned(false)
+      }
     }
     document.addEventListener("pointerdown", dismiss)
+    document.addEventListener("keydown", dismissOnEscape)
     return () => {
       observer.disconnect()
       document.removeEventListener("pointerdown", dismiss)
+      document.removeEventListener("keydown", dismissOnEscape)
     }
   }, [])
+  const names = [...new Set(lines.map((line) => line.name))]
+  const color = (name: string) => colors[names.indexOf(name) % colors.length]
   const shown = lines.filter((line) => visible.includes(line.name))
   const points = shown
     .flatMap((line) => line.points)
@@ -96,18 +120,20 @@ export function MeasurementPlot({
   const compactLabels =
     labels.length > 1 && (plotWidth - 128) / (labels.length - 1) < 64
   const y = (value: number) => 235 - ((value - min) / (max - min)) * 190
-  const hits: Hit[] = lines.flatMap((line, lineIndex) =>
+  const hits: Hit[] = lines.flatMap((line) =>
     visible.includes(line.name)
       ? line.points.flatMap((point, index) =>
-          point && finite(point.value)
+          point && !point.connectorOnly && finite(point.value)
             ? [
                 {
+                  id: `${line.id ?? line.name}-${index}`,
+                  point,
                   name: line.name,
                   index,
                   value: point.value,
                   x: x(index),
                   y: y(point.value),
-                  color: colors[lineIndex % colors.length],
+                  color: color(line.name),
                 },
               ]
             : [],
@@ -138,8 +164,12 @@ export function MeasurementPlot({
           Math.hypot(hit.x - active.x, hit.y - active.y) <= 4,
       )
     : []
-  const tooltipWidth = Math.min(184, plotWidth - 16)
-  const tooltipHeight = 44 + overlapping.length * 24
+  const detailed = overlapping.some((hit) => hit.point.label)
+  const tooltipWidth = Math.min(detailed ? 260 : 184, plotWidth - 16)
+  const tooltipHeight = Math.min(
+    240,
+    44 + overlapping.length * (detailed ? 54 : 24),
+  )
   const tooltipLeft = active
     ? Math.max(
         8,
@@ -167,6 +197,7 @@ export function MeasurementPlot({
         : [...visible, name],
     )
     setActive(null)
+    setPinned(false)
   }
   return (
     <div className="min-w-0 space-y-3">
@@ -174,15 +205,26 @@ export function MeasurementPlot({
         ref={plot}
         className="relative"
         onPointerMove={(event) => {
-          if (event.pointerType !== "touch")
+          if (!pinned && event.pointerType !== "touch")
             setActive(hitAt(event.clientX, event.clientY))
         }}
         onPointerDown={(event) => {
-          if (event.pointerType === "touch")
-            setActive(hitAt(event.clientX, event.clientY, 16))
+          if ((event.target as Element).closest("[data-plot-popover]")) return
+          const hit = hitAt(
+            event.clientX,
+            event.clientY,
+            event.pointerType === "touch" ? 16 : 8,
+          )
+          if (!hit) {
+            setActive(null)
+            setPinned(false)
+          } else if (event.pointerType === "touch") {
+            setActive(hit)
+            setPinned(true)
+          }
         }}
         onPointerLeave={(event) => {
-          if (event.pointerType !== "touch") setActive(null)
+          if (!pinned && event.pointerType !== "touch") setActive(null)
         }}
       >
         {empty || values.length ? (
@@ -265,9 +307,9 @@ export function MeasurementPlot({
               </g>
             ))}
             {lines.map(
-              (line, lineIndex) =>
+              (line) =>
                 visible.includes(line.name) && (
-                  <g key={line.name}>
+                  <g key={line.id ?? line.name}>
                     {line.points.map((point, index) => {
                       if (!point || !finite(point.value)) return null
                       const previous = line.points[index - 1]
@@ -279,7 +321,7 @@ export function MeasurementPlot({
                               x2={x(index)}
                               y1={y(previous.value)}
                               y2={y(point.value)}
-                              stroke={colors[lineIndex % colors.length]}
+                              stroke={color(line.name)}
                               strokeWidth="2"
                               strokeDasharray={
                                 point.prediction || previous.prediction
@@ -288,25 +330,28 @@ export function MeasurementPlot({
                               }
                             />
                           )}
-                          <circle
-                            cx={x(index)}
-                            cy={y(point.value)}
-                            r={
-                              overlapping.some(
-                                (hit) =>
-                                  hit.name === line.name && hit.index === index,
-                              )
-                                ? 5
-                                : 4
-                            }
-                            fill={
-                              point.prediction
-                                ? "var(--background)"
-                                : colors[lineIndex % colors.length]
-                            }
-                            stroke={colors[lineIndex % colors.length]}
-                            strokeWidth="2"
-                          />
+                          {!point.connectorOnly && (
+                            <circle
+                              cx={x(index)}
+                              cy={y(point.value)}
+                              r={
+                                overlapping.some(
+                                  (hit) =>
+                                    hit.id ===
+                                    `${line.id ?? line.name}-${index}`,
+                                )
+                                  ? 5
+                                  : 4
+                              }
+                              fill={
+                                point.prediction
+                                  ? "var(--background)"
+                                  : color(line.name)
+                              }
+                              stroke={color(line.name)}
+                              strokeWidth="2"
+                            />
+                          )}
                         </g>
                       )
                     })}
@@ -361,9 +406,13 @@ export function MeasurementPlot({
                   width: x(interval.to) - x(interval.from),
                   height: 208,
                 }}
-                onFocus={() => setActive(null)}
+                onFocus={() => {
+                  setActive(null)
+                  setPinned(false)
+                }}
                 onClick={() => {
                   setActive(null)
+                  setPinned(false)
                   onInterval(interval.id)
                 }}
               />
@@ -372,48 +421,113 @@ export function MeasurementPlot({
         )}
         {hits.map((hit) => (
           <button
-            key={`${hit.name}-${hit.index}`}
+            key={hit.id}
             type="button"
             className="absolute size-4 rounded-full focus-visible:outline-2 focus-visible:outline-ring"
             style={{ left: hit.x - 8, top: hit.y - 8 }}
-            aria-label={`Consultar ${hit.name.toUpperCase()} · ${labels[hit.index]}`}
+            aria-label={`Consultar ${hit.name.toUpperCase()} · ${labels[hit.index]}${hit.point.label ? ` · ${hit.point.label}` : ""}`}
             aria-describedby={
-              active?.index === hit.index && active.name === hit.name
-                ? tooltipId
-                : undefined
+              active?.id === hit.id && !pinned ? tooltipId : undefined
             }
-            onFocus={() => setActive(hit)}
-            onBlur={() => setActive(null)}
-            onClick={() => setActive(hit)}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") setActive(null)
+            aria-haspopup="dialog"
+            aria-expanded={pinned && active?.id === hit.id}
+            onFocus={() => {
+              if (!pinned) setActive(hit)
+            }}
+            onBlur={() => {
+              if (!pinned) setActive(null)
+            }}
+            onClick={() => {
+              setActive(hit)
+              setPinned(true)
             }}
           />
         ))}
         {active && overlapping.length > 0 && (
           <div
             id={tooltipId}
-            role="tooltip"
+            data-plot-popover
+            {...(pinned
+              ? {
+                  role: "dialog",
+                  "aria-label": `Valores de ${labels[active.index]}`,
+                }
+              : { role: "tooltip" })}
             aria-live="polite"
-            className="pointer-events-none absolute z-10 rounded-md border bg-popover p-3 text-xs text-popover-foreground shadow-md"
-            style={{ left: tooltipLeft, top: tooltipTop, width: tooltipWidth }}
+            className={cn(
+              "absolute z-10 rounded-md border bg-popover p-3 text-xs text-popover-foreground shadow-md",
+              pinned ? "pointer-events-auto" : "pointer-events-none",
+            )}
+            style={{
+              left: tooltipLeft,
+              top: tooltipTop,
+              width: tooltipWidth,
+              maxHeight: 240,
+              overflowY: "auto",
+            }}
           >
-            <div className="mb-2 font-medium">{labels[active.index]}</div>
+            <div className="mb-2 flex items-center justify-between gap-2 font-medium">
+              {labels[active.index]}
+              {pinned && (
+                <button
+                  type="button"
+                  aria-label="Cerrar valores"
+                  className="rounded p-1 hover:bg-accent"
+                  onClick={() => {
+                    setPinned(false)
+                    setActive(null)
+                  }}
+                >
+                  <X className="size-3" />
+                </button>
+              )}
+            </div>
             {overlapping.map((hit) => (
               <div
-                key={hit.name}
-                className="flex h-6 items-center justify-between gap-3"
+                key={hit.id}
+                className={cn(
+                  "flex items-center justify-between gap-3",
+                  detailed ? "min-h-12 border-t py-1" : "h-6",
+                )}
               >
                 <span className="flex items-center gap-2">
                   <span
                     className="size-2 rounded-full"
                     style={{ backgroundColor: hit.color }}
                   />
-                  {hit.name.toUpperCase()}
+                  <span>
+                    {hit.name.toUpperCase()}
+                    {hit.point.label && (
+                      <span className="block text-muted-foreground">
+                        {hit.point.label}
+                      </span>
+                    )}
+                  </span>
                 </span>
-                <b className="tabular-nums">
-                  {fmt(hit.value)} {unit}
-                </b>
+                <span className="text-right tabular-nums">
+                  {pinned && onSource && hit.point.source?.file_id ? (
+                    <button
+                      type="button"
+                      className="font-semibold text-primary underline underline-offset-2"
+                      aria-label={`Ver origen ${hit.name.toUpperCase()} · ${fmt(hit.value)} ${unit}`}
+                      onClick={() => onSource(hit.point, hit.name)}
+                    >
+                      {fmt(hit.value)} {unit}
+                    </button>
+                  ) : (
+                    <b>
+                      {fmt(hit.value)} {unit}
+                    </b>
+                  )}
+                  {hit.point.change !== undefined && (
+                    <span className="block text-muted-foreground">
+                      Variación:{" "}
+                      {hit.point.change == null
+                        ? "—"
+                        : `${hit.point.change > 0 ? "+" : hit.point.change < 0 ? "−" : ""}${fmt(Math.abs(hit.point.change))} ${unit}`}
+                    </span>
+                  )}
+                </span>
               </div>
             ))}
           </div>
@@ -422,24 +536,21 @@ export function MeasurementPlot({
       {!empty && (
         <fieldset className="flex flex-wrap items-center justify-center gap-2">
           <legend className="sr-only">Cavidades visibles</legend>
-          {lines.map((line, index) => (
+          {names.map((name) => (
             <Button
-              key={line.name}
+              key={name}
               type="button"
               variant="ghost"
               size="sm"
-              aria-pressed={visible.includes(line.name)}
-              onClick={() => toggle(line.name)}
-              className={cn(
-                "gap-2",
-                !visible.includes(line.name) && "opacity-40",
-              )}
+              aria-pressed={visible.includes(name)}
+              onClick={() => toggle(name)}
+              className={cn("gap-2", !visible.includes(name) && "opacity-40")}
             >
               <span
                 className="size-2 rounded-full"
-                style={{ backgroundColor: colors[index % colors.length] }}
+                style={{ backgroundColor: color(name) }}
               />
-              {line.name.toUpperCase()}
+              {name.toUpperCase()}
             </Button>
           ))}
         </fieldset>

@@ -234,6 +234,10 @@ export const FeaturesService = {
 }
 
 export const FilesService = {
+  readSourceTable: async ({ fileId }) => {
+    if (state().tableError) throw new Error(state().tableError)
+    return clone(state().sourceTables?.[fileId] ?? { sheets: [] })
+  },
   listSource: async ({ path, directoriesOnly, skip = 0, limit = 200 }) => {
     state().sourceRequests ??= []
     state().sourceRequests.push({ path, directoriesOnly, skip })

@@ -23,6 +23,10 @@ export type PartSearch = {
   plano?: true
   drawingQ?: string
   drawingFile?: string
+  sourceLocator?: string
+  sourceQ?: string
+  sourceCavity?: string
+  sourceValue?: string
 }
 const text = (value: unknown) =>
   typeof value === "string" || typeof value === "number"
@@ -54,6 +58,10 @@ export function validatePartSearch(
     plano: search.plano === true || search.plano === "true" ? true : undefined,
     drawingQ: typeof search.drawingQ === "string" ? search.drawingQ : undefined,
     drawingFile: text(search.drawingFile),
+    sourceLocator: text(search.sourceLocator),
+    sourceQ: typeof search.sourceQ === "string" ? search.sourceQ : undefined,
+    sourceCavity: text(search.sourceCavity),
+    sourceValue: text(search.sourceValue),
     view:
       search.view === "correcciones" || search.tab === "correcciones"
         ? "correcciones"

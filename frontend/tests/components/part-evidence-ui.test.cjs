@@ -384,9 +384,7 @@ test("the piece's drawing file opens its own page and Back restores the piece", 
     "/parts/part-one?cota=N170&view=correcciones&interval=03-05",
   )
   const previous = await state(page)
-  await page
-    .getByRole("link", { name: "Plano 2D: DRW_3212.pdf", exact: true })
-    .click()
+  await page.getByRole("link", { name: "DRW_3212.pdf", exact: true }).click()
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "DRW_3212.pdf",
   )
@@ -460,6 +458,27 @@ async function hoverPoint(page, sample, cavity) {
   const position = await pointPosition(page, sample, cavity)
   await page.mouse.move(position.x, position.y)
   return position
+}
+
+async function correctionValue(page, sample, kind, change) {
+  const detail = page.getByRole("region", { name: "Detalle del tramo" })
+  const point = detail.getByRole("button", {
+    name: `Consultar C13 · ${sample} · ${kind}`,
+    exact: true,
+  })
+  await point.scrollIntoViewIfNeeded()
+  const bounds = await point.boundingBox()
+  await page.mouse.move(
+    bounds.x + bounds.width / 2,
+    bounds.y + bounds.height / 2,
+  )
+  await expect(
+    detail
+      .getByRole("tooltip")
+      .getByText(`Variación: ${change} mm`, { exact: true })
+      .first(),
+  ).toBeVisible()
+  await page.mouse.move(0, 0)
 }
 
 async function searchHeader(page, search) {
@@ -570,13 +589,18 @@ test("corrections preserve layout, evaluation and browser history, including the
   const bounds = await page
     .getByRole("region", { name: "Evolución de mediciones" })
     .boundingBox()
+  const documentTop = bounds.y + (await page.evaluate(() => window.scrollY))
   await page.getByRole("button", { name: "Correcciones", exact: true }).click()
   const comparison = page.getByRole("region", {
     name: "Evolución con correcciones",
   })
   await expect(comparison).toBeVisible()
   assert.equal((await state(page)).view, "correcciones")
-  assert.equal((await comparison.boundingBox()).y, bounds.y)
+  assert.equal(
+    (await comparison.boundingBox()).y +
+      (await page.evaluate(() => window.scrollY)),
+    documentTop,
+  )
   await expect(
     page.getByRole("combobox", { name: "Elemento", exact: true }),
   ).toHaveText("B2")
@@ -596,12 +620,14 @@ test("corrections preserve layout, evaluation and browser history, including the
     page.getByRole("tooltip").getByText("intern.08", { exact: true }),
   ).toBeVisible()
   await page.mouse.move(0, 0)
+  await correctionValue(page, "intern.03", "Predicción", "+0,500")
+  await page
+    .getByRole("region", { name: "Detalle del tramo" })
+    .getByRole("button", { name: "C14", exact: true })
+    .click()
   await expect(
-    page
-      .getByRole("region", { name: "Efecto previsto" })
-      .getByText("+0,500 mm", { exact: true }),
-  ).toBeVisible()
-  await choose(page, "Cavidad", "C14")
+    comparison.getByRole("button", { name: "C14", exact: true }),
+  ).toHaveAttribute("aria-pressed", "false")
   const selectedCorrection = await state(page)
   await searchHeader(page, page.getByRole("combobox", { name: "Buscar cota" }))
   await page.screenshot({
@@ -695,7 +721,9 @@ test("mobile layout and touch values remain within the viewport", async (t) => {
   const page = await mount(t, "/parts/part-one?cota=N170", true)
   const position = await pointPosition(page, "intern.03")
   await page.touchscreen.tap(position.x, position.y)
-  await expect(page.getByRole("tooltip")).toBeVisible()
+  await expect(
+    page.getByRole("dialog", { name: "Valores de intern.03" }),
+  ).toBeVisible()
   await page.screenshot({
     path: path.join(artifacts, "measurements-mobile.png"),
     fullPage: true,
@@ -705,8 +733,12 @@ test("mobile layout and touch values remain within the viewport", async (t) => {
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   )
-  await page.touchscreen.tap(position.x, position.y + 60)
-  await expect(page.getByRole("tooltip")).toHaveCount(0)
+  await page
+    .getByRole("heading", { name: "Evolución de mediciones", exact: true })
+    .tap()
+  await expect(
+    page.getByRole("dialog", { name: "Valores de intern.03" }),
+  ).toHaveCount(0)
   await page.getByRole("button", { name: "Correcciones", exact: true }).tap()
   await expect(
     page.getByRole("region", { name: "Evolución con correcciones" }),
@@ -719,7 +751,7 @@ test("mobile layout and touch values remain within the viewport", async (t) => {
   await expect(
     page
       .getByRole("region", { name: "Detalle del tramo" })
-      .getByText(/no hay una acción vinculada a N170/),
+      .getByText(/No hay una acción vinculada a N170/),
   ).toBeVisible()
   const current = await state(page)
   await page.getByRole("button", { name: "Plano", exact: true }).tap()
@@ -842,7 +874,7 @@ test("N170 describes the first proposal and keeps later intervals without invent
     chart.getByRole("group", { name: "Tramos entre muestreos" }),
   ).toBeVisible()
   assert.equal(await chart.getByRole("button", { name: /^Tramo / }).count(), 3)
-  assert.equal(await detail.getByRole("img").count(), 0)
+  assert.equal(await detail.getByRole("img").count(), 1)
   assert.equal(await detail.getByRole("link").count(), 0)
   assert.equal(await detail.locator("details").count(), 0)
   assert.equal(
@@ -850,35 +882,27 @@ test("N170 describes the first proposal and keeps later intervals without invent
     0,
   )
   await expect(detail.getByText(/expulsores de Ø4 mm/)).toBeVisible()
-  await expect(
-    detail
-      .getByRole("region", { name: "Efecto previsto" })
-      .getByText("+0,500 mm", { exact: true }),
-  ).toBeVisible()
-  await expect(
-    detail
-      .getByRole("region", { name: "Cambio medido" })
-      .getByText("+0,547 mm", { exact: true }),
-  ).toBeVisible()
+  await correctionValue(page, "intern.03", "Predicción", "+0,500")
+  await correctionValue(page, "intern.03", "Cambio medido", "+0,547")
+  assert.deepEqual(
+    await detail.locator("svg text[y='263']").allTextContents(),
+    ["intern.01", "intern.03"],
+  )
   await page
     .getByRole("button", { name: "Tramo intern.03 a intern.05" })
     .click()
   await expect(
-    detail.getByText(/Existe un plan.*no hay una acción vinculada a N170/),
+    detail.getByText("No hay una acción vinculada a N170."),
   ).toBeVisible()
   await expect(
     detail.getByText("Sin previsión documentada para esta evaluación."),
   ).toBeVisible()
-  await expect(
-    detail
-      .getByRole("region", { name: "Cambio medido" })
-      .getByText("+0,001 mm", { exact: true }),
-  ).toBeVisible()
+  await correctionValue(page, "intern.05", "Cambio medido", "+0,001")
   await page
     .getByRole("button", { name: "Tramo intern.05 a intern.08" })
     .click()
   await expect(
-    detail.getByText(/No hay una actuación documentada/),
+    detail.getByText("No hay una acción vinculada a N170."),
   ).toBeVisible()
   await expect(
     page.getByRole("button", { name: "Tramo intern.03 a intern.05" }),
@@ -929,16 +953,8 @@ test("both documented plans of a cota are accessible without assigning unvalidat
   await expect(
     detail.getByText(/reducir 0,305 mm en diámetro total/),
   ).toBeVisible()
-  await expect(
-    detail
-      .getByRole("region", { name: "Efecto previsto" })
-      .getByText("−0,305 mm", { exact: true }),
-  ).toBeVisible()
-  await expect(
-    detail
-      .getByRole("region", { name: "Cambio medido" })
-      .getByText("−0,335 mm", { exact: true }),
-  ).toBeVisible()
+  await correctionValue(page, "intern.05", "Predicción", "−0,305")
+  await correctionValue(page, "intern.05", "Cambio medido", "−0,335")
   await page
     .getByRole("button", { name: "Tramo intern.01 a intern.03" })
     .click()
@@ -948,11 +964,7 @@ test("both documented plans of a cota are accessible without assigning unvalidat
   await expect(
     detail.getByText("Sin previsión documentada para esta evaluación."),
   ).toBeVisible()
-  await expect(
-    detail
-      .getByRole("region", { name: "Cambio medido" })
-      .getByText("−0,089 mm", { exact: true }),
-  ).toBeVisible()
+  await correctionValue(page, "intern.03", "Cambio medido", "−0,089")
 })
 
 test("importing files is confined to management and requires an explicit click", async (t) => {
@@ -990,6 +1002,131 @@ test("unfinished numbers suggest cotas and the selected number stays only in the
   await search.fill("N113")
   await page.keyboard.press("Enter")
   await expect(search).toHaveValue("N113")
+})
+
+for (const mobile of [false, true]) {
+  test(`pinned measurements open their raw CSV and restore the consultation (${mobile ? "mobile" : "desktop"})`, async (t) => {
+    const page = await mount(t, "/parts/part-one?cota=N170", mobile)
+    const previous = await state(page)
+    const position = await pointPosition(page, "intern.03")
+    if (mobile) await page.touchscreen.tap(position.x, position.y)
+    else await page.mouse.click(position.x, position.y)
+    const dialog = page.getByRole("dialog", { name: "Valores de intern.03" })
+    await expect(dialog).toBeVisible()
+    await expect(
+      dialog.getByRole("button", { name: /^Ver origen / }),
+    ).toHaveCount(4)
+    await page.mouse.move(0, 0)
+    await expect(dialog).toBeVisible()
+    await dialog
+      .getByRole("button", { name: "Ver origen C13 · 3,976 mm", exact: true })
+      .click()
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "measurement.csv",
+    )
+    const search = page.getByRole("textbox", { name: "Buscar en el archivo" })
+    await expect(search).toHaveValue("Línea 2 · N170")
+    await expect(page.locator("td[aria-current='true']")).toHaveText("3.976")
+    await search.fill("3.977")
+    await expect(page.locator("td[aria-current='true']")).toHaveText("3.977")
+    await search.fill("inexistente")
+    await expect(page.getByRole("status")).toHaveText("Sin resultados")
+    await page
+      .getByRole("button", { name: "Volver al origen de la medición" })
+      .click()
+    await expect(page.locator("td[aria-current='true']")).toHaveText("3.976")
+    await page.screenshot({
+      path: path.join(
+        artifacts,
+        `source-csv-${mobile ? "mobile" : "desktop"}.png`,
+      ),
+      fullPage: true,
+    })
+    assert.ok(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    )
+    await page.evaluate(() => window.review.back())
+    await expect(
+      page.getByRole("combobox", { name: "Buscar cota" }),
+    ).toHaveValue("N170")
+    assert.deepEqual(await state(page), previous)
+    const point = page.getByRole("button", {
+      name: "Consultar C13 · intern.03",
+      exact: true,
+    })
+    await point.focus()
+    await point.press("Enter")
+    await expect(dialog).toBeVisible()
+    await point.press("Escape")
+    await expect(dialog).toHaveCount(0)
+  })
+}
+
+test("Excel origin selects its sheet and cell beyond the first page", async (t) => {
+  const page = await mount(t)
+  await page.evaluate(async () => {
+    window.review.study.catalog.entries.find(
+      (e) => e.id === "N170",
+    ).series[0].records.c13["03"].source = {
+      file_id: "excel",
+      path: "report.xlsx",
+      locator: "DR_PAR!H90",
+    }
+    await window.review.refetchEvidence()
+  })
+  const position = await pointPosition(page, "intern.03")
+  await page.mouse.click(position.x, position.y)
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Ver origen C13 · 3,976 mm" })
+    .click()
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "report.xlsx",
+  )
+  await expect(
+    page.getByRole("textbox", { name: "Buscar en el archivo" }),
+  ).toHaveValue("DR_PAR!H90")
+  await expect(page.getByRole("tab", { name: "DR_PAR" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  )
+  await expect(page.locator("td[aria-current='true']")).toHaveAttribute(
+    "title",
+    "DR_PAR!H90",
+  )
+  await expect(page.locator("td[aria-current='true']")).toHaveText("3.976")
+  await page.getByRole("tab", { name: "INTRO" }).click()
+  await expect(
+    page.getByRole("cell", { name: "Informe", exact: true }),
+  ).toBeVisible()
+  await page
+    .getByRole("textbox", { name: "Buscar en el archivo" })
+    .fill("3.976")
+  await expect(page.getByRole("tab", { name: "DR_PAR" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  )
+  await page.screenshot({
+    path: path.join(artifacts, "source-excel-desktop.png"),
+    fullPage: true,
+  })
+})
+
+test("source preview shows an unavailable original without attributing another file", async (t) => {
+  const page = await mount(t)
+  await page.evaluate(() => {
+    window.review.tableError = "El original ha cambiado."
+  })
+  const position = await pointPosition(page, "intern.03")
+  await page.mouse.click(position.x, position.y)
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Ver origen C13 · 3,976 mm" })
+    .click()
+  await expect(page.getByRole("alert")).toHaveText("El original ha cambiado.")
+  await expect(page.getByRole("table")).toHaveCount(0)
 })
 
 test("a tooltip does not include distant cavities from the same sampling", async (t) => {

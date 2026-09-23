@@ -13,7 +13,11 @@ import {
 } from "./consultationEntries"
 import { correctionTimeline } from "./correctionTimeline"
 import { DrawingToggle } from "./DrawingToggle"
-import { MeasurementPlot, type PlotLine } from "./MeasurementPlot"
+import {
+  MeasurementPlot,
+  type PlotLine,
+  type PlotPoint,
+} from "./MeasurementPlot"
 import {
   findEntries,
   type PartSearch,
@@ -27,6 +31,7 @@ export function Measurements({
   search,
   onChange,
   onDrawing,
+  onSource,
   characteristics = [],
   features = [],
   status,
@@ -42,6 +47,7 @@ export function Measurements({
   search: PartSearch
   onChange: (values: Partial<PartSearch>, replace?: boolean) => void
   onDrawing?: (code: string) => void
+  onSource?: (point: PlotPoint, cavity: string) => void
 }) {
   const scope = consultationScope(features, search)
   const filtered = hasFeatureFilters(search)
@@ -77,9 +83,6 @@ export function Measurements({
     intervals.find((item) => item.comparison) ??
     intervals.find((item) => item.actions.length) ??
     intervals[0]
-  const cavity = visible.includes(search.cavity ?? "")
-    ? search.cavity!
-    : visible[0]
   const labels = samples.map((sample) => `intern.${sample}`)
   const lines: PlotLine[] = (study?.cavities ?? []).map((cavity) => ({
     name: cavity,
@@ -260,6 +263,7 @@ export function Measurements({
               lines={lines}
               unit={selected.series.unit}
               visible={visible}
+              onSource={onSource}
               intervals={correctionMode ? intervals : undefined}
               selectedInterval={correctionMode ? interval?.id : undefined}
               onInterval={(id) =>
@@ -275,9 +279,11 @@ export function Measurements({
               interval={interval}
               cota={code}
               evaluation={selected}
-              cavities={visible}
-              cavity={cavity}
-              onCavity={(cavity) => onChange({ cavity }, true)}
+              cavities={study?.cavities ?? []}
+              visible={visible}
+              onVisible={(names) =>
+                onChange({ cavities: names.join(",") }, true)
+              }
               actionId={search.action}
               onAction={(action) => onChange({ action }, true)}
             />

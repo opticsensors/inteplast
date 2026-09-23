@@ -40,6 +40,7 @@ from app.models import (
     User,
 )
 from app.previews import delete_preview, preview_key, preview_path, request_preview
+from app.source_tables import SourceTable, read_table
 
 router = APIRouter(prefix="/files", tags=["files"])
 
@@ -201,6 +202,27 @@ def relink_file(
         )
     session.refresh(document)
     return document
+
+
+@router.get("/{file_id}/table", response_model=SourceTable)
+def read_source_table(
+    session: SessionDep, _current_user: CurrentUser, file_id: uuid.UUID
+) -> SourceTable:
+    document = session.get(StoredFile, file_id)
+    if not document:
+        raise HTTPException(404, "Archivo no encontrado.")
+    path = document_path(document)
+    try:
+        version = stamp(path)
+        table = read_table(path, document.filename)
+        if stamp(path) != version:
+            raise HTTPException(
+                409,
+                "El original ha cambiado durante la lectura. Actualiza los datos de la pieza.",
+            )
+        return table
+    except OSError as error:
+        raise HTTPException(503, "No se puede acceder al archivo original.") from error
 
 
 @router.get("/{file_id}/status", response_model=FileStatus)

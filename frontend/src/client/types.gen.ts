@@ -669,6 +669,15 @@ export type SourceListing = {
     count: number;
 };
 
+export type SourceSheet = {
+    name: string;
+    rows: Array<Array<(string)>>;
+};
+
+export type SourceTable = {
+    sheets: Array<SourceSheet>;
+};
+
 export type Token = {
     access_token: string;
     token_type?: string;
@@ -985,6 +994,12 @@ export type FilesRelinkFileData = {
 };
 
 export type FilesRelinkFileResponse = (FilePublic);
+
+export type FilesReadSourceTableData = {
+    fileId: string;
+};
+
+export type FilesReadSourceTableResponse = (SourceTable);
 
 export type FilesFileStatusData = {
     fileId: string;

@@ -29,7 +29,11 @@ const part = {
 }
 const samples = ["01", "03", "05", "08"]
 const cavities = ["c13", "c14", "c15", "c16"]
-const source = { file_id: "source", path: "measurement.csv", locator: "CMM 16" }
+const source = {
+  file_id: "source",
+  path: "measurement.csv",
+  locator: "Línea 2 · N170",
+}
 function series(id, block, idx, base = 3.975) {
   return {
     id,
@@ -263,6 +267,43 @@ study.cases.N170.description =
 study.cases.N161.description =
   "El plan propone reducir 0,305 mm en diámetro total y conservar la redondez."
 window.review = {
+  sourceTables: {
+    source: {
+      sheets: [
+        {
+          name: "CSV",
+          rows: [
+            ["N170", "", "", "", "", "", "c13", "c14", "c15", "c16"],
+            [
+              "16",
+              "GX",
+              "",
+              "4",
+              "0",
+              "-0.1",
+              "3.976",
+              "3.977",
+              "3.978",
+              "3.979",
+            ],
+          ],
+        },
+      ],
+    },
+    excel: {
+      sheets: [
+        { name: "INTRO", rows: [["Informe"]] },
+        {
+          name: "DR_PAR",
+          rows: Array.from({ length: 100 }, (_, row) =>
+            row === 89
+              ? ["N170", "", "", "4", "0", "-0.1", "CMM", "3.976"]
+              : [],
+          ),
+        },
+      ],
+    },
+  },
   accessRequests: [],
   sourceRequests: [],
   requests: [],
@@ -351,6 +392,7 @@ const features = [
   {
     id: "rib",
     name: "Rib",
+    assets: [],
     category: "rib",
     tags: ["stiffness"],
     characteristics: [],
@@ -358,6 +400,7 @@ const features = [
   {
     id: "seal",
     name: "Seal",
+    assets: [],
     category: "hole",
     tags: ["sealing"],
     characteristics: [characteristic("N113")],
@@ -465,6 +508,21 @@ EvidenceService.readPartEvidence = async ({ partId, revision, snapshotId }) => {
     import_available: true,
     drawing_reference_set: window.review.drawingRemoved ?? false,
     documents: [
+      {
+        id: "source",
+        filename: "measurement.csv",
+        content_type: "text/csv",
+        version: "v1",
+        source: "upload",
+      },
+      {
+        id: "excel",
+        filename: "report.xlsx",
+        content_type:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        version: "v1",
+        source: "upload",
+      },
       {
         id: "linked-drawing",
         filename: "3212-07.pdf",

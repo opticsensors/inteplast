@@ -3409,6 +3409,43 @@ export const SourceListingSchema = {
     title: 'SourceListing'
 } as const;
 
+export const SourceSheetSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        rows: {
+            items: {
+                items: {
+                    type: 'string'
+                },
+                type: 'array'
+            },
+            type: 'array',
+            title: 'Rows'
+        }
+    },
+    type: 'object',
+    required: ['name', 'rows'],
+    title: 'SourceSheet'
+} as const;
+
+export const SourceTableSchema = {
+    properties: {
+        sheets: {
+            items: {
+                '$ref': '#/components/schemas/SourceSheet'
+            },
+            type: 'array',
+            title: 'Sheets'
+        }
+    },
+    type: 'object',
+    required: ['sheets'],
+    title: 'SourceTable'
+} as const;
+
 export const TokenSchema = {
     properties: {
         access_token: {

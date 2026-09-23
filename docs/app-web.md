@@ -346,6 +346,7 @@ API autenticada de mediciones (prefijo `/api/v1`):
 | `POST /evidence/parts/{id}/measurements/import` | Verificar otra vez contexto y hashes, incorporar cotas y conservar versiones. Requiere pieza vinculada a un feature y confirmación de las sustituciones. |
 | `GET /evidence/parts/{id}/measurements/history` | Historial de importaciones, con revisiones y versión vigente por muestreo/cavidad. |
 | `GET /evidence/parts/{id}?revision=…&snapshot_id=…` | Consulta de la revisión elegida o del estado guardado hasta una importación concreta; devuelve `measurement_revisions`. |
+| `GET /files/{id}/table` | Vista autenticada de las celdas originales de CSV/XLS/XLSX, con hojas y coordenadas, sin modificar archivos ni recalcular fórmulas. Verifica que el original local siga siendo la versión registrada. |
 
 La migración `h39c25ebfa07` añade `MeasurementImport` (`measurement_models.py`). No
 importa originales durante la migración. La primera importación CSV conserva también

@@ -226,6 +226,26 @@ export function MetrologyPage({
                 }
         }
         onChange={change}
+        onSource={
+          partId
+            ? (point, cavity) => {
+                if (!point.source?.file_id) return
+                void navigate({
+                  to: "/parts/$partId/fichero/$fileId",
+                  params: { partId, fileId: point.source.file_id },
+                  search: {
+                    ...consultationSearch,
+                    sourceLocator: point.source.locator,
+                    sourceQ: point.source.locator,
+                    sourceCavity: cavity,
+                    sourceValue: String(
+                      point.original_value ?? point.value ?? "",
+                    ),
+                  },
+                })
+              }
+            : undefined
+        }
         onDrawing={
           drawing && partId
             ? (code) =>
