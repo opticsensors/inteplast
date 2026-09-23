@@ -181,6 +181,7 @@ def publish_study(
             session.add(characteristic)
     result["measurement_revision"] = "06"
     result["adapter"] = "3212 / CSV CMM + DR(100%) + planes 1 y 2"
+    result["source_files"] = sorted(originals)
     return result
 
 

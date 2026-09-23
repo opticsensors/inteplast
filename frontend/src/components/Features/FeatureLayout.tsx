@@ -43,30 +43,39 @@ export function FeatureSection({
   title,
   icon,
   count,
+  actions,
   children,
 }: {
   title: string
   icon: ReactNode
   count?: number
+  actions?: ReactNode
   children: ReactNode
 }) {
+  const heading = (
+    <h2 className="mb-4 flex items-center gap-2.5 text-lg font-semibold">
+      {icon}
+      {title}
+      {count !== undefined && (
+        <Badge variant="secondary" className="rounded-full px-2.5 tabular-nums">
+          {count}
+        </Badge>
+      )}
+    </h2>
+  )
   return (
     <section
       aria-label={title}
       className="min-w-0 rounded-lg border bg-card p-4 sm:p-5"
     >
-      <h2 className="mb-4 flex items-center gap-2.5 text-lg font-semibold">
-        {icon}
-        {title}
-        {count !== undefined && (
-          <Badge
-            variant="secondary"
-            className="rounded-full px-2.5 tabular-nums"
-          >
-            {count}
-          </Badge>
-        )}
-      </h2>
+      {actions ? (
+        <div className="flex items-start justify-between gap-3">
+          {heading}
+          {actions}
+        </div>
+      ) : (
+        heading
+      )}
       {children}
     </section>
   )

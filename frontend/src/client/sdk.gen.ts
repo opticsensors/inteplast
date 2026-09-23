@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AssistantStatusResponse, AssistantChatData, AssistantChatResponse, CatalogSearchCatalogData, CatalogSearchCatalogResponse, CatalogReadPartDetailData, CatalogReadPartDetailResponse, CatalogSavePartCoverData, CatalogSavePartCoverResponse, EvidenceReadMetrologyFiltersResponse, EvidenceReadMetrologyData, EvidenceReadMetrologyResponse, EvidenceReadPartEvidenceData, EvidenceReadPartEvidenceResponse, EvidenceImportPartEvidenceData, EvidenceImportPartEvidenceResponse, EvidenceReadFeatureEvidenceData, EvidenceReadFeatureEvidenceResponse, EvidenceAssignCharacteristicData, EvidenceAssignCharacteristicResponse, EvidenceUnassignCharacteristicData, EvidenceUnassignCharacteristicResponse, EvidenceReadDrawingIndexData, EvidenceReadDrawingIndexResponse, EvidenceIndexDrawingData, EvidenceIndexDrawingResponse, EvidenceReviewDrawingLocationData, EvidenceReviewDrawingLocationResponse, EvidencePreviewMeasurementsData, EvidencePreviewMeasurementsResponse, EvidenceImportMeasurementsData, EvidenceImportMeasurementsResponse, EvidenceMeasurementHistoryData, EvidenceMeasurementHistoryResponse, FeaturesReadFeaturesData, FeaturesReadFeaturesResponse, FeaturesCreateFeatureData, FeaturesCreateFeatureResponse, FeaturesReadFeatureFiltersResponse, FeaturesReadFeatureData, FeaturesReadFeatureResponse, FeaturesUpdateFeatureData, FeaturesUpdateFeatureResponse, FeaturesDeleteFeatureData, FeaturesDeleteFeatureResponse, FeaturesReorderFeatureNotesData, FeaturesReorderFeatureNotesResponse, FeaturesReorderFeatureAssetsData, FeaturesReorderFeatureAssetsResponse, FeaturesCreateFeatureNoteData, FeaturesCreateFeatureNoteResponse, FeaturesUpdateFeatureNoteData, FeaturesUpdateFeatureNoteResponse, FeaturesDeleteFeatureNoteData, FeaturesDeleteFeatureNoteResponse, FeaturesReorderFeaturePartsData, FeaturesReorderFeaturePartsResponse, FeaturesLinkFeaturePartData, FeaturesLinkFeaturePartResponse, FeaturesUnlinkFeaturePartData, FeaturesUnlinkFeaturePartResponse, FeaturesCreateFeatureAssetData, FeaturesCreateFeatureAssetResponse, FeaturesUpdateFeatureAssetData, FeaturesUpdateFeatureAssetResponse, FeaturesDeleteFeatureAssetData, FeaturesDeleteFeatureAssetResponse, FilesListSourceData, FilesListSourceResponse, FilesReferenceFileData, FilesReferenceFileResponse, FilesRelinkFileData, FilesRelinkFileResponse, FilesFileStatusData, FilesFileStatusResponse, FilesUploadFileData, FilesUploadFileResponse, FilesCreateFileAccessUrlData, FilesCreateFileAccessUrlResponse, FilesPreparePreviewData, FilesPreparePreviewResponse, FilesReadPreviewData, FilesReadPreviewResponse, FilesReadFileData, FilesReadFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PartsDiscoverPartFolderData, PartsDiscoverPartFolderResponse, PartsSetupPartData, PartsSetupPartResponse, PartsRefreshPartDataData, PartsRefreshPartDataResponse, PartsReadPartsData, PartsReadPartsResponse, PartsCreatePartData, PartsCreatePartResponse, PartsCreatePartFromFolderData, PartsCreatePartFromFolderResponse, PartsUpdatePartData, PartsUpdatePartResponse, PartsDeletePartData, PartsDeletePartResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { AssistantStatusResponse, AssistantChatData, AssistantChatResponse, CatalogSearchCatalogData, CatalogSearchCatalogResponse, CatalogReadPartDetailData, CatalogReadPartDetailResponse, CatalogSavePartCoverData, CatalogSavePartCoverResponse, EvidenceReadMetrologyFiltersResponse, EvidenceReadMetrologyData, EvidenceReadMetrologyResponse, EvidenceReadPartEvidenceData, EvidenceReadPartEvidenceResponse, EvidenceImportPartEvidenceData, EvidenceImportPartEvidenceResponse, EvidenceReadFeatureEvidenceData, EvidenceReadFeatureEvidenceResponse, EvidenceAssignCharacteristicData, EvidenceAssignCharacteristicResponse, EvidenceUnassignCharacteristicData, EvidenceUnassignCharacteristicResponse, EvidenceReadDrawingIndexData, EvidenceReadDrawingIndexResponse, EvidenceIndexDrawingData, EvidenceIndexDrawingResponse, EvidenceReviewDrawingLocationData, EvidenceReviewDrawingLocationResponse, EvidencePreviewMeasurementsData, EvidencePreviewMeasurementsResponse, EvidenceImportMeasurementsData, EvidenceImportMeasurementsResponse, EvidenceMeasurementHistoryData, EvidenceMeasurementHistoryResponse, FeaturesReadFeaturesData, FeaturesReadFeaturesResponse, FeaturesCreateFeatureData, FeaturesCreateFeatureResponse, FeaturesReadFeatureFiltersResponse, FeaturesReadFeatureData, FeaturesReadFeatureResponse, FeaturesUpdateFeatureData, FeaturesUpdateFeatureResponse, FeaturesDeleteFeatureData, FeaturesDeleteFeatureResponse, FeaturesReorderFeatureNotesData, FeaturesReorderFeatureNotesResponse, FeaturesReorderFeatureAssetsData, FeaturesReorderFeatureAssetsResponse, FeaturesCreateFeatureNoteData, FeaturesCreateFeatureNoteResponse, FeaturesUpdateFeatureNoteData, FeaturesUpdateFeatureNoteResponse, FeaturesDeleteFeatureNoteData, FeaturesDeleteFeatureNoteResponse, FeaturesReorderFeaturePartsData, FeaturesReorderFeaturePartsResponse, FeaturesLinkFeaturePartData, FeaturesLinkFeaturePartResponse, FeaturesUnlinkFeaturePartData, FeaturesUnlinkFeaturePartResponse, FeaturesCreateFeatureAssetData, FeaturesCreateFeatureAssetResponse, FeaturesUpdateFeatureAssetData, FeaturesUpdateFeatureAssetResponse, FeaturesDeleteFeatureAssetData, FeaturesDeleteFeatureAssetResponse, FilesListSourceData, FilesListSourceResponse, FilesReferenceFileData, FilesReferenceFileResponse, FilesRelinkFileData, FilesRelinkFileResponse, FilesFileStatusData, FilesFileStatusResponse, FilesUploadFileData, FilesUploadFileResponse, FilesCreateFileAccessUrlData, FilesCreateFileAccessUrlResponse, FilesPreparePreviewData, FilesPreparePreviewResponse, FilesReadPreviewData, FilesReadPreviewResponse, FilesReadFileData, FilesReadFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PartsReadPartDataReportData, PartsReadPartDataReportResponse, PartsReadPartDataData, PartsReadPartDataResponse, PartsRegisterPartData, PartsRegisterPartResponse, PartsDiscoverPartFolderData, PartsDiscoverPartFolderResponse, PartsSetupPartData, PartsSetupPartResponse, PartsRefreshPartDataData, PartsRefreshPartDataResponse, PartsReadPartsData, PartsReadPartsResponse, PartsCreatePartData, PartsCreatePartResponse, PartsCreatePartFromFolderData, PartsCreatePartFromFolderResponse, PartsUpdatePartData, PartsUpdatePartResponse, PartsDeletePartData, PartsDeletePartResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class AssistantService {
     /**
@@ -1251,6 +1251,65 @@ export class LoginService {
 }
 
 export class PartsService {
+    /**
+     * Read Part Data Report
+     * @param data The data for the request.
+     * @param data.partId
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static readPartDataReport(data: PartsReadPartDataReportData): CancelablePromise<PartsReadPartDataReportResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/parts/{part_id}/read-data',
+            path: {
+                part_id: data.partId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Read Part Data
+     * @param data The data for the request.
+     * @param data.partId
+     * @returns PartRefreshResult Successful Response
+     * @throws ApiError
+     */
+    public static readPartData(data: PartsReadPartDataData): CancelablePromise<PartsReadPartDataResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/parts/{part_id}/read-data',
+            path: {
+                part_id: data.partId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Register Part
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns PartPublic Successful Response
+     * @throws ApiError
+     */
+    public static registerPart(data: PartsRegisterPartData): CancelablePromise<PartsRegisterPartResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/parts/register',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
     /**
      * Discover Part Folder
      * @param data The data for the request.

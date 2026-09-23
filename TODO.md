@@ -23,7 +23,7 @@ ya que aun no hemos seleccinado cta, pero quiero que el grafico con sus dimebnsi
 - [ ] añadir la foto de la pieza de verdad en ficheros vinculados a una pieza. 
 
 
-- [ ] quiero consistencia entre features (tarjeta buena y que no tiens que modificar) y pieza (tarjetas que tienes que cambiar, especialmente la parte de edicion, que flojea un poco)
+- [x] quiero consistencia entre features (tarjeta buena y que no tiens que modificar) y pieza (tarjetas que tienes que cambiar, especialmente la parte de edicion, que flojea un poco)
 Al darle a nueva fature se me abre una nueva ventana con una tarjeta de feature vacia, y con mini titulos encima los rectangulos vacios que me dicen que va alli. titulo, descripcion, tags, etc. (eso no pasa en la tarjeta de pieza...)
 
 quiero que nueva pieza haga lo mismo. pero pieza requiere de un paso previo: sleccionar la carpeta donde se encuentran todos sus datos. 

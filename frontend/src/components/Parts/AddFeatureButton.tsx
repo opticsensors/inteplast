@@ -18,7 +18,7 @@ export function AddFeatureButton({
 }: {
   linkedIds: string[]
   disabled: boolean
-  onSelect: (id: string) => void
+  onSelect: (id: string, name: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
@@ -98,7 +98,7 @@ export function AddFeatureButton({
               ref={index === 0 ? firstFeature : undefined}
               aria-label={feature.name}
               disabled={disabled || catalog.isLoading || catalog.isError}
-              onSelect={() => onSelect(feature.id)}
+              onSelect={() => onSelect(feature.id, feature.name)}
             >
               <span className="truncate">{feature.name}</span>
             </DropdownMenuItem>

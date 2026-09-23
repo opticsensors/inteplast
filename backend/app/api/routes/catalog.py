@@ -25,7 +25,6 @@ from app.knowledge_models import (
 from app.models import (
     AssetKind,
     Feature,
-    FeatureAsset,
     FeatureCategory,
     FeaturePublic,
     FilePublic,
@@ -33,7 +32,7 @@ from app.models import (
     PartPublic,
     StoredFile,
 )
-from app.part_setup import reference_choices, references
+from app.part_files import PartFilePublic, primary_files, read_files
 
 router = APIRouter(tags=["catalog"])
 
@@ -54,6 +53,7 @@ class PartDetailPublic(BaseModel):
     part: PartCardPublic
     features: list[FeaturePublic]
     references: list[PartReferencePublic]
+    files: list[PartFilePublic] = []
 
 
 class CotaSearchResult(BaseModel):
@@ -81,18 +81,7 @@ class PartCoverRequest(BaseModel):
 
 
 def part_references(session: SessionDep, part_id: uuid.UUID) -> dict[str, StoredFile]:
-    result = references(session, part_id)
-    chosen = reference_choices(session, part_id)
-    # Older pieces store their CAD in the feature assets. Prefer the explicit piece reference.
-    for asset, document in session.exec(
-        select(FeatureAsset, StoredFile)
-        .join(StoredFile, col(FeatureAsset.file_id) == StoredFile.id)
-        .where(FeatureAsset.part_id == part_id)
-        .order_by(col(FeatureAsset.position), col(FeatureAsset.id))
-    ).all():
-        if asset.kind not in chosen:
-            result.setdefault(AssetKind(asset.kind).value, document)
-    return result
+    return primary_files(session, part_id)
 
 
 def part_card(session: SessionDep, part: Part, count: int) -> PartCardPublic:
@@ -295,6 +284,7 @@ def read_part_detail(
     )
     return PartDetailPublic(
         part=part_card(session, part, count),
+        files=read_files(session, part),
         features=[FeaturePublic.model_validate(f) for f in features],
         references=[
             PartReferencePublic(

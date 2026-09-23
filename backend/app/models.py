@@ -252,6 +252,8 @@ class AssetKind(str, Enum):
 class PartBase(SQLModel):
     code: str = Field(min_length=1, max_length=64, unique=True, index=True)
     name: str | None = Field(default=None, max_length=255)
+    description: str | None = Field(default=None, max_length=2000)
+    customer: str | None = Field(default=None, max_length=255)
     # Relative to the configured source; never an absolute workstation path.
     folder_path: str | None = Field(
         default=None, max_length=2048, unique=True, index=True
@@ -275,11 +277,26 @@ class ReferenceChoice(BaseModel):
     source_version: str | None = None
 
 
+PartFileKind = Literal["part", "scan", "mold", "drawing", "moldflow", "document"]
+
+
+class PartFileInput(BaseModel):
+    file_id: uuid.UUID | None = None
+    path: str | None = Field(default=None, max_length=2048)
+    source_version: str | None = None
+    kind: PartFileKind
+    name: str = Field(min_length=1, max_length=255)
+    primary: bool = False
+
+
 class PartUpdate(SQLModel):
     code: str = Field(default=None, min_length=1, max_length=64)
     name: str | None = Field(default=None, max_length=255)
+    description: str | None = Field(default=None, max_length=2000)
+    customer: str | None = Field(default=None, max_length=255)
     folder_path: str | None = Field(default=None, max_length=2048)
     references: list[ReferenceChoice] | None = Field(default=None, max_length=4)
+    files: list[PartFileInput] | None = Field(default=None, max_length=200)
 
 
 class FeaturePartOrder(SQLModel):
@@ -313,6 +330,8 @@ class FeaturePartLink(SQLModel, table=True):
 
 class Part(PartBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    files_managed: bool = False
+    last_read: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     created_at: datetime | None = Field(
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),  # type: ignore

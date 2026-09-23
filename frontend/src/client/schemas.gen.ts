@@ -1542,6 +1542,21 @@ export const FolderDiscoverySchema = {
             type: 'array',
             title: 'Notices',
             default: []
+        },
+        code: {
+            type: 'string',
+            title: 'Code',
+            default: ''
+        },
+        existing_part: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/PartPublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         }
     },
     type: 'object',
@@ -2306,6 +2321,30 @@ export const PartCardPublicSchema = {
             ],
             title: 'Name'
         },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        customer: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Customer'
+        },
         folder_path: {
             anyOf: [
                 {
@@ -2390,6 +2429,30 @@ export const PartCatalogPublicSchema = {
                 }
             ],
             title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        customer: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Customer'
         },
         folder_path: {
             anyOf: [
@@ -2485,6 +2548,30 @@ export const PartCreateSchema = {
             ],
             title: 'Name'
         },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        customer: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Customer'
+        },
         folder_path: {
             anyOf: [
                 {
@@ -2521,6 +2608,14 @@ export const PartDetailPublicSchema = {
             },
             type: 'array',
             title: 'References'
+        },
+        files: {
+            items: {
+                '$ref': '#/components/schemas/PartFilePublic'
+            },
+            type: 'array',
+            title: 'Files',
+            default: []
         }
     },
     type: 'object',
@@ -2596,6 +2691,100 @@ export const PartEvidencePublicSchema = {
     title: 'PartEvidencePublic'
 } as const;
 
+export const PartFileInputSchema = {
+    properties: {
+        file_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'File Id'
+        },
+        path: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2048
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Path'
+        },
+        source_version: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Version'
+        },
+        kind: {
+            type: 'string',
+            enum: ['part', 'scan', 'mold', 'drawing', 'moldflow', 'document'],
+            title: 'Kind'
+        },
+        name: {
+            type: 'string',
+            maxLength: 255,
+            minLength: 1,
+            title: 'Name'
+        },
+        primary: {
+            type: 'boolean',
+            title: 'Primary',
+            default: false
+        }
+    },
+    type: 'object',
+    required: ['kind', 'name'],
+    title: 'PartFileInput'
+} as const;
+
+export const PartFilePublicSchema = {
+    properties: {
+        kind: {
+            type: 'string',
+            enum: ['part', 'scan', 'mold', 'drawing', 'moldflow', 'document'],
+            title: 'Kind'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        primary: {
+            type: 'boolean',
+            title: 'Primary'
+        },
+        path: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Path'
+        },
+        file: {
+            '$ref': '#/components/schemas/FilePublic'
+        }
+    },
+    type: 'object',
+    required: ['kind', 'name', 'primary', 'file'],
+    title: 'PartFilePublic'
+} as const;
+
 export const PartFromFolderSchema = {
     properties: {
         folder_path: {
@@ -2629,6 +2818,30 @@ export const PartPublicSchema = {
                 }
             ],
             title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        customer: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Customer'
         },
         folder_path: {
             anyOf: [
@@ -2706,11 +2919,107 @@ export const PartRefreshResultSchema = {
             type: 'array',
             title: 'Notices',
             default: []
+        },
+        state: {
+            type: 'string',
+            title: 'State',
+            default: 'ready'
+        },
+        files: {
+            items: {
+                '$ref': '#/components/schemas/ReadFileReport'
+            },
+            type: 'array',
+            title: 'Files',
+            default: []
+        },
+        updated_at: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Updated At'
+        },
+        corrections_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Corrections Key'
         }
     },
     type: 'object',
     required: ['measurements'],
     title: 'PartRefreshResult'
+} as const;
+
+export const PartRegistrationSchema = {
+    properties: {
+        folder_path: {
+            type: 'string',
+            maxLength: 2048,
+            minLength: 1,
+            title: 'Folder Path'
+        },
+        name: {
+            type: 'string',
+            maxLength: 255,
+            minLength: 1,
+            title: 'Name'
+        },
+        code: {
+            type: 'string',
+            maxLength: 64,
+            minLength: 1,
+            title: 'Code'
+        },
+        customer: {
+            type: 'string',
+            maxLength: 255,
+            minLength: 1,
+            title: 'Customer'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        files: {
+            items: {
+                '$ref': '#/components/schemas/PartFileInput'
+            },
+            type: 'array',
+            maxItems: 200,
+            title: 'Files'
+        },
+        feature_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            maxItems: 200,
+            title: 'Feature Ids'
+        }
+    },
+    type: 'object',
+    required: ['folder_path', 'name', 'code', 'customer'],
+    title: 'PartRegistration'
 } as const;
 
 export const PartSetupRequestSchema = {
@@ -2772,6 +3081,30 @@ export const PartUpdateSchema = {
             ],
             title: 'Name'
         },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 2000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        customer: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Customer'
+        },
         folder_path: {
             anyOf: [
                 {
@@ -2798,6 +3131,21 @@ export const PartUpdateSchema = {
                 }
             ],
             title: 'References'
+        },
+        files: {
+            anyOf: [
+                {
+                    items: {
+                        '$ref': '#/components/schemas/PartFileInput'
+                    },
+                    type: 'array',
+                    maxItems: 200
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Files'
         }
     },
     type: 'object',
@@ -2846,6 +3194,26 @@ export const PrivateUserCreateSchema = {
     type: 'object',
     required: ['email', 'password', 'full_name'],
     title: 'PrivateUserCreate'
+} as const;
+
+export const ReadFileReportSchema = {
+    properties: {
+        path: {
+            type: 'string',
+            title: 'Path'
+        },
+        group: {
+            type: 'string',
+            title: 'Group'
+        },
+        status: {
+            type: 'string',
+            title: 'Status'
+        }
+    },
+    type: 'object',
+    required: ['path', 'group', 'status'],
+    title: 'ReadFileReport'
 } as const;
 
 export const ReferenceCandidateSchema = {

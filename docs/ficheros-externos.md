@@ -303,12 +303,19 @@ del origen SharePoint. El build estático no implementa esta integración ni Mic
 
 Endpoints autenticados adicionales:
 
-- POST `/parts/discover`: propone nombre y archivos sin registrar la pieza.
-- POST `/parts/setup`: registra/reutiliza la pieza y guarda las referencias revisadas.
-- POST `/parts/{id}/refresh`: incorpora CSV inequívocos, devuelve pendientes y comprueba
-  si puede preparar el estudio de correcciones conocido.
+- POST `/parts/discover`: propone nombre, código y archivos sin registrar la pieza;
+  informa si la carpeta ya está vinculada a otra ficha.
+- POST `/parts/register`: crea la identidad, archivos y features en una transacción.
+  Una carpeta registrada produce conflicto, sin renombrar ni reutilizar su pieza.
+- PUT `/parts/{id}`: guarda la cabecera y la lista `files` juntos. Cada archivo tiene
+  tipo, nombre visible y selección de principal; los nuevos deben estar dentro de la carpeta.
+- POST `/parts/{id}/read-data`: lee mediciones y prepara las correcciones compatibles,
+  guardando un resumen de fuentes y resultado. GET en la misma ruta consulta su progreso
+  sin iniciar otra importación. Los endpoints antiguos `/setup` y `/refresh` permanecen
+  por compatibilidad, pero la interfaz ya no utiliza la modal.
 
-Las referencias usan `PartDocument.kind`: `reference_part`, `reference_scan`,
+La lista editable se guarda en `PartFile`; `PartReference` identifica los principales
+y las ausencias explícitas. Las referencias usan también `PartDocument.kind`: `reference_part`, `reference_scan`,
 `reference_mold`, `reference_drawing`. Una referencia anterior conserva su registro como
 evidencia. Vincular la pieza a un feature crea asociaciones iniciales a sus archivos, sin
 copiar bytes ni sobrescribir filas existentes. El plano elegido se usa en Metrología

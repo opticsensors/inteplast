@@ -347,6 +347,12 @@ export const PartsService = {
   discoverPartFolder: async ({ requestBody }) => ({
     folder_path: requestBody.folder_path,
     name: requestBody.folder_path.split("/").pop(),
+    code: requestBody.folder_path.split("/").pop().split(" ")[0],
+    existing_part: clone(
+      state().parts.find(
+        (part) => part.folder_path === requestBody.folder_path,
+      ) ?? null,
+    ),
     references: ["part", "scan", "mold", "drawing"].map((kind) => ({
       kind,
       path: `${requestBody.folder_path}/${kind}.${kind === "drawing" ? "pdf" : kind === "scan" ? "stl" : "step"}`,
@@ -355,6 +361,51 @@ export const PartsService = {
     })),
     notices: [],
   }),
+  registerPart: async ({ requestBody }) => {
+    state().registrationRequests ??= []
+    state().registrationRequests.push(clone(requestBody))
+    if (state().failRegistration) throw new Error("No se pudo crear la pieza")
+    const part = {
+      ...clone(requestBody),
+      id: `part-${state().parts.length + 1}`,
+    }
+    state().parts.push(part)
+    setPieceFiles(part.id, requestBody.files)
+    for (const featureId of requestBody.feature_ids ?? [])
+      await FeaturesService.linkFeaturePart({ featureId, partId: part.id })
+    return clone(part)
+  },
+  readPartDataReport: async ({ partId }) =>
+    clone(state().readReports?.[partId] ?? null),
+  readPartData: async ({ partId }) => {
+    state().refreshRequests ??= []
+    state().refreshRequests.push(partId)
+    if (state().holdRefresh)
+      await new Promise((resolve) => {
+        state().releaseRefresh = resolve
+      })
+    if (state().failRead) throw new Error("No se pudo leer la carpeta")
+    const report = {
+      state: "ready",
+      imported: 1,
+      skipped: 0,
+      corrections_state: "empty",
+      measurements: { context_key: "test", files: [] },
+      notices: [],
+      updated_at: new Date().toISOString(),
+      files: [
+        {
+          path: "rev.A/measurements.csv",
+          group: "measurements",
+          status: "imported",
+        },
+      ],
+      ...state().nextReadReport,
+    }
+    state().readReports ??= {}
+    state().readReports[partId] = report
+    return clone(report)
+  },
   setupPart: async ({ requestBody }) => {
     const part = await PartsService.createPartFromFolder({ requestBody })
     part.name = requestBody.name
@@ -459,6 +510,7 @@ export const PartsService = {
     )
       throw new Error("No se pudo guardar la pieza")
     const part = state().parts.find((item) => item.id === partId)
+    if (requestBody.files) setPieceFiles(partId, requestBody.files)
     if (requestBody.references) {
       state().partReferences ??= {}
       let references = state().partReferences[partId] ?? []
@@ -528,5 +580,27 @@ export const CatalogService = {
     ),
     features: (await FeaturesService.readFeatures({ partId })).data,
     references: clone(state().partReferences?.[partId] ?? []),
+    files: clone(state().pieceFiles?.[partId]),
   }),
+}
+
+function setPieceFiles(partId, files) {
+  state().pieceFiles ??= {}
+  const previous =
+    state().pieceFiles[partId] ?? state().partReferences?.[partId] ?? []
+  state().pieceFiles[partId] = files.map((item) => ({
+    ...clone(item),
+    file: item.file_id
+      ? previous.find((row) => row.file.id === item.file_id).file
+      : {
+          id: `file-${item.path}`,
+          filename: item.path.split("/").pop(),
+          size: 1024,
+          content_type: "application/octet-stream",
+        },
+  }))
+  state().partReferences ??= {}
+  state().partReferences[partId] = state()
+    .pieceFiles[partId].filter((item) => item.primary)
+    .map(({ kind, file }) => ({ kind, file }))
 }

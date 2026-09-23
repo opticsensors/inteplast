@@ -190,7 +190,30 @@ def update_part(
             raise HTTPException(
                 status_code=409, detail="Ya existe una pieza con ese codigo"
             )
-    changes = part_in.model_dump(exclude_unset=True, exclude={"references"})
+    changes = part_in.model_dump(exclude_unset=True, exclude={"references", "files"})
+    if (
+        part.files_managed
+        and "folder_path" in changes
+        and changes["folder_path"] != part.folder_path
+        and part_in.files is None
+    ):
+        raise HTTPException(
+            422, "Cambia la carpeta junto con sus ficheros desde la ficha de la pieza."
+        )
+    if part_in.files is not None and part_in.references is not None:
+        raise HTTPException(422, "Guarda los ficheros en una sola operación.")
+    if part_in.files is not None:
+        from app.part_files import save_files
+
+        try:
+            save_files(
+                session,
+                part,
+                part_in.files,
+                folder_path=changes.get("folder_path", part.folder_path),
+            )
+        except SourceError as error:
+            raise HTTPException(error.status_code, error.message)
     if part_in.references:
         from app.part_setup import save_references
 

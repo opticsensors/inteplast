@@ -1,12 +1,18 @@
 import { useQuery } from "@tanstack/react-query"
 import { Navigate, useNavigate } from "@tanstack/react-router"
+import { Plus } from "lucide-react"
 import { EvidenceService } from "@/client"
 import { FilterSelect } from "@/components/Common/FilterSelect"
+import { Button } from "@/components/ui/button"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
 import { Measurements } from "./Measurements"
 import { MetrologyFilters } from "./MetrologyFilters"
 import type { PartSearch } from "./measurementSelection"
-import { PartSetupDialog } from "./PartSetupDialog"
+import {
+  PartReadButton,
+  PartReadStatus,
+  usePartReading,
+} from "./PartReadStatus"
 import type { Study } from "./types"
 
 export function MetrologyPage({
@@ -19,6 +25,7 @@ export function MetrologyPage({
   embedded?: boolean
 }) {
   const navigate = useNavigate()
+  const reading = usePartReading(embedded ? undefined : partId)
   // The piece shows all its cotas; catalogue filters no longer scope this page.
   const consultationSearch = embedded
     ? { ...search, feature: undefined, category: undefined, tag: undefined }
@@ -174,12 +181,20 @@ export function MetrologyPage({
           <h1 className="text-2xl font-bold tracking-tight">Metrología</h1>
           <div className="flex flex-wrap gap-2">
             {data?.part && (
-              <PartSetupDialog key={data.part.id} part={data.part} />
+              <PartReadButton
+                reading={reading}
+                folder={data.part.folder_path}
+                editing={false}
+              />
             )}
-            <PartSetupDialog onCreated={(id) => visit(id, {})} />
+            <Button onClick={() => void navigate({ to: "/parts/nueva" })}>
+              <Plus />
+              Nueva pieza
+            </Button>
           </div>
         </div>
       )}
+      {!embedded && data?.part && <PartReadStatus reading={reading} />}
       {data?.refresh_job?.state === "error" && (
         <p role="alert" className="text-sm text-destructive">
           {data.refresh_job.message}

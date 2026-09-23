@@ -12,7 +12,6 @@ import {
 } from "@/components/Features/FeatureSearch"
 import { partLabel } from "@/components/Features/parts"
 import { PartCard } from "@/components/Parts/PartCard"
-import { PartSetupDialog } from "@/components/Parts/PartSetupDialog"
 import PendingFeatures from "@/components/Pending/PendingFeatures"
 import { Button } from "@/components/ui/button"
 import useDebounce from "@/hooks/useDebounce"
@@ -89,12 +88,13 @@ export function CatalogPage({ params }: { params: FeatureSearchParams }) {
             <Plus />
             Nuevo feature
           </Button>
-          <PartSetupDialog
-            triggerClassName="h-11"
-            onCreated={(partId) =>
-              void navigate({ to: "/parts/$partId", params: { partId } })
-            }
-          />
+          <Button
+            className="h-11"
+            onClick={() => void navigate({ to: "/parts/nueva" })}
+          >
+            <Plus />
+            Nueva pieza
+          </Button>
         </div>
       </div>
       <div className="space-y-4">

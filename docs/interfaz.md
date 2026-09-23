@@ -63,13 +63,11 @@ nueva, comprobar qué componente o patrón de la aplicación ya resuelve esa tar
   importadas al feature. Los recuadros guardados mantienen su presentación compacta.
 - La fila COTAS no incluye importación. Las mediciones se preparan al registrar la pieza
   con Nueva pieza y mediante «Actualizar datos». Aquí se eligen las cotas del feature.
-- Nueva pieza y Actualizar datos mantienen dimensiones constantes durante todos sus
-  estados, con contenido desplazable y carga/error en un hueco fijo del pie. Crear (o
-  Actualizar) va inmediatamente a la izquierda de Cancelar. Cancelar descarta el formulario.
-- No mostrar instrucciones de relleno, «Elegir otra carpeta», «Archivos guardados»,
-  resultados de importación ni formularios de revisión por archivo. La lectura es automática
-  y las sustituciones conservan historial. Abrir Actualizar datos no modifica la pieza:
-  el procesamiento empieza con Actualizar en el pie.
+- Nueva pieza abre `/parts/nueva`, con la misma estructura que Editar pieza y los campos
+  etiquetados como en Features. Cancelar descarta el borrador sin registrar la pieza.
+- Actualizar datos es un icono en la esquina superior derecha del título Cotas; su ayuda
+  al pasar el ratón explica la lectura. No tiene panel vacío. El progreso aparece solo
+  durante la lectura y el resultado, incidencias y fuentes quedan en un resumen desplegable.
 - Reutilizar `Input`, el botón con Plus, la papelera, `useAutosave` y `SaveStatus` del
   editor de ficheros. Los borradores fallidos se conservan y participan en Guardar.
 - Las cotas guardadas abren sus mediciones; el icono de plano contiguo abre esa cota
@@ -92,8 +90,8 @@ nueva, comprobar qué componente o patrón de la aplicación ya resuelve esa tar
   En móvil se apilan. Los features no repiten fotos: cada subtarjeta muestra el nombre
   enlazado y sus cotas de esta pieza. Pulsar una cota la consulta en la columna izquierda.
 - Los listados de features y piezas usan subtarjetas compactas y enlaces «Ver feature» /
-  «Ver pieza» en el color principal. En Archivos, cada fila muestra el tipo y, a su lado,
-  el tamaño en texto pequeño gris, sin nombre de fichero visible.
+  «Ver pieza» en el color principal. En Archivos, cada fila muestra tipo y nombre en dos
+  líneas; el tamaño queda centrado verticalmente junto a los botones.
 - La portada de pieza es una captura de todo el CAD STEP sin superficies marcadas.
   Al pulsarla abre el visor interactivo reutilizado de Features, sin edición de caras.
 - Editar permite cambiar nombre/código y añadir o desvincular features existentes.
@@ -150,10 +148,26 @@ una previsión cuantitativa validada. Distinguir «sin acción vinculada» de «
 documentada». Una diferencia entre mediciones nunca basta para inventar una intervención.
 Mantener separadas la base del XLS para la previsión y las mediciones CSV para el cambio real.
 
-El alta de piezas parte de **Catálogo → Nueva pieza**. Se selecciona una carpeta con
-el diálogo de Windows y se proponen su nombre, CAD, escaneo, molde y plano. Las propuestas
-son editables antes de registrar la pieza. Crear procesa automáticamente los CSV/XLS/XLSX
-compatibles sin formularios de revisión por archivo.
+El alta de piezas parte de **Catálogo → Nueva pieza**. La cabecera contiene título,
+descripción opcional, código y cliente, junto a la portada cuadrada de la pieza. La carpeta
+ocupa una fila compacta con etiqueta y nombre en la misma línea. Al elegirla
+con el diálogo de Windows se proponen nombre, código, CAD, escaneo, molde y plano.
+Si ya pertenece a una pieza, se ofrece abrir esa ficha y no se modifica su identidad.
+Las propuestas son editables antes de registrar la pieza. Crear procesa automáticamente
+los CSV/XLS/XLSX compatibles sin formularios de revisión por archivo.
+Archivos permite varios ficheros por tipo, con nombre visible propio y un principal por
+tipo de referencia. «Añadir fichero» usa el botón con Plus, borde y tamaño de «Añadir feature».
+Solo admite originales dentro de la carpeta de la pieza y sus subcarpetas. En edición
+se cambia el tipo, nombre y vínculo; carpeta y papelera sustituyen a la descarga.
+Cada archivo ocupa como máximo dos líneas: tipo y nombre truncado debajo. El tamaño es
+un elemento aparte, centrado verticalmente con los botones de carpeta, papelera o descarga.
+En consulta, código y cliente aparecen juntos bajo la descripción, alineados a la izquierda.
+La tarjeta del catálogo muestra la descripción opcional bajo el nombre, hasta dos líneas
+como en Features. En la fila siguiente, «código · cliente» acompaña a la etiqueta azul
+Pieza, con el cliente truncado y el texto completo al pasar el ratón. Si no hay cliente,
+se muestra únicamente el código.
+Guardar aplica cabecera y archivos juntos; Cancelar los descarta. Ninguna acción renombra
+ni borra los originales. Cotas muestra datos extraídos, sin alta manual en la ficha de pieza.
 **Actualizar datos** inicia otra lectura únicamente al pulsarlo. Se conservan el historial
 y las revisiones. No hay vigilancia automática. La cabecera mantiene el título, con los
 botones a la derecha.

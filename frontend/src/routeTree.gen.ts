@@ -20,6 +20,7 @@ import { Route as LayoutPartsRouteImport } from './routes/_layout/parts'
 import { Route as LayoutItemsRouteImport } from './routes/_layout/items'
 import { Route as LayoutFeaturesRouteImport } from './routes/_layout/features'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
+import { Route as LayoutPartsNuevaRouteImport } from './routes/_layout/parts_.nueva'
 import { Route as LayoutPartsPartIdRouteImport } from './routes/_layout/parts_.$partId'
 import { Route as LayoutFeaturesNuevoRouteImport } from './routes/_layout/features_.nuevo'
 import { Route as LayoutFeaturesFeatureIdRouteImport } from './routes/_layout/features_.$featureId'
@@ -80,6 +81,11 @@ const LayoutAdminRoute = LayoutAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutPartsNuevaRoute = LayoutPartsNuevaRouteImport.update({
+  id: '/parts_/nueva',
+  path: '/parts/nueva',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutPartsPartIdRoute = LayoutPartsPartIdRouteImport.update({
   id: '/parts_/$partId',
   path: '/parts/$partId',
@@ -122,6 +128,7 @@ export interface FileRoutesByFullPath {
   '/features/$featureId': typeof LayoutFeaturesFeatureIdRoute
   '/features/nuevo': typeof LayoutFeaturesNuevoRoute
   '/parts/$partId': typeof LayoutPartsPartIdRoute
+  '/parts/nueva': typeof LayoutPartsNuevaRoute
   '/features/$featureId/fichero/$assetId': typeof LayoutFeaturesFeatureIdFicheroAssetIdRoute
   '/parts/$partId/fichero/$fileId': typeof LayoutPartsPartIdFicheroFileIdRoute
 }
@@ -139,6 +146,7 @@ export interface FileRoutesByTo {
   '/features/$featureId': typeof LayoutFeaturesFeatureIdRoute
   '/features/nuevo': typeof LayoutFeaturesNuevoRoute
   '/parts/$partId': typeof LayoutPartsPartIdRoute
+  '/parts/nueva': typeof LayoutPartsNuevaRoute
   '/features/$featureId/fichero/$assetId': typeof LayoutFeaturesFeatureIdFicheroAssetIdRoute
   '/parts/$partId/fichero/$fileId': typeof LayoutPartsPartIdFicheroFileIdRoute
 }
@@ -158,6 +166,7 @@ export interface FileRoutesById {
   '/_layout/features_/$featureId': typeof LayoutFeaturesFeatureIdRoute
   '/_layout/features_/nuevo': typeof LayoutFeaturesNuevoRoute
   '/_layout/parts_/$partId': typeof LayoutPartsPartIdRoute
+  '/_layout/parts_/nueva': typeof LayoutPartsNuevaRoute
   '/_layout/features_/$featureId_/fichero/$assetId': typeof LayoutFeaturesFeatureIdFicheroAssetIdRoute
   '/_layout/parts_/$partId_/fichero/$fileId': typeof LayoutPartsPartIdFicheroFileIdRoute
 }
@@ -177,6 +186,7 @@ export interface FileRouteTypes {
     | '/features/$featureId'
     | '/features/nuevo'
     | '/parts/$partId'
+    | '/parts/nueva'
     | '/features/$featureId/fichero/$assetId'
     | '/parts/$partId/fichero/$fileId'
   fileRoutesByTo: FileRoutesByTo
@@ -194,6 +204,7 @@ export interface FileRouteTypes {
     | '/features/$featureId'
     | '/features/nuevo'
     | '/parts/$partId'
+    | '/parts/nueva'
     | '/features/$featureId/fichero/$assetId'
     | '/parts/$partId/fichero/$fileId'
   id:
@@ -212,6 +223,7 @@ export interface FileRouteTypes {
     | '/_layout/features_/$featureId'
     | '/_layout/features_/nuevo'
     | '/_layout/parts_/$partId'
+    | '/_layout/parts_/nueva'
     | '/_layout/features_/$featureId_/fichero/$assetId'
     | '/_layout/parts_/$partId_/fichero/$fileId'
   fileRoutesById: FileRoutesById
@@ -303,6 +315,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/parts_/nueva': {
+      id: '/_layout/parts_/nueva'
+      path: '/parts/nueva'
+      fullPath: '/parts/nueva'
+      preLoaderRoute: typeof LayoutPartsNuevaRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/parts_/$partId': {
       id: '/_layout/parts_/$partId'
       path: '/parts/$partId'
@@ -351,6 +370,7 @@ interface LayoutRouteChildren {
   LayoutFeaturesFeatureIdRoute: typeof LayoutFeaturesFeatureIdRoute
   LayoutFeaturesNuevoRoute: typeof LayoutFeaturesNuevoRoute
   LayoutPartsPartIdRoute: typeof LayoutPartsPartIdRoute
+  LayoutPartsNuevaRoute: typeof LayoutPartsNuevaRoute
   LayoutFeaturesFeatureIdFicheroAssetIdRoute: typeof LayoutFeaturesFeatureIdFicheroAssetIdRoute
   LayoutPartsPartIdFicheroFileIdRoute: typeof LayoutPartsPartIdFicheroFileIdRoute
 }
@@ -365,6 +385,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutFeaturesFeatureIdRoute: LayoutFeaturesFeatureIdRoute,
   LayoutFeaturesNuevoRoute: LayoutFeaturesNuevoRoute,
   LayoutPartsPartIdRoute: LayoutPartsPartIdRoute,
+  LayoutPartsNuevaRoute: LayoutPartsNuevaRoute,
   LayoutFeaturesFeatureIdFicheroAssetIdRoute:
     LayoutFeaturesFeatureIdFicheroAssetIdRoute,
   LayoutPartsPartIdFicheroFileIdRoute: LayoutPartsPartIdFicheroFileIdRoute,

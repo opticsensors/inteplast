@@ -13,8 +13,10 @@
 
 **22/09/2026:** **Catálogo** reúne piezas y features en `/features`, con cotas solo cuando
 se escribe en el buscador. Nueva pieza y Nuevo feature están juntos. Cada pieza tiene ficha
-con portada STEP completa ampliable en 3D, features vinculados y la consulta de metrología
-reutilizada. Los vínculos se editan desde cualquiera de las dos fichas.
+con título, descripción, código y cliente, features vinculados y la consulta de metrología
+reutilizada. Los vínculos se editan desde cualquiera de las dos fichas. La portada STEP
+encuadrada aparece junto a la cabecera de la ficha y en la tarjeta del catálogo;
+los archivos abren su visor desde la ficha.
 
 La ficha de feature mantiene el mismo reparto en consulta y edición: portada y datos
 arriba, advertencias/lecciones a la izquierda y piezas con sus cotas a la derecha.
@@ -23,10 +25,13 @@ Las notas permiten adjuntar imágenes a su cuerpo Markdown (`![nombre](file:id)`
 reutilizando los archivos y las URL de acceso temporales existentes; no se guardan URL
 caducables en el texto. Plegar el punto mantiene las subidas y borradores pendientes.
 
-El alta se hace desde **Catálogo → Nueva pieza**. Propone nombre y
-cuatro referencias desde una carpeta seleccionada en Windows e incorpora automáticamente
-CSV CMM individuales/comparativos y tablas PPAP XLS/XLSX. **Actualizar datos** repite la lectura de forma
-explícita. Features ofrece únicamente piezas registradas y reutiliza sus referencias al
+El alta se hace en **Catálogo → Nueva pieza** (`/parts/nueva`), en una ficha común con
+la edición y el diseño de Features. La carpeta seleccionada en Windows propone nombre,
+código y cuatro referencias. Se pueden añadir más ficheros de esa carpeta, escoger su
+tipo, darles un nombre visible y elegir el principal de cada tipo de referencia.
+Crear guarda la ficha e incorpora automáticamente CSV CMM individuales/comparativos y
+tablas PPAP XLS/XLSX. **Actualizar datos** repite la lectura de forma explícita y muestra
+su resultado, progreso y fuentes en Cotas. Features ofrece únicamente piezas registradas y reutiliza sus referencias al
 asociarlas. La integración nativa local se describe en [ficheros-externos.md](ficheros-externos.md).
 La interpretación de correcciones de otras piezas y la conexión Graph siguen pendientes.
 

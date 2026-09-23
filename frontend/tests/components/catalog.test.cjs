@@ -574,30 +574,39 @@ async function referencePiece(t) {
 test("reference changes stay in the draft, survive membership updates and cancel together", async (t) => {
   const page = await referencePiece(t)
   await expect(page.getByRole("link", { name: /^Descargar / })).toHaveCount(0)
-  await expect(page.getByRole("group", { name: /^Archivo / })).toHaveCount(4)
+  await expect(page.getByRole("group", { name: /^Fichero / })).toHaveCount(2)
   await expect(
-    page.getByRole("button", { name: "Quitar Escaneo", exact: true }),
-  ).toBeDisabled()
+    page.getByRole("button", { name: "Añadir Escaneo", exact: true }),
+  ).toBeEnabled()
   let selectedPath = null
   await page.route("**/__native-picker", (route) =>
     route.fulfill({ json: { path: selectedPath } }),
   )
-  await page.getByRole("button", { name: "Cambiar CAD", exact: true }).click()
+  await page
+    .getByRole("button", { name: "Cambiar original.step", exact: true })
+    .click()
   await expect(
-    page.getByRole("link", { name: "CAD: original.step" }),
+    page.getByRole("textbox", { name: "Nombre de original.step" }),
   ).toBeVisible()
   selectedPath = "Other/invalid.step"
-  await page.getByRole("button", { name: "Cambiar CAD", exact: true }).click()
+  await page
+    .getByRole("button", { name: "Cambiar original.step", exact: true })
+    .click()
   await expect(page.getByRole("alert")).toHaveText(
     "Selecciona un archivo dentro de la carpeta de esta pieza.",
   )
   selectedPath = "3212 Pump Housing/replacement.step"
-  await page.getByRole("button", { name: "Cambiar CAD", exact: true }).click()
+  await page
+    .getByRole("button", { name: "Cambiar original.step", exact: true })
+    .click()
   await expect(
-    page.getByText("replacement.step", { exact: true }),
+    page.getByRole("textbox", {
+      name: "Nombre de replacement.step",
+      exact: true,
+    }),
   ).toBeVisible()
   await page
-    .getByRole("button", { name: "Quitar Plano 2D", exact: true })
+    .getByRole("button", { name: "Quitar DRW.pdf", exact: true })
     .click()
   await page
     .getByRole("textbox", { name: "Nombre de la pieza" })
@@ -605,7 +614,10 @@ test("reference changes stay in the draft, survive membership updates and cancel
   await page.getByRole("button", { name: "Desvincular Bolt Eye" }).click()
   await expect(page.getByText("Sin features vinculados.")).toBeVisible()
   await expect(
-    page.getByText("replacement.step", { exact: true }),
+    page.getByRole("textbox", {
+      name: "Nombre de replacement.step",
+      exact: true,
+    }),
   ).toBeVisible()
   assert.equal(
     await page.evaluate(
@@ -623,10 +635,10 @@ test("reference changes stay in the draft, survive membership updates and cancel
   ).toBeVisible()
   await page.getByRole("button", { name: "Editar pieza", exact: true }).click()
   await expect(
-    page.getByRole("link", { name: "CAD: original.step" }),
+    page.getByRole("textbox", { name: "Nombre de original.step" }),
   ).toBeVisible()
   await expect(
-    page.getByRole("button", { name: "Quitar Plano 2D", exact: true }),
+    page.getByRole("button", { name: "Quitar DRW.pdf", exact: true }),
   ).toBeEnabled()
 })
 
@@ -636,17 +648,24 @@ test("reference save failure keeps the draft and retry saves header and files wi
   await page.route("**/__native-picker", (route) =>
     route.fulfill({ json: { path: selectedPath } }),
   )
-  await page.getByRole("button", { name: "Cambiar CAD", exact: true }).click()
+  await page
+    .getByRole("button", { name: "Cambiar original.step", exact: true })
+    .click()
   await expect(
-    page.getByText("replacement.step", { exact: true }),
+    page.getByRole("textbox", {
+      name: "Nombre de replacement.step",
+      exact: true,
+    }),
   ).toBeVisible()
   selectedPath = "3212 Pump Housing/scan.stl"
   await page
-    .getByRole("button", { name: "Seleccionar Escaneo", exact: true })
+    .getByRole("button", { name: "Añadir Escaneo", exact: true })
     .click()
-  await expect(page.getByText("scan.stl", { exact: true })).toBeVisible()
+  await expect(
+    page.getByRole("textbox", { name: "Nombre de scan.stl", exact: true }),
+  ).toBeVisible()
   await page
-    .getByRole("button", { name: "Quitar Plano 2D", exact: true })
+    .getByRole("button", { name: "Quitar DRW.pdf", exact: true })
     .click()
   await page
     .getByRole("textbox", { name: "Nombre de la pieza" })
@@ -661,7 +680,10 @@ test("reference save failure keeps the draft and retry saves header and files wi
     "No se pudo guardar la pieza",
   )
   await expect(
-    page.getByText("replacement.step", { exact: true }),
+    page.getByRole("textbox", {
+      name: "Nombre de replacement.step",
+      exact: true,
+    }),
   ).toBeVisible()
   assert.equal(
     await page.evaluate(
@@ -678,7 +700,7 @@ test("reference save failure keeps the draft and retry saves header and files wi
     .click()
   await page.waitForFunction(() => Boolean(window.review.releasePartSave))
   await expect(
-    page.getByRole("button", { name: "Cambiar CAD", exact: true }),
+    page.getByRole("button", { name: "Cambiar replacement.step", exact: true }),
   ).toBeDisabled()
   await expect(
     page.getByRole("button", { name: "Cancelar", exact: true }),
@@ -698,28 +720,32 @@ test("reference save failure keeps the draft and retry saves header and files wi
     await page.evaluate(() => window.review.refreshRequests ?? []),
     [],
   )
+  const patch = await page.evaluate(
+    () => window.review.requests.filter((r) => r.kind === "part").at(-1).patch,
+  )
+  assert.equal(patch.name, "Updated piece")
+  assert.equal(patch.code, "3212")
   assert.deepEqual(
-    await page.evaluate(
-      () =>
-        window.review.requests.filter((r) => r.kind === "part").at(-1).patch,
-    ),
-    {
-      name: "Updated piece",
-      code: "3212",
-      references: [
-        {
-          kind: "part",
-          path: "3212 Pump Housing/replacement.step",
-          source_version: null,
-        },
-        {
-          kind: "scan",
-          path: "3212 Pump Housing/scan.stl",
-          source_version: null,
-        },
-        { kind: "drawing", path: null },
-      ],
-    },
+    patch.files.map(({ kind, path, name, primary }) => ({
+      kind,
+      path,
+      name,
+      primary,
+    })),
+    [
+      {
+        kind: "part",
+        path: "3212 Pump Housing/replacement.step",
+        name: "replacement.step",
+        primary: true,
+      },
+      {
+        kind: "scan",
+        path: "3212 Pump Housing/scan.stl",
+        name: "scan.stl",
+        primary: true,
+      },
+    ],
   )
 })
 

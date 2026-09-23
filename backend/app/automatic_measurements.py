@@ -191,7 +191,12 @@ def collect(
 
 
 def refresh(
-    session: Session, part: Part, user_id: uuid.UUID, paths: list[Path]
+    session: Session,
+    part: Part,
+    user_id: uuid.UUID,
+    paths: list[Path],
+    *,
+    used_files: dict[str, str] | None = None,
 ) -> tuple[int, int]:
     session.exec(select(Part).where(Part.id == part.id).with_for_update()).one()
     root = local_path(part.folder_path or "", directory=True)
@@ -218,7 +223,19 @@ def refresh(
         revision, sample, cavity = key
         checksum = digest(rows)
         previous = active.get(key)
-        if previous and previous.reader == READER and previous.sha256 == checksum:
+        unchanged = bool(
+            previous and previous.reader == READER and previous.sha256 == checksum
+        )
+        if used_files is not None:
+            for row in rows:
+                for source in [
+                    row["source"],
+                    *([row["tolerance_source"]] if "tolerance_source" in row else []),
+                ]:
+                    path = source["path"]
+                    if used_files.get(path) != "imported":
+                        used_files[path] = "unchanged" if unchanged else "imported"
+        if unchanged:
             skipped += 1
             continue
         measurement_imports.preserve_legacy(session, part, user_id)

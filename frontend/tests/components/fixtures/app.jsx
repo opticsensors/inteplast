@@ -14,7 +14,6 @@ import { FileLink } from "../../../src/components/Common/FileLink"
 import { FeatureCover } from "../../../src/components/Features/FeatureCover"
 import { FeatureForm } from "../../../src/components/Features/FeatureForm"
 import { PartAssetList } from "../../../src/components/Features/PartAssetList"
-import { PartSetupDialog } from "../../../src/components/Parts/PartSetupDialog"
 import useAuth from "../../../src/hooks/useAuth"
 import { Route as LoginRoute } from "../../../src/routes/login"
 
@@ -141,25 +140,6 @@ const cover = createRoute({
 })
 const router = createRouter({
   routeTree: root.addChildren([
-    createRoute({
-      getParentRoute: () => root,
-      path: "/setup",
-      component: () => (
-        <>
-          <PartSetupDialog
-            onCreated={(id) => {
-              window.review.createdPart = id
-            }}
-          />
-          <PartSetupDialog
-            part={{
-              ...window.review.feature.parts[0],
-              folder_path: "3212 Pump Housing",
-            }}
-          />
-        </>
-      ),
-    }),
     editor,
     newFeature,
     away,

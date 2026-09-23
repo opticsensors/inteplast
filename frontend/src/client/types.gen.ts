@@ -303,6 +303,8 @@ export type FolderDiscovery = {
     name: string;
     references: Array<ReferenceProposal>;
     notices?: Array<(string)>;
+    code?: string;
+    existing_part?: (PartPublic | null);
 };
 
 export type HTTPValidationError = {
@@ -470,6 +472,8 @@ export type NoteKind = 'warning' | 'lesson';
 export type PartCardPublic = {
     code: string;
     name?: (string | null);
+    description?: (string | null);
+    customer?: (string | null);
     folder_path?: (string | null);
     id: string;
     created_at?: (string | null);
@@ -482,6 +486,8 @@ export type PartCardPublic = {
 export type PartCatalogPublic = {
     code: string;
     name?: (string | null);
+    description?: (string | null);
+    customer?: (string | null);
     folder_path?: (string | null);
     id: string;
     created_at?: (string | null);
@@ -498,6 +504,8 @@ export type PartCoverRequest = {
 export type PartCreate = {
     code: string;
     name?: (string | null);
+    description?: (string | null);
+    customer?: (string | null);
     folder_path?: (string | null);
 };
 
@@ -505,6 +513,7 @@ export type PartDetailPublic = {
     part: PartCardPublic;
     features: Array<FeaturePublic>;
     references: Array<PartReferencePublic>;
+    files?: Array<PartFilePublic>;
 };
 
 export type PartEvidencePublic = {
@@ -520,6 +529,25 @@ export type PartEvidencePublic = {
     refresh_job?: JobPublic;
 };
 
+export type PartFileInput = {
+    file_id?: (string | null);
+    path?: (string | null);
+    source_version?: (string | null);
+    kind: 'part' | 'scan' | 'mold' | 'drawing' | 'moldflow' | 'document';
+    name: string;
+    primary?: boolean;
+};
+
+export type kind = 'part' | 'scan' | 'mold' | 'drawing' | 'moldflow' | 'document';
+
+export type PartFilePublic = {
+    kind: 'part' | 'scan' | 'mold' | 'drawing' | 'moldflow' | 'document';
+    name: string;
+    primary: boolean;
+    path?: (string | null);
+    file: FilePublic;
+};
+
 export type PartFromFolder = {
     folder_path: string;
 };
@@ -527,6 +555,8 @@ export type PartFromFolder = {
 export type PartPublic = {
     code: string;
     name?: (string | null);
+    description?: (string | null);
+    customer?: (string | null);
     folder_path?: (string | null);
     id: string;
     created_at?: (string | null);
@@ -543,6 +573,20 @@ export type PartRefreshResult = {
     measurements: MeasurementPreview;
     corrections_state?: string;
     notices?: Array<(string)>;
+    state?: string;
+    files?: Array<ReadFileReport>;
+    updated_at?: (string | null);
+    corrections_key?: (string | null);
+};
+
+export type PartRegistration = {
+    folder_path: string;
+    name: string;
+    code: string;
+    customer: string;
+    description?: (string | null);
+    files?: Array<PartFileInput>;
+    feature_ids?: Array<(string)>;
 };
 
 export type PartSetupRequest = {
@@ -563,8 +607,11 @@ export type PartsPublic = {
 export type PartUpdate = {
     code?: string;
     name?: (string | null);
+    description?: (string | null);
+    customer?: (string | null);
     folder_path?: (string | null);
     references?: (Array<ReferenceChoice> | null);
+    files?: (Array<PartFileInput> | null);
 };
 
 export type PrivateUserCreate = {
@@ -572,6 +619,12 @@ export type PrivateUserCreate = {
     password: string;
     full_name: string;
     is_verified?: boolean;
+};
+
+export type ReadFileReport = {
+    path: string;
+    group: string;
+    status: string;
 };
 
 export type ReferenceCandidate = {
@@ -586,7 +639,7 @@ export type ReferenceChoice = {
     source_version?: (string | null);
 };
 
-export type kind = 'part' | 'scan' | 'mold' | 'drawing';
+export type kind2 = 'part' | 'scan' | 'mold' | 'drawing';
 
 export type ReferenceProposal = {
     kind: 'part' | 'scan' | 'mold' | 'drawing';
@@ -1037,6 +1090,24 @@ export type LoginRecoverPasswordHtmlContentData = {
 };
 
 export type LoginRecoverPasswordHtmlContentResponse = (string);
+
+export type PartsReadPartDataReportData = {
+    partId: string;
+};
+
+export type PartsReadPartDataReportResponse = ((PartRefreshResult | null));
+
+export type PartsReadPartDataData = {
+    partId: string;
+};
+
+export type PartsReadPartDataResponse = (PartRefreshResult);
+
+export type PartsRegisterPartData = {
+    requestBody: PartRegistration;
+};
+
+export type PartsRegisterPartResponse = (PartPublic);
 
 export type PartsDiscoverPartFolderData = {
     requestBody: PartFromFolder;

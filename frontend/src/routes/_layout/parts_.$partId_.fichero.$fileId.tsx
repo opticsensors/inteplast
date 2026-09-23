@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { ExternalLink } from "lucide-react"
 import { lazy, Suspense } from "react"
-import { EvidenceService } from "@/client"
+import { CatalogService, EvidenceService } from "@/client"
 import { FileLink } from "@/components/Common/FileLink"
 import { fileAction, usesWebPreview } from "@/components/Features/viewers"
 import { consultationScope } from "@/components/Parts/consultationEntries"
@@ -26,6 +26,10 @@ function PartFile() {
   const { partId, fileId } = Route.useParams()
   const search = Route.useSearch()
   const navigate = useNavigate()
+  const detail = useQuery({
+    queryKey: ["parts", "detail", partId],
+    queryFn: () => CatalogService.readPartDetail({ partId }),
+  })
   const result = useQuery({
     queryKey: ["part-evidence", partId, search.revision, search.snapshot],
     queryFn: () =>
@@ -41,6 +45,9 @@ function PartFile() {
   if (result.error) return <p role="alert">{fileErrorMessage(result.error)}</p>
   if (!file) return <p>Documento no encontrado en esta pieza.</p>
   const { viewer, action } = fileAction(file)
+  const displayName =
+    detail.data?.files?.find((item) => item.file.id === fileId)?.name ??
+    file.filename
   const scope = consultationScope(result.data?.features ?? [], search)
   return (
     <div className="space-y-5">
@@ -49,7 +56,7 @@ function PartFile() {
       </p>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="break-words text-2xl font-bold tracking-tight">
-          {file.filename}
+          {displayName}
         </h1>
         {viewer === "pdf" ? (
           access.url && (
@@ -78,7 +85,7 @@ function PartFile() {
             <DrawingSearch
               key={`${file.id}:${file.version}`}
               file={file}
-              title={file.filename}
+              title={displayName}
               initialQuery={search.drawingQ ?? search.cota}
               onQueryChange={(drawingQ) =>
                 void navigate({
@@ -98,7 +105,7 @@ function PartFile() {
           ) : viewer === "image" ? (
             <img
               src={access.url}
-              alt={file.filename}
+              alt={displayName}
               className="max-h-[75vh] object-contain"
             />
           ) : usesWebPreview(file) ? (

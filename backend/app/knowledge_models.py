@@ -48,6 +48,19 @@ class PartDocument(SQLModel, table=True):
     kind: str = Field(default="source", max_length=32)
 
 
+class PartFile(SQLModel, table=True):
+    part_id: uuid.UUID = Field(
+        foreign_key="part.id", ondelete="CASCADE", primary_key=True
+    )
+    file_id: uuid.UUID = Field(
+        foreign_key="storedfile.id", ondelete="RESTRICT", primary_key=True
+    )
+    kind: str = Field(max_length=16)
+    name: str = Field(max_length=255)
+    position: int = 0
+    primary: bool = False
+
+
 class PartReference(SQLModel, table=True):
     """Explicit file choices; null remembers a removal without deleting evidence."""
 
@@ -177,7 +190,9 @@ class PartEvidencePublic(BaseModel):
     measurement_revisions: list[str] = []
     drawing_file_id: uuid.UUID | None = None
     drawing_reference_set: bool = False
-    refresh_job: JobPublic = PydanticField(default_factory=lambda: JobPublic(state="empty"))
+    refresh_job: JobPublic = PydanticField(
+        default_factory=lambda: JobPublic(state="empty")
+    )
 
 
 class LocationReview(BaseModel):

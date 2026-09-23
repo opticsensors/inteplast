@@ -21,6 +21,7 @@ import { Route as Detail } from "../../../src/routes/_layout/features_.$featureI
 import { Route as NewFeature } from "../../../src/routes/_layout/features_.nuevo"
 import { Route as Home } from "../../../src/routes/_layout/index"
 import { Route as PartDetail } from "../../../src/routes/_layout/parts_.$partId"
+import { Route as NewPart } from "../../../src/routes/_layout/parts_.nueva"
 
 localStorage.setItem(
   "access_token",
@@ -41,6 +42,7 @@ window.review = {
   },
   user: { id: "test-user", email: "review@example.com", is_superuser: false },
   requests: [],
+  accessRequests: [],
   searchRequests: [],
   deleted: false,
   parts: [
@@ -122,6 +124,7 @@ const routes = [
   [Detail, "/features_/$featureId", "/features/$featureId"],
   [NewFeature, "/features_/nuevo", "/features/nuevo"],
   [PartDetail, "/parts_/$partId", "/parts/$partId"],
+  [NewPart, "/parts_/nueva", "/parts/nueva"],
 ].map(([route, id, path]) =>
   route.update({ id, path, getParentRoute: () => layout }),
 )

@@ -1,5 +1,6 @@
 """Explicit piece registration, proposed reference files and manual data refresh."""
 
+import hashlib
 import os
 import re
 import uuid
@@ -38,6 +39,8 @@ class FolderDiscovery(BaseModel):
     name: str
     references: list[ReferenceProposal]
     notices: list[str] = []
+    code: str = ""
+    existing_part: PartPublic | None = None
 
 
 class PartSetupRequest(BaseModel):
@@ -56,6 +59,16 @@ class PartRefreshResult(BaseModel):
     measurements: MeasurementPreview
     corrections_state: str = "empty"
     notices: list[str] = []
+    state: str = "ready"
+    files: list["ReadFileReport"] = []
+    updated_at: str | None = None
+    corrections_key: str | None = None
+
+
+class ReadFileReport(BaseModel):
+    path: str
+    group: str
+    status: str
 
 
 def folder_files(folder_path: str) -> list[Path]:
@@ -182,6 +195,17 @@ def discover(session: Session, folder_path: str) -> FolderDiscovery:
         name=(part.name if part else None) or root.name,
         references=proposals,
         notices=notices,
+        code=part.code if part else proposed_code(folder_path),
+        existing_part=PartPublic.model_validate(part) if part else None,
+    )
+
+
+def proposed_code(folder_path: str) -> str:
+    prefix = re.match(r"^(\d{1,64})(?:[\s_-]|$)", PurePosixPath(folder_path).name)
+    return (
+        prefix[1]
+        if prefix
+        else f"PIEZA-{hashlib.sha256(folder_path.encode()).hexdigest()[:12]}"
     )
 
 
@@ -237,6 +261,36 @@ def save_references(
 ) -> None:
     session.exec(select(Part).where(Part.id == part.id).with_for_update()).one()
     session.refresh(part)
+    if part.files_managed:
+        # Keep older clients consistent with the named file list. A legacy choice
+        # replaces its primary file and retains any additional files of that type.
+        from app.models import PartFileInput
+        from app.part_files import read_files, save_files
+
+        changed_kinds = {choice.kind for choice in choices}
+        retained = [
+            PartFileInput(
+                file_id=item.file.id,
+                kind=item.kind,
+                name=item.name,
+                primary=item.primary,
+            )
+            for item in read_files(session, part)
+            if not (item.primary and item.kind in changed_kinds)
+        ]
+        retained.extend(
+            PartFileInput(
+                path=choice.path,
+                source_version=choice.source_version,
+                kind=choice.kind,
+                name=PurePosixPath(choice.path).name,
+                primary=True,
+            )
+            for choice in choices
+            if choice.path
+        )
+        save_files(session, part, retained, folder_path=part.folder_path)
+        return
     if not part.folder_path and any(choice.path for choice in choices):
         raise HTTPException(422, "Vincula primero la carpeta de esta pieza.")
     validate_references(part.folder_path or "", choices)
@@ -280,12 +334,20 @@ def save_references(
 
 def refresh(session: Session, part: Part, user_id: uuid.UUID) -> PartRefreshResult:
     paths = folder_files(part.folder_path or "")
-    added, skipped = automatic_measurements.refresh(session, part, user_id, paths)
+    used_files: dict[str, str] = {}
+    added, skipped = automatic_measurements.refresh(
+        session, part, user_id, paths, used_files=used_files
+    )
+    read_files = [
+        ReadFileReport(path=path, group="measurements", status=status)
+        for path, status in sorted(used_files.items())
+    ]
     preview = MeasurementPreview(
         context_key=measurement_imports.context_key(part), files=[]
     )
     notices: list[str] = []
     corrections_state = "empty"
+    corrections_key = None
     correction_files = [
         p
         for p in paths
@@ -301,9 +363,20 @@ def refresh(session: Session, part: Part, user_id: uuid.UUID) -> PartRefreshResu
         ]
         if all(path.is_file() for path in required):
             key = study_key(part)
+            corrections_key = key
             corrections_state = queue(
                 session, "study", part.id, key, requested_by=user_id
             ).state
+            read_files.extend(
+                ReadFileReport(
+                    path=path.relative_to(root).as_posix(),
+                    group="corrections",
+                    status="used"
+                    if corrections_state == "ready"
+                    else corrections_state,
+                )
+                for path in required
+            )
         elif correction_files:
             corrections_state = "needs_review"
             notices.append("Faltan documentos del estudio de correcciones del 3212.")
@@ -320,4 +393,11 @@ def refresh(session: Session, part: Part, user_id: uuid.UUID) -> PartRefreshResu
         measurements=preview,
         corrections_state=corrections_state,
         notices=notices,
+        files=read_files,
+        state="processing"
+        if corrections_state in {"queued", "processing"}
+        else "partial"
+        if corrections_state in {"needs_review", "error"}
+        else "ready",
+        corrections_key=corrections_key,
     )

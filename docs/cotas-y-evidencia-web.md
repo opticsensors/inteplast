@@ -89,11 +89,15 @@ los casos y las cotas se refieren a ella. No se crean lessons learned automátic
 
 ## Alta y actualización de piezas (22/09/2026)
 
-1. Nueva pieza selecciona una carpeta con el diálogo de Windows. La detección usa rutas,
+1. Nueva pieza abre una ficha vacía en `/parts/nueva` y permite seleccionar una carpeta
+   con el diálogo de Windows. La detección usa rutas,
    extensiones y metadatos para proponer CAD, escaneo, molde y plano, sin leer su contenido.
    Las cuatro propuestas se pueden cambiar antes de guardar.
-2. El usuario puede cambiar nombre y propuestas. Crear registra o reutiliza la pieza,
-   guarda sus referencias en `PartDocument` con `kind=reference_*` y prepara las mediciones.
+2. El usuario puede cambiar título, descripción, código, cliente y propuestas, añadir
+   features y más archivos de la carpeta con nombre y tipo propios. Crear registra una
+   nueva pieza, guarda su lista en `PartFile` y los principales en `PartReference` y
+   `PartDocument`, y prepara las mediciones. Si la carpeta ya existe, se ofrece abrir
+   su ficha. Cancelar descarta todo el borrador.
 3. `automatic_measurements.py` incorpora CSV individuales/comparativos y tablas DR de
    informes PPAP XLS/XLSX, sin revisión manual por archivo. Obtiene la revisión de las
    cabeceras y conserva temperatura, presión, boquilla y repetición en el muestreo.
@@ -105,11 +109,12 @@ los casos y las cotas se refieren a ella. No se crean lessons learned automátic
    Una pieza sin mediciones también se registra y aparece en el catálogo.
 4. Actualizar datos repite la lectura por acción explícita. Las mediciones existentes se
    omiten; los cambios generan versiones consultables, incluso si se recuperan bytes de
-   una versión anterior. Abrir o cancelar el formulario no actualiza las mediciones.
+   una versión anterior. La ficha permanece abierta y muestra los archivos utilizados,
+   progreso, fecha e incidencias. Consultar el resumen no vuelve a importar datos.
 5. Las correcciones del 3212 se preparan con su adaptador cuando están los originales.
    Los documentos de retoques de otras piezas se detectan internamente; su interpretación
-   sigue pendiente. No se inventan correspondencias ni previsiones, ni se muestran sus
-   avisos técnicos en la modal. DR(100%) y carpetas de retoques se excluyen de mediciones.
+   sigue pendiente y se indica en el resultado de lectura. No se inventan correspondencias
+   ni previsiones. DR(100%) y carpetas de retoques se excluyen de mediciones.
 6. Añadir pieza en Features ofrece solo registros existentes e incorpora sus referencias
    al vincularla por primera vez, respetando las filas existentes. Añadir cota permite
    escoger explícitamente qué cotas pertenecen al feature y de qué revisión.
