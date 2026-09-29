@@ -26,6 +26,20 @@ qué problemas aparecieron en piezas anteriores y qué actuaciones se documentar
 [Aplicación web](app-web.md) y [Cotas y evidencia](cotas-y-evidencia-web.md). La validación
 del conocimiento con INTEPLAST forma parte de esta etapa.
 
+### Pendiente: generalizar la importación de correcciones PPTX
+
+El importador actual utiliza reglas de texto y correspondencias explícitas revisadas
+para el piloto 3212. No utiliza una LLM para interpretar las diapositivas ni está
+validado para presentaciones con otras estructuras.
+
+Pendiente: revisar ejemplos de otras piezas y decidir entre ampliar los adaptadores,
+incorporar interpretación mediante una LLM con capacidad visual o combinar ambos
+métodos. La elección todavía no está tomada.
+
+La solución deberá conservar la procedencia de cada dato, señalar asociaciones ambiguas
+y validar las extracciones contra documentos originales de otras estructuras antes de
+considerar resuelta la generalización.
+
 ## 2. Features reutilizables y adaptables dentro de SolidWorks
 
 **Objetivo:** que el diseñador pueda reutilizar features en SolidWorks y modificarlos

@@ -5,6 +5,8 @@ en este repositorio, pero no forman parte de la aplicación web ni de su imagen 
 
 - [Data Explorer](data-explorer/README.md): visores experimentales de planos,
   metrología y correcciones. Sus salidas generadas permanecen fuera de Git.
+- [Ontología](ontology/README.md): esquema inicial en HTML e imagen de los
+  conceptos y relaciones de la solución, para revisar con ingeniería.
 - Los lectores de la web viven en `backend/app/ingestion/`, con pruebas propias.
   El backend y el frontend no deben importar, ejecutar ni copiar código de esta carpeta.
 

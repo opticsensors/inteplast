@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ca">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ontologia d’Inteplast · Esquema inicial</title>
+  <style>
+    :root { color-scheme: light; font-family: "Segoe UI", Arial, sans-serif; color: #17324d; background: #edf2f6; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 32px; }
+    main { max-width: 1360px; margin: auto; }
+    .sheet { background: white; border: 1px solid #dce5ed; border-radius: 20px; overflow: hidden; }
+    .legend-label { fill: #435971; font-size: 13px; }
+    .diagram { padding: 12px 20px; overflow-x: auto; }
+    svg { display: block; width: 100%; min-width: 980px; height: auto; }
+    svg text { font-family: "Segoe UI", Arial, sans-serif; }
+    .edge { fill: none; stroke: #7c90a5; stroke-width: 1.8; stroke-linejoin: round; marker-end: url(#arrow); }
+    .edge-label { fill: #435971; font-size: 14px; paint-order: stroke; stroke: #fff; stroke-width: 7px; stroke-linejoin: round; }
+    .box { fill: #f3f7fc; stroke: #bed1e5; stroke-width: 1.3; }
+    .classification .box { fill: #f7f3fc; stroke: #d5c7e8; }
+    .evidence .box { fill: #f0f8f6; stroke: #b9dcd4; }
+    .node-title { font-size: 21px; font-weight: 700; fill: #17324d; }
+    .node-detail { font-size: 14px; fill: #4c6379; }
+    @media (max-width: 700px) { body { padding: 12px; } }
+    @media print { @page { size: A3 landscape; margin: 10mm; } body { padding: 0; background: white; } .sheet { border: 0; break-inside: avoid; } svg { min-width: 0; } * { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
+  </style>
+</head>
+<body>
+<main>
+  <article class="sheet" aria-label="Diagrama de la proposta inicial d’ontologia d’Inteplast">
+    <div class="diagram">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 710" role="img" aria-labelledby="diagram-title diagram-desc">
+        <title id="diagram-title">Proposta inicial d’ontologia d’Inteplast</title>
+        <desc id="diagram-desc">Les categories i etiquetes classifiquen els features. Cada feature té advertiments i lliçons apreses, apareix en peces i es vincula a cotes. Les cotes s’identifiquen per peça, revisió i número. Les medicions avaluen les cotes. La peça pot tenir una carpeta vinculada que agrupa documents d’origen. Els documents recullen propostes de correcció referides a cotes.</desc>
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#7c90a5"/></marker>
+        </defs>
+        <g aria-label="Llegenda">
+          <circle cx="35" cy="30" r="4.5" fill="#8063b2"/>
+          <text class="legend-label" x="49" y="35">Classificació i coneixement</text>
+          <circle cx="345" cy="30" r="4.5" fill="#3775b3"/>
+          <text class="legend-label" x="359" y="35">Peces i característiques</text>
+          <circle cx="565" cy="30" r="4.5" fill="#2e897e"/>
+          <text class="legend-label" x="579" y="35">Dades raw</text>
+        </g>
+        <g transform="translate(0 36)">
+        <!-- Relations: direction is read together with the verb on the arrow. -->
+        <path class="edge" d="M330 102 H470"/>
+        <text class="edge-label" x="400" y="88" text-anchor="middle">classifiquen</text>
+        <path class="edge" d="M770 102 H910"/>
+        <text class="edge-label" x="840" y="88" text-anchor="middle">té associats</text>
+        <path class="edge" d="M540 164 V222 H180 V280"/>
+        <text class="edge-label" x="365" y="213" text-anchor="middle">apareix en</text>
+        <path class="edge" d="M620 164 V280"/>
+        <text class="edge-label" x="637" y="229">es vincula a</text>
+        <path class="edge" d="M330 342 H470"/>
+        <text class="edge-label" x="400" y="328" text-anchor="middle">té</text>
+        <path class="edge" d="M910 342 H770"/>
+        <text class="edge-label" x="840" y="328" text-anchor="middle">avalua</text>
+        <path class="edge" d="M180 404 V520"/>
+        <text class="edge-label" x="197" y="461">pot tenir vinculada</text>
+        <path class="edge" d="M330 582 H470"/>
+        <text class="edge-label" x="400" y="568" text-anchor="middle">agrupa originals</text>
+        <path class="edge" d="M770 582 H910"/>
+        <text class="edge-label" x="840" y="568" text-anchor="middle">documenten</text>
+        <path class="edge" d="M1060 520 V462 H620 V404"/>
+        <text class="edge-label" x="840" y="450" text-anchor="middle">fa referència a</text>
+
+        <g class="classification">
+          <rect class="box" x="30" y="40" width="300" height="124" rx="13"/>
+          <text class="node-title" x="50" y="84">Categories i etiquetes</text>
+          <text class="node-detail" x="50" y="110">Forat, nervi, gruix…</text>
+          <text class="node-detail" x="50" y="132">Classificació editable i ampliable</text>
+        </g>
+        <g>
+          <rect class="box" x="470" y="40" width="300" height="124" rx="13"/>
+          <text class="node-title" x="490" y="84">Feature</text>
+          <text class="node-detail" x="490" y="110">Nom i descripció</text>
+          <text class="node-detail" x="490" y="132">Exemple: Bolt Eye</text>
+        </g>
+        <g class="classification">
+          <rect class="box" x="910" y="40" width="300" height="124" rx="13"/>
+          <text class="node-title" x="930" y="84">Advertiments i lliçons</text>
+          <text class="node-detail" x="930" y="110">Què cal vigilar i què s’ha après</text>
+          <text class="node-detail" x="930" y="132">Contingut aportat pels usuaris</text>
+        </g>
+        <g>
+          <rect class="box" x="30" y="280" width="300" height="124" rx="13"/>
+          <text class="node-title" x="50" y="324">Peça</text>
+          <text class="node-detail" x="50" y="350">Codi, nom i client</text>
+          <text class="node-detail" x="50" y="372">Exemple: 3212 Pump Housing</text>
+        </g>
+        <g>
+          <rect class="box" x="470" y="280" width="300" height="124" rx="13"/>
+          <text class="node-title" x="490" y="324">Cota</text>
+          <text class="node-detail" x="490" y="350">Identitat: peça + revisió + número</text>
+          <text class="node-detail" x="490" y="372">Exemple: 3212 · rev. 06 · N170</text>
+        </g>
+        <g class="evidence">
+          <rect class="box" x="910" y="280" width="300" height="124" rx="13"/>
+          <text class="node-title" x="930" y="324">Medició</text>
+          <text class="node-detail" x="930" y="350">Valor, unitat, nominal i toleràncies</text>
+          <text class="node-detail" x="930" y="372">Sèrie, mostreig, cavitat i font</text>
+        </g>
+        <g class="evidence">
+          <rect class="box" x="30" y="520" width="300" height="124" rx="13"/>
+          <text class="node-title" x="50" y="564">Carpeta d’origen</text>
+          <text class="node-detail" x="50" y="590">Ubicació dels originals de la peça</text>
+          <text class="node-detail" x="50" y="612">Estructura utilitzada en la captura</text>
+        </g>
+        <g class="evidence">
+          <rect class="box" x="470" y="520" width="300" height="124" rx="13"/>
+          <text class="node-title" x="490" y="564">Documents</text>
+          <text class="node-detail" x="490" y="590">Plànols, CAD i informes</text>
+          <text class="node-detail" x="490" y="612">Fonts de les dades i de les propostes</text>
+        </g>
+        <g class="evidence">
+          <rect class="box" x="910" y="520" width="300" height="124" rx="13"/>
+          <text class="node-title" x="930" y="564">Acció de correcció</text>
+          <text class="node-detail" x="930" y="590">Actuació proposada sobre el motlle</text>
+        </g>
+        </g>
+      </svg>
+    </div>
+  </article>
+</main>
+</body>
+</html>

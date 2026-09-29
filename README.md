@@ -13,6 +13,7 @@ Las etapas 2 y 3 son futuras. Ver la [hoja de ruta](docs/hoja-de-ruta.md).
 
 ## Documentación
 
+- [Acta de la reunión del 24/09/2026](docs/acta-reunion-2026-09-24.md): texto original de la reunión con Inteplast.
 - [Hoja de ruta](docs/hoja-de-ruta.md): objetivos y alcance de las tres etapas.
 - [CLAUDE.md](CLAUDE.md): contexto, rutas y reglas del proyecto.
 - [Aplicación](docs/app-web.md): modelo, API, permisos y comportamiento.

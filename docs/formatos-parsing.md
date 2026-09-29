@@ -288,6 +288,12 @@ $wb.Close($false); $xl.Quit()
 `5- Retoques de molde/AAAAMMDD-Mold correction_<N>_P<proyecto>_rev<N>.pptx`
 Es un **ZIP**: `ppt/slides/slide*.xml` (texto) + `ppt/media/` (imágenes).
 
+**Alcance actual:** el importador utiliza reglas de texto y correspondencias explícitas
+revisadas para el piloto 3212, sin interpretación mediante una LLM. La lectura de otras
+estructuras sigue pendiente de desarrollo y validación. La decisión entre ampliar
+adaptadores, incorporar una LLM con capacidad visual o combinar ambos métodos se recoge
+en la [hoja de ruta: generalizar la importación de correcciones PPTX](hoja-de-ruta.md#pendiente-generalizar-la-importación-de-correcciones-pptx).
+
 ### Estructura de una diapositiva — muy regular, parseable
 
 ```
