@@ -20,8 +20,8 @@ La pestaña **Imagen** admite:
 - Clic para seleccionar una imagen del ordenador.
 - Arrastrar y soltar una imagen.
 - Pegar una imagen con **Ctrl+V**, fuera de los campos de texto.
-- **CAD**, en la misma ventana, permite utilizar un STEP ya subido o vinculado como
-  **Pieza CAD**. No se abre otra modal encima.
+- **CAD**, en la misma ventana, permite usar el STEP de una de las piezas vinculadas al
+  feature ([origen del CAD](#origen-del-cad-de-la-portada)). No se abre otra modal encima.
 
 El editor CAD permite elegir la pieza, marcar varias superficies con clics, quitar una marca
 con otro clic y limpiar la selección con el icono de borrador junto a **Encuadrar**.
@@ -31,10 +31,12 @@ de cabecera. Las imágenes elegidas, pegadas o arrastradas también requieren **
 **Cancelar**, la X o Esc en la modal descartan solo los cambios de esa apertura;
 durante una subida se espera a que termine antes de aplicar o cerrar. **Guardar** en la ficha
 persiste conjuntamente imagen y selección; **Cancelar** en la ficha descarta su borrador de
-cabecera. Las notas y adjuntos mantienen su autoguardado habitual.
+cabecera. Las notas, las piezas vinculadas y sus cotas mantienen su guardado en línea; los
+archivos se editan en la ficha de pieza, con su propio **Guardar cambios**.
 
-Si falta el STEP, se indica que hay que subirlo o vincularlo antes, con acceso a **Piezas
-ejemplo**. Solo se ofrecen archivos STEP/STP de tipo `part` asociados a una pieza. El editor
+Si no hay ninguno, el editor indica «Vincula el CAD desde la ficha de la pieza» (o «Añade
+una pieza que tenga un CAD vinculado» si el feature aún no se ha creado). Solo se ofrecen
+archivos STEP/STP de tipo CAD asociados a una pieza. El editor
 admite hasta 50 MiB; el molde y el escaneo simplificados conservan sus visores independientes.
 
 Las tarjetas y la ficha muestran una imagen estática. En la ficha, toda la portada abre la
@@ -105,13 +107,28 @@ visores existentes. La integración futura con Graph puede conservar este contra
 `occt-import-js` queda fijado a `0.0.23`. Al cambiar el importador o la teselación, hay que
 actualizar la receta y revisar la compatibilidad de las selecciones guardadas.
 
-## Archivos de «Piezas ejemplo»
+## Origen del CAD de la portada
 
-En edición, el icono de cadena está junto a la descarga. Abre el selector de originales;
-si ya hay un documento local, ofrece **Usar otro archivo en esta ficha** o **Actualizar
-ubicación o revisión del documento**. Esta última acción conserva el UUID y afecta a todas
-las fichas que utilizan el documento, como explica el diálogo. No aparecen dos botones de
-vínculo debajo de cada fila. El icono tiene nombre accesible y ayuda al pasar el ratón.
+Desde el 22/09/2026 la ficha del feature no muestra ni edita archivos: se gestionan en la
+ficha de pieza ([uso](ficheros-externos.md#uso-en-la-ficha-de-pieza)). El selector CAD de la
+portada ofrece los **adjuntos de tipo CAD del feature** (`coverAssets` en `cadCover.ts`).
+Esos adjuntos se crean al vincular una pieza al feature por primera vez, con **Añadir pieza**
+o al crear la pieza con el feature seleccionado: se copian los archivos principales de la
+pieza (CAD, escaneo, molde y plano), sin copiar bytes. El adjunto de plano es también el que
+abre el plano desde la fila COTAS.
+
+**Limitación conocida:** esos adjuntos no siguen a la pieza. Si después se cambia el CAD
+principal en la ficha de pieza, el feature conserva el documento anterior y su portada sigue
+ligada a él. La interfaz no tiene hoy una acción para actualizarlo; la solución funcional
+queda como tarea separada. Desvincular la pieza y volver a vincularla copia los archivos
+actuales, pero tiene dos efectos que no se recuperan al volver a vincular:
+
+- Se retiran las cotas de esa pieza asignadas al feature.
+- Si la portada 3D usa el CAD de esa pieza, se elimina su configuración (superficies
+  seleccionadas y cámara; `unlink_feature_part` en `api/routes/features.py`). La imagen
+  estática de la portada se conserva, pero la selección hay que rehacerla.
+
+La portada de la pieza en el catálogo sí usa siempre su CAD principal actual.
 
 ## Comprobaciones
 

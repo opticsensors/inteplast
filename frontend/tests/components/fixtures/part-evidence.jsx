@@ -315,7 +315,10 @@ EvidenceService.importPartEvidence = async ({ partId }) => {
 }
 EvidenceService.readDrawingIndex = async () => ({
   state: "ready",
-  reviews: [{ candidate_id: "reviewed", label: "N170.3" }],
+  reviews: [
+    { candidate_id: "reviewed", label: "N170.3" },
+    ...(window.evidenceDrawingReviews ?? []),
+  ],
   payload: {
     balloons: [
       {
@@ -350,7 +353,7 @@ EvidenceService.readDrawingIndex = async () => ({
         candidates: [{ label: "N113" }],
       },
     ],
-    words: [],
+    words: window.evidenceDrawingWords ?? [],
     notices: [],
   },
 })

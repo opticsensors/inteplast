@@ -155,14 +155,16 @@ después se completa con la cabecera y se incorporan las correcciones.
 >
 > Desde el **2026-08-18** también existen los dos primeros trozos de este esquema:
 > **`PROYECTO`** (como tabla `Part`: código + nombre, y los ficheros cuelgan de ella) e
-> **`INSTANCIA_EN_PROYECTO`** (como tabla `FeaturePartLink`, todavía sin N-numbers ni
-> tolerancias — solo dice qué feature aparece en qué pieza). Lo que sigue
-> pendiente es la ingesta: `PROYECTO`, `MUESTREO`, `MEDICION`, `CORRECCION_MOLDE`.
+> **`INSTANCIA_EN_PROYECTO`** (como tabla `FeaturePartLink`: dice qué feature aparece en qué
+> pieza; desde el 18/09/2026 las cotas se vinculan con `FeatureCharacteristicLink`). Las
+> mediciones y correcciones se guardan como snapshots ([Cotas y evidencia](cotas-y-evidencia-web.md));
+> sigue pendiente el modelo normalizado: `MUESTREO`, `MEDICION`, `CORRECCION_MOLDE`.
 
 El frontend tiene búsqueda global de features, tarjetas con imagen, nombre, descripción y tags,
 y una página propia `/features/{id}` con secciones desplegables de **warnings**,
-**lessons learned** y **piezas ejemplo**. Los ficheros se agrupan por pieza y las notas y los
-adjuntos se editan en línea. El estado actual de la aplicación se mantiene en [app-web.md](app-web.md).
+**lessons learned** y **piezas ejemplo** con sus cotas. Las notas se editan en línea; los
+archivos pertenecen a la pieza y se gestionan en su ficha (`/parts/{id}`). El estado actual de
+la aplicación se mantiene en [app-web.md](app-web.md).
 
 El mapeo es directo:
 
@@ -195,7 +197,8 @@ De `inteplast_notas_reunion_20_2_2026.md` + `inteplast_resposta_dubtes.md` + los
 
 La primera experiencia se centra en antes → acción propuesta → previsión XLS → después.
 Prototipo independiente: `prototypes/data-explorer/ver_correcciones.py` (N161, N240, N170, N165 y perfiles).
-No hay ingesta en la web todavía. [Evidencia y decisiones](3212/revision-2026-09-17.md).
+Desde el 18/09/2026 la web lo incorpora para el 3212 ([Cotas y evidencia](cotas-y-evidencia-web.md));
+el prototipo se conserva como referencia. [Evidencia y decisiones](3212/revision-2026-09-17.md).
 
 No agregar N170 como conforme si solo entra GX; conservar LP máximo, agujero y altura.
 No contar las 120 filas POINT de N165 como 120 características independientes.

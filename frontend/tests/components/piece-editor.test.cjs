@@ -361,6 +361,43 @@ test("leaving a dirty piece requests discard, and save failure keeps all editabl
   ).toBeVisible()
 })
 
+test("changing an existing piece's folder keeps its edited name and code", async (t) => {
+  const page = await mount(t)
+  await choose(page)
+  await page.getByRole("button", { name: "Crear pieza", exact: true }).click()
+  await expect(
+    page.getByRole("heading", { name: "9001 New housing", exact: true }),
+  ).toBeVisible()
+  await page.getByRole("button", { name: "Editar pieza", exact: true }).click()
+  await page.getByLabel("Nombre de la pieza").fill("Custom part name")
+  await page.route("**/__native-picker", (route) =>
+    route.fulfill({ json: { path: "9002 Other housing" } }),
+  )
+  await page
+    .getByRole("button", { name: "Cambiar carpeta de la pieza", exact: true })
+    .click()
+  await expect(
+    page.getByText("9002 Other housing", { exact: true }),
+  ).toBeVisible()
+  await expect(page.getByLabel("Nombre de la pieza")).toHaveValue(
+    "Custom part name",
+  )
+  await expect(page.getByLabel("Código de la pieza")).toHaveValue("9001")
+  await page
+    .getByRole("button", { name: "Guardar cambios", exact: true })
+    .click()
+  await expect(
+    page.getByRole("heading", { name: "Custom part name", exact: true }),
+  ).toBeVisible()
+  const saved = await page.evaluate(() =>
+    window.review.requests.filter((request) => request.kind === "part"),
+  )
+  assert.equal(saved.length, 1)
+  assert.equal(saved[0].patch.folder_path, "9002 Other housing")
+  assert.equal(saved[0].patch.name, "Custom part name")
+  assert.equal(saved[0].patch.code, "9001")
+})
+
 test("asynchronous correction progress is polled without starting another import", async (t) => {
   const page = await mount(t)
   await choose(page)

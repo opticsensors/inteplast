@@ -35,6 +35,7 @@ Integración del 18/09/2026; separación de lectores y simplificación de la int
   restauran el contexto al visitar otra cota, una corrección o el plano. No hay enlaces de retorno.
 - El **visor PDF existente** conserva zoom, arrastre y paginación. Su búsqueda ofrece propuestas
   OCR, texto nativo y ubicaciones revisadas; seleccionarlas encuadra y resalta la zona.
+  Cada resultado indica su origen y las propuestas OCR se señalan como sin verificar.
   Usa el buscador compartido; acepta prefijos y subcotas. Las coincidencias y su contador
   aparecen sobre el plano, sin columna lateral ni formulario de revisión.
 
@@ -114,7 +115,9 @@ los casos y las cotas se refieren a ella. No se crean lessons learned automátic
 5. Las correcciones del 3212 se preparan con su adaptador cuando están los originales.
    Los documentos de retoques de otras piezas se detectan internamente; su interpretación
    sigue pendiente y se indica en el resultado de lectura. No se inventan correspondencias
-   ni previsiones. DR(100%) y carpetas de retoques se excluyen de mediciones.
+   ni previsiones. DR(100%) y carpetas de retoques se excluyen de mediciones. Estado y
+   requisitos para otras piezas en la
+   [hoja de ruta](hoja-de-ruta.md#pendiente-generalizar-la-importación-de-correcciones-pptx).
 6. Añadir pieza en Features ofrece solo registros existentes e incorpora sus referencias
    al vincularla por primera vez, respetando las filas existentes. Añadir cota permite
    escoger explícitamente qué cotas pertenecen al feature y de qué revisión.

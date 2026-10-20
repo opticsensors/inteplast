@@ -28,17 +28,40 @@ del conocimiento con INTEPLAST forma parte de esta etapa.
 
 ### Pendiente: generalizar la importación de correcciones PPTX
 
-El importador actual utiliza reglas de texto y correspondencias explícitas revisadas
-para el piloto 3212. No utiliza una LLM para interpretar las diapositivas ni está
-validado para presentaciones con otras estructuras.
+**Estado (20/10/2026): en espera de ejemplos de otra pieza.** La recopilación está en
+curso. No se programa nada hasta disponer de ellos y de sus resultados esperados.
 
-Pendiente: revisar ejemplos de otras piezas y decidir entre ampliar los adaptadores,
-incorporar interpretación mediante una LLM con capacidad visual o combinar ambos
-métodos. La elección todavía no está tomada.
+Qué funciona ya con otras piezas y qué no:
 
-La solución deberá conservar la procedencia de cada dato, señalar asociaciones ambiguas
-y validar las extracciones contra documentos originales de otras estructuras antes de
-considerar resuelta la generalización.
+| Parte | Otras piezas | Código |
+|---|---|---|
+| Mediciones: CSV CMM por bloques y tablas `DR` de informes PPAP XLS/XLSX | ✅ Lectura genérica al crear la pieza y con **Actualizar datos** | `automatic_measurements.py`, `ingestion/measurement_csv.py`, `ingestion/measurement_tables.py` |
+| Correcciones: diapositivas PPTX, previsiones `DR(100%)` de los XLS de retoques y sus correspondencias con cotas | ❌ Solo 3212. En otras piezas se detectan los documentos, que no se interpretan, y la lectura termina «con incidencias» | `ingestion/pilot_3212/` (planes, casos y asociaciones revisadas en `config.py`), `part_setup.refresh` |
+
+El adaptador piloto se selecciona comprobando el código `3212` y la carpeta
+`3212 Pump Housing` en `api/routes/evidence.py`, `part_setup.py`,
+`automatic_measurements.py` y `measurement_imports.py`. La revisión `06` está fijada en
+`evidence.publish_study`. En el frontend, las reglas de N161, N240, N165 y N170 de
+`describeSeries` (`Parts/measurementSelection.ts`) solo se aplican a series del piloto; las
+series de informes XLS de otras piezas conservan sus columnas originales.
+
+El importador de correcciones usa reglas de texto y correspondencias revisadas para el 3212.
+No usa una LLM para interpretar las diapositivas ni está validado con otras estructuras.
+
+**Antes de programar hace falta:**
+
+1. **Documentos de corrección de otra pieza:** PPTX y XLS de retoques, junto con las
+   mediciones de antes y después de cada corrección.
+2. **Resultados esperados contrastados:** qué acción corresponde a qué cota y muestreo, qué
+   previsión debe leerse de cada celda y qué diapositivas son decisiones de no actuar.
+   Idealmente, revisados con quien prepara esos documentos (preguntas A13 y A14 en
+   [preguntas abiertas](preguntas-abiertas.md)).
+3. **Con esos ejemplos, elegir el método:** ampliar los adaptadores, interpretar con una LLM
+   con capacidad visual, o combinar ambos. La elección todavía no está tomada.
+
+La solución deberá conservar la procedencia de cada dato, señalar las asociaciones ambiguas
+y validar las extracciones contra esos resultados esperados antes de dar por resuelta la
+generalización.
 
 ## 2. Features reutilizables y adaptables dentro de SolidWorks
 

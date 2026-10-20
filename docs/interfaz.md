@@ -191,10 +191,13 @@ El buscador ocupa todo el ancho disponible. Las coincidencias aparecen debajo co
 franja que se adapta al ancho disponible, con un contador de resultados. Seleccionar
 una enfoca su ubicación. Conservar las subcotas entre los resultados, sin casilla para
 activarlas. Si el mismo número aparece en varias ubicaciones, distinguirlas con `1/2`, `2/2`.
+Cada botón indica el origen de la lectura: «Revisada» (prevalece sobre las demás), «Texto
+del PDF» u «OCR · sin verificar». Si hay propuestas OCR, un aviso breve bajo la franja
+recuerda comprobar el número en el plano.
 
-No añadir columna lateral, descarga del original, filtro «Sin lectura», metadatos de revisión
-ni formulario «Número de esta ubicación / Guardar revisión» en esta consulta. Las revisiones
-ya guardadas siguen siendo utilizadas al buscar.
+No añadir columna lateral, descarga del original, filtro «Sin lectura», autor o fecha de la
+revisión ni formulario «Número de esta ubicación / Guardar revisión» en esta consulta. Las
+revisiones ya guardadas siguen siendo utilizadas al buscar.
 
 ## Gráficas y detalle
 

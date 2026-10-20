@@ -4,36 +4,59 @@ Implementado y comprobado el **2026-09-15**. La aplicación puede vincular archi
 existen en una carpeta accesible al backend. Se guardan sus metadatos y su referencia; los
 originales se leen cuando se abre el visor o se descarga. Las subidas siguen disponibles.
 
-## Uso en la ficha
+## Uso en la ficha de pieza
 
-1. Abrir **Bolt Eye → Editar → Piezas ejemplo → 3212**.
-2. En la fila del plano o del CAD, pulsar el **icono de cadena**, junto a la descarga.
-3. Entrar en `1-2D y 3D Pieza`, seleccionar el fichero y, si se conoce, indicar su revisión.
-4. Pulsar **Vincular**. La asociación se guarda automáticamente; **Guardar** guarda también
-   los cambios de la cabecera y vuelve al listado.
-5. Abrir el fichero desde la ficha. Tiene una **página propia** con enlace para volver al
-   feature. El selector de archivos es un diálogo; el visor permanece en la página.
+Desde el 22/09/2026 los archivos pertenecen a la **pieza** y se gestionan en su ficha
+(`/parts/{id}`). La ficha del feature ya no muestra ni edita archivos.
 
-El PDF se muestra como una imagen interactiva: **rueda para ampliar donde está el cursor y
-arrastre izquierdo para mover el plano**. Tiene acercar/alejar, **Encuadrar** y cambio de página
-si hay varias. **Abrir en pestaña** y **Descargar** permiten acceder al PDF original.
-El 3D permite girar con arrastre izquierdo, acercar/alejar con la rueda y **Encuadrar**;
-el arrastre derecho o central desplaza la pieza. El giro es libre y se detiene al soltar.
-Los archivos sin visor también tienen una página de
-detalles y descarga. Los desplegables por pieza y la posición de scroll se recuperan al volver.
+1. **Catálogo → Nueva pieza**, o **Editar pieza** en una pieza existente. El botón de carpeta
+   abre el selector de Windows en la raíz configurada (`ASSETS_HOST_PATH`). Al elegir la
+   carpeta se proponen CAD, escaneo, molde y plano por ruta, extensión y nombre, sin leer su
+   contenido. En una pieza nueva se proponen también título y código; en una existente se
+   conservan los que ya tiene.
+2. En **Archivos**, cada fila tiene su tipo (desplegable), un nombre visible editable, una
+   estrella para elegir el principal cuando hay varios del mismo tipo, el botón de carpeta
+   para elegir otro archivo y la papelera para quitarlo de la lista. **Añadir fichero**
+   incorpora más archivos, y CAD, Escaneo, Molde y Plano 2D aparecen aunque estén vacíos.
+   Solo se admiten archivos dentro de la carpeta de la pieza. El tipo se propone por la
+   extensión: PDF → plano; STEP/STP/IGES → molde si la ruta contiene «molde», «mold» o
+   «mould», y CAD en otro caso; STL/OBJ/PLY/GLB/GLTF → escaneo; MFR/MPI → Moldflow; el
+   resto → documento. Se puede cambiar antes de guardar.
+3. **Guardar cambios** guarda cabecera y archivos en una sola operación (`PUT /parts/{id}`);
+   **Cancelar** los descarta. En esta ficha no hay autoguardado. Si cambió la carpeta, al
+   guardar se leen los datos de la pieza.
+4. En consulta, el nombre de cada archivo abre su página (`/parts/{id}/fichero/{fileId}`) y
+   el botón de la fila descarga el original.
 
-La ficha muestra el nombre legible y el tamaño, sin repetir nombres internos, rutas ni etiquetas
-de revisión. Tampoco muestra el pie «Archivo vinculado» cuando todo está disponible. Conserva
-los avisos de «sin archivo vinculado», no encontrado, original cambiado y origen inaccesible.
-Desde el icono de cadena se elige un archivo y se pulsa **Vincular**. Ese archivo sustituye
-al vínculo de la tarjeta actual; las demás fichas conservan sus documentos. El selector ya no
-pide elegir entre reemplazar y actualizar un documento compartido, ni muestra texto introductorio.
-La tarjeta y el visor muestran el nombre real completo, incluida la extensión.
+La página del archivo muestra el visor que corresponda:
 
-Seleccionar de nuevo el mismo archivo, con la misma fecha/tamaño, reutiliza su registro.
-El selector no pide una etiqueta de revisión. La API conserva la etiqueta existente al omitirla;
-una etiqueta distinta devuelve conflicto. La actualización explícita del documento compartido
-sigue disponible en `PUT /files/{id}/reference` para integraciones, fuera de este selector.
+- **PDF**: buscador de cotas sobre el plano y visor interactivo (**rueda para ampliar donde
+  está el cursor y arrastre izquierdo para mover el plano**, acercar/alejar, **Encuadrar** y
+  cambio de página si hay varias). **Abrir en pestaña** da acceso al PDF original.
+- **CSV/XLS/XLSX**: las celdas originales en solo lectura.
+- **Imágenes**: se muestran en la página.
+- **3D**: giro con arrastre izquierdo, zoom con la rueda, desplazamiento con el arrastre
+  derecho o central y **Encuadrar**. STL y STEP de más de 50 MiB usan un
+  [GLB generado en el servidor](vistas-3d.md).
+- **Sin visor** (Moldflow, SolidWorks, CATIA…): **Descargar original**.
+
+Quitar un archivo de la lista o elegir otro no borra ni modifica el original. Elegir de nuevo
+el mismo archivo, con la misma fecha y tamaño, reutiliza su registro; si cambió, se registra
+como un documento nuevo y el anterior se conserva asociado a la pieza como evidencia. Si un
+original desaparece o cambia, el servidor se niega a servirlo y el visor muestra el error;
+se corrige eligiendo de nuevo el archivo en **Editar pieza**.
+
+Al vincular una pieza a un feature por primera vez, sus archivos principales se copian como
+adjuntos del feature, sin copiar bytes. No se muestran en la ficha del feature: los usan la
+portada CAD y el acceso al plano desde las cotas, y no se actualizan si después cambian los
+archivos de la pieza ([limitación](portadas-cad.md#origen-del-cad-de-la-portada)).
+
+La página antigua `/features/{id}/fichero/{assetId}` sigue respondiendo para enlaces
+guardados, con **Volver a vincular** para originales locales, pero la interfaz ya no enlaza a
+ella. Su texto para un adjunto sin archivo aún remite a la edición del feature. La
+actualización explícita de un documento compartido sigue disponible en
+`PUT /files/{id}/reference` para integraciones; se rechaza si el documento ya es evidencia
+de una pieza.
 
 La cabecera puede usar una [portada creada desde el STEP](portadas-cad.md), con superficies
 marcadas en rojo. El marcado se guarda en la aplicación y mantiene intacto el original.
@@ -44,10 +67,11 @@ En el equipo de desarrollo de Eduard ya está configurado `.env`, excluido de Gi
 la carpeta `Exemples` indicada en [CLAUDE.md](../CLAUDE.md), con una subcarpeta por pieza. Esto utiliza la
 copia local sincronizada por OneDrive. **No inicia sesión en Microsoft ni usa Microsoft Graph.**
 
-Esta conexión local es temporal. Cada pieza guarda su `folder_path` relativo al origen;
-el selector de ficheros comienza ahí. Código, nombre y carpeta se comparten entre features,
-pero cada ficha vincula solo los ficheros que necesita. La futura conexión con SharePoint/OneDrive
-deberá sustituir el acceso al origen manteniendo esta interacción.
+Esta conexión local es temporal. Cada pieza guarda su `folder_path` relativo al origen, y
+sus archivos deben estar dentro de esa carpeta; el selector de Windows se abre en la raíz
+configurada. Código, nombre, carpeta y archivos pertenecen a la pieza y se comparten entre
+los features vinculados. La futura conexión con SharePoint/OneDrive deberá sustituir el
+acceso al origen manteniendo esta interacción.
 
 El 2026-09-17 se amplió el montaje desde `Exemples/3212 Pump Housing` a `Exemples`.
 Los cuatro documentos existentes se actualizaron añadiendo `3212 Pump Housing/` a sus rutas

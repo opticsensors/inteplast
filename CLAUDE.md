@@ -342,6 +342,7 @@ hidratación en OneDrive y por dónde empezar.
 
 | Documento | Léelo cuando… |
 |---|---|
+| [docs/proximos-pasos.md](docs/proximos-pasos.md) | vayas a **retomar el trabajo**: qué quedó abierto (ejemplos de correcciones, Ollama/Copilot y concurrencia, finales de línea) y qué hace falta para continuar |
 | [docs/app-web.md](docs/app-web.md) | vayas a tocar la **aplicación** (`backend/`, `frontend/`): modelo, endpoints, permisos, cómo levantarla y qué falta |
 | [docs/ficheros-externos.md](docs/ficheros-externos.md) | vayas a vincular originales, configurar la carpeta local, revisar los visores o preparar Graph |
 | [docs/visores.md](docs/visores.md) | quieras **ver los datos** en vez de leer sobre ellos: qué hace cada visor de `prototypes/data-explorer/` y qué decisiones lleva dentro |

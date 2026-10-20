@@ -27,23 +27,6 @@ export const ASSET_KIND_LABELS: Record<AssetKind, string> = {
   moldflow: "Moldflow",
 }
 
-/** Etiqueta de la fila en la lista de ficheros: va en una columna estrecha. */
-export const ASSET_KIND_SHORT: Record<AssetKind, string> = {
-  mold: "Molde",
-  part: "CAD",
-  scan: "Escaneo",
-  drawing: "Plano",
-  moldflow: "Moldflow",
-}
-
-export const ASSET_KIND_SINGULAR: Record<AssetKind, string> = {
-  mold: "molde",
-  part: "CAD",
-  scan: "escaneo",
-  drawing: "plano 2D",
-  moldflow: "estudio Moldflow",
-}
-
 export const ASSET_KINDS = Object.keys(ASSET_KIND_LABELS) as AssetKind[]
 
 export const ASSET_ICONS: Record<AssetKind, typeof Box> = {
@@ -52,11 +35,6 @@ export const ASSET_ICONS: Record<AssetKind, typeof Box> = {
   scan: ScanLine,
   drawing: FileText,
   moldflow: Waves,
-}
-
-export const NOTE_KIND_LABELS: Record<NoteKind, string> = {
-  warning: "Advertencias",
-  lesson: "Lecciones aprendidas",
 }
 
 export const NOTE_KIND_SINGULAR: Record<NoteKind, string> = {

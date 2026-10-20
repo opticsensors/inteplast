@@ -81,13 +81,15 @@ export type Evaluation = {
 
 /** The N170 identity is derived from CMM IDs by the importer, never its repeated header. */
 export function describeSeries(entry: Entry, series: Series): Evaluation {
-  if (series.element && series.evaluation)
+  // Report rows (XLS/XLSX) keep their own columns even when Equipment or type
+  // are empty: the 3212 pilot rules below must never relabel another report.
+  if (series.id.startsWith("PPAP:") || (series.element && series.evaluation))
     return {
       series,
-      element: series.element,
+      element: series.element || "Equipo no indicado",
       height: "",
       metric: series.id,
-      label: series.evaluation,
+      label: series.evaluation || `${series.label} · ${series.idx ?? 1}`,
     }
   const bolt = /^N170\|(B[1-4])-H(1\.5|5\.0)\|([12])$/.exec(series.id)
   if (bolt)

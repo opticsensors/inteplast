@@ -353,6 +353,10 @@ Las importaciones comparten datos entre features y conservan versiones. El lecto
 cubre el formato CMM por bloques, con pruebas sintéticas de otra pieza. Aún no se ha
 validado una segunda pieza real ni la generalización de correcciones XLS/PPTX.
 
+**Contexto interno (2026-10-20):** la generalización de correcciones queda en espera de estos
+ejemplos y de sus resultados esperados; requisitos en la
+[hoja de ruta](hoja-de-ruta.md#pendiente-generalizar-la-importación-de-correcciones-pptx).
+
 ---
 
 ### A14 · ¿Cómo se elaboran los XLS de metrología y de retoques?

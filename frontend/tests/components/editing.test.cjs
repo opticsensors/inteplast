@@ -311,37 +311,6 @@ test("registered pieces remain selectable while the original folder is unavailab
   )
 })
 
-test("a part takes its folder name and changing its folder preserves its edited name", async (t) => {
-  const { page } = await mount(t)
-  await addPart(page)
-  await page.waitForFunction(
-    () => window.review.feature.parts[1]?.folder_path === "2820 Pump Housing",
-  )
-  await page
-    .getByRole("textbox", { name: "Nombre de la pieza", exact: true })
-    .last()
-    .fill("Custom part name")
-  await page
-    .getByRole("button", { name: "Opciones de la pieza", exact: true })
-    .last()
-    .click()
-  await page
-    .getByRole("menuitem", { name: "Cambiar carpeta de la pieza", exact: true })
-    .click()
-  await page.waitForFunction(() =>
-    window.review.requests.some(
-      (request) => request.kind === "part" && request.patch.folder_path,
-    ),
-  )
-  assert.equal(
-    await page
-      .getByRole("textbox", { name: "Nombre de la pieza", exact: true })
-      .last()
-      .inputValue(),
-    "Custom part name",
-  )
-})
-
 test("removing a part removes its full card but leaves the part reusable", async (t) => {
   const { page } = await mount(t)
   await page.getByRole("button", { name: "Quitar 3212", exact: true }).click()

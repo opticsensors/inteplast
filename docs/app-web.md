@@ -112,7 +112,7 @@ Decisiones que conviene conocer antes de tocarlo:
 | Las notas y los adjuntos son **`ON DELETE CASCADE`** | No tienen sentido sin su feature |
 | `FeatureAsset.file_id` y `part_id` son **`SET NULL`** | Borrar un fichero no borra la fila que lo describía; borrar una pieza no borra sus adjuntos, que caen a un desplegable *«Sin pieza»* al final de la lista |
 | `Part.code` es **UNIQUE**; las piezas existentes se pueden vincular sin duplicarlas | Es la clave con la que se agrupa todo. El alta desde carpeta extrae un código editable del nombre |
-| `FeaturePartLink` es una tabla de unión **sin campos propios** | Hoy solo dice *«este feature está en esta pieza»*. Cuando llegue la ingesta, aquí cuelgan los N-numbers y las tolerancias y pasa a ser `INSTANCIA_EN_PROYECTO` |
+| `FeaturePartLink` es una tabla de unión **sin campos propios** | Solo dice *«este feature está en esta pieza»*. Las cotas no cuelgan de aquí: se asocian con `FeatureCharacteristicLink` (feature ↔ cota de una pieza y revisión, con rol). El modelo normalizado `INSTANCIA_EN_PROYECTO` sigue pendiente |
 | Borrar una pieza es **solo de superusuario y si no tiene uso** | Se rechaza con `409` si quedan vínculos directos o adjuntos en algún feature; no se borran carpetas ni documentos |
 
 ### Ficheros subidos y originales externos
@@ -260,17 +260,20 @@ desplegable de documentos. Plano queda junto al buscador con su misma altura y a
 `/parts/{id}/fichero/{fileId}`, una página propia con el visor de Features. El enlace del
 PDF en Archivos abre la misma página; no redirige a la sección Cotas. Los enlaces antiguos
 con `plano=true` se resuelven al archivo. Correcciones queda debajo a la izquierda.
-Ambos conservan el contexto en el historial del navegador. La importación CSV está en
-**Catálogo → Nueva pieza / ficha de pieza → Actualizar datos**. Admin conserva la importación
-piloto de mediciones/correcciones del 3212. Metrología permite cambiar de revisión si hay
+Ambos conservan el contexto en el historial del navegador. Las mediciones y correcciones se
+leen en **Catálogo → Nueva pieza** y con **Actualizar datos** en la ficha de pieza; Admin solo
+gestiona usuarios. Metrología permite cambiar de revisión si hay
 varias, y consultar una versión anterior desde el historial de importaciones de la pieza.
 
 | Ruta | Fichero | Qué es |
 |---|---|---|
 | `/` | `routes/_layout/index.tsx` | Redirige a `/features`, conservando los filtros de los enlaces antiguos |
-| `/features/{id}` | `routes/_layout/features_.$featureId.tsx` | 🔑 **La ficha del feature**: cabecera con la imagen a la izquierda e identidad a la derecha (nombre, descripción, categoría, tags, piezas), y debajo a todo el ancho warnings, lessons y los ficheros por pieza. **Se edita aquí mismo** (ver abajo) |
+| `/features/{id}` | `routes/_layout/features_.$featureId.tsx` | 🔑 **La ficha del feature**: cabecera con la imagen a la izquierda e identidad a la derecha (nombre, descripción, categoría, tags, piezas), y debajo advertencias y lecciones a la izquierda y piezas con sus cotas a la derecha. **Se edita aquí mismo** (ver abajo) |
 | `/features` | `routes/_layout/features.tsx` | **Catálogo e inicio**: buscador, filtros y tarjetas que abren la ficha en lectura, con *Nuevo feature* y *Editar* directamente accesibles. La búsqueda va en la URL (`/features?q=3212`) |
-| `/features/{id}/fichero/{assetId}` | `routes/_layout/features_.$featureId_.fichero.$assetId.tsx` | 🔑 **La página de un fichero**: el visor (PDF, imagen o 3D), el botón de descargar y, cuando no hay visor posible, qué programa hace falta |
+| `/features/{id}/fichero/{assetId}` | `routes/_layout/features_.$featureId_.fichero.$assetId.tsx` | Página antigua de un adjunto del feature. Se conserva para enlaces guardados; la interfaz ya no enlaza a ella |
+| `/parts/{id}` | `routes/_layout/parts_.$partId.tsx` | 🔑 **La ficha de pieza**: identidad, carpeta, Cotas (mediciones, correcciones y plano), Features y Archivos. Se edita aquí mismo con `?editar=true` |
+| `/parts/nueva` | `routes/_layout/parts_.nueva.tsx` | Alta de pieza desde su carpeta, con la misma composición que la ficha |
+| `/parts/{id}/fichero/{fileId}` | `routes/_layout/parts_.$partId_.fichero.$fileId.tsx` | 🔑 **La página de un archivo de la pieza**: visor PDF con buscador de cotas, tabla CSV/XLS/XLSX, imagen o 3D; si no hay visor, descarga del original |
 | `/features/nuevo` | `routes/_layout/features_.nuevo.tsx` | **Alta completa** con todas las secciones desde el principio. Añadir contenido crea el feature automáticamente; Guardar termina en su ficha de consulta |
 | `/admin` | `routes/_layout/admin.tsx` | Usuarios y permisos; punto de alta de cuentas con el registro público cerrado |
 
@@ -280,9 +283,9 @@ Componentes en `components/Features/`:
 |---|---|
 | `FeatureSearch.tsx` | Buscador + Pieza y Feature; Categoría y Tag bajo Más filtros. Selectores con búsqueda interna poblados desde `/features/filters`; `feature_id` filtra por identidad exacta y se conserva como `feature` en la URL |
 | `FeatureCard.tsx` | La tarjeta: imagen, nombre, descripción, tags y el resumen *«2 piezas · 3197, 3212»* |
-| `PartAssetList.tsx` | 🔑 **Los ficheros agrupados por pieza**: un desplegable por pieza y dentro una fila por fichero. **El mismo componente sirve la ficha y el formulario** (`editable`) |
+| `PartAssetList.tsx` | 🔑 **Las piezas del feature con sus cotas**: un desplegable por pieza con su fila COTAS y «Ver pieza». Los documentos se consultan en la ficha de pieza. **El mismo componente sirve la ficha y el formulario** (`editable`) |
 | `Parts/FeaturePartEvidence.tsx` | Fila **COTAS** compacta: números, plano, añadir y papelera. Añadir permite seleccionar una cota importada con su revisión o escribir otra al final de la fila. |
-| `Parts/PartSetupDialog.tsx` | Alta y actualización automática, tamaño fijo, carga en el pie y acciones Crear/Cancelar. No asigna cotas al feature. |
+| `Parts/PartDetailPage.tsx` | Ficha y alta de pieza (`/parts/{id}`, `/parts/nueva`): cabecera, carpeta, Cotas, Features y Archivos. **Actualizar datos** (`Parts/PartReadStatus.tsx`) relee la carpeta; no asigna cotas al feature. |
 | `viewers.ts` | Extensión → visor, carga directa hasta 50 MiB y GLB automático para STL/STEP grandes |
 | `ModelViewer.tsx` | El visor 3D (three.js + OpenCascade en WASM). Se carga con `import()` dinámico: no pesa nada hasta que alguien abre un 3D |
 | `modelControls.ts` | Giro libre en pantalla, desplazamiento y zoom 3D, sin bloqueo en los polos ni inercia al soltar |
@@ -290,12 +293,10 @@ Componentes en `components/Features/`:
 | `parts.ts` | La unión *piezas declaradas + piezas con ficheros* y el reparto por pieza y tipo. Es la lógica de la lista |
 | `PartActions.tsx` | Buscador de piezas registradas; seleccionar vincula una al feature |
 | `PartIdentityEditor.tsx` | Código y nombre editables en la cabecera de la pieza, con autoguardado y recuperación de errores |
-| `PartFolderPicker.tsx` | Carpeta compartida de la pieza; reutiliza el explorador de originales |
-| `FeatureForm.tsx` | El formulario de alta y edición (datos básicos + warnings, lessons, **Piezas** y **Ficheros por pieza**). Lo montan `/features/nuevo` y la propia ficha en modo edición. 🔑 **Repite el reparto de la ficha** —foto a la izquierda, datos a la derecha, secciones debajo— con una casilla en el sitio de cada dato, para que entrar y salir de edición no mueva nada de sitio |
+| `FeatureForm.tsx` | El formulario de alta y edición (datos básicos + warnings, lessons y **Piezas** con sus cotas). Lo montan `/features/nuevo` y la propia ficha en modo edición. 🔑 **Repite el reparto de la ficha** —foto a la izquierda, datos a la derecha, secciones debajo— con una casilla en el sitio de cada dato, para que entrar y salir de edición no mueva nada de sitio |
 | `FeatureNotFound.tsx` | La pantalla de «feature no encontrado» de la ficha |
 | `FeatureActions.tsx` | El botón *Editar* compartido por las tarjetas y la ficha; *Eliminar* vive en la ficha, con confirmación y solo para autor o superusuario |
 | `NoteList.tsx` | Warnings y lessons **en modo edición**: título editable en su sitio, desplegable con el cuerpo dentro y autoguardado |
-| `AssetEditRow.tsx` | Fila **en edición**: tipo/pieza, nombre, subida y vínculo a un archivo existente |
 | `SourceFilePicker.tsx` | Selector de originales: elegir un archivo y vincularlo a esta tarjeta, sin opciones adicionales |
 | `DocumentStatus.tsx` | Estado del original y aviso de archivo ausente/cambiado/inaccesible |
 | `constants.ts` | Las etiquetas en castellano de categorías y tipos, y el icono de cada tipo |
@@ -304,38 +305,44 @@ Componentes en `components/Features/`:
 Y en `components/Common/`: `FileUpload.tsx` (drag and drop), `RichText.tsx` (editor y visor),
 `CollapsibleSection.tsx` (los paneles desplegables).
 
-### Los ficheros, agrupados por pieza (2026-08-25)
+### Piezas, cotas y archivos (actualizado el 22/09/2026)
 
-Hasta el 2026-08-25 esto era una **tabla** de pieza × tipo de fichero. Se cambió por tres motivos:
-era lo único con forma de tabla en toda la ficha, en una casilla no cabe el nombre del fichero
-—que es justo lo que se quiere leer— y con tres piezas se iba en horizontal. Ahora es lo mismo que
-Warnings y Lessons: un **desplegable por pieza** (`3212 · Pump Housing`) y dentro **una fila por
-fichero**.
+Del 25/08 al 22/09/2026 la ficha del feature tenía un desplegable por pieza con una fila por
+fichero, editable en línea. Desde el 22/09 **los archivos pertenecen a la pieza** y se
+gestionan en su ficha. En la ficha del feature, cada pieza muestra sus **cotas** y el enlace
+«Ver pieza»; el desplegable conserva el código y el nombre de la pieza.
 
-**El checklist de lo que falta no se pierde**: lo dan el contador de cada pieza
-(*«5 ficheros · 2 vinculados»*) y las filas que dicen *«sin archivo vinculado»*.
-
-**Añadir pieza** busca exclusivamente en el catálogo registrado. **Nueva pieza** está en
+**Añadir pieza** (editor del feature) busca exclusivamente en el catálogo registrado. Al
+vincular una pieza por primera vez se copian sus archivos principales como adjuntos del
+feature, sin copiar bytes ni sobrescribir los existentes. Esos adjuntos no se muestran en la
+ficha del feature: los usan la portada CAD y el acceso al plano desde las cotas. No se
+actualizan si después cambian los archivos de la pieza
+([limitación](portadas-cad.md#origen-del-cad-de-la-portada)). **Nueva pieza** está en
 Catálogo: selecciona una carpeta de Windows dentro del origen configurado, propone el
 nombre completo y los archivos y prepara datos compatibles al crearla. El código se obtiene
 del prefijo numérico de la carpeta o se asigna uno provisional estable `PIEZA-…`.
 Se reutilizan registros existentes, sin crear carpetas ni duplicar piezas. Código y carpeta
 son únicos; un código asociado a otra carpeta produce conflicto.
 
-Código, nombre y carpeta se comparten entre features; cada feature elige sus propios ficheros.
-El selector nativo de ficheros empieza en Exemples. **Cambiar carpeta** está en el menú
-de tres puntos y conserva los nombres personalizados. `folder_path` pertenece al adaptador
-local temporal; Graph sustituirá esa referencia por la identidad estable del origen.
+En la ficha de pieza, **Editar pieza** permite cambiar título, descripción, código, cliente,
+carpeta y archivos; **Guardar cambios** los guarda juntos y **Cancelar** los descarta.
+Cambiar la carpeta propone sus archivos y conserva el título y el código ya editados. Uso
+detallado en [archivos externos](ficheros-externos.md#uso-en-la-ficha-de-pieza). Código y
+nombre también se editan en la cabecera de cada pieza dentro del editor del feature, con
+autoguardado: son datos compartidos entre features. El selector nativo de Windows se abre
+en la raíz configurada (Exemples). `folder_path` pertenece al adaptador local temporal;
+Graph sustituirá esa referencia por la identidad estable del origen.
 
-La fila COTAS usa el mismo patrón compacto de los ficheros. Añadir cota inserta un campo
+La fila COTAS es compacta, con la altura de una fila de archivo. Añadir cota inserta un campo
 al final que se guarda con Intro, al salir o con Guardar el feature; los errores conservan
 el borrador. No solicita revisión ni relación. Reutiliza vínculos existentes sin cambiar
 sus metadatos; para altas toma la revisión del estudio o una única revisión conocida de
 la pieza/cota. Sin esa información queda «sin confirmar», sin asumir la revisión 06.
 
 Si hay cotas importadas, Añadir cota ofrece primero un selector con búsqueda y revisión;
-la alternativa manual conserva el comportamiento anterior. Actualizar datos en Metrología
-procesa las tablas compatibles automáticamente sin asignar sus cotas al feature.
+la alternativa manual conserva el comportamiento anterior. **Actualizar datos**, en la
+sección Cotas de la ficha de pieza, procesa las tablas compatibles automáticamente sin
+asignar sus cotas al feature.
 Una pieza vinculada a varios features comparte las mismas importaciones.
 
 API autenticada de mediciones (prefijo `/api/v1`):
@@ -343,7 +350,7 @@ API autenticada de mediciones (prefijo `/api/v1`):
 | Método y ruta | Función |
 |---|---|
 | `POST /evidence/parts/{id}/measurements/preview` | Descubrir CSV o revisar una selección; devuelve contexto, hash, ejemplos y estado sin escribir datos. |
-| `POST /evidence/parts/{id}/measurements/import` | Verificar otra vez contexto y hashes, incorporar cotas y conservar versiones. Requiere pieza vinculada a un feature y confirmación de las sustituciones. |
+| `POST /evidence/parts/{id}/measurements/import` | Verificar otra vez contexto y hashes, incorporar cotas y conservar versiones. Requiere confirmar las sustituciones; no exige que la pieza esté vinculada a un feature. |
 | `GET /evidence/parts/{id}/measurements/history` | Historial de importaciones, con revisiones y versión vigente por muestreo/cavidad. |
 | `GET /evidence/parts/{id}?revision=…&snapshot_id=…` | Consulta de la revisión elegida o del estado guardado hasta una importación concreta; devuelve `measurement_revisions`. |
 | `GET /files/{id}/table` | Vista autenticada de las celdas originales de CSV/XLS/XLSX, con hojas y coordenadas, sin modificar archivos ni recalcular fórmulas. Verifica que el original local siga siendo la versión registrada. |
@@ -359,30 +366,27 @@ el permiso de superusuario. La API cuenta vínculos directos y adjuntos de cada 
 sola vez. Borrar el registro conserva los originales: si su carpeta sigue en el origen,
 continúa disponible para registrarla de nuevo. Las carpetas aún no registradas no muestran papelera.
 
-Las tarjetas se reordenan con el tirador y `@dnd-kit/react`, con desplazamiento animado durante
-el arrastre. Space/flechas/Space permiten ordenar con teclado y Escape cancela. `Feature.part_order`
-guarda el orden de piezas por feature, también usado en consulta. El mismo arrastre se aplica a
-los ficheros dentro de cada pieza, las advertencias y las lecciones, guardando `position` en una
-sola operación por lista. El orden de ficheros se conserva entre tipos distintos. Las listas no
-intercambian elementos al arrastrar. La papelera retira la tarjeta y sus filas
-de adjuntos en una transacción; conserva la pieza compartida, los otros features y los originales.
-El desplegable de tipo de fichero contiene únicamente tipos.
+Las tarjetas de pieza del feature se reordenan con el tirador y `@dnd-kit/react`, con
+desplazamiento animado durante el arrastre. Space/flechas/Space permiten ordenar con teclado y
+Escape cancela. `Feature.part_order` guarda el orden de piezas por feature, también usado en
+consulta. El mismo arrastre se aplica a las advertencias y las lecciones, guardando
+`position` en una sola operación por lista. Las listas no intercambian elementos al
+arrastrar. La papelera de una tarjeta retira la pieza del feature, sus adjuntos copiados y
+sus cotas asignadas en una transacción; conserva la pieza compartida, los otros features y
+los originales. Al volver a la ficha se conserva el desplegado de cada pieza en la sesión del
+navegador y se restaura el scroll de la ruta.
 
-🔑 **Cada fila promete lo que va a pasar antes de que la cliques**, que es lo que la tabla no hacía
-(los iconos no se podían clicar y nadie sabía por qué):
+En la ficha de pieza, **Archivos** muestra en cada fila el tipo, el nombre visible y el
+tamaño. El nombre abre la página del archivo (`/parts/{id}/fichero/{fileId}`) y el botón de
+la fila descarga el original. La página muestra el visor que corresponda o, si no hay visor
+posible, indica que hay que descargar el original para abrirlo en su aplicación. La cabecera
+del visor omite tipo, nombre interno, ruta y revisión técnica; esos metadatos siguen en la
+BD. Un original ausente o modificado se rechaza en el servidor y el visor muestra el error;
+se corrige eligiendo de nuevo el archivo en **Editar pieza**.
 
-| Se ve | Significa | Al clicar |
-|---|---|---|
-| Nombre legible del adjunto y tamaño | Hay fichero y **se puede ver aquí** | La página del fichero, con el visor |
-| Igual, pero en gris debajo *«necesita Moldflow Communicator»* o *«demasiado grande para el visor»* | Hay fichero pero **la aplicación no ofrece un visor para él** | Página de detalles, estado y descarga |
-| *«sin archivo vinculado»* en cursiva | El adjunto está declarado pero no tiene archivo. Es el caso inicial del seed | Vincular desde Editar |
-
-La fila no repite el nombre original del archivo ni «Archivo vinculado». La cabecera del visor
-también omite tipo, nombre interno, ruta y revisión técnica. Esos metadatos siguen en la BD.
-Solo se muestran avisos de disponibilidad cuando requieren una acción. Si falta el original
-o ha cambiado, **Volver a vincular** permite corregir la ubicación, conservando la revisión guardada. El selector es un
-diálogo; los visores siguen en su página. Al volver se conserva el desplegado por pieza en la
-sesión del navegador y se restaura el scroll de la ruta.
+La página antigua `/features/{id}/fichero/{assetId}` sigue respondiendo para enlaces
+guardados, con estado del original y **Volver a vincular**, pero la interfaz ya no enlaza a
+ella. Su texto para un adjunto sin archivo aún remite a la edición del feature.
 
 Lo decide `viewers.ts` a partir del tipo MIME, la extensión y el tamaño: los PDF con tipo
 `application/pdf` y las imágenes JPEG, PNG, GIF, WebP, AVIF y BMP se pintan en la página.
@@ -451,16 +455,18 @@ modal se ha borrado. El motivo no es estético:
 - **La ficha es el destino de la herramienta**, no una vista previa. Con URL propia se puede
   enviar por Teams, guardar en favoritos y enlazar desde estos `docs/`.
 - La **cabecera repite la lectura de la tarjeta del buscador** —imagen a la izquierda, identidad
-  a la derecha— para que el salto del resultado a la ficha no obligue a releer nada. Debajo, a
-  todo el ancho, lo que hay que saber para diseñar: warnings, lessons y los ficheros por pieza.
+  a la derecha— para que el salto del resultado a la ficha no obligue a releer nada. Debajo, lo
+  que hay que saber para diseñar: advertencias, lecciones y las piezas con sus cotas (desde el
+  22/09/2026 los archivos se consultan en la ficha de pieza).
 - **Cabe lo que viene.** La matriz pieza × tipo ya se salía en la modal; los muestreos y las
   correcciones de molde de la siguiente fase no habrían entrado de ninguna manera.
 - **El formulario tampoco es una modal.** Era una modal con warnings, lessons, piezas y cinco
   tipos de fichero dentro de 672 px, que además abría modales encima de la modal. Ahora el alta
   es `/features/nuevo` y la edición ocurre **dentro de la propia ficha**. Desde el 2026-08-25
-  las notas y los adjuntos se editan **en línea**: `NoteDialog` y `AssetDialog` se han borrado
-(ver abajo). Se mantienen confirmaciones de borrado, el diálogo de cambios pendientes,
-el selector de originales y los diálogos para crear o ampliar una portada CAD.
+  las notas se editan **en línea** (`NoteDialog` y `AssetDialog` se han borrado; ver abajo) y
+  desde el 22/09/2026 los archivos se editan en la ficha de pieza. Se mantienen
+  confirmaciones de borrado, el diálogo de cambios pendientes y los diálogos para crear o
+  ampliar una portada CAD.
 
 🔑 **Un único catálogo de piezas y features** (ampliado el 2026-09-22). El menú lateral tiene
 una sola entrada **Catálogo**, activa también dentro de las fichas y los visores; **Admin**
@@ -484,13 +490,15 @@ Los permisos no cambian: cualquier usuario autenticado puede crear y editar.
 casilla—, la foto sigue a la izquierda —ahora abre el editor de portada—, y las secciones
 siguen debajo, con sus botones de añadir y borrar. Arriba a la derecha están *Cancelar* y
 *Guardar*, y ahí es donde tienen que estar: lo único que se guarda a mano es la cabecera, porque
-las notas y los ficheros se guardan en línea. **Los dos dejan la misma ficha en lectura**.
+las notas, las piezas vinculadas y sus cotas se guardan en línea. Los archivos no se editan
+aquí: pertenecen a la pieza y se guardan con **Guardar cambios** en su ficha. **Los dos dejan
+la misma ficha en lectura**.
 Cambiar de modo reemplaza la entrada del historial: *atrás* vuelve al catálogo con sus filtros
 y posición, sin recorrer modos de edición anteriores. El modo vive en la URL y no en un `useState` por
 dos motivos: el *Editar* de la lista entra directo a él, y recargar (F5) no te echa de la
-edición. Antes de salir, se completan los guardados pendientes de notas/adjuntos y las subidas;
-si fallan, se conserva la edición y se muestra el error. **Cancelar descarta la cabecera**, no
-deshace las notas ni los adjuntos guardados en línea. `validateSearch` lo declara **opcional**, o el catálogo no podría enlazar la ficha sin
+edición. Antes de salir, se completan los guardados pendientes de notas, piezas y cotas, y las
+subidas; si fallan, se conserva la edición y se muestra el error. **Cancelar descarta la
+cabecera**, no deshace las notas, piezas ni cotas guardadas en línea. `validateSearch` lo declara **opcional**, o el catálogo no podría enlazar la ficha sin
 pasarlo (TanStack exige en los enlaces todo search param que el validador declare obligatorio).
 
 **No hay botón *Volver*** en ninguna de las dos: para eso están el botón del navegador y el menú
@@ -516,13 +524,13 @@ lista pero se escribía en otro sitio. Ahora **se escribe donde se lee**:
 | | Antes | Ahora |
 |---|---|---|
 | Warning / lesson | Fila con el título + lápiz → modal con título y cuerpo | **Título editable en la fila** y desplegable con el cuerpo dentro, editable ahí mismo |
-| Fichero de una pieza | Fila con el nombre + lápiz → modal con tipo, pieza y fichero | Tipo/pieza en desplegable, nombre en línea y acciones de subir, descargar y vincular en la fila |
+| Archivo de una pieza | Fila con el nombre + lápiz → modal con tipo, pieza y fichero | En la ficha de pieza, con **Editar pieza**: tipo, nombre visible y archivo en la propia fila. Se guarda con la cabecera, sin autoguardado |
 | Añadir | Modal vacía que hay que rellenar y confirmar | Crea la fila en el momento, abierta y con el texto seleccionado para escribir encima |
 
-Las notas mantienen el botón de borrar y edición en línea. Los archivos agrupan sus acciones
-en la propia fila: subida, descarga, vínculo y borrado, sin botones de vínculo debajo.
+Las notas mantienen el botón de borrar y edición en línea. Los archivos de la pieza agrupan
+en su fila el tipo, el nombre, el cambio de archivo y la papelera, sin botones debajo.
 
-🔑 **Autoguardado, sin botón de guardar**: se envían solo los campos modificados localmente
+🔑 **Autoguardado de notas, sin botón de guardar**: se envían solo los campos modificados localmente
 tras **0,7 s**, mediante `PUT` parcial (`model_dump(exclude_unset=True)`). Las escrituras se
 serializan: una respuesta antigua no dispara una escritura que deshaga cambios posteriores.
 Una actualización del servidor sincroniza los campos limpios, sin convertir diferencias
@@ -531,19 +539,20 @@ Plegar una sección de edición conserva montados sus borradores; guardar o nave
 guardados pendientes. La cabecera se sigue guardando mediante su botón.
 
 - El **título vacío no se guarda** (`min_length=1` en el backend): el campo se marca en rojo y se
-  queda esperando. Lo mismo con el nombre de un fichero.
-- Al **subir un fichero en una fila recién creada** (la que aún se llama *«Nuevo fichero»*), el
-  nombre pasa a ser el del fichero y el tipo se deduce de la extensión —`.pdf` → plano, `.stl` →
-  escaneo, `.mfr` → Moldflow—. `.step` y `.stp` **no se deducen**: pueden ser el molde o la pieza,
-  y adivinar mal es peor que no adivinar.
+  queda esperando. En la ficha de pieza, un archivo sin nombre visible se marca en rojo y
+  bloquea **Guardar cambios**.
+- Al **añadir un archivo a la pieza**, el nombre visible es el del fichero y el tipo se propone
+  por la extensión: `.pdf` → plano, `.stl`/`.obj`/`.ply`/`.glb`/`.gltf` → escaneo, `.mfr`/`.mpi` →
+  Moldflow. `.step`, `.stp`, `.igs` e `.iges` se proponen como molde si la ruta contiene «molde», «mold»
+  o «mould», y como CAD en otro caso. El tipo se puede cambiar antes de guardar.
 
 ### Tres cosas del frontend que hay que saber
 
 1. **El alta muestra cabecera, warnings, lessons y piezas desde el primer momento.** Abrir o
    cancelar el formulario vacío no crea registros. La primera nota o pieza crea automáticamente
    el feature con los datos actuales y nombre provisional «Nuevo feature» si falta título. Las
-   altas simultáneas comparten esa misma creación. Las notas, piezas y adjuntos se guardan al
-   vuelo; Guardar espera las operaciones pendientes y termina en la ficha de consulta.
+   altas simultáneas comparten esa misma creación. Las notas, las piezas y sus cotas se guardan
+   al vuelo; Guardar espera las operaciones pendientes y termina en la ficha de consulta.
 
 2. 🔴 **Radix `Select` dentro de un `<form>` dispara `onValueChange("")` él solo** mientras su
    lista no se haya abierto. En el formulario del feature eso **borraba la categoría**: el
@@ -654,10 +663,13 @@ La cobertura HTML se genera dentro del stack de tests y desaparece al limpiarlo.
 |---|---|
 | **La página `/items` de la plantilla sigue existiendo** | Se ha quitado del menú pero el `Item` de demo sigue en el backend, el frontend y los tests. No molesta; se puede borrar entero cuando se decida |
 | **Imagen con la zona marcada en rojo** | Implementada la [portada CAD](portadas-cad.md): caras del STEP, captura, cámara y 3D interactivo. El marcado libre sobre imágenes/planos sigue pendiente |
-| **Vincular un feature con sus N-numbers y sus cotas** | La tabla ya existe (`FeaturePartLink`), pero está vacía de contenido: solo dice *feature ↔ pieza*. Añadirle los N-numbers y las tolerancias la convierte en el `INSTANCIA_EN_PROYECTO` de [modelo-datos.md](modelo-datos.md) |
+| **Vincular un feature con sus N-numbers y sus cotas** | Implementado con `PartCharacteristic` + `FeatureCharacteristicLink` (cota por pieza y revisión, con rol); ver [Cotas y evidencia](cotas-y-evidencia-web.md). Las tolerancias se leen de las mediciones importadas; el modelo normalizado `INSTANCIA_EN_PROYECTO` de [modelo-datos.md](modelo-datos.md) sigue pendiente |
 | **Vistas ligeras de escaneo y molde** | Implementadas: cola persistente, GLB en caché, original intacto y descarga íntegra; ver [vistas-3d.md](vistas-3d.md) |
 | **Conexión Microsoft 365** | Adaptador local implementado. Confirmar ubicación/permisos con IT (A10, prioridad 1) y desarrollar Graph con IDs estables; los visores usan el UUID interno del documento |
-| **La ficha de una pieza** | Hoy `Part` solo tiene código y nombre; se crean, vinculan y editan desde el feature. No hay página propia de pieza |
+| **La ficha de una pieza** | Implementada el 22/09/2026: `/parts/{id}` con identidad, carpeta, Cotas, Features y Archivos (`Parts/PartDetailPage.tsx`) |
+| **Adjuntos del feature copiados de la pieza** | No se actualizan si cambian los archivos de la pieza; afecta a la portada CAD y al plano de la fila COTAS. Ver [portadas CAD](portadas-cad.md#origen-del-cad-de-la-portada) |
+| **Concurrencia del asistente** | Pendiente de decidir con el despliegue (proveedor, máquina, usuarios). Ver [asistente](asistente.md#concurrencia-y-despliegue) |
+| **Correcciones de otras piezas** | Las mediciones ya son genéricas; las correcciones XLS/PPTX solo se interpretan en el 3212. En espera de ejemplos y resultados esperados. Ver [hoja de ruta](hoja-de-ruta.md#pendiente-generalizar-la-importación-de-correcciones-pptx) |
 
 ### Nombre real del fichero en las tarjetas (2026-09-17)
 

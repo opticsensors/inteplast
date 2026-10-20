@@ -38,9 +38,53 @@ Se mantiene el modelo cargado 15 minutos después de usarlo. La primera consulta
 puede tardar más; desactivar thinking no hace instantánea la inferencia en CPU.
 No hay límite de palabras: se pide responder de forma directa y con la extensión
 necesaria. Si alcanza el límite técnico de tokens, la interfaz lo indica. Se atiende una petición por proceso;
-las simultáneas reciben un aviso para reintentar, sin acumular cola.
+las simultáneas reciben un aviso para reintentar, sin acumular cola. En producción hay varios
+procesos: ver [Concurrencia y despliegue](#concurrencia-y-despliegue), pendiente de decisión.
 Las respuestas largas se conservan completas en pantalla; solo se abrevia su copia
 enviada como historial, manteniendo la pregunta anterior y sus identificadores.
+
+## Concurrencia y despliegue
+
+**Estado (20/10/2026): pendiente de decisión.** No se ha cambiado el comportamiento. Esta
+sección recoge cómo funciona hoy y qué hay que decidir antes de abrir el asistente a varios
+usuarios. Se decidirá cuando se elija el despliegue (ver el
+[acta del 24/09/2026](acta-reunion-2026-09-24.md): asistente local o vinculado a Copilot).
+
+### Cómo funciona hoy
+
+| Elemento | Comportamiento | Código |
+|---|---|---|
+| Chat | Cada proceso del backend atiende **una consulta a la vez**. Si llega otra, espera 0,1 s y recibe «El asistente está atendiendo otra consulta…», sin cola. | `assistant/router.py` (`_slot`) |
+| Procesos | Desarrollo: `fastapi run --reload`, **un proceso** (`compose.override.yml`). Producción: `--workers 4` (`backend/Dockerfile`), es decir, **hasta cuatro consultas de chat a la vez por contenedor**. | |
+| Límite de tiempo | `ASSISTANT_TIMEOUT_SECONDS` (120 s por defecto) cubre toda la consulta, esperas incluidas. | `assistant/router.py`, `assistant/providers.py` |
+| Indexador | Cada `ASSISTANT_INDEX_INTERVAL_SECONDS` (60 s) comprueba qué textos han cambiado y solo calcula los embeddings pendientes, en lotes de cuatro, con un segundo de pausa mientras quede trabajo. Un bloqueo de PostgreSQL impide que dos procesos indexen a la vez. Funciona aparte del chat y **puede coincidir con él**, también en desarrollo. | `assistant/index.py` |
+| Búsqueda semántica | `search_knowledge` calcula durante el chat el embedding de la pregunta. | `assistant/semantic.py` |
+| Ollama | Chat (`qwen3.5:2b`) y embeddings (`embeddinggemma`) son modelos distintos. Según la [FAQ de Ollama](https://docs.ollama.com/faq), `OLLAMA_NUM_PARALLEL` limita las peticiones simultáneas **por modelo** (1 por defecto) y puede haber varios modelos cargados a la vez si caben en memoria (`OLLAMA_MAX_LOADED_MODELS`). Ollama **no garantiza** una única operación en todo el servidor. | |
+
+**Riesgo, no medido:** en producción, varias consultas pueden competir por el mismo modelo.
+Las que esperan consumen su límite de tiempo y pueden terminar con «La consulta ha tardado
+demasiado». El indexador y los embeddings de las búsquedas compiten además por la misma
+máquina. No hay tiempos medidos que permitan cuantificarlo.
+
+### Qué hay que decidir
+
+1. **Proveedor:** Ollama local, un modelo en la nube como motor de este chat, o un agente de
+   Copilot Studio.
+2. **Máquina del servidor**, si se mantiene Ollama: GPU, RAM disponible y modelos de chat y
+   de embeddings.
+3. **Tiempos de respuesta medidos** con esos modelos en esa máquina.
+4. **Usuarios simultáneos** esperados, entre Olot y la República Checa.
+5. **Alcance del límite:** solo el chat, o también los embeddings (indexación y búsquedas).
+
+### Qué implicaría cada opción
+
+| Opción | Alcance |
+|---|---|
+| Mantener Ollama y limitar a **un chat en todo el servidor** | Acotado. Bloqueo compartido entre procesos (por ejemplo, un bloqueo asesor de PostgreSQL, como las colas de vistas 3D y de evidencias), respuesta clara de «ocupado» y liberación ante errores, cancelaciones y desconexiones. Debe probarse con **dos procesos**: dos peticiones dentro del mismo proceso no demuestran nada. Hay que definir cómo convive con el indexador y los embeddings de las búsquedas. |
+| Permitir **N chats a la vez** | El mismo mecanismo con un límite configurable, ajustado a la capacidad medida y a `OLLAMA_NUM_PARALLEL`. |
+| **Cola con espera** | Requiere diseño propio: posición en la cola, límites de tiempo y cancelación. |
+| **Modelo en la nube** como motor de este chat | Implementar otro `ChatProvider` (hoy solo existe Ollama), con su autenticación, coste y cuotas. Sigue haciendo falta un límite, ajustado a las cuotas en vez de a la máquina. Los embeddings seguirían usando Ollama, salvo que se añada otro proveedor o se use solo la búsqueda por palabras. |
+| **Agente de Copilot Studio** | Trabajo distinto: el agente puede vivir en Teams, en Microsoft 365 o integrarse en esta web, y consultaría nuestras lecturas expuestas como API con autenticación de Microsoft (Entra ID). Hay que concretarlo antes de estimarlo. |
 
 ## Límites del módulo
 

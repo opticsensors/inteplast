@@ -5,10 +5,18 @@ import { SearchField } from "@/components/Common/SearchField"
 import { SearchToolbar } from "@/components/Common/SearchToolbar"
 import { Button } from "@/components/ui/button"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
+import { cn } from "@/lib/utils"
 import { matchesCotaPrefix, normalizeCota } from "./drawingSearchHelpers"
 import PdfViewer from "./PdfViewer"
 
 export type DrawingFocus = { id: string; page: number; box: number[] }
+/** A human review prevails over the PDF text and over any OCR proposal. */
+type Origin = "review" | "pdf" | "ocr"
+const ORIGIN_LABELS: Record<Origin, string> = {
+  review: "Revisada",
+  pdf: "Texto del PDF",
+  ocr: "OCR · sin verificar",
+}
 type Candidate = DrawingFocus & {
   candidates?: { label: string }[]
   text?: string
@@ -87,12 +95,18 @@ export default function DrawingSearch({
                 (code) => label === code || label.startsWith(`${code}.`),
               )),
         )
+        const origin: Origin = review
+          ? "review"
+          : candidate.method === "pdf"
+            ? "pdf"
+            : "ocr"
         return matches.length
           ? [
               {
                 ...candidate,
                 label: matches.join(" / "),
                 exact: matches.includes(needle),
+                origin,
               },
             ]
           : []
@@ -175,15 +189,34 @@ export default function DrawingSearch({
                   size="sm"
                   onClick={() => setSelectedId(result.id)}
                   aria-pressed={result.id === selected?.id}
+                  aria-label={`${label} · ${ORIGIN_LABELS[result.origin]}`}
                   title={`Página ${result.page}`}
                 >
                   {label}
+                  <span
+                    className={cn(
+                      "text-xs font-normal",
+                      result.origin === "ocr"
+                        ? "text-amber-700 dark:text-amber-400"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {ORIGIN_LABELS[result.origin]}
+                  </span>
                 </Button>
               )
             })}
           </fieldset>
         </div>
       )}
+      {data &&
+        query.trim() &&
+        results.some((result) => result.origin === "ocr") && (
+          <p className="text-xs text-muted-foreground">
+            Las lecturas OCR son propuestas automáticas sin verificar. Comprueba
+            el número en el plano antes de utilizarlo.
+          </p>
+        )}
       <PdfViewer file={file} title={title} focus={selected} />
       {data?.notices?.length ? (
         <details className="text-xs text-muted-foreground">

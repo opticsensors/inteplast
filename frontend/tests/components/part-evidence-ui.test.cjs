@@ -1152,7 +1152,11 @@ for (const mobile of [false, true]) {
       name: "Coincidencias en el plano",
     })
     await expect(page.getByRole("status")).toHaveText("3 resultados")
-    for (const label of ["N170", "N170.5", "N170.3"])
+    for (const label of [
+      "N170 · OCR · sin verificar",
+      "N170.5 · OCR · sin verificar",
+      "N170.3 · Revisada",
+    ])
       await expect(
         results.getByRole("button", { name: label, exact: true }),
       ).toBeVisible()
@@ -1174,13 +1178,20 @@ for (const mobile of [false, true]) {
     assert.ok(resultBounds.y + resultBounds.height <= bounds.y)
     assert.equal(searchBounds.x, bounds.x)
     assert.ok(Math.abs(searchBounds.width - bounds.width) <= 2)
-    await results.getByRole("button", { name: "N170.5", exact: true }).click()
+    await results
+      .getByRole("button", {
+        name: "N170.5 · OCR · sin verificar",
+        exact: true,
+      })
+      .click()
     await expect(plan).toHaveText("Plano · N170.5")
     assert.deepEqual(
       await page.evaluate(() => window.review.drawingFocus.box),
       [80, 100, 100, 120],
     )
-    await results.getByRole("button", { name: "N170.3", exact: true }).click()
+    await results
+      .getByRole("button", { name: "N170.3 · Revisada", exact: true })
+      .click()
     await expect(plan).toHaveText("Plano · N170.3")
     assert.equal(await page.evaluate(() => window.review.drawingFocus.page), 2)
     await page.screenshot({
@@ -1193,7 +1204,10 @@ for (const mobile of [false, true]) {
     await search.fill("N11")
     await expect(page.getByRole("status")).toHaveText("2 resultados")
     await results
-      .getByRole("button", { name: "N113 · 2/2", exact: true })
+      .getByRole("button", {
+        name: "N113 · 2/2 · OCR · sin verificar",
+        exact: true,
+      })
       .click()
     assert.equal(
       await page.evaluate(() => window.review.drawingFocus.id),
@@ -1218,5 +1232,86 @@ for (const mobile of [false, true]) {
       await expect(
         page.getByRole("button", { name: "Tramo intern.03 a intern.05" }),
       ).toHaveAttribute("aria-pressed", "true")
+  })
+
+  test(`drawing results state whether a location is reviewed, PDF text or unverified OCR (${mobile ? "mobile" : "desktop"})`, async (t) => {
+    const page = await mount(t, "/parts/part-one?cota=N170", mobile)
+    await page.evaluate(() => {
+      window.evidenceDrawingWords = [
+        {
+          id: "pdf-text",
+          page: 1,
+          box: [400, 420, 420, 440],
+          text: "N170.7",
+          method: "pdf",
+        },
+        {
+          id: "ocr-text",
+          page: 1,
+          box: [440, 460, 460, 480],
+          text: "N170.8",
+          method: "ocr",
+        },
+        {
+          id: "pdf-reviewed",
+          page: 2,
+          box: [480, 500, 500, 520],
+          text: "N170.9",
+          method: "pdf",
+        },
+      ]
+      window.evidenceDrawingReviews = [
+        { candidate_id: "pdf-reviewed", label: "N170.6" },
+      ]
+    })
+    await page.getByRole("button", { name: "Plano", exact: true }).click()
+    const search = page.getByRole("textbox", {
+      name: "Buscar cota en el plano",
+    })
+    await expect(search).toHaveValue("N170")
+    const results = page.getByRole("group", {
+      name: "Coincidencias en el plano",
+    })
+    await expect(page.getByRole("status")).toHaveText("6 resultados")
+    for (const name of [
+      "N170 · OCR · sin verificar",
+      "N170.5 · OCR · sin verificar",
+      "N170.8 · OCR · sin verificar",
+      "N170.3 · Revisada",
+      "N170.6 · Revisada",
+      "N170.7 · Texto del PDF",
+    ])
+      await expect(
+        results.getByRole("button", { name, exact: true }),
+      ).toBeVisible()
+    const notice = page.getByText(
+      "Las lecturas OCR son propuestas automáticas sin verificar.",
+    )
+    await expect(notice).toBeVisible()
+    assert.ok(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    )
+    // A review replaces the OCR reading (N178) and the PDF text (N170.9) it corrects.
+    for (const query of ["N178", "N170.9"]) {
+      await search.fill(query)
+      await expect(page.getByRole("status")).toHaveText("0 resultados")
+    }
+    await search.fill("N170.7")
+    await expect(page.getByRole("status")).toHaveText("1 resultado")
+    await expect(
+      results.getByRole("button", {
+        name: "N170.7 · Texto del PDF",
+        exact: true,
+      }),
+    ).toBeVisible()
+    await expect(notice).toHaveCount(0)
+    await search.fill("N170.3")
+    await expect(page.getByRole("status")).toHaveText("1 resultado")
+    await expect(
+      results.getByRole("button", { name: "N170.3 · Revisada", exact: true }),
+    ).toBeVisible()
+    await expect(notice).toHaveCount(0)
   })
 }
