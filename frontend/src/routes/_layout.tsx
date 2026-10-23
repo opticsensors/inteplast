@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router"
 import { AssistantEntry } from "@/assistant/AssistantEntry"
 
+import { SourceBrowser } from "@/components/Common/SourceBrowser"
 import AppSidebar from "@/components/Sidebar/AppSidebar"
 import {
   SidebarInset,
@@ -35,6 +36,7 @@ function Layout() {
         </main>
       </SidebarInset>
       <AssistantEntry />
+      <SourceBrowser />
     </SidebarProvider>
   )
 }

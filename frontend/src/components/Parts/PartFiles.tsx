@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
-import { pickNativePath } from "@/lib/nativePicker"
+import { pickSourcePath } from "@/lib/sourcePicker"
 import { cn } from "@/lib/utils"
 import { formatFileSize } from "@/utils"
 import {
@@ -64,7 +64,11 @@ export function PartFiles({
     onPickingChange(true)
     setError("")
     try {
-      const path = await pickNativePath("file", controller.signal)
+      const path = await pickSourcePath(
+        "file",
+        controller.signal,
+        folder || undefined,
+      )
       if (!path || controller.signal.aborted) return
       if (!folder || !path.startsWith(`${folder}/`))
         throw new Error(

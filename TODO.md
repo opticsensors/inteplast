@@ -13,6 +13,9 @@ titulo oficial: gestor de conocimiento de modificaciones de molde
 
 - [ ] añadir la foto de la pieza de verdad en ficheros vinculados a una pieza. 
 
+- [ ] revisar `docs/preguntas-abiertas.md`: está bastante obsoleta. Contrastarla con lo que salga de
+  `conocimiento/` (en especial `conocimiento/incongruencias.md`) tras leer todos los features de Exemples.
+
 
 PRUEBA POSTMAN ANGEL:
 

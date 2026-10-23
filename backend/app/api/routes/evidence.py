@@ -8,7 +8,7 @@ from app import measurement_imports
 from app.api.deps import CurrentUser, SessionDep
 from app.api.routes.parts import get_part_or_404
 from app.evidence import drawing_key, job_id, queue, study_key
-from app.file_sources import SourceError, document_path
+from app.file_sources import SourceError, document_check
 from app.knowledge_models import (
     CharacteristicAssignment,
     CharacteristicPublic,
@@ -39,6 +39,7 @@ from app.models import (
     StoredFile,
     get_datetime_utc,
 )
+from app.pilot import is_pilot
 
 router = APIRouter(prefix="/evidence", tags=["evidence"])
 
@@ -128,17 +129,16 @@ def read_part_evidence(
         drawing_file_id=drawing.id if drawing else None,
         drawing_reference_set="drawing" in reference_choices(session, part_id),
         refresh_job=public_job(session.get(EvidenceJob, job_id("study", part_id))),
-        import_available=part.code == "3212"
-        and part.folder_path == "3212 Pump Housing",
+        import_available=is_pilot(part),
     )
 
 
 @router.post("/parts/{part_id}/import", response_model=JobPublic)
 def import_part_evidence(
-    session: SessionDep, _current_user: CurrentUser, part_id: uuid.UUID
+    session: SessionDep, current_user: CurrentUser, part_id: uuid.UUID
 ) -> Any:
     part = get_part_or_404(session, part_id)
-    if part.code != "3212" or part.folder_path != "3212 Pump Housing":
+    if not is_pilot(part):
         raise HTTPException(
             status_code=422,
             detail="Esta pieza todavía no tiene un adaptador de mediciones configurado.",
@@ -147,7 +147,9 @@ def import_part_evidence(
         key = study_key(part)
     except SourceError as error:
         raise HTTPException(status_code=error.status_code, detail=error.message)
-    return public_job(queue(session, "study", part_id, key))
+    return public_job(
+        queue(session, "study", part_id, key, source_user=current_user.id)
+    )
 
 
 @router.get(
@@ -265,7 +267,7 @@ def drawing_document(session: SessionDep, file_id: uuid.UUID) -> StoredFile:
         raise HTTPException(status_code=404, detail="File not found")
     if not document.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=422, detail="Selecciona un plano PDF")
-    document_path(document)
+    document_check(document)
     return document
 
 
@@ -300,10 +302,18 @@ def read_drawing_index(
 
 @router.post("/drawings/{file_id}/index", response_model=JobPublic)
 def index_drawing(
-    session: SessionDep, _current_user: CurrentUser, file_id: uuid.UUID
+    session: SessionDep, current_user: CurrentUser, file_id: uuid.UUID
 ) -> Any:
     document = drawing_document(session, file_id)
-    return public_job(queue(session, "drawing", file_id, drawing_key(document)))
+    return public_job(
+        queue(
+            session,
+            "drawing",
+            file_id,
+            drawing_key(document),
+            source_user=current_user.id,
+        )
+    )
 
 
 @router.put("/drawings/{file_id}/review", response_model=LocationPublic)

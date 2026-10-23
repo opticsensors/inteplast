@@ -12,9 +12,17 @@ from typing import Any
 from fastapi import HTTPException
 from sqlmodel import Session, col, select
 
+from app import sharepoint
 from app.core.config import settings
 from app.evidence import job_id, register_document
-from app.file_sources import SourceError, local_path
+from app.file_sources import (
+    SourceError,
+    SourceItem,
+    inside,
+    item_file,
+    local_path,
+    source_item,
+)
 from app.ingestion.common import result
 from app.ingestion.measurement_csv import READER, content_hash, parse
 from app.knowledge_models import EvidenceJob, JobPublic, PartCharacteristic
@@ -30,6 +38,7 @@ from app.measurement_models import (
     MeasurementPreviewRequest,
 )
 from app.models import Part, get_datetime_utc
+from app.pilot import is_pilot
 
 MAX_BYTES = 10 * 1024 * 1024
 MAX_TOTAL = 64 * 1024 * 1024
@@ -59,24 +68,43 @@ def natural(value: str) -> list[Any]:
     return [int(v) if v.isdigit() else v.casefold() for v in re.split(r"(\d+)", value)]
 
 
-def root_path(part: Part) -> Path:
+def root_path(part: Part) -> SourceItem:
     if not part.folder_path:
         raise HTTPException(422, "Selecciona primero la carpeta de esta pieza.")
-    return local_path(part.folder_path, directory=True)
+    return source_item(part.folder_path, directory=True)
 
 
-def file_path(part: Part, relative: str) -> Path:
-    root = root_path(part)
-    path = local_path(f"{part.folder_path}/{relative}")
-    if not path.is_relative_to(root) or path.suffix.casefold() != ".csv":
+def file_path(part: Part, relative: str) -> SourceItem:
+    root_path(part)
+    path = f"{part.folder_path}/{relative}"
+    item = source_item(path)
+    suffix = (item.local or Path(item.path)).suffix.casefold()
+    if not inside(path, part.folder_path or "") or suffix != ".csv":
         raise HTTPException(
             422, "Selecciona un CSV dentro de la carpeta de esta pieza."
         )
-    return path
+    return item
 
 
 def discover(part: Part) -> list[str]:
-    root = root_path(part)
+    if sharepoint.enabled():
+        too_wide = (
+            "La carpeta es demasiado amplia. Vincula la carpeta concreta de la pieza."
+        )
+        folder = root_path(part).path
+        try:
+            found = sharepoint.walk(folder, too_wide=too_wide)
+        except SourceError as error:
+            if error.message == too_wide:
+                raise HTTPException(422, too_wide)
+            raise
+        csv = sorted(i.relative_to(folder) for i in found if i.suffix == ".csv")
+        if len(csv) > 250:
+            raise HTTPException(
+                422, "Hay más de 250 CSV. Acota la carpeta antes de importarlos."
+            )
+        return csv
+    root = local_path(root_path(part).path, directory=True)
     paths = []
     visited = 0
     for directory, folders, files in os.walk(root, followlinks=False):
@@ -145,9 +173,7 @@ def fingerprint(part: Part, item: MeasurementFileSelection) -> str:
             item.cavity,
             item.sha256,
             READER,
-            part.code == "3212"
-            and part.folder_path == "3212 Pump Housing"
-            and item.revision == "06",
+            is_pilot(part) and item.revision == "06",
         ]
     )
 
@@ -260,14 +286,14 @@ def prepare(
     for selection in selections:
         item = normalize(selection)
         try:
-            path = file_path(part, item.path)
-            size = path.stat().st_size
+            source = file_path(part, item.path)
+            size = source.size or 0
             total += size
             if size > MAX_BYTES or total > MAX_TOTAL:
                 raise ValueError(
                     "Límite de lectura: 10 MB por CSV y 64 MB por selección."
                 )
-            data = path.read_bytes()
+            data = item_file(source).read_bytes()
             sha = content_hash(data)
             if item.sha256 and item.sha256 != sha:
                 raise HTTPException(
@@ -286,11 +312,7 @@ def prepare(
                 values = {getattr(row, field) for row in previous}
                 if not getattr(item, field) and len(values) == 1:
                     setattr(item, field, next(iter(values)))
-            pilot = (
-                part.code == "3212"
-                and part.folder_path == "3212 Pump Housing"
-                and item.revision == "06"
-            )
+            pilot = is_pilot(part) and item.revision == "06"
             rows, issues = parse(data, pilot=pilot)
             parsed[item.path] = rows
             status: MeasurementFileStatus = "new"

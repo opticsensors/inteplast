@@ -23,9 +23,10 @@ from fastapi import FastAPI, HTTPException
 from sqlalchemy import text
 from sqlmodel import Session, col, select
 
+from app import sharepoint
 from app.core.config import settings
 from app.core.db import engine
-from app.file_sources import document_path, stamp
+from app.file_sources import document_path, document_version
 from app.models import FilePreview, StoredFile
 from app.preview_converter import EXTENSIONS, MAX_INPUT_BYTES, RECIPE
 
@@ -34,7 +35,6 @@ WORKER_LOCK = 3212091501
 
 
 def preview_key(document: StoredFile) -> str:
-    source = document_path(document)
     return hashlib.sha256(
         json.dumps(
             [
@@ -43,7 +43,7 @@ def preview_key(document: StoredFile) -> str:
                 document.source,
                 document.source_key,
                 document.source_path,
-                stamp(source),
+                document_version(document),
                 RECIPE,
             ]
         ).encode()
@@ -58,7 +58,12 @@ def preview_path(preview: FilePreview) -> Path:
     return preview_directory(preview.file_id) / f"{preview.cache_key}.glb"
 
 
-def request_preview(session: Session, document: StoredFile, retry: bool) -> FilePreview:
+def request_preview(
+    session: Session,
+    document: StoredFile,
+    retry: bool,
+    requested_by: uuid.UUID | None = None,
+) -> FilePreview:
     if Path(document.filename).suffix.lower() not in EXTENSIONS:
         raise HTTPException(
             status_code=415, detail="Este formato no tiene vista ligera."
@@ -82,6 +87,8 @@ def request_preview(session: Session, document: StoredFile, retry: bool) -> File
         preview.message = None
         preview.size = preview.triangles = 0
         preview.source_sha256 = None
+    if preview.state == "queued" and requested_by is not None:
+        preview.requested_by = requested_by
     session.add(preview)
     session.commit()
     session.refresh(preview)
@@ -151,61 +158,62 @@ def process_next(stop: threading.Event) -> bool:
             return True
         output = preview_path(preview)
         temporary = output.with_name(f"{key}.pending.glb")
-        try:
-            if preview_key(document) != key:
-                raise ValueError("Source version no longer matches job")
-            output.parent.mkdir(parents=True, exist_ok=True)
-            metadata = run_converter(
-                document_path(document),
-                Path(document.filename).suffix.lower(),
-                temporary,
-                stop,
-            )
-            # Re-read under the same document row lock used by relink/request.
-            session.expire_all()
-            current = session.exec(
-                select(StoredFile).where(StoredFile.id == file_id).with_for_update()
-            ).first()
-            active = session.get(FilePreview, file_id)
-            if current is None or active is None or active.cache_key != key:
-                return True
-            if preview_key(current) != key:
-                raise ValueError("Original changed during conversion")
-            temporary.replace(output)
-            temporary.with_suffix(".json").replace(output.with_suffix(".json"))
-            active.state = "ready"
-            active.message = (
-                "Vista parcial: algunas superficies del STEP no se han podido "
-                "representar. Descarga el original para consultar el molde completo."
-                if metadata.get("step_incomplete_faces")
-                else None
-            )
-            active.size = metadata["size"]
-            active.triangles = metadata["triangles"]
-            active.source_sha256 = metadata["source_sha256"]
-            session.add(active)
-            session.commit()
-            # Keep only this document's current derivative; never touch originals.
-            for old in output.parent.iterdir():
-                if old.name not in {output.name, output.with_suffix(".json").name}:
-                    old.unlink(missing_ok=True)
-            logger.info("Preview ready: %s (%s bytes)", file_id, active.size)
-        except InterruptedError:
-            # Durable 'processing' is picked up by the next worker after restart.
-            session.rollback()
-        except Exception:
-            logger.exception("Preview conversion failed for %s", file_id)
-            session.rollback()
-            session.expire_all()
-            active = session.get(FilePreview, file_id)
-            if active is not None and active.cache_key == key:
-                active.state = "error"
-                active.message = "No se ha podido preparar la vista 3D. Puedes reintentar o descargar el original."
+        with sharepoint.acting_as(preview.requested_by):
+            try:
+                if preview_key(document) != key:
+                    raise ValueError("Source version no longer matches job")
+                output.parent.mkdir(parents=True, exist_ok=True)
+                metadata = run_converter(
+                    document_path(document),
+                    Path(document.filename).suffix.lower(),
+                    temporary,
+                    stop,
+                )
+                # Re-read under the same document row lock used by relink/request.
+                session.expire_all()
+                current = session.exec(
+                    select(StoredFile).where(StoredFile.id == file_id).with_for_update()
+                ).first()
+                active = session.get(FilePreview, file_id)
+                if current is None or active is None or active.cache_key != key:
+                    return True
+                if preview_key(current) != key:
+                    raise ValueError("Original changed during conversion")
+                temporary.replace(output)
+                temporary.with_suffix(".json").replace(output.with_suffix(".json"))
+                active.state = "ready"
+                active.message = (
+                    "Vista parcial: algunas superficies del STEP no se han podido "
+                    "representar. Descarga el original para consultar el molde completo."
+                    if metadata.get("step_incomplete_faces")
+                    else None
+                )
+                active.size = metadata["size"]
+                active.triangles = metadata["triangles"]
+                active.source_sha256 = metadata["source_sha256"]
                 session.add(active)
                 session.commit()
-        finally:
-            temporary.unlink(missing_ok=True)
-            temporary.with_suffix(".json").unlink(missing_ok=True)
+                # Keep only this document's current derivative; never touch originals.
+                for old in output.parent.iterdir():
+                    if old.name not in {output.name, output.with_suffix(".json").name}:
+                        old.unlink(missing_ok=True)
+                logger.info("Preview ready: %s (%s bytes)", file_id, active.size)
+            except InterruptedError:
+                # Durable 'processing' is picked up by the next worker after restart.
+                session.rollback()
+            except Exception:
+                logger.exception("Preview conversion failed for %s", file_id)
+                session.rollback()
+                session.expire_all()
+                active = session.get(FilePreview, file_id)
+                if active is not None and active.cache_key == key:
+                    active.state = "error"
+                    active.message = "No se ha podido preparar la vista 3D. Puedes reintentar o descargar el original."
+                    session.add(active)
+                    session.commit()
+            finally:
+                temporary.unlink(missing_ok=True)
+                temporary.with_suffix(".json").unlink(missing_ok=True)
     return True
 
 

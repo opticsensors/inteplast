@@ -202,7 +202,7 @@ Cotas **nuevas** en la corrección 2: `N241`, `N284`.
 
 ## 6. La segunda prueba: el plano A
 
-*(Añadido el 2026-08-11 al resolver la pregunta A2 → [R9](../preguntas-abiertas.md).)*
+*(Añadido el 2026-08-11 al resolver la pregunta A2 → [R9](../../../docs/preguntas-abiertas.md).)*
 
 Las diapositivas 1.16–1.18 (y sus gemelas 2.3–2.5) son **el retoque del plano A**: la zona roja
 es la brida perimetral entera y no llevan `DIM. Nr.` porque la acción es sobre la **referencia**,
@@ -283,7 +283,7 @@ tenir influència en el resultat final de les posicions… pot passar de estar O
 aquest pla"*.
 
 → **La BD necesita modelar dependencias entre N-numbers**, no solo cotas independientes.
-Es la entidad `DEPENDENCIA_COTA` de [modelo-datos.md](../modelo-datos.md).
+Es la entidad `DEPENDENCIA_COTA` de [modelo-datos.md](../../../docs/modelo-datos.md).
 
 ---
 
@@ -418,4 +418,4 @@ que 49.
 > las cuatro cavidades y hay informes posteriores, pero no está confirmado si hubo más retoques
 > ni cómo se aceptaron esas cotas. ¿Hay correcciones posteriores o una concesión del cliente?
 > → A1 en
-> [preguntas-abiertas.md](../preguntas-abiertas.md).
+> [preguntas-abiertas.md](../../../docs/preguntas-abiertas.md).

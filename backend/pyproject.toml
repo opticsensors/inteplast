@@ -31,6 +31,8 @@ dependencies = [
     "rapidocr-onnxruntime>=1.4,<2",
     "onnxruntime==1.22.1",
     "pgvector>=0.4,<0.5",
+    "msal>=1.31,<2",
+    "cryptography>=42,<51",
 ]
 
 [dependency-groups]
@@ -97,5 +99,5 @@ sort = "-Cover"
 show_contexts = true
 
 [[tool.mypy.overrides]]
-module = ["fitz", "pandas", "xlrd", "pytesseract", "rapidocr_onnxruntime"]
+module = ["fitz", "pandas", "xlrd", "pytesseract", "rapidocr_onnxruntime", "msal", "requests"]
 ignore_missing_imports = true

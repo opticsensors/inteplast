@@ -10,7 +10,7 @@ Los pasos siguientes se ejecutan en el servidor preparado por el responsable del
 - DNS para `api`, `dashboard` y, si se utilizan, `traefik` y `adminer` bajo el dominio elegido.
 - Acceso al servidor y almacenamiento para la BD y las subidas; política de copias de ambos.
 - Ficheros del cliente fuera del repositorio. Se admiten subidas de hasta 50 MB y referencias
-  a originales accesibles al backend. La integración Microsoft Graph sigue pendiente.
+  a originales accesibles al backend, o lectura desde SharePoint con `SHAREPOINT_ENABLED`.
 
 ## Configuración
 
@@ -80,6 +80,8 @@ comando de la aplicación y configurar `ASSETS_HOST_PATH`, `ASSETS_SOURCE_ID` y
 explícitos de arriba para seleccionar el fichero de producción y excluir el override de desarrollo.
 Ver [archivos externos](docs/ficheros-externos.md). El acceso a los originales de INTEPLAST debe
 acordarse antes del despliegue; una ruta del ordenador de desarrollo no es una conexión Graph.
+El modo [SharePoint](docs/ficheros-externos.md#sharepoint-microsoft-graph) necesita un registro
+de aplicación en el tenant del cliente y su redirect URI pública.
 
 ## Persistencia y actualización desde la versión anterior
 

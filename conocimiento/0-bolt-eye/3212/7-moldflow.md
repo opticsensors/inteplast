@@ -94,7 +94,7 @@ El `.mfr` **no se puede indexar**. La única vía realista:
 | Puntos de inyección: nº, posición, tipo, Ø | **Entrada manual** | Campos estructurados de `PROYECTO` |
 
 Esto es exactamente la **pregunta abierta A5** en
-[preguntas-abiertas.md](../preguntas-abiertas.md): pedir a INTEPLAST que exporte esas dos
+[preguntas-abiertas.md](../../../docs/preguntas-abiertas.md): pedir a INTEPLAST que exporte esas dos
 imágenes y esos 4 datos por proyecto. Es lo mínimo para materializar el warning de líneas de
 soldadura sin depender del `.mfr`.
 

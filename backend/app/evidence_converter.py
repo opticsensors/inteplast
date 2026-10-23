@@ -5,6 +5,10 @@ import shutil
 import sys
 from pathlib import Path
 
+# The pilot study reads these folders and formats, never the CAD/scan directories.
+STUDY_FOLDERS = ("4- Metrologia", "5- Retoques de molde")
+STUDY_SUFFIXES = {".csv", ".xls", ".pptx", ".pdf", ".txt"}
+
 
 def main() -> None:
     kind, source, destination = sys.argv[1:]
@@ -22,15 +26,9 @@ def main() -> None:
         # the formats used by this adapter, never the large CAD/scan directories.
         root = Path(source).resolve()
         staged = output / "input"
-        for folder in ("4- Metrologia", "5- Retoques de molde"):
+        for folder in STUDY_FOLDERS:
             for path in (root / folder).rglob("*"):
-                if path.is_file() and path.suffix.lower() in {
-                    ".csv",
-                    ".xls",
-                    ".pptx",
-                    ".pdf",
-                    ".txt",
-                }:
+                if path.is_file() and path.suffix.lower() in STUDY_SUFFIXES:
                     if path.is_symlink() or not path.resolve().is_relative_to(root):
                         raise ValueError("Source outside the part folder")
                     staged_file = staged / path.relative_to(root)

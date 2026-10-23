@@ -8,6 +8,9 @@ node_modules/
 
 # data-explorer: HTML/PNG generados por los visores (~42 MB, se rehacen con ver_todo.py)
 /prototypes/data-explorer/out/
+# conocimiento: base SQLite y contenido extraido de Exemples (datos del cliente, no van a GitHub)
+/conocimiento/datos/
+/conocimiento/.venv/
 __pycache__/
 /.env
 /.env.local

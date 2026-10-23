@@ -42,7 +42,7 @@ import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
-import { pickNativePath } from "@/lib/nativePicker"
+import { pickSourcePath } from "@/lib/sourcePicker"
 import { AddFeatureButton } from "./AddFeatureButton"
 import { FeaturePartEvidence } from "./FeaturePartEvidence"
 import { MetrologyPage } from "./MetrologyPage"
@@ -230,7 +230,7 @@ function PartPage({
     setFolderBusy(true)
     setFolderError("")
     try {
-      const path = await pickNativePath("folder", controller.signal)
+      const path = await pickSourcePath("folder", controller.signal)
       if (!path || controller.signal.aborted) return
       const proposal = await PartsService.discoverPartFolder({
         requestBody: { folder_path: path },

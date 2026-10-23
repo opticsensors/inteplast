@@ -64,14 +64,14 @@ marcadas en rojo. El marcado se guarda en la aplicación y mantiene intacto el o
 ## Configuración local con Docker
 
 En el equipo de desarrollo de Eduard ya está configurado `.env`, excluido de Git, para
-la carpeta `Exemples` indicada en [CLAUDE.md](../CLAUDE.md), con una subcarpeta por pieza. Esto utiliza la
-copia local sincronizada por OneDrive. **No inicia sesión en Microsoft ni usa Microsoft Graph.**
+la carpeta `Exemples` indicada en [CLAUDE.md](../CLAUDE.md): una subcarpeta por feature y,
+dentro, una por pieza. Esto utiliza la copia local sincronizada por OneDrive y no inicia
+sesión en Microsoft. La alternativa que lee el mismo conjunto desde SharePoint se activa con
+una variable: ver [SharePoint](#sharepoint-microsoft-graph).
 
-Esta conexión local es temporal. Cada pieza guarda su `folder_path` relativo al origen, y
-sus archivos deben estar dentro de esa carpeta; el selector de Windows se abre en la raíz
-configurada. Código, nombre, carpeta y archivos pertenecen a la pieza y se comparten entre
-los features vinculados. La futura conexión con SharePoint/OneDrive deberá sustituir el
-acceso al origen manteniendo esta interacción.
+Cada pieza guarda su `folder_path` relativo al origen, y sus archivos deben estar dentro de
+esa carpeta; el selector de Windows se abre en la raíz configurada. Código, nombre, carpeta y
+archivos pertenecen a la pieza y se comparten entre los features vinculados.
 
 El 2026-09-17 se amplió el montaje desde `Exemples/3212 Pump Housing` a `Exemples`.
 Los cuatro documentos existentes se actualizaron añadiendo `3212 Pump Housing/` a sus rutas
@@ -79,6 +79,27 @@ y recalculando sus claves de deduplicación; conservaron UUID, versión y víncu
 quedó asociada a esa subcarpeta. Se verificó la disponibilidad de los cuatro originales y se
 guardó una copia previa de la BD y `.env` fuera del repositorio. En otra instalación que cambie
 su carpeta raíz, también hay que adaptar las rutas relativas existentes.
+
+El 2026-10-21 INTEPLAST reorganizó `Exemples` por feature y movió las cuatro piezas a
+`Exemples/0- Bolt Eye`. Se cambió solo `ASSETS_HOST_PATH` a esa carpeta, conservando
+`ASSETS_SOURCE_ID`: las rutas relativas guardadas (`3212 Pump Housing/…`) y la detección del
+piloto por carpeta siguen siendo válidas sin migrar la BD. Los originales vinculados conservan
+tamaño y fecha de modificación tras el traslado (comprobado en Windows; falta confirmarlo en la
+aplicación al recrear el backend). Con esta raíz, el selector solo alcanza las piezas del Bolt Eye;
+incorporar los demás features exigirá decidir otra raíz y migrar esas rutas relativas.
+
+**El 2026-10-22 la raíz pasa a `Exemples`**, donde están todos los features. Se copió la BD y
+`.env` en `C:\Users\eduard.almar\inteplast-backups\`, se cambió `ASSETS_HOST_PATH`, se recreó
+el backend y se ejecutó `python -m app.rebase_source "0- Bolt Eye" --apply`. El script
+antepone el prefijo a todas las rutas del conjunto `ASSETS_SOURCE_ID` y recalcula sus claves
+de deduplicación: 284 documentos, 2 piezas (`0- Bolt Eye/3212 Pump Housing`,
+`0- Bolt Eye/3197 Pot`) y 172 importaciones de mediciones. Conserva UUID, versiones y
+vínculos. Sin `--apply` solo comprueba; también se niega a aplicar dos veces el mismo
+prefijo o si alguna ruta nueva no existe bajo la raíz montada. Tras aplicarlo, los 284
+originales seguían disponibles y el plano del 3212 se descargaba con sus 1.487.728 bytes.
+El piloto se reconoce por el código `3212` y el **nombre** de la carpeta (`app/pilot.py`),
+no por su ruta completa: mover la raíz ya no lo desactiva. Otra instalación que suba su raíz
+un nivel debe ejecutar el mismo script con su prefijo.
 
 En otro equipo, crear `.env` a partir de [.env.example](../.env.example), sin sobrescribir una
 configuración existente. Descomentar el bloque de originales externos y ajustar:
@@ -183,30 +204,130 @@ Su downgrade se rechaza mientras existan referencias externas. Hacer copia de BD
 actualizar y conservar `.env` por separado. El backup de la app **no incluye** los originales
 externos; su conservación corresponde al almacenamiento que los contiene.
 
-## Integración futura con INTEPLAST
+## SharePoint (Microsoft Graph)
 
-La **prioridad 1 de la reunión** es confirmar con informática dónde están los originales y cómo
-autorizar su lectura: [pregunta A10](preguntas-abiertas.md#a10-acceso-originales).
+Implementado el **2026-10-22** y probado con Graph y MSAL simulados. **Falta la primera prueba
+real** con la cuenta de Eurecat (ver [cómo activarlo](#activarlo-y-volver-a-local)).
 
-Propuesta para Microsoft 365: añadir un adaptador Graph con identidad de organización, unidad
-y archivo; mantener el UUID interno de documento y el contrato de los visores. Microsoft ofrece
-[direcciones por ID](https://learn.microsoft.com/en-us/graph/onedrive-addressing-driveitems),
-que permiten seguir el archivo cuando cambia de nombre. Habrá que implementar autenticación,
-listado, lectura/rangos, estados y política de revisiones. La migración de nuestras referencias
-locales a esos IDs exige una asociación explícita; cambiar una variable no conecta dos empresas.
+El mismo conjunto de datos se puede leer desde la carpeta local o desde OneDrive/SharePoint.
+Se elige con **una sola variable**, `SHAREPOINT_ENABLED` (`false` por defecto). Las dos
+fuentes usan las **mismas rutas relativas** (`0- Bolt Eye/3212 Pump Housing/…`), así que la
+misma BD sirve para ambas y se puede cambiar de una a otra sin migrar nada. El modo local no
+cambia de comportamiento.
 
-Los permisos se acordarán con IT, acotados al contenido necesario. Evaluar los
-[permisos Selected](https://learn.microsoft.com/en-us/graph/permissions-selected-overview)
-según su biblioteca y usuarios; no presuponer acceso a todos los archivos del tenant.
-**Graph todavía no está implementado.** Esta separación permite incorporarlo sin reescribir
-el renderizado PDF/3D; el selector y la gestión del origen sí necesitarán esa integración.
+### Cómo funciona
 
-Como opción pendiente de acordar con IT, se prefiere acceso automático del servidor, de solo
-lectura y limitado al proyecto, si todos los usuarios autorizados pueden consultar los mismos
-archivos. Si hay restricciones por persona, evaluar acceso delegado con su cuenta.
-Los conversores y el importador actuales esperan rutas locales (`file_sources.py`,
-`evidence.py` y `evidence_converter.py`): la integración también deberá proporcionar las
-entradas temporales necesarias y comprobar la autorización al servir los derivados.
+- **Inicio de sesión: cada usuario con su cuenta de empresa**, una vez. Es el patrón que
+  recomienda Microsoft para una web que inicia sesión y llama a Graph
+  ([web app que llama a APIs](https://learn.microsoft.com/en-us/entra/identity-platform/scenario-web-app-call-api-app-configuration)):
+  OpenID Connect con código de autorización y PKCE, mediante **MSAL Python** como cliente
+  confidencial (App ID + secret). El backend canjea el código; los tokens de Microsoft no
+  llegan al navegador, que sigue recibiendo el token propio de la aplicación.
+- **Una caché de tokens MSAL por usuario**, cifrada (Fernet con clave derivada de
+  `SECRET_KEY`) en la tabla `microsoftaccount`. Graph se llama con
+  `acquire_token_silent_with_error`, que renueva el acceso con el token de renovación
+  ([90 días en apps web, se renueva con el uso](https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens)).
+  Si Microsoft exige iniciar sesión otra vez, la API devuelve 401 y la web vuelve al login.
+- **Permisos de cada persona**: se lee con los permisos delegados del usuario, así que
+  Microsoft aplica sus propios permisos. Un elemento sin permiso devuelve 409 con mensaje (no
+  403, que cerraría la sesión de la web).
+- **Quién puede entrar**: sigue el alta desde Admin. Solo entra quien tenga un usuario activo
+  con el mismo correo (`preferred_username`), y de la organización configurada
+  (`MICROSOFT_TENANT_ID`). La cuenta queda ligada por su `oid`. En este modo el login con
+  contraseña está desactivado; cerrar sesión borra también los tokens de Microsoft.
+- **Lectura** (`app/sharepoint.py`): direcciones por ruta desde `SHAREPOINT_ROOT_PATH`, con cada
+  segmento codificado según las [reglas de Graph](https://learn.microsoft.com/en-us/graph/onedrive-addressing-driveitems).
+  Los 429/5xx se reintentan respetando `Retry-After`
+  ([guía de limitaciones](https://learn.microsoft.com/en-us/graph/throttling)). Los contenidos
+  se descargan una vez por versión (`cTag`) desde la URL preautenticada de Graph, sin cabecera
+  de autorización ([descarga](https://learn.microsoft.com/en-us/graph/api/driveitem-get-content)),
+  a `uploads/sharepoint/`. Se conserva solo la última versión de cada elemento.
+- **Siempre la última versión**: un cambio en SharePoint no exige volver a vincular. Hay un
+  documento por ruta (`StoredFile` se reutiliza). Las vistas 3D, el índice del plano y el
+  estudio del piloto usan la versión actual como clave y se regeneran solos.
+- **Trabajos en segundo plano** (vistas 3D, índice del plano, estudio del 3212): leen
+  SharePoint con la cuenta de quien los pidió (`FilePreview.requested_by` y `_source_user` en
+  `EvidenceJob`). El estudio copia a una carpeta temporal solo los CSV/XLS/PPTX/PDF/TXT de
+  `4- Metrologia` y `5- Retoques de molde`, como hace el lector local.
+- **Selector**: el diálogo de Windows solo alcanza la carpeta local. Con SharePoint, Nueva
+  pieza, Añadir fichero y Vincular archivo abren un navegador de carpetas dentro de la web
+  (`Common/SourceBrowser.tsx`) sobre `GET /files/source`. Añadir fichero se abre en la carpeta
+  de la pieza.
+- **Vínculos entre modos**: un vínculo creado con SharePoint guarda una versión `sp:…`. En modo
+  local se lee sin comprobar versión, porque no hay sello local con el que compararla; los
+  vínculos creados en local conservan su detección de cambios.
+
+### Configuración
+
+En `.env` (plantilla en `.env.example`; Compose las pasa al backend):
+
+| Variable | Valor en el equipo de Eduard |
+|---|---|
+| `SHAREPOINT_ENABLED` | `false` (local) / `true` (SharePoint) |
+| `SHAREPOINT_ROOT_PATH` | `Escritorio/proyectos/11. inteplast/Exemples`, dentro de la unidad |
+| `SHAREPOINT_DRIVE_ID` | vacío = OneDrive del usuario conectado. Para otros usuarios haría falta el ID de la unidad y la carpeta compartida con ellos: sin comprobar |
+| `MICROSOFT_TENANT_ID`, `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | App registrada por informática de Eurecat (25/09/2026). El secret caducaba a unos 60 días: hacia el 24/11/2026 si no se amplió |
+| `MICROSOFT_REDIRECT_URI` | `https://oauth.pstmn.io/v1/browser-callback` (la de Postman, ya registrada) |
+| `MICROSOFT_SCOPES` | `https://graph.microsoft.com/.default`: los permisos ya concedidos a la app |
+
+Mantener el bloque de originales locales con el mismo `ASSETS_SOURCE_ID`: identifica el
+conjunto de datos en ambos modos.
+
+**Redirect URI.** Con la de Postman, la web abre Microsoft en otra pestaña y el usuario pega
+la dirección final (`?code=…&state=…`) en la pantalla de login. Cuando informática registre
+`http://localhost:8000/api/v1/login/microsoft/callback` (plataforma Web) y se ponga en
+`MICROSOFT_REDIRECT_URI`, Microsoft envía la respuesta al backend por `form_post` y el login es
+automático: el backend redirige a `/login?microsoft=<ticket>`, un ticket de un solo uso válido
+2 minutos que la web canjea por su token.
+
+### Activarlo y volver a local
+
+1. En Admin (modo local), crear o editar el usuario con el correo de Microsoft
+   (p. ej. `eduard.almar@eurecat.org`), activo y, si procede, superusuario.
+2. Poner `SHAREPOINT_ENABLED=true` y recrear el backend: `docker compose up -d backend`
+   (si el código cambió, con `--build`). El frontend consulta el modo en
+   `GET /login/methods`; no hace falta reconstruirlo.
+3. En la web: **Entrar con Microsoft** → iniciar sesión en la pestaña nueva → copiar la
+   dirección de la página de Postman → pegarla → **Continuar**.
+4. Para volver a local: `SHAREPOINT_ENABLED=false` y recrear el backend.
+
+### API
+
+| Método y ruta | Función |
+|---|---|
+| `GET /login/methods` | Público: contraseña o Microsoft, si se pega la dirección y si el origen es SharePoint |
+| `POST /login/microsoft/start` | Crea el flujo (estado, nonce y PKCE, guardados cifrados 15 min en `microsoftlogin`) y devuelve la URL de Microsoft |
+| `POST /login/microsoft/complete` | `{response_url}` pegada: valida estado y nonce, canjea el código y devuelve el token de la web |
+| `POST /login/microsoft/callback` | `form_post` de Microsoft cuando la redirect URI es la API; redirige con un ticket |
+| `POST /login/microsoft/ticket` | Canjea el ticket de un solo uso |
+| `POST /login/microsoft/logout` | Olvida los tokens de Microsoft del usuario |
+
+Migración `l73a69cfde41`: tablas `microsoftaccount` y `microsoftlogin`, y
+`filepreview.requested_by`. Pruebas en `backend/tests/api/routes/test_sharepoint.py` (Graph
+con `httpx.MockTransport` y MSAL simulado, sin red) y en `piece-editor.test.cjs` (selector
+dentro de la web).
+
+### Límites conocidos
+
+- Se direcciona por ruta: renombrar o mover un archivo en SharePoint rompe su vínculo, como en
+  local. Guardar también el ID del elemento permitiría seguirlo.
+- La caché de descargas no tiene límite de tamaño más allá de una versión por archivo. La
+  primera apertura de un original grande (molde STEP de 247 MB) espera a la descarga completa.
+- Los datos ya importados (mediciones, vistas, índice del plano) son visibles para todos los
+  usuarios de la web, aunque alguno no tuviera permiso sobre el original en SharePoint.
+- Si `SHAREPOINT_DRIVE_ID` está vacío, cada usuario lee su propio OneDrive: solo sirve para
+  el propietario de `Exemples`.
+
+## Integración con INTEPLAST
+
+La **prioridad 1 de la reunión** sigue siendo confirmar con su informática dónde están los
+originales y cómo autorizar su lectura: [pregunta A10](preguntas-abiertas.md#a10-acceso-originales).
+La app registrada es de Eurecat y no da acceso al entorno de INTEPLAST: allí hará falta su
+propio registro (tenant, App ID, secret o certificado, redirect URI) y apuntar
+`SHAREPOINT_DRIVE_ID`/`SHAREPOINT_ROOT_PATH` a su biblioteca. Si los permisos son iguales
+para todos, se puede valorar acceso de aplicación limitado con
+[permisos Selected](https://learn.microsoft.com/en-us/graph/permissions-selected-overview);
+el modo implementado es delegado, con los permisos de cada usuario.
 
 ## Verificación con el 3212
 
@@ -241,7 +362,7 @@ los originales dentro de la aplicación. El seed continúa sin dependencias de a
 
 **No confundir revisiones:** el PDF disponible es rev. 07; los informes de medidas citan rev. 06.
 La fecha del nombre del STEP no se presenta como una revisión CAD confirmada. Ver
-[definición de la pieza](3212/1-pieza-2d-3d.md).
+[definición de la pieza](../conocimiento/0-bolt-eye/3212/1-pieza-2d-3d.md).
 
 Pruebas automáticas: **114 backend** en BD temporal (91 % de cobertura, fase de referencias),
 **21 componentes** tras los ajustes de los visores, con
@@ -296,7 +417,7 @@ La asociación local es temporal; no implementa todavía Microsoft Graph. Se man
 ### Selector nativo y alta desde Metrología (2026-09-22)
 
 Nueva pieza y Vincular/Cambiar archivo vinculado abren los diálogos de Windows, con
-`ASSETS_HOST_PATH` como ubicación inicial (Exemples en el `.env` existente). El botón
+`ASSETS_HOST_PATH` como ubicación inicial (`Exemples` en el `.env` existente desde el 22/10). El botón
 separado de subir/reemplazar archivos de la pieza se ha retirado.
 
 El backend Docker no puede abrir ventanas en el escritorio. El plugin Vite
@@ -322,8 +443,8 @@ La prueba optativa `INTEPLAST_TEST_NATIVE_DIALOG=1` de `native-picker.test.cjs` 
 ambos diálogos reales, comprueba la ruta en su interfaz y los cierra sin seleccionar.
 
 **Alcance:** funciona en el servidor Vite de la instalación Windows local. Una web
-publicada con Nginx o abierta desde otro ordenador necesita un agente local o un selector
-del origen SharePoint. El build estático no implementa esta integración ni Microsoft Graph.
+publicada con Nginx o abierta desde otro ordenador necesita el modo
+[SharePoint](#sharepoint-microsoft-graph), que usa un selector dentro de la web.
 
 Endpoints autenticados adicionales:
 

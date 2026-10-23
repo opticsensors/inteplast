@@ -61,7 +61,7 @@ from plotly.offline import get_plotlyjs
 
 RAIZ = Path(
     r"C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\proyectos"
-    r"\11. inteplast\Exemples\3212 Pump Housing\4- Metrologia"
+    r"\11. inteplast\Exemples\0- Bolt Eye\3212 Pump Housing\4- Metrologia"
 )
 SALIDA = Path(__file__).resolve().parent.parent / "out"   # prototypes/data-explorer/out, compartida
 

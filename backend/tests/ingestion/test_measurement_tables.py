@@ -4,6 +4,15 @@ import pytest
 
 from app.automatic_measurements import collect, path_context
 from app.ingestion.measurement_tables import csv_rows, report_rows, workbook
+from app.source_types import SourceItem
+
+
+def walked(root: Path, paths: list[Path]) -> tuple[str, list[SourceItem]]:
+    """A piece folder as `part_setup.folder_files` lists it locally."""
+    return root.name, [
+        SourceItem(path=f"{root.name}/{p.relative_to(root).as_posix()}", local=p)
+        for p in paths
+    ]
 
 
 @pytest.mark.parametrize("prefix", [";;;;;", ";;;;;;"])
@@ -115,7 +124,7 @@ def test_collect_keeps_unidentified_context_explicit_and_skips_correction_foreca
     data = b"N12 diameter\n1;Diameter;;10;0.1;-0.1;9.95;-0.05;;\n"
     (tmp_path / "report.csv").write_bytes(data)
     (tmp_path / "corrections.csv").write_bytes(data)
-    groups = collect(tmp_path, list(tmp_path.iterdir()))
+    groups = collect(*walked(tmp_path, list(tmp_path.iterdir())))
     assert len(groups) == 1
     (revision, sample, cavity), rows = next(iter(groups.items()))
     assert revision == "sin-revision" and cavity == "sin-cavidad"
@@ -136,7 +145,7 @@ def test_csv_priority_and_missing_comparative_tolerances_use_matching_report(
     report_file = root / "intern.02.xls"
     report_file.write_bytes(b"report fixture")
     monkeypatch.setattr(automatic, "workbook", lambda _: [("DR_PAR", report())])
-    groups = collect(root, [comparison, report_file])
+    groups = collect(*walked(root, [comparison, report_file]))
     row = groups["REV-ABC", "02.135c.500bar", "c1"][0]
     assert row["value"] == 29.01
     assert row["tol_inf"] == -0.15 and row["tol_sup"] == -0.05
@@ -145,7 +154,7 @@ def test_csv_priority_and_missing_comparative_tolerances_use_matching_report(
     individual.write_bytes(
         b"N720 diameter\n5;Diameter;;29.2;-0.05;-0.15;29.08;-0.12;;\n"
     )
-    rows = collect(root, [comparison, report_file, individual])[
+    rows = collect(*walked(root, [comparison, report_file, individual]))[
         "REV-ABC", "02.135c.500bar", "c1"
     ]
     assert [r["value"] for r in rows if r["numbers"] == ["N720"]] == [29.08]
@@ -167,5 +176,5 @@ def test_changing_source_during_read_aborts_instead_of_publishing_mixed_values(
 
     monkeypatch.setattr(automatic, "csv_rows", changing_reader)
     with pytest.raises(HTTPException) as error:
-        collect(tmp_path, [path])
+        collect(*walked(tmp_path, [path]))
     assert error.value.status_code == 409

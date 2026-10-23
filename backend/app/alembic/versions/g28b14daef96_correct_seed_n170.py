@@ -11,6 +11,8 @@ down_revision = "f17a03c9de85"
 branch_labels = None
 depends_on = None
 
+# Literal text stored by the old seed. It must stay byte-identical (including the
+# former docs/3212 path, now conocimiento/0-bolt-eye/3212) so existing rows match.
 OLD = (
     "Se actuo sobre el macho del bolt segun la desviacion medida en el "
     "muestreo. La cota volvio a tolerancia en el muestreo siguiente: es el "

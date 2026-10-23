@@ -154,14 +154,14 @@ posterior a toda la metrología.
 puede hacer (a) a mano sobre la imagen, (b) por OCR sobre los globos del plano, o (c) por anclaje
 geométrico: cruzar el nominal del CSV con la nube de puntos, que funciona para las cotas
 circulares pero deja fuera las que no están en la nube (N161/N162/N163) y las no circulares.
-→ [3212/4-metrologia.md](3212/4-metrologia.md)*
+→ [3212/4-metrologia.md](../conocimiento/0-bolt-eye/3212/4-metrologia.md)*
 
 *Actualización 2026-08-18: la vía (b) queda **descartada, y esta vez con la medida hecha**.
 Tesseract da basura evidente. RapidOCR parecía funcionar (131 N-numbers "leídos") pero al auditar
 16 lecturas al azar contra la imagen solo 6 eran correctas: **37 %**, con fallos de un dígito y
 confianza de 0,99. Se ha quitado de `ver_plano.py`, que ahora solo LOCALIZA los globos y explica
 por qué hay que pedir otro plano. Queda la vía (a), a mano.
-→ [visores.md](visores.md) · [3212/1-pieza-2d-3d.md](3212/1-pieza-2d-3d.md)*
+→ [visores.md](../conocimiento/visores.md) · [3212/1-pieza-2d-3d.md](../conocimiento/0-bolt-eye/3212/1-pieza-2d-3d.md)*
 </details>
 
 ---
@@ -192,7 +192,7 @@ quedan colgando fuera del sistema.
 recalculable desde las nubes (⚠️ el `3212_CONTORN.igs` es el contorno **escaneado**, no el
 nominal). Y son valiosos: prueban que la corrección nº1 dividió por 5,5 la desviación del
 contorno en las 4 cavidades a la vez.
-→ [3212/4-metrologia.md](3212/4-metrologia.md), [3212/historial-molde.md](3212/historial-molde.md)*
+→ [3212/4-metrologia.md](../conocimiento/0-bolt-eye/3212/4-metrologia.md), [3212/historial-molde.md](../conocimiento/0-bolt-eye/3212/historial-molde.md)*
 </details>
 
 ---
@@ -295,8 +295,9 @@ lea de ahi. Asi no hay dos copias de vuestro archivo CAD ni nada que sincronizar
 
 *Contexto interno (no enviar):* ya está implementada la referencia local con un UUID de
 documento independiente de su ubicación. Los visores PDF/3D están comprobados con los dos
-originales del 3212. Conectar Graph requerirá implementar su acceso e identificar los archivos
-de INTEPLAST; no basta con sustituir la ruta local. La integración con EURECAT, si se prueba,
+originales del 3212. Desde el 22/10/2026 hay un modo SharePoint (login delegado + Graph)
+construido con la app de prueba de Eurecat; para INTEPLAST hará falta su registro de
+aplicación y la ubicación de su biblioteca. La integración con EURECAT, si se prueba,
 no concede acceso al entorno de INTEPLAST. Ver [ficheros-externos.md](ficheros-externos.md).
 
 ---
@@ -312,7 +313,7 @@ que representa. Conviene comprobarla con el conversor antes de sustituir el vín
 la nueva entrega como una revisión distinta. Se está comprobando compatibilidad de exportación;
 la vista web por sí sola no permite concluir que falten superficies en el CAD original.
 
-→ [Vista ligera y límites](vistas-3d.md), [fichero del molde](3212/3-molde-3d.md).
+→ [Vista ligera y límites](vistas-3d.md), [fichero del molde](../conocimiento/0-bolt-eye/3212/3-molde-3d.md).
 
 ---
 
@@ -387,8 +388,8 @@ valores heredados y previsiones.
 **Contexto interno (2026-09-22, no enviar):** el proceso mixto es una hipótesis, no una
 confirmación del cliente. La respuesta determinará qué podemos automatizar y qué necesita
 revisión humana. Una fórmula calcula una previsión; no acredita ejecución ni resultado.
-Ver [metrología del 3212](3212/4-metrologia.md) y
-[fórmulas y previsiones verificadas](3212/revision-2026-09-17.md).
+Ver [metrología del 3212](../conocimiento/0-bolt-eye/3212/4-metrologia.md) y
+[fórmulas y previsiones verificadas](../conocimiento/0-bolt-eye/3212/revision-2026-09-17.md).
 
 ---
 
@@ -459,7 +460,7 @@ identificamos como `N240` leyendo una imagen, pedía bajar 0,08 mm — y N240 ba
 literal de `intern.01`** (25/01/2024) — los 32 valores idénticos, 15 meses después — y sus
 `N275`/`N276` son copia de `intern.08`. Tercer caso de copia-pega detectado.
 
-→ Todo el detalle en [3212/historial-molde.md §8](3212/historial-molde.md#8-hubo-una-tercera-corrección-de-molde--no).
+→ Todo el detalle en [3212/historial-molde.md §8](../conocimiento/0-bolt-eye/3212/historial-molde.md#8-hubo-una-tercera-corrección-de-molde--no).
 
 ---
 
@@ -504,8 +505,8 @@ el globo `[]240` rodeado en rojo con una flecha.
 Validado que **todas** las imágenes de los `_rels` están realmente colocadas: el número de
 `r:embed` distintos del `slideN.xml` coincide con el número de relaciones de imagen.
 
-→ Detalle en [3212/5-retoques-molde.md](3212/5-retoques-molde.md) y la comprobación numérica
-de que el retoque se aplicó en [3212/historial-molde.md](3212/historial-molde.md#6-la-segunda-prueba-el-plano-a).
+→ Detalle en [3212/5-retoques-molde.md](../conocimiento/0-bolt-eye/3212/5-retoques-molde.md) y la comprobación numérica
+de que el retoque se aplicó en [3212/historial-molde.md](../conocimiento/0-bolt-eye/3212/historial-molde.md#6-la-segunda-prueba-el-plano-a).
 
 ### R1 · ¿Qué `intern.NN` corresponde a cada retoque de molde?
 
@@ -519,7 +520,7 @@ confirman (reunión 1–4 días alrededor del informe).
 | nº2 (18/03/2024) | `intern.03` | `intern.05` (01/05/2024) |
 
 Además la corrección 2 **audita explícitamente** la 1 en el texto de sus diapositivas, y 12 de
-18 llevan un marcador `OK`. → [3212/historial-molde.md](3212/historial-molde.md)
+18 llevan un marcador `OK`. → [3212/historial-molde.md](../conocimiento/0-bolt-eye/3212/historial-molde.md)
 
 ### R2 · ¿A qué muestreo pertenece el STL?
 
@@ -549,7 +550,7 @@ su uso exacto y vínculo a acciones se recogen en A11.
 3,429 → 3,974 → 3,981 → 3,978. LP máximo del mismo elemento:
 3,477 → 4,018 → 4,023 → 4,023, frente a máximo admisible 4,000.
 En `.03`, 0/32 GX están fuera, pero sí 30/32 LP máximos. No concluir que quedó aceptado
-porque desaparezca del segundo PPTX. [Fuentes](3212/revision-2026-09-17.md).
+porque desaparezca del segundo PPTX. [Fuentes](../conocimiento/0-bolt-eye/3212/revision-2026-09-17.md).
 
 ### R6 · ¿Cómo se calcula la posición ⌖? *(Dubte 2)*
 
@@ -560,7 +561,7 @@ porque desaparezca del segundo PPTX. [Fuentes](3212/revision-2026-09-17.md).
 
 **Resuelto** con el método de medida: `GX` = Ø mínimo, `GN` = Ø máximo, `LP(2)` = distancia
 directa entre dos puntos opuestos a la misma altura.
-→ [3212/6-metodo-medida.md](3212/6-metodo-medida.md#2-vocabulario-de-evaluación)
+→ [3212/6-metodo-medida.md](../conocimiento/0-bolt-eye/3212/6-metodo-medida.md#2-vocabulario-de-evaluación)
 
 ### R8 · ¿Por qué se mide el agujero a dos alturas? *(Dubte 7)*
 

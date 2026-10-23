@@ -21,7 +21,7 @@ Es la carpeta con más valor del proyecto. Contiene **toda la historia de medici
 > geométrico hay que hidratarlo a propósito — son 1–3 MB por fichero, nada que ver con el STEP
 > de 247 MB de `3- 3D Molde`.
 
-Los esquemas exactos de cada formato están en [formatos-parsing.md](../formatos-parsing.md).
+Los esquemas exactos de cada formato están en [formatos-parsing.md](../../formatos-parsing.md).
 Aquí se explica **qué hay, cómo está organizado y cómo leerlo**.
 
 ---
@@ -229,7 +229,7 @@ $wb.Close($false); $xl.Quit()
 
 ⚠️ **Cerrar siempre**: si no, quedan procesos `EXCEL.EXE` colgados.
 ⚠️ La convención del repo es mantener los scripts `.ps1` en **ASCII** para evitar problemas de
-codificación con PowerShell 5.1. Ver [CLAUDE.md](../../CLAUDE.md).
+codificación con PowerShell 5.1. Ver [CLAUDE.md](../../../CLAUDE.md).
 
 ---
 
@@ -280,7 +280,7 @@ la cavidad **como prefijo** del nombre.
 ### El CSV de cavidad — el fichero más importante de todo el proyecto
 
 `;` como delimitador, **cp1252**, export por bloques. Esquema columna a columna en
-[formatos-parsing.md](../formatos-parsing.md#1-csv-de-medición-de-cavidad--el-formato-más-importante).
+[formatos-parsing.md](../../formatos-parsing.md#1-csv-de-medición-de-cavidad--el-formato-más-importante).
 
 **Contiene ~55 bloques de N-number.** Los del 3212, en orden:
 
@@ -317,7 +317,7 @@ Dos consecuencias para comparar estas muestras:
 
 1. **Los CSV son comparables fila a fila entre muestreos** sin hacer *matching* difuso: basta
    `cabecera_de_bloque + índice dentro del bloque` (ver
-   [formatos-parsing.md](../formatos-parsing.md#receta-cruzar-dos-muestreos)).
+   [formatos-parsing.md](../../formatos-parsing.md#receta-cruzar-dos-muestreos)).
 2. **Se remidió *todo* en cada muestreo con CMM**, no solo lo que fallaba. La sensación de
    "informe parcial" es **exclusiva del XLS**: 211 mediciones × 4 cavidades × 4 muestreos =
    **3.376 mediciones reales** disponibles. Es el argumento definitivo para ingerir el CSV.
@@ -446,7 +446,7 @@ plano `YZ(X)` · `Offset -0.025` · `Nº de pares actual/nominal: 1` ·
 ⚠️ **La tabla del PDF son celdas sueltas**: los bloques de texto de PyMuPDF **no** agrupan las
 filas, y `Contorno (21)` sale separado de sus números. Hay que **agrupar las palabras por
 coordenada Y**. Receta en
-[formatos-parsing.md §4ter](../formatos-parsing.md#4ter-pdf-pa_16--pb_16--tolerancia-de-contorno).
+[formatos-parsing.md §4ter](../../formatos-parsing.md#4ter-pdf-pa_16--pb_16--tolerancia-de-contorno).
 
 #### 🔑 La prueba de que el retoque enderezó el perfil interior
 
@@ -502,7 +502,7 @@ $s  = "C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\repos\inteplast\proto
 & $py "$s\metrologia\ver_txt.py"     # las 40 nubes de puntos en 3D
 ```
 
-→ [docs/visores.md](../visores.md)
+→ [conocimiento/visores.md](../../visores.md)
 
 ### 🆕 Dónde vive el N-number — y dónde **no**
 
@@ -532,9 +532,9 @@ se puede saber a qué cota pertenece un punto de la nube leyendo el fichero.
    → 20 puntos a `Y=1,5` en (31, 0). **Funciona para las cotas circulares**, pero deja fuera las
    que no están en la nube (N161/N162/N163) y las no circulares.
 3. **El plano 2D**, que es el único sitio donde el N-number aparece *junto al punto al que se
-   refiere* — pero es un escaneo. → [preguntas-abiertas A4](../preguntas-abiertas.md)
+   refiere* — pero es un escaneo. → [preguntas-abiertas A4](../../../docs/preguntas-abiertas.md)
 4. Los PDF `PA`/`PB` **no se pueden enlazar** con lo que tenemos.
-   → [preguntas-abiertas A9](../preguntas-abiertas.md)
+   → [preguntas-abiertas A9](../../../docs/preguntas-abiertas.md)
 
 ### 🆕 CSV y TXT son **dos exports paralelos**, no uno derivado del otro
 
@@ -597,7 +597,7 @@ Verificado el 2026-08-13 por cuatro vías independientes:
 misma pieza** — el diámetro más estrecho y el más ancho del mismo agujero, que es como se detecta
 si ha salido ovalado. Lo mismo con los 60 `POINT n`: 60 secciones de la misma pieza.
 
-Una fila de CSV ≈ una fila de `MEDICION`. Ver [modelo-datos.md](../modelo-datos.md).
+Una fila de CSV ≈ una fila de `MEDICION`. Ver [modelo-datos.md](../../../docs/modelo-datos.md).
 
 ## Revisión del 17/09/2026 y presentación
 

@@ -9,7 +9,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
-import { pickNativePath } from "@/lib/nativePicker"
+import { pickSourcePath } from "@/lib/sourcePicker"
 import { usePendingTask } from "./usePendingTask"
 
 export function SourceFilePicker({
@@ -31,7 +31,7 @@ export function SourceFilePicker({
     : "Vincular archivo existente"
   const linking = usePendingTask(async (_: undefined) => {
     try {
-      const path = await pickNativePath("file")
+      const path = await pickSourcePath("file")
       if (!path) return
       const file = await FilesService.referenceFile({ requestBody: { path } })
       await onLinked(file)

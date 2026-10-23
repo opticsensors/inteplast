@@ -11,14 +11,21 @@ from fastapi import HTTPException
 from pydantic import BaseModel, Field
 from sqlmodel import Session, col, select
 
-from app import automatic_measurements, measurement_imports
+from app import automatic_measurements, measurement_imports, sharepoint
 from app.evidence import queue, register_document, study_key
-from app.file_sources import SourceError, local_path, stamp
+from app.file_sources import (
+    SourceError,
+    SourceItem,
+    inside,
+    local_path,
+    source_item,
+)
 from app.knowledge_models import PartDocument, PartReference
 from app.measurement_models import (
     MeasurementPreview,
 )
 from app.models import Part, PartPublic, ReferenceChoice, ReferenceKind, StoredFile
+from app.pilot import is_pilot
 
 KINDS: tuple[ReferenceKind, ...] = ("part", "scan", "mold", "drawing")
 LABELS = {"part": "CAD", "scan": "Escaneo", "mold": "Molde", "drawing": "Plano"}
@@ -71,7 +78,20 @@ class ReadFileReport(BaseModel):
     status: str
 
 
-def folder_files(folder_path: str) -> list[Path]:
+def folder_files(folder_path: str) -> list[SourceItem]:
+    """Files of a piece folder, as paths from the source root."""
+    if sharepoint.enabled():
+        too_wide = "Selecciona la carpeta concreta de la pieza."
+        try:
+            return [
+                item
+                for item in sharepoint.walk(folder_path, too_wide=too_wide)
+                if not item.name.startswith("~$")
+            ]
+        except SourceError as error:
+            if error.message == too_wide:
+                raise HTTPException(422, too_wide)
+            raise
     root = local_path(folder_path, directory=True)
     paths: list[Path] = []
     visited = 0
@@ -90,7 +110,13 @@ def folder_files(folder_path: str) -> list[Path]:
             if not name.startswith((".", "~$"))
             and not Path(directory, name).is_symlink()
         )
-    return paths
+    return [
+        SourceItem(
+            path="/".join(filter(None, [folder_path, p.relative_to(root).as_posix()])),
+            local=p,
+        )
+        for p in paths
+    ]
 
 
 def reference_kind(relative: str) -> ReferenceKind | None:
@@ -142,21 +168,22 @@ def discover(session: Session, folder_path: str) -> FolderDiscovery:
         raise HTTPException(
             422, "Selecciona la carpeta de una pieza dentro del origen."
         )
-    root = local_path(folder_path, directory=True)
+    root = source_item(folder_path, directory=True)
     candidates: dict[str, list[ReferenceCandidate]] = defaultdict(list)
     notices = []
-    for path in folder_files(folder_path):
-        kind = reference_kind(path.relative_to(root).as_posix())
+    for item in folder_files(folder_path):
+        kind = reference_kind(item.relative_to(folder_path))
         if not kind:
             continue
-        relative = f"{folder_path}/{path.relative_to(root).as_posix()}"
+        relative = f"{folder_path}/{item.relative_to(folder_path)}"
         try:
-            checked = local_path(relative)
+            # Local walks are validated per candidate, as when linking them.
+            checked = item if item.version is not None else source_item(relative)
             candidates[kind].append(
                 ReferenceCandidate(
                     path=relative,
-                    source_version=stamp(checked),
-                    size=checked.stat().st_size,
+                    source_version=checked.version or "",
+                    size=checked.size or 0,
                 )
             )
         except SourceError:
@@ -192,7 +219,8 @@ def discover(session: Session, folder_path: str) -> FolderDiscovery:
             )
     return FolderDiscovery(
         folder_path=folder_path,
-        name=(part.name if part else None) or root.name,
+        name=(part.name if part else None)
+        or (root.local.name if root.local else root.name),
         references=proposals,
         notices=notices,
         code=part.code if part else proposed_code(folder_path),
@@ -211,7 +239,7 @@ def proposed_code(folder_path: str) -> str:
 
 def validate_references(folder_path: str, choices: list[ReferenceChoice]) -> None:
     root = (
-        local_path(folder_path, directory=True)
+        source_item(folder_path, directory=True)
         if any(c.path for c in choices)
         else None
     )
@@ -223,8 +251,8 @@ def validate_references(folder_path: str, choices: list[ReferenceChoice]) -> Non
     for choice in choices:
         if not choice.path:
             continue
-        path = local_path(choice.path)
-        if root is None or not path.is_relative_to(root):
+        item = source_item(choice.path)
+        if root is None or not inside(choice.path, folder_path):
             raise HTTPException(
                 422, "Los archivos deben estar dentro de la carpeta de la pieza."
             )
@@ -244,11 +272,17 @@ def validate_references(folder_path: str, choices: list[ReferenceChoice]) -> Non
             },
             "scan": {".stl", ".ply", ".obj", ".glb", ".gltf"},
         }
-        if path.suffix.lower() not in allowed[choice.kind]:
+        suffix = (item.local or PurePosixPath(item.path)).suffix.lower()
+        if suffix not in allowed[choice.kind]:
             raise HTTPException(
                 422, f"El formato no corresponde a {LABELS[choice.kind]}."
             )
-        if choice.source_version and stamp(path) != choice.source_version:
+        # SharePoint always uses the latest version: a newer one is not an error.
+        if (
+            choice.source_version
+            and not sharepoint.enabled()
+            and item.version != choice.source_version
+        ):
             raise HTTPException(409, "Un archivo ha cambiado. Selecciónalo de nuevo.")
 
 
@@ -349,19 +383,18 @@ def refresh(session: Session, part: Part, user_id: uuid.UUID) -> PartRefreshResu
     corrections_state = "empty"
     corrections_key = None
     correction_files = [
-        p
-        for p in paths
-        if p.suffix.lower() in {".pptx", ".xls", ".xlsx", ".pdf"}
-        and re.search(r"retoqu|correction", p.as_posix(), re.I)
+        item
+        for item in paths
+        if item.suffix in {".pptx", ".xls", ".xlsx", ".pdf"}
+        and re.search(r"retoqu|correction", item.path, re.I)
     ]
-    if part.code == "3212" and part.folder_path == "3212 Pump Housing":
+    if is_pilot(part):
         from app.ingestion.pilot_3212.config import CORRECTIONS
 
-        root = local_path(part.folder_path, directory=True)
-        required = [
-            root / c[key] for c in CORRECTIONS.values() for key in ("xls", "pptx")
-        ]
-        if all(path.is_file() for path in required):
+        folder = part.folder_path or ""
+        present = {item.relative_to(folder) for item in paths}
+        required = [c[key] for c in CORRECTIONS.values() for key in ("xls", "pptx")]
+        if all(path in present for path in required):
             key = study_key(part)
             corrections_key = key
             corrections_state = queue(
@@ -369,7 +402,7 @@ def refresh(session: Session, part: Part, user_id: uuid.UUID) -> PartRefreshResu
             ).state
             read_files.extend(
                 ReadFileReport(
-                    path=path.relative_to(root).as_posix(),
+                    path=path,
                     group="corrections",
                     status="used"
                     if corrections_state == "ready"

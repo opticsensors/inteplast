@@ -96,6 +96,39 @@ async function choose(page, selected = "9001 New housing") {
   await page.getByLabel("Cliente", { exact: true }).fill("Example company")
 }
 
+test("with SharePoint the folder is chosen inside the application, without the Windows dialog", async (t) => {
+  const page = await mount(t)
+  let nativeRequests = 0
+  await page.route("**/__native-picker", (route) => {
+    nativeRequests += 1
+    return route.fulfill({ json: { path: null } })
+  })
+  await page.evaluate(() => {
+    window.review.sharepoint = true
+    window.review.sourceFolders = ["9002 Shared housing"]
+  })
+  await page
+    .getByRole("button", { name: "Seleccionar carpeta", exact: true })
+    .click()
+  const dialog = page.getByRole("dialog", { name: "Elegir carpeta" })
+  const confirm = dialog.getByRole("button", { name: "Elegir esta carpeta" })
+  await expect(confirm).toBeDisabled()
+  await dialog
+    .getByRole("button", { name: "9002 Shared housing", exact: true })
+    .click()
+  await expect(dialog.getByText("No hay subcarpetas.")).toBeVisible()
+  await confirm.click()
+  await expect(dialog).toHaveCount(0)
+  await expect(page.getByLabel("Nombre de la pieza")).toHaveValue(
+    "9002 Shared housing",
+  )
+  assert.equal(nativeRequests, 0)
+  assert.deepEqual(
+    await page.evaluate(() => window.review.sourceRequests.map((r) => r.path)),
+    ["", "9002 Shared housing"],
+  )
+})
+
 test("new piece is an empty labelled page; folder proposals, arbitrary named files and features are drafts until creation", async (t) => {
   const page = await mount(t)
   await expect(page.getByRole("dialog")).toHaveCount(0)

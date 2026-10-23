@@ -27,6 +27,9 @@ def login_access_token(
     """
     OAuth2 compatible token login, get an access token for future requests
     """
+    if settings.SHAREPOINT_ENABLED:
+        # SharePoint is read with each user's Microsoft account: sign in there.
+        raise HTTPException(status_code=400, detail="Inicia sesión con Microsoft.")
     user = crud.authenticate(
         session=session, email=form_data.username, password=form_data.password
     )

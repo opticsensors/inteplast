@@ -1837,6 +1837,34 @@ export const LocationReviewSchema = {
     title: 'LocationReview'
 } as const;
 
+export const LoginMethodsSchema = {
+    properties: {
+        password: {
+            type: 'boolean',
+            title: 'Password'
+        },
+        microsoft: {
+            type: 'boolean',
+            title: 'Microsoft'
+        },
+        microsoft_paste: {
+            type: 'boolean',
+            title: 'Microsoft Paste'
+        },
+        sharepoint: {
+            type: 'boolean',
+            title: 'Sharepoint'
+        },
+        source_name: {
+            type: 'string',
+            title: 'Source Name'
+        }
+    },
+    type: 'object',
+    required: ['password', 'microsoft', 'microsoft_paste', 'sharepoint', 'source_name'],
+    title: 'LoginMethods'
+} as const;
+
 export const MeasurementCommitRequestSchema = {
     properties: {
         files: {
@@ -2275,6 +2303,46 @@ export const MetrologyPartSchema = {
     type: 'object',
     required: ['part', 'features'],
     title: 'MetrologyPart'
+} as const;
+
+export const MicrosoftLoginCompleteSchema = {
+    properties: {
+        response_url: {
+            type: 'string',
+            maxLength: 8192,
+            minLength: 1,
+            title: 'Response Url'
+        }
+    },
+    type: 'object',
+    required: ['response_url'],
+    title: 'MicrosoftLoginComplete'
+} as const;
+
+export const MicrosoftLoginStartSchema = {
+    properties: {
+        auth_uri: {
+            type: 'string',
+            title: 'Auth Uri'
+        }
+    },
+    type: 'object',
+    required: ['auth_uri'],
+    title: 'MicrosoftLoginStart'
+} as const;
+
+export const MicrosoftTicketSchema = {
+    properties: {
+        ticket: {
+            type: 'string',
+            maxLength: 128,
+            minLength: 16,
+            title: 'Ticket'
+        }
+    },
+    type: 'object',
+    required: ['ticket'],
+    title: 'MicrosoftTicket'
 } as const;
 
 export const NewPasswordSchema = {

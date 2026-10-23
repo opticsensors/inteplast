@@ -2,7 +2,7 @@
 
 > Esquemas exactos, columna a columna, de los tres formatos que hay que ingerir:
 > el CSV de la CMM, el XLS PPAP y el PPTX de corrección de molde.
-> Dónde vive cada uno → [3212/README.md](3212/README.md).
+> Dónde vive cada uno → [3212/README.md](0-bolt-eye/3212/README.md).
 
 ---
 
@@ -138,7 +138,7 @@ awk -F'|' 'NR==FNR{k=$1"|"$2; v[k]=$6; next} {k=$1"|"$2; if(k in v) printf "%-46
 **~130 de 211 filas más de 0,10 mm**; en `.05 → .08` ninguna supera ese umbral y el máximo es
 ~0,08 mm. **Esto no prueba que ese segundo tramo carezca de retoques**: los hay documentados
 de 0,02 y 0,03 mm. El umbral sirve para describir estos tramos, no para cerrar el historial.
-→ [3212/historial-molde.md §8](3212/historial-molde.md#8-hubo-una-tercera-corrección-de-molde--no)
+→ [3212/historial-molde.md §8](0-bolt-eye/3212/historial-molde.md#8-hubo-una-tercera-corrección-de-molde--no)
 
 ---
 
@@ -244,7 +244,7 @@ o quedarse con `HISTORY`, que es la que está completa.
 vacías y heredan. Hay que arrastrar el valor hacia abajo al parsear.
 
 El significado de `GX` / `GN` / `LP(2)` está en
-[3212/6-metodo-medida.md](3212/6-metodo-medida.md#2-vocabulario-de-evaluación).
+[3212/6-metodo-medida.md](0-bolt-eye/3212/6-metodo-medida.md#2-vocabulario-de-evaluación).
 
 ### Discrepancias entre medidas XLS y CSV
 
@@ -262,7 +262,7 @@ Ejemplo: corrección 2, N240 `P224=H224+$O$224`, `P225=P224+$O$225`.
 `xlrd` lee el valor guardado de fórmulas BIFF8; no las recalcula. Para auditar fórmulas usar
 Excel en solo lectura. Los mapeos deben comprobar característica, equipo y evaluación;
 no propagar un N-number ciegamente a filas de cálculos intermedios.
-Ver [revisión 17/09/2026](3212/revision-2026-09-17.md).
+Ver [revisión 17/09/2026](0-bolt-eye/3212/revision-2026-09-17.md).
 
 ### Receta (PowerShell + Excel COM)
 
@@ -292,7 +292,7 @@ Es un **ZIP**: `ppt/slides/slide*.xml` (texto) + `ppt/media/` (imágenes).
 revisadas para el piloto 3212, sin interpretación mediante una LLM. La lectura de otras
 estructuras sigue pendiente de desarrollo y validación. La decisión entre ampliar
 adaptadores, incorporar una LLM con capacidad visual o combinar ambos métodos se recoge
-en la [hoja de ruta: generalizar la importación de correcciones PPTX](hoja-de-ruta.md#pendiente-generalizar-la-importación-de-correcciones-pptx).
+en la [hoja de ruta: generalizar la importación de correcciones PPTX](../docs/hoja-de-ruta.md#pendiente-generalizar-la-importación-de-correcciones-pptx).
 
 ### Estructura de una diapositiva — muy regular, parseable
 
@@ -343,7 +343,7 @@ imagen del `.rels`.
    (7 en el 3212). **No son inparseables**: el N-number está en la **imagen** del bloque
    *Current situation*, que es un recorte del `DR(3D)` cuya primera columna es la columna `Nr`.
    Hay que leerlas (OCR o a ojo). En el 3212, 6 de las 7 son el retoque del **plano A** —
-   una acción sobre una *referencia*, no sobre una cota. → [3212/5-retoques-molde.md §3bis](3212/5-retoques-molde.md#3bis--las-7-diapositivas-sin-cota-son-el-retoque-del-plano-a)
+   una acción sobre una *referencia*, no sobre una cota. → [3212/5-retoques-molde.md §3bis](0-bolt-eye/3212/5-retoques-molde.md#3bis--las-7-diapositivas-sin-cota-son-el-retoque-del-plano-a)
 3. **La numeración del pie miente**: la corrección 1 del 3212 declara `n/37` pero solo hay
    **36 diapositivas** (falta la 5/37). ⚠️ Como consecuencia **`slideN.xml` ≠ slide N**: a
    partir de la que falta hay un desfase de 1 (`slide15.xml` = diapositiva **1.16**). En la
@@ -383,7 +383,7 @@ Trivial de parsear (`awk '{print $1,$2,$3}'`). Cifras medidas en `intern.01/c13`
 Seis grupos de 25 puntos, con Y ligeramente variable dentro de cada grupo. No se demuestra
 que sean nominales ni una transformación de corrección. Los hashes diferentes solo prueban
 que los archivos difieren. Conservar origen, muestreo, cavidad y relación de subconjunto;
-el vínculo a una acción se debe confirmar. [Detalle](3212/revision-2026-09-17.md).
+el vínculo a una acción se debe confirmar. [Detalle](0-bolt-eye/3212/revision-2026-09-17.md).
 
 ---
 
@@ -511,7 +511,7 @@ tenemos (el `.igs` es el *escaneado*, no el nominal).
 ## 6. Comandos útiles
 
 ```bash
-cd "C:/Users/eduard.almar/OneDrive - EURECAT/Escritorio/proyectos/11. inteplast/Exemples"
+cd "C:/Users/eduard.almar/OneDrive - EURECAT/Escritorio/proyectos/11. inteplast/Exemples/0- Bolt Eye"
 
 # Inventario por extensión
 find . -type f | sed 's/.*\.//' | tr 'A-Z' 'a-z' | sort | uniq -c | sort -rn

@@ -19,9 +19,17 @@ from fastapi import FastAPI
 from sqlalchemy import text
 from sqlmodel import Session, col, select
 
+from app import sharepoint
 from app.core.config import settings
 from app.core.db import engine
-from app.file_sources import content_type, document_path, local_path, stamp
+from app.evidence_converter import STUDY_FOLDERS, STUDY_SUFFIXES
+from app.file_sources import (
+    content_type,
+    document_path,
+    linked_version,
+    local_path,
+    stamp,
+)
 from app.knowledge_models import EvidenceJob, PartCharacteristic, PartDocument
 from app.models import Part, StoredFile, get_datetime_utc
 from app.previews import preview_lifespan
@@ -41,17 +49,27 @@ def digest(value: Any) -> str:
 
 def drawing_key(document: StoredFile) -> str:
     return digest(
-        [RECIPE, str(document.id), str(document.version), document.source_version]
+        [RECIPE, str(document.id), str(document.version), linked_version(document)]
     )
 
 
 def study_key(part: Part) -> str:
-    root = local_path(part.folder_path or "", directory=True)
-    manifest = [
-        (p.relative_to(root).as_posix(), stamp(p))
-        for p in root.rglob("*")
-        if p.is_file() and p.suffix.lower() in {".csv", ".xls", ".pptx", ".pdf", ".txt"}
-    ]
+    folder = part.folder_path or ""
+    if sharepoint.enabled():
+        manifest = [
+            (item.relative_to(folder), item.version or "")
+            for item in sharepoint.walk(
+                folder, too_wide="Selecciona la carpeta concreta de la pieza."
+            )
+            if item.suffix in STUDY_SUFFIXES
+        ]
+    else:
+        root = local_path(folder, directory=True)
+        manifest = [
+            (p.relative_to(root).as_posix(), stamp(p))
+            for p in root.rglob("*")
+            if p.is_file() and p.suffix.lower() in STUDY_SUFFIXES
+        ]
     return digest([RECIPE, part.folder_path, sorted(manifest)])
 
 
@@ -62,6 +80,7 @@ def queue(
     key: str,
     *,
     requested_by: uuid.UUID | None = None,
+    source_user: uuid.UUID | None = None,
 ) -> EvidenceJob:
     # Serialize creation/update for this identity, including concurrent requests.
     session.execute(
@@ -82,6 +101,9 @@ def queue(
     job.cache_key, job.state, job.message = key, "queued", None
     if requested_by is not None:
         job.payload = {**job.payload, "_refresh_requested_by": str(requested_by)}
+    if (source_user or requested_by) is not None:
+        # Whose SharePoint permissions the worker uses to read the originals.
+        job.payload = {**job.payload, "_source_user": str(source_user or requested_by)}
     job.updated_at = get_datetime_utc()
     session.add(job)
     session.commit()
@@ -90,15 +112,13 @@ def queue(
 
 
 def register_document(session: Session, part: Part, relative: str) -> StoredFile:
-    from app.api.routes.files import reference_metadata
+    from app.api.routes.files import existing_reference, reference_metadata
     from app.models import LocalFileReference
 
     metadata = reference_metadata(
         LocalFileReference(path=f"{part.folder_path}/{relative}")
     )
-    stored = session.exec(
-        select(StoredFile).where(StoredFile.reference_key == metadata["reference_key"])
-    ).first()
+    stored = existing_reference(session, metadata)
     if stored is None:
         stored = StoredFile(**metadata)
         session.add(stored)
@@ -195,19 +215,28 @@ def process_next(stop: threading.Event) -> bool:
         if job is None:
             return False
         identity, key = job.id, job.cache_key
+        source_user = job.payload.get("_source_user")
         job.state, job.message = "processing", None
         session.add(job)
         session.commit()
+        token = sharepoint.acting_user.set(
+            uuid.UUID(source_user) if source_user else None
+        )
+        staging: Path | None = None
         try:
             part = session.get(Part, job.part_id) if job.part_id else None
             document = session.get(StoredFile, job.file_id) if job.file_id else None
-            source = (
-                document_path(document)
-                if document
-                else local_path(part.folder_path or "", directory=True)
-                if part
-                else None
-            )
+            source: Path | None = None
+            if document:
+                source = document_path(document)
+            elif part and sharepoint.enabled():
+                # The reader expects a folder: copy only the formats it reads.
+                staging = Path(tempfile.mkdtemp(prefix="inteplast-sharepoint-"))
+                source = sharepoint.stage(
+                    part.folder_path or "", STUDY_FOLDERS, STUDY_SUFFIXES, staging
+                )
+            elif part:
+                source = local_path(part.folder_path or "", directory=True)
             if source is None:
                 raise ValueError("Missing source")
             with tempfile.TemporaryDirectory(prefix="inteplast-evidence-") as temporary:
@@ -294,6 +323,10 @@ def process_next(stop: threading.Event) -> bool:
                 active.message = "No se ha podido preparar la evidencia. Comprueba los originales y vuelve a intentarlo."
                 session.add(active)
                 session.commit()
+        finally:
+            sharepoint.acting_user.reset(token)
+            if staging is not None:
+                shutil.rmtree(staging, ignore_errors=True)
     return True
 
 

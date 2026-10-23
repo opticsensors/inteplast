@@ -11,7 +11,7 @@ from sqlmodel import col, func, select
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
 from app.core.config import settings
-from app.file_sources import SourceError, local_path
+from app.file_sources import SourceError, source_item
 from app.models import (
     FeatureAsset,
     FeaturePartLink,
@@ -45,7 +45,7 @@ def commit_part(session: SessionDep) -> None:
 def folder_name(path: str) -> str:
     """Validate through the source adapter, keeping local paths out of the UI."""
     try:
-        local_path(path, directory=True)
+        source_item(path, directory=True)
     except SourceError as error:
         raise HTTPException(status_code=error.status_code, detail=error.message)
     return (PurePosixPath(path).name if path else settings.ASSETS_SOURCE_NAME)[:255]

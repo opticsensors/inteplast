@@ -364,6 +364,14 @@ export type LocationReview = {
     label: string;
 };
 
+export type LoginMethods = {
+    password: boolean;
+    microsoft: boolean;
+    microsoft_paste: boolean;
+    sharepoint: boolean;
+    source_name: string;
+};
+
 export type MeasurementCommitRequest = {
     files?: Array<MeasurementFileSelection>;
     context_key: string;
@@ -460,6 +468,18 @@ export type MetrologyPart = {
     part: PartPublic;
     features: Array<MetrologyFeature>;
     matched_feature_ids?: Array<(string)>;
+};
+
+export type MicrosoftLoginComplete = {
+    response_url: string;
+};
+
+export type MicrosoftLoginStart = {
+    auth_uri: string;
+};
+
+export type MicrosoftTicket = {
+    ticket: string;
 };
 
 export type NewPassword = {
@@ -1105,6 +1125,24 @@ export type LoginRecoverPasswordHtmlContentData = {
 };
 
 export type LoginRecoverPasswordHtmlContentResponse = (string);
+
+export type LoginLoginMethodsResponse = (LoginMethods);
+
+export type LoginStartMicrosoftLoginResponse = (MicrosoftLoginStart);
+
+export type LoginCompleteMicrosoftLoginData = {
+    requestBody: MicrosoftLoginComplete;
+};
+
+export type LoginCompleteMicrosoftLoginResponse = (Token);
+
+export type LoginRedeemMicrosoftTicketData = {
+    requestBody: MicrosoftTicket;
+};
+
+export type LoginRedeemMicrosoftTicketResponse = (Token);
+
+export type LoginMicrosoftLogoutResponse = (Message);
 
 export type PartsReadPartDataReportData = {
     partId: string;

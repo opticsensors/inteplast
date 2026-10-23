@@ -118,7 +118,7 @@ DEPENDENCIA_COTA (n:n)     n_number_origen → n_number_afectado, tipo, texto
    bolt eye nuevo, ¿qué pasó en piezas anteriores?"*.
 2. **`CORRECCION_MOLDE.muestreo_origen` / `.muestreo_validacion`** es lo que permite demostrar
    *"esta corrección mejoró esta cota"* — el par antes/después.
-   Reconstruido para el 3212 en [3212/historial-molde.md](3212/historial-molde.md).
+   Reconstruido para el 3212 en [3212/historial-molde.md](../conocimiento/0-bolt-eye/3212/historial-molde.md).
 3. **`DEPENDENCIA_COTA`** captura el acoplamiento entre cotas (el plano A arrastra todo lo
    demás). Es conocimiento tácito que no está en ninguna tabla, solo en el texto de las
    diapositivas.
@@ -128,7 +128,7 @@ DEPENDENCIA_COTA (n:n)     n_number_origen → n_number_afectado, tipo, texto
 ## 4. Prioridad de ingesta
 
 ⚠️ **Revisada respecto a la versión inicial**: el XLS ya no va primero. Ver
-[formatos-parsing.md](formatos-parsing.md#discrepancias-entre-medidas-xls-y-csv).
+[formatos-parsing.md](../conocimiento/formatos-parsing.md#discrepancias-entre-medidas-xls-y-csv).
 
 | Prioridad | Fuente | Por qué | Esfuerzo |
 |:--:|---|---|---|
@@ -198,7 +198,7 @@ De `inteplast_notas_reunion_20_2_2026.md` + `inteplast_resposta_dubtes.md` + los
 La primera experiencia se centra en antes → acción propuesta → previsión XLS → después.
 Prototipo independiente: `prototypes/data-explorer/ver_correcciones.py` (N161, N240, N170, N165 y perfiles).
 Desde el 18/09/2026 la web lo incorpora para el 3212 ([Cotas y evidencia](cotas-y-evidencia-web.md));
-el prototipo se conserva como referencia. [Evidencia y decisiones](3212/revision-2026-09-17.md).
+el prototipo se conserva como referencia. [Evidencia y decisiones](../conocimiento/0-bolt-eye/3212/revision-2026-09-17.md).
 
 No agregar N170 como conforme si solo entra GX; conservar LP máximo, agujero y altura.
 No contar las 120 filas POINT de N165 como 120 características independientes.

@@ -2,6 +2,7 @@ import secrets
 import warnings
 from pathlib import Path
 from typing import Annotated, Any, Literal
+from urllib.parse import urlsplit
 
 from pydantic import (
     AnyUrl,
@@ -85,6 +86,25 @@ class Settings(BaseSettings):
     ASSETS_ROOT: str | None = None
     ASSETS_SOURCE_ID: str = "local-assets"
     ASSETS_SOURCE_NAME: str = "Archivos de referencia"
+    # The same dataset read through Microsoft Graph instead of the local folder.
+    # Users sign in with Microsoft and the files are read with their permissions.
+    SHAREPOINT_ENABLED: bool = False
+    SHAREPOINT_DRIVE_ID: str | None = None  # Empty: the signed-in user's OneDrive.
+    SHAREPOINT_ROOT_PATH: str = ""  # Folder inside the drive, e.g. ".../Exemples".
+    MICROSOFT_TENANT_ID: str | None = None
+    MICROSOFT_CLIENT_ID: str | None = None
+    MICROSOFT_CLIENT_SECRET: str | None = None
+    MICROSOFT_REDIRECT_URI: str | None = None
+    MICROSOFT_SCOPES: str = "https://graph.microsoft.com/.default"
+
+    @property
+    def microsoft_redirect_handled(self) -> bool:
+        """True when Microsoft returns to this API; otherwise the user pastes the URL."""
+        return (
+            bool(self.MICROSOFT_REDIRECT_URI)
+            and urlsplit(self.MICROSOFT_REDIRECT_URI or "").path
+            == f"{self.API_V1_STR}/login/microsoft/callback"
+        )
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -142,6 +162,19 @@ class Settings(BaseSettings):
             raise ValueError(
                 "Test routes require ENVIRONMENT=local and a _test database"
             )
+        if self.SHAREPOINT_ENABLED:
+            missing = [
+                name
+                for name in (
+                    "MICROSOFT_TENANT_ID",
+                    "MICROSOFT_CLIENT_ID",
+                    "MICROSOFT_CLIENT_SECRET",
+                    "MICROSOFT_REDIRECT_URI",
+                )
+                if not getattr(self, name)
+            ]
+            if missing:
+                raise ValueError(f"SHAREPOINT_ENABLED requires {', '.join(missing)}")
 
         return self
 

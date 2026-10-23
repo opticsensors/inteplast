@@ -113,10 +113,10 @@ los números coincidan exactamente con `intern.03`.
 | Descarga desde el frontend | Vinculado al Bolt Eye por referencia local; descarga íntegra sin subida duplicada |
 | Previsualización 3D en el navegador | GLB generado automáticamente en el servidor y guardado en caché |
 | Análisis geométrico automático | ✅ Alto valor y **viable ya**: hay Python 3.11 con `open3d`, `pyvista`, `pymeshlab` y `libigl` |
-| **Derivado decimado** (GLB para el navegador) | Implementado con `trimesh` + `fast-simplification`; objetivo de 300.000 triángulos. [Detalles](../vistas-3d.md) |
+| **Derivado decimado** (GLB para el navegador) | Implementado con `trimesh` + `fast-simplification`; objetivo de 300.000 triángulos. [Detalles](../../../docs/vistas-3d.md) |
 
 Encaja como `PIEZA_REAL (lote, cavidad, escaneado.stl)` colgando de `PROYECTO`, y alimenta la
-sección *"piezas de referencia"* del frontend → ver [modelo-datos.md](../modelo-datos.md).
+sección *"piezas de referencia"* del frontend → ver [modelo-datos.md](../../../docs/modelo-datos.md).
 
 **Prioridad de ingesta: 8** para el análisis geométrico; **1** si solo se guardan los metadatos
 (es un único registro).

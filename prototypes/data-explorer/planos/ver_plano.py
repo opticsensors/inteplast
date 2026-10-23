@@ -62,7 +62,7 @@ from PIL import Image
 
 RAIZ = Path(
     r"C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\proyectos"
-    r"\11. inteplast\Exemples"
+    r"\11. inteplast\Exemples\0- Bolt Eye"
 )
 CARPETA_PLANO = "1-2D y 3D Pieza"
 PROYECTO = "3212 Pump Housing"      # el unico que se trabaja -> CLAUDE.md
@@ -862,7 +862,7 @@ probado con Tesseract y RapidOCR, este ultimo acierta solo el 37&nbsp;% y falla 
 que se quito. Tampoco los <b>marcos GD&amp;T</b> (<code>&#8918;0,15 A-B</code> sale como
 <code>[1]</code>).</p>
 <p>Los globos <b>si</b> se localizan ({len(globos)}): sirven para saber donde mirar y leerlos a
-ojo con el zoom. Detalle completo en <code>docs/visores.md</code> y en la pregunta A4 de
+ojo con el zoom. Detalle completo en <code>conocimiento/visores.md</code> y en la pregunta A4 de
 <code>docs/preguntas-abiertas.md</code>.</p>
 <p><b>Los planos de los otros proyectos</b> estan en la nube de OneDrive y no se tocan:</p>
 <table class='datos'><tr><th>proyecto</th><th>fichero</th><th>estado</th></tr>{filas_otros}</table>

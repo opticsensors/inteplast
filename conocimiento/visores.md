@@ -14,7 +14,7 @@ Son prototipos independientes de la web. Los lectores de la aplicación se manti
 en `backend/app/ingestion/`; Docker no incluye la carpeta `prototypes/`.
 >
 > 🔴 Los **datos** que lee sí están fuera del repo, en
-> `…\Escritorio\proyectos\11. inteplast\Exemples`.
+> `…\Escritorio\proyectos\11. inteplast\Exemples\0- Bolt Eye`.
 
 ---
 
@@ -105,7 +105,7 @@ capa reconstruida con Tesseract (1.504 palabras, confianza media 74). Además lo
   los gráficos dejan un hueco. No se muestra un OK por ausencia de datos.
 - **Las fechas no salen en la interfaz**: los muestreos ya se ordenan por número, y lo relevante
   de cada uno es qué pasó antes (el retoque de molde). Las fechas viven en
-  [3212/historial-molde.md](3212/historial-molde.md).
+  [3212/historial-molde.md](0-bolt-eye/3212/historial-molde.md).
 - **Una página por resultado, no scroll infinito**: además de navegarse mejor, evita el límite de
   ~16 contextos WebGL del navegador, que dejaba gráficos en blanco.
 - **El plano se busca por *variantes normalizadas*, no por texto crudo**: el OCR lee `Ø40,3`
@@ -202,7 +202,7 @@ dice que no se puede y enciende los 178 globos para que lo busques a ojo con el 
 
 La página lo dice arriba del todo y trae **el texto listo para enviar**. Se pide, por orden:
 PDF vectorial / SVG / DWG / CATDrawing nativo; si no, **el mismo plano a 600 DPI o más**; y la
-**rev. 06**, que es la de los informes. → [preguntas-abiertas.md](preguntas-abiertas.md) (A4)
+**rev. 06**, que es la de los informes. → [preguntas-abiertas.md](../docs/preguntas-abiertas.md) (A4)
 
 ## Prototipo independiente de correcciones (17/09/2026)
 
@@ -224,7 +224,7 @@ el 3212 y se validan; no es una ingesta genérica. Faltantes se muestran sin eva
 
 La documentación antigua del visor TXT llamaba «objetivos» a PUNTS_NOUS. Esa interpretación
 está retirada: son los últimos 150 puntos de PUNTS. Los visores anteriores se conservan
-sin cambios de código por petición del usuario. [Hallazgos y límites](3212/revision-2026-09-17.md).
+sin cambios de código por petición del usuario. [Hallazgos y límites](0-bolt-eye/3212/revision-2026-09-17.md).
 
 ## Correcciones v2 · presentación (18/09/2026)
 

@@ -60,11 +60,11 @@ class PartRegistration(BaseModel):
 def register_part(
     session: SessionDep, _current_user: CurrentUser, body: PartRegistration
 ) -> PartPublic:
-    from app.file_sources import local_path
+    from app.file_sources import source_item
     from app.part_files import save_files
 
     try:
-        local_path(body.folder_path, directory=True)
+        source_item(body.folder_path, directory=True)
         existing = session.exec(
             select(Part).where(Part.folder_path == body.folder_path)
         ).first()

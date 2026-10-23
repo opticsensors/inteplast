@@ -7,7 +7,7 @@ import logging
 import re
 import uuid
 from collections import defaultdict
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from fastapi import HTTPException
@@ -16,7 +16,13 @@ from sqlmodel import Session, select
 from app import measurement_imports
 from app.core.config import settings
 from app.evidence import register_document
-from app.file_sources import local_path, stamp
+from app.file_sources import (
+    SourceItem,
+    item_changed,
+    item_file,
+    source_item,
+    with_metadata,
+)
 from app.ingestion.measurement_tables import (
     cavity_label,
     conditions,
@@ -27,6 +33,7 @@ from app.ingestion.measurement_tables import (
 from app.knowledge_models import PartCharacteristic
 from app.measurement_models import MeasurementImport
 from app.models import Part
+from app.pilot import is_pilot
 
 READER = "automatic-tables-v1"
 logger = logging.getLogger(__name__)
@@ -64,28 +71,30 @@ def path_context(path: str, part_code: str = "") -> dict[str, str]:
 
 
 def collect(
-    root: Path, paths: list[Path], *, pilot: bool = False
+    folder: str, items: list[SourceItem], *, pilot: bool = False
 ) -> dict[Context, list[dict[str, Any]]]:
     sources = []
     revisions: dict[str, set[str]] = defaultdict(set)
     total = 0
-    part_code = re.match(r"\d+", root.name)
-    for path in sorted(paths):
-        relative = path.relative_to(root).as_posix()
-        if path.suffix.lower() not in {".csv", ".xls", ".xlsx"} or re.search(
+    part_code = re.match(r"\d+", PurePosixPath(folder).name)
+    for item in sorted(items, key=lambda item: PurePosixPath(item.path)):
+        relative = item.relative_to(folder)
+        if item.suffix not in {".csv", ".xls", ".xlsx"} or re.search(
             r"retoqu|correction", relative, re.I
         ):
             continue
-        size = path.stat().st_size
-        version = stamp(path)
+        item = with_metadata(item)
+        size = item.size or 0
+        version = item.version or ""
         total += size
         if size > 16 * 1024 * 1024 or total > 128 * 1024 * 1024:
             raise HTTPException(
                 422, "Los archivos de mediciones superan el tamaño admitido."
             )
         context = path_context(relative, part_code[0] if part_code else "")
+        path = item_file(item)
         try:
-            if path.suffix.lower() == ".csv":
+            if item.suffix == ".csv":
                 rows = csv_rows(path.read_bytes(), pilot=pilot)
                 revision = context["revision"]
             else:
@@ -95,16 +104,14 @@ def collect(
                     # The pilot adapter already supplies XLS evaluations and forecasts.
                     rows = []
         except ValueError as error:
-            if path.suffix.lower() == ".csv" and "No se reconoce un CSV CMM" in str(
-                error
-            ):
+            if item.suffix == ".csv" and "No se reconoce un CSV CMM" in str(error):
                 # Point clouds have coordinates, not measured drawing characteristics.
                 logger.info("No dimensional table in %s", relative)
                 continue
-            raise HTTPException(422, f"No se ha podido leer {path.name}.") from error
-        if stamp(path) != version:
+            raise HTTPException(422, f"No se ha podido leer {item.name}.") from error
+        if item_changed(item):
             raise HTTPException(
-                409, f"{path.name} ha cambiado durante la lectura. Vuelve a actualizar."
+                409, f"{item.name} ha cambiado durante la lectura. Vuelve a actualizar."
             )
         if revision:
             revisions[context["sample"]].add(revision)
@@ -194,17 +201,14 @@ def refresh(
     session: Session,
     part: Part,
     user_id: uuid.UUID,
-    paths: list[Path],
+    paths: list[SourceItem],
     *,
     used_files: dict[str, str] | None = None,
 ) -> tuple[int, int]:
     session.exec(select(Part).where(Part.id == part.id).with_for_update()).one()
-    root = local_path(part.folder_path or "", directory=True)
-    groups = collect(
-        root,
-        paths,
-        pilot=part.code == "3212" and part.folder_path == "3212 Pump Housing",
-    )
+    folder = part.folder_path or ""
+    source_item(folder, directory=True)
+    groups = collect(folder, paths, pilot=is_pilot(part))
     history = measurement_imports.imported(session, part.id)
     active = {(b.revision, b.sample, b.cavity): b for b in history if not b.baseline}
     # Empty snapshots retire observations removed from the current source files.
@@ -246,7 +250,8 @@ def refresh(
             ]:
                 relative = source["path"]
                 if relative not in documents:
-                    if stamp(root / relative) != source["version"]:
+                    current = source_item("/".join(filter(None, [folder, relative])))
+                    if current.version != source["version"]:
                         raise HTTPException(
                             409,
                             f"{Path(relative).name} ha cambiado. Vuelve a actualizar.",

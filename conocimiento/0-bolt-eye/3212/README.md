@@ -3,7 +3,7 @@
 > **Este es el único proyecto sobre el que se trabaja.** Los otros tres (2820, 3051, 3197)
 > quedan documentados pero sin tocar → [otros-proyectos.md](../otros-proyectos.md).
 >
-> **Ruta:** `…\Exemples\3212 Pump Housing`
+> **Ruta:** `…\Exemples\0- Bolt Eye\3212 Pump Housing` *(hasta el 2026-10-20, `…\Exemples\3212 Pump Housing`)*
 > **Volumen:** 253 ficheros · 834 MB lógicos
 > **Inspección:** 2026-08-07, ampliada y verificada el 2026-08-11
 

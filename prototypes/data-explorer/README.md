@@ -73,11 +73,12 @@ $s  = "C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\repos\inteplast\proto
 > 📁 **Dónde vive esto.** Estos visores son **utilidades de exploración de los datos crudos**, no
 > parte de la aplicación: no comparten nada con `backend/` ni con `frontend/`, y por eso están en
 > `prototypes/data-explorer/` y no en `scripts/` (que es el de build y test del template FastAPI).
-> El puntero a esta carpeta está en [`../../docs/visores.md`](../../docs/visores.md) y en
+> El puntero a esta carpeta está en [`../../conocimiento/visores.md`](../../conocimiento/visores.md) y en
 > [`../../CLAUDE.md`](../../CLAUDE.md).
 >
 > 🔴 Los **datos** que lee siguen fuera del repo, en
-> `…\Escritorio\proyectos\11. inteplast\Exemples` (ruta absoluta en la cabecera de cada script).
+> `…\Escritorio\proyectos\11. inteplast\Exemples\0- Bolt Eye` (ruta absoluta en la cabecera de
+> cada script). Desde el 2026-10-21 `Exemples` se organiza por feature; el 3212 está en `0- Bolt Eye`.
 
 En la máquina de desarrollo se usó Python 3.11.8. Dependencias de los visores:
 `pandas`, `numpy`, `plotly`, `PyMuPDF`; el plano añade `opencv-python`, `Pillow` y
@@ -88,7 +89,7 @@ En la máquina de desarrollo se usó Python 3.11.8. Dependencias de los visores:
 
 🔴 **No sirve para los números de dentro de los globos, y RapidOCR tampoco** (acierta el 37 % y
 falla con 0,99 de confianza). Esa parte **se quitó a propósito**: ver
-[`docs/visores.md`](../../docs/visores.md). No volver a intentarlo con este PDF.
+[`conocimiento/visores.md`](../../conocimiento/visores.md). No volver a intentarlo con este PDF.
 
 ### Opciones
 
@@ -105,7 +106,7 @@ Los dos apuntan por defecto a la ruta absoluta de los datos del 3212, que **no e
 repo**:
 
 ```
-C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\proyectos\11. inteplast\Exemples\3212 Pump Housing\4- Metrologia
+C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\proyectos\11. inteplast\Exemples\0- Bolt Eye\3212 Pump Housing\4- Metrologia
 ```
 
 ⚠️ **`ver_txt.py` hidrata ficheros de OneDrive.** 36 de los 40 `.txt` son placeholders; leerlos
@@ -181,8 +182,8 @@ Los 12 de cada cavidad son **2 perfiles × 6 contornos**: `PERFIL_A` (`PA_1..6`,
   salió del hueco 14 en esa tanda. Los `MIN`/`MAX` que se repiten por todo el fichero son el
   valor mínimo y máximo **del mismo elemento en la misma pieza** (así se detecta la ovalidad).
 
-Todo el detalle está en este repo: [formatos-parsing.md](../../docs/formatos-parsing.md),
-[4-metrologia.md](../../docs/3212/4-metrologia.md) y [visores.md](../../docs/visores.md).
+Todo el detalle está en este repo: [formatos-parsing.md](../../conocimiento/formatos-parsing.md),
+[4-metrologia.md](../../conocimiento/0-bolt-eye/3212/4-metrologia.md) y [visores.md](../../conocimiento/visores.md).
 Las notas originales citadas por esos documentos permanecen en el vault externo.
 
 **Los PDF con campos ausentes o ilegibles quedan como estado desconocido**, con el motivo
@@ -236,7 +237,7 @@ a originales siguen apuntando a la carpeta externa de esta máquina.
 
 La documentación antigua del visor TXT llamaba «objetivos» a PUNTS_NOUS. Esa interpretación
 está retirada: son los últimos 150 puntos de PUNTS. Los visores anteriores se conservan
-sin cambios de código por petición del usuario. [Hallazgos y límites](../../docs/3212/revision-2026-09-17.md).
+sin cambios de código por petición del usuario. [Hallazgos y límites](../../conocimiento/0-bolt-eye/3212/revision-2026-09-17.md).
 
 ## Correcciones v2 · vista para presentación (18/09/2026)
 

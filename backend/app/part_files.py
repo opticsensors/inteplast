@@ -8,8 +8,9 @@ from fastapi import HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, col, select
 
+from app import sharepoint
 from app.evidence import register_document
-from app.file_sources import local_path, stamp
+from app.file_sources import inside, source_item
 from app.knowledge_models import PartDocument, PartFile, PartReference
 from app.models import (
     AssetKind,
@@ -87,7 +88,7 @@ def save_files(
     existing = {item.file.id for item in read_files(session, part)}
     changed_folder = folder_path != part.folder_path
     root = (
-        local_path(folder_path, directory=True)
+        source_item(folder_path, directory=True)
         if folder_path and (changed_folder or any(c.path for c in choices))
         else None
     )
@@ -106,7 +107,7 @@ def save_files(
         if choice.file_id and choice.path:
             raise HTTPException(422, "Selecciona el fichero guardado o una nueva ruta.")
         if choice.path:
-            if root is None or not local_path(choice.path).is_relative_to(root):
+            if root is None or not inside(choice.path, folder_path or ""):
                 raise HTTPException(
                     422, "Selecciona archivos dentro de la carpeta de la pieza."
                 )
@@ -123,7 +124,8 @@ def save_files(
                 )
             elif (
                 choice.source_version
-                and stamp(local_path(choice.path)) != choice.source_version
+                and not sharepoint.enabled()
+                and source_item(choice.path).version != choice.source_version
             ):
                 raise HTTPException(
                     409, "El archivo ha cambiado. Selecciónalo de nuevo."
@@ -148,7 +150,7 @@ def save_files(
             if changed_folder and (
                 not file.source_path
                 or root is None
-                or not local_path(file.source_path).is_relative_to(root)
+                or not inside(file.source_path, folder_path or "")
             ):
                 raise HTTPException(
                     422, "Los archivos deben pertenecer a la nueva carpeta de la pieza."

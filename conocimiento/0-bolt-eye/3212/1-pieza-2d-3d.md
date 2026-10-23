@@ -52,10 +52,10 @@ Es **poco para OCR fiable de cotas pequeñas** con símbolos GD&T (⌖, Ø, ⊥,
 
 - **En la aplicación**: Bolt Eye → Piezas ejemplo → 3212 → Plano 2D rev. 07. El original
   está vinculado en la instalación local y se puede ampliar, abrir en otra pestaña y descargar.
-  La resolución sigue siendo la del escaneo. Ver [ficheros externos](../ficheros-externos.md).
-- 📊 **Con el visor: [`prototypes/data-explorer/planos/ver_plano.py`](../../prototypes/data-explorer/planos/ver_plano.py)**.
+  La resolución sigue siendo la del escaneo. Ver [ficheros externos](../../../docs/ficheros-externos.md).
+- 📊 **Con el visor: [`prototypes/data-explorer/planos/ver_plano.py`](../../../prototypes/data-explorer/planos/ver_plano.py)**.
   Para buscar texto exploratoriamente. Abre el plano en una página, se teclea una cota y **la marca sobre la
-  imagen**, con zoom y arrastre. → [visores.md](../visores.md)
+  imagen**, con zoom y arrastre. → [visores.md](../../visores.md)
   ```powershell
   & $py "…\prototypes\data-explorer\planos\ver_plano.py"
   & $py "…\prototypes\data-explorer\planos\ver_plano.py" --buscar "40,3"
@@ -77,7 +77,7 @@ sobre el fichero real con Tesseract 5.5:
 | **Texto rotado** | ❌ No aporta: a 270° salen 192 palabras de confianza alta y **ninguna de 4+ letras**. Son las líneas del dibujo leídas como `=` y `|` |
 
 Sigue en pie pedir el CAD nativo (pregunta **A4** en
-[preguntas-abiertas.md](../preguntas-abiertas.md)): esto es una reconstrucción, no la fuente.
+[preguntas-abiertas.md](../../../docs/preguntas-abiertas.md)): esto es una reconstrucción, no la fuente.
 
 ### 🔑 Los N-numbers SÍ están en el plano: en globos verdes, sin la `N`
 
@@ -97,7 +97,7 @@ saber **dónde** mirar.
 y `--psm 6/7/8/11`) y con **RapidOCR**, que es **peor porque se equivoca en silencio**: auditadas
 16 lecturas al azar contra la imagen, **6 correctas — 37 %**. Lee `155` donde pone `156` **con
 0,99 de confianza**, `103` por `109`, `234` por `294`. Los fallos son de un dígito y la confianza
-no los delata. → [visores.md](../visores.md)
+no los delata. → [visores.md](../../visores.md)
 
 **Se quitó del visor**: un 37 % con errores indetectables es peor que nada, porque produce
 N-numbers inventados con pinta de buenos. Hoy la única vía es **leerlos a ojo con el zoom** (a 8×
@@ -157,7 +157,7 @@ Esta es exactamente la limitación que motiva las propuestas de `inteplast_datos
   Vinculado y comprobado con giro, zoom, encuadre y descarga el 2026-09-15. También se puede
   abrir con un CAD/visor STEP instalado.
 - **Programáticamente**: `pythonocc` / OCCT. ⚠️ Hay Python 3.11 (fuera del PATH, ver
-  [CLAUDE.md](../../CLAUDE.md)) pero **OCCT no está instalado**: habría que añadirlo.
+  [CLAUDE.md](../../../CLAUDE.md)) pero **OCCT no está instalado**: habría que añadirlo.
 
 ---
 

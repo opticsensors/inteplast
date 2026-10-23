@@ -31,6 +31,9 @@ del conocimiento con INTEPLAST forma parte de esta etapa.
 **Estado (20/10/2026): en espera de ejemplos de otra pieza.** La recopilación está en
 curso. No se programa nada hasta disponer de ellos y de sus resultados esperados.
 
+**21/10/2026:** `Exemples` ya trae correcciones de 21 piezas. Qué se puede leer con reglas y qué
+necesita LLM, medido sobre todos los ficheros: [ingesta automática](ingesta-automatica.md).
+
 Qué funciona ya con otras piezas y qué no:
 
 | Parte | Otras piezas | Código |
@@ -38,9 +41,8 @@ Qué funciona ya con otras piezas y qué no:
 | Mediciones: CSV CMM por bloques y tablas `DR` de informes PPAP XLS/XLSX | ✅ Lectura genérica al crear la pieza y con **Actualizar datos** | `automatic_measurements.py`, `ingestion/measurement_csv.py`, `ingestion/measurement_tables.py` |
 | Correcciones: diapositivas PPTX, previsiones `DR(100%)` de los XLS de retoques y sus correspondencias con cotas | ❌ Solo 3212. En otras piezas se detectan los documentos, que no se interpretan, y la lectura termina «con incidencias» | `ingestion/pilot_3212/` (planes, casos y asociaciones revisadas en `config.py`), `part_setup.refresh` |
 
-El adaptador piloto se selecciona comprobando el código `3212` y la carpeta
-`3212 Pump Housing` en `api/routes/evidence.py`, `part_setup.py`,
-`automatic_measurements.py` y `measurement_imports.py`. La revisión `06` está fijada en
+El adaptador piloto se selecciona con `app/pilot.py`: código `3212` y carpeta llamada
+`3212 Pump Housing`, cualquiera que sea su ruta desde la raíz. La revisión `06` está fijada en
 `evidence.publish_study`. En el frontend, las reglas de N161, N240, N165 y N170 de
 `describeSeries` (`Parts/measurementSelection.ts`) solo se aplican a series del piloto; las
 series de informes XLS de otras piezas conservan sus columnas originales.
@@ -89,7 +91,7 @@ es un objetivo, no una capacidad ya validada.
 El STEP de pieza del 3212 analizado contiene geometría sin el árbol de operaciones ni sus
 parámetros originales. Para preparar features editables habrá que concretar qué modelos
 nativos están disponibles y qué información debe reconstruirse. Ver
-[análisis del CAD de pieza](3212/1-pieza-2d-3d.md).
+[análisis del CAD de pieza](../conocimiento/0-bolt-eye/3212/1-pieza-2d-3d.md).
 
 ## 3. Predicción de contracciones a partir de resultados
 
@@ -109,7 +111,7 @@ con su significado original: son previsiones documentadas de efectos de correcci
 El modelo predictivo de contracciones de esta etapa todavía está por desarrollar.
 
 La decisión anterior de dejar los parámetros de máquina fuera de la base de consulta de
-diseño se recoge en [Otros proyectos](otros-proyectos.md). Al definir la etapa predictiva
+diseño se recoge en [Otros proyectos](../conocimiento/0-bolt-eye/otros-proyectos.md). Al definir la etapa predictiva
 habrá que revisar qué variables necesita, sin dar por ampliada la recogida de datos actual.
 
 ## Relación entre las etapas

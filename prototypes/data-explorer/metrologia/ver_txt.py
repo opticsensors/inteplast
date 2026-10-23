@@ -61,7 +61,7 @@ from plotly.offline import get_plotlyjs
 
 RAIZ = Path(
     r"C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\proyectos"
-    r"\11. inteplast\Exemples\3212 Pump Housing\4- Metrologia"
+    r"\11. inteplast\Exemples\0- Bolt Eye\3212 Pump Housing\4- Metrologia"
 )
 SALIDA = Path(__file__).resolve().parent.parent / "out"   # prototypes/data-explorer/out, compartida
 
@@ -75,7 +75,7 @@ FAMILIAS = {
 ORDEN_FAMILIA = {"perfil": 0, "punts": 1, "nous": 2}
 
 # Lote y contexto de cada muestreo con medicion 3D, de la hoja HISTORY de los .xls.
-# -> docs/3212/4-metrologia.md
+# -> conocimiento/0-bolt-eye/3212/4-metrologia.md
 # Las fechas se dejan fuera de la interfaz a proposito: lo que ordena los muestreos es su
 # numero, y lo que importa de cada uno es que paso antes (el retoque de molde).
 MUESTREOS = {

@@ -31,7 +31,7 @@ from PIL import Image
 
 DEFAULT_PDF = Path(
     r"C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\proyectos\11. inteplast"
-    r"\Exemples\3212 Pump Housing\1-2D y 3D Pieza\20250523_DRW 0140S00237_07.pdf"
+    r"\Exemples\0- Bolt Eye\3212 Pump Housing\1-2D y 3D Pieza\20250523_DRW 0140S00237_07.pdf"
 )
 OUTPUT = Path(__file__).resolve().parent / "out" / "buscar-en-plano"
 VERSION = 2

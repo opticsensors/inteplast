@@ -21,6 +21,7 @@ fileConfig(config.config_file_name)
 from app import (  # noqa: E402
     knowledge_models,  # noqa: F401
     measurement_models,  # noqa: F401
+    microsoft_models,  # noqa: F401
 )
 from app.core.config import settings  # noqa
 from app.assistant import index_models  # noqa: F401, E402

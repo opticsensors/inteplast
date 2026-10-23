@@ -8,6 +8,7 @@ from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
 from sqlmodel import Session
 
+from app import sharepoint
 from app.core import security
 from app.core.config import settings
 from app.core.db import engine
@@ -61,7 +62,16 @@ def get_current_user(session: SessionDep, token: TokenDep) -> User:
     return user
 
 
-CurrentUser = Annotated[User, Depends(get_current_user)]
+async def bind_source_user(
+    user: Annotated[User, Depends(get_current_user)],
+) -> User:
+    # Async on purpose: the context variable is set in the request task, so the
+    # endpoint (run later in the threadpool) reads SharePoint as this user.
+    sharepoint.acting_user.set(user.id)
+    return user
+
+
+CurrentUser = Annotated[User, Depends(bind_source_user)]
 
 
 def get_current_active_superuser(current_user: CurrentUser) -> User:

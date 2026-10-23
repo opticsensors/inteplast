@@ -4,7 +4,7 @@
 > `full-stack-fastapi-template`: **backend** en `backend/`, **frontend** en `frontend/`.
 >
 > Este documento cubre **lo que se ha construido y por qué**. Las trampas de los datos crudos
-> están en [formatos-parsing.md](formatos-parsing.md); el modelo del dominio completo (proyectos,
+> están en [formatos-parsing.md](../conocimiento/formatos-parsing.md); el modelo del dominio completo (proyectos,
 > muestreos, mediciones, correcciones de molde) en [modelo-datos.md](modelo-datos.md).
 
 ---
@@ -33,7 +33,12 @@ Crear guarda la ficha e incorpora automáticamente CSV CMM individuales/comparat
 tablas PPAP XLS/XLSX. **Actualizar datos** repite la lectura de forma explícita y muestra
 su resultado, progreso y fuentes en Cotas. Features ofrece únicamente piezas registradas y reutiliza sus referencias al
 asociarlas. La integración nativa local se describe en [ficheros-externos.md](ficheros-externos.md).
-La interpretación de correcciones de otras piezas y la conexión Graph siguen pendientes.
+La interpretación de correcciones de otras piezas sigue pendiente.
+
+Desde el **2026-10-22** el mismo conjunto se puede leer desde **SharePoint** con
+`SHAREPOINT_ENABLED=true`: cada usuario entra con su cuenta de Microsoft y los archivos se leen
+por Graph con sus permisos. Falta la primera prueba real. Ver
+[SharePoint](ficheros-externos.md#sharepoint-microsoft-graph).
 
 El **bloque transversal** del modelo de datos: `FEATURE` + `WARNING` + `LESSON_LEARNED` +
 ficheros de ejemplo. Es lo que consume el frontend descrito en la fase B y lo que responde a
@@ -44,7 +49,7 @@ del feature sueltos, cuelgan de la pieza a la que pertenecen. Es el embrión de 
 
 Desde el **2026-09-15**, una ficha puede **vincular originales externos** sin subirlos. El PDF y
 el STEP del 3212 están conectados y comprobados en la instalación local. Configuración, límites
-de revisión y futura conexión Graph en [ficheros-externos.md](ficheros-externos.md).
+de revisión y lectura desde SharePoint en [ficheros-externos.md](ficheros-externos.md).
 
 Desde el **2026-09-18** hay catálogo de piezas, cotas por pieza/revisión, búsqueda de cotas
 en el visor PDF con revisiones compartidas y una importación piloto de mediciones/correcciones
@@ -68,7 +73,8 @@ de sus retoques sigue pendiente; los puntos de coordenadas no se importan como c
 ```
 StoredFile                    identidad común de un documento subido o referenciado
   id, filename, content_type, size, created_at
-  source = upload | local, source_key, source_path, source_version
+  source = upload | local (ruta del conjunto, leída de la carpeta o de SharePoint)
+  source_key, source_path, source_version
   version (UUID del vínculo), revision (etiqueta), reference_key (deduplicación)
 
 Part                          la pieza = el proyecto = el molde  → embrión de PROYECTO
@@ -214,7 +220,8 @@ el cuerpo de warnings y lessons learned. Es lo que permite encontrar el Bolt Eye
 ### Permisos
 
 Hay dos roles (usuario y superusuario). El registro público está desactivado por defecto
-(`ALLOW_PUBLIC_SIGNUP=false`); Admin crea las cuentas. `/signup` indica que se contacte con
+(`ALLOW_PUBLIC_SIGNUP=false`); Admin crea las cuentas. Con SharePoint se entra con Microsoft:
+la cuenta se asocia al usuario de Admin con el mismo correo. `/signup` indica que se contacte con
 el administrador. Las rutas privadas para crear usuarios de prueba requieren
 `ENABLE_TEST_ROUTES=true`, `ENVIRONMENT=local` y una BD cuyo nombre termine en `_test`.
 
@@ -330,8 +337,8 @@ Cambiar la carpeta propone sus archivos y conserva el título y el código ya ed
 detallado en [archivos externos](ficheros-externos.md#uso-en-la-ficha-de-pieza). Código y
 nombre también se editan en la cabecera de cada pieza dentro del editor del feature, con
 autoguardado: son datos compartidos entre features. El selector nativo de Windows se abre
-en la raíz configurada (Exemples). `folder_path` pertenece al adaptador local temporal;
-Graph sustituirá esa referencia por la identidad estable del origen.
+en la raíz configurada (`Exemples`); con SharePoint se usa un navegador de carpetas dentro de
+la web. `folder_path` es la ruta relativa a la raíz, la misma en ambos orígenes.
 
 La fila COTAS es compacta, con la altura de una fila de archivo. Añadir cota inserta un campo
 al final que se guarda con Intro, al salir o con Guardar el feature; los errores conservan
@@ -602,7 +609,7 @@ El frontend no tiene este problema: Vite sirve desde el disco.
 ### Datos de ejemplo
 
 Hay una carga opcional con el **Bolt Eye del 3212**: sus 8 warnings y 2 lessons learned, sacados
-de [modelo-datos.md](modelo-datos.md) y [3212/historial-molde.md](3212/historial-molde.md).
+de [modelo-datos.md](modelo-datos.md) y [3212/historial-molde.md](../conocimiento/0-bolt-eye/3212/historial-molde.md).
 
 ```powershell
 docker compose exec backend python -m app.seed_features
@@ -665,7 +672,7 @@ La cobertura HTML se genera dentro del stack de tests y desaparece al limpiarlo.
 | **Imagen con la zona marcada en rojo** | Implementada la [portada CAD](portadas-cad.md): caras del STEP, captura, cámara y 3D interactivo. El marcado libre sobre imágenes/planos sigue pendiente |
 | **Vincular un feature con sus N-numbers y sus cotas** | Implementado con `PartCharacteristic` + `FeatureCharacteristicLink` (cota por pieza y revisión, con rol); ver [Cotas y evidencia](cotas-y-evidencia-web.md). Las tolerancias se leen de las mediciones importadas; el modelo normalizado `INSTANCIA_EN_PROYECTO` de [modelo-datos.md](modelo-datos.md) sigue pendiente |
 | **Vistas ligeras de escaneo y molde** | Implementadas: cola persistente, GLB en caché, original intacto y descarga íntegra; ver [vistas-3d.md](vistas-3d.md) |
-| **Conexión Microsoft 365** | Adaptador local implementado. Confirmar ubicación/permisos con IT (A10, prioridad 1) y desarrollar Graph con IDs estables; los visores usan el UUID interno del documento |
+| **Conexión Microsoft 365** | Implementada el 22/10/2026 con la app de Eurecat (login delegado + Graph), pendiente de la primera prueba real. INTEPLAST: confirmar ubicación y permisos con su IT (A10, prioridad 1). Se direcciona por ruta: un renombrado rompe el vínculo. Ver [SharePoint](ficheros-externos.md#sharepoint-microsoft-graph) |
 | **La ficha de una pieza** | Implementada el 22/09/2026: `/parts/{id}` con identidad, carpeta, Cotas, Features y Archivos (`Parts/PartDetailPage.tsx`) |
 | **Adjuntos del feature copiados de la pieza** | No se actualizan si cambian los archivos de la pieza; afecta a la portada CAD y al plano de la fila COTAS. Ver [portadas CAD](portadas-cad.md#origen-del-cad-de-la-portada) |
 | **Concurrencia del asistente** | Pendiente de decidir con el despliegue (proveedor, máquina, usuarios). Ver [asistente](asistente.md#concurrencia-y-despliegue) |

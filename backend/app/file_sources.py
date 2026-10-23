@@ -1,9 +1,14 @@
 """Content adapters. Viewers use the document UUID, not a filesystem location.
 
-Local sources are metadata-only until content is explicitly requested. A future
-Graph adapter belongs here; keep Microsoft identities out of feature/viewer APIs.
+Two interchangeable sources serve the same dataset with the same relative paths:
+the local folder (`ASSETS_ROOT`, the default) and SharePoint through Microsoft
+Graph (`SHAREPOINT_ENABLED=true`, see `app.sharepoint`). Local sources are
+metadata-only until content is explicitly requested. Keep Microsoft identities
+out of feature/viewer APIs.
 """
 
+import hashlib
+import json
 import mimetypes
 import os
 import stat
@@ -11,15 +16,12 @@ from pathlib import Path, PurePosixPath
 
 from fastapi import HTTPException
 
+from app import sharepoint
 from app.core.config import settings
 from app.models import FileStatus, SourceEntry, SourceListing, StoredFile
+from app.source_types import SourceError, SourceItem
 
-
-class SourceError(Exception):
-    def __init__(self, state: str, message: str, status_code: int = 409):
-        self.state = state
-        self.message = message
-        self.status_code = status_code
+__all__ = ["SourceError", "SourceItem"]
 
 
 def local_path(relative: str, *, directory: bool = False) -> Path:
@@ -79,6 +81,13 @@ def stamp(path: Path) -> str:
     return f"{info.st_mtime_ns}:{info.st_size}"
 
 
+def reference_key(path: str, version: str) -> str:
+    """Deduplicate a reference by dataset, relative path and observed version."""
+    return hashlib.sha256(
+        json.dumps([settings.ASSETS_SOURCE_ID, path, version]).encode()
+    ).hexdigest()
+
+
 def content_type(path: str) -> str:
     cad = {
         ".stp": "model/step",
@@ -93,6 +102,18 @@ def content_type(path: str) -> str:
     )
 
 
+def sharepoint_reference(document: StoredFile) -> bool:
+    """A dataset reference read through Graph instead of the local folder."""
+    return sharepoint.enabled() and document.source == "local"
+
+
+def connected(document: StoredFile) -> None:
+    if document.source_key != settings.ASSETS_SOURCE_ID:
+        raise SourceError(
+            "unavailable", "El origen de este documento no está conectado.", 503
+        )
+
+
 def resolve_document(document: StoredFile) -> Path:
     if document.source == "upload":
         path = settings.uploads_path / str(document.id)
@@ -102,12 +123,15 @@ def resolve_document(document: StoredFile) -> Path:
             )
         return path
     if document.source == "local":
-        if document.source_key != settings.ASSETS_SOURCE_ID:
-            raise SourceError(
-                "unavailable", "El origen de este documento no está conectado.", 503
-            )
+        connected(document)
+        if sharepoint.enabled():
+            # SharePoint always serves the latest version of the linked path.
+            return sharepoint.download(sharepoint.item(document.source_path or ""))
         path = local_path(document.source_path or "")
-        if stamp(path) != document.source_version:
+        # A link registered through SharePoint has no local stamp to compare.
+        if stamp(path) != document.source_version and not (
+            document.source_version or ""
+        ).startswith("sp:"):
             raise SourceError(
                 "changed",
                 "El original ha cambiado. Revisa la revisión y vuelve a vincularlo.",
@@ -118,9 +142,18 @@ def resolve_document(document: StoredFile) -> Path:
     )
 
 
+def check_document(document: StoredFile) -> None:
+    """Availability without downloading: SharePoint only reads the metadata."""
+    if sharepoint_reference(document):
+        connected(document)
+        sharepoint.item(document.source_path or "")
+    else:
+        resolve_document(document)
+
+
 def document_status(document: StoredFile) -> FileStatus:
     try:
-        resolve_document(document)
+        check_document(document)
         return FileStatus(
             state="available", message="Disponible", path=document.source_path
         )
@@ -145,9 +178,95 @@ def document_path(document: StoredFile) -> Path:
         raise HTTPException(status_code=503, detail="No se puede acceder al archivo.")
 
 
+def document_check(document: StoredFile) -> None:
+    try:
+        check_document(document)
+    except SourceError as error:
+        raise HTTPException(status_code=error.status_code, detail=error.message)
+    except OSError:
+        raise HTTPException(status_code=503, detail="No se puede acceder al archivo.")
+
+
+def document_version(document: StoredFile) -> str:
+    """The version of the bytes that would be served now, for derived caches."""
+    if sharepoint_reference(document):
+        try:
+            connected(document)
+            return sharepoint.item(document.source_path or "").version or ""
+        except SourceError as error:
+            raise HTTPException(status_code=error.status_code, detail=error.message)
+    return stamp(document_path(document))
+
+
+def linked_version(document: StoredFile) -> str | None:
+    """The version recorded when linking; through SharePoint, always the latest."""
+    if sharepoint_reference(document):
+        return document_version(document)
+    return document.source_version
+
+
+def source_item(relative: str, *, directory: bool = False) -> SourceItem:
+    """A file or folder of the active source, validated and with its metadata."""
+    if sharepoint.enabled():
+        return sharepoint.item(relative, directory=directory)
+    path = local_path(relative, directory=directory)
+    if directory:
+        return SourceItem(path=relative, directory=True, local=path)
+    return SourceItem(
+        path=relative, size=path.stat().st_size, version=stamp(path), local=path
+    )
+
+
+def with_metadata(item: SourceItem) -> SourceItem:
+    """Size and version of a walked item, read only when a caller needs them."""
+    if item.version is not None:
+        return item
+    path = item.local or local_path(item.path)
+    return item.with_metadata(path.stat().st_size, stamp(path))
+
+
+def item_file(item: SourceItem) -> Path:
+    """A readable local file: the original, or SharePoint's cached version."""
+    if sharepoint.enabled():
+        return sharepoint.download(item if item.remote else sharepoint.item(item.path))
+    return item.local or local_path(item.path)
+
+
+def item_changed(item: SourceItem) -> bool:
+    """A local original modified after its version was read. Cached copies are fixed."""
+    if sharepoint.enabled():
+        return False
+    return stamp(item.local or local_path(item.path)) != item.version
+
+
+def inside(relative: str, folder: str) -> bool:
+    if sharepoint.enabled():
+        return relative != folder and PurePosixPath(relative).is_relative_to(folder)
+    return local_path(relative).is_relative_to(local_path(folder, directory=True))
+
+
 def browse_source(
     relative: str, skip: int, limit: int, directories_only: bool = False
 ) -> SourceListing:
+    if sharepoint.enabled():
+        entries = [
+            SourceEntry(
+                name=item.name,
+                path=item.path,
+                directory=item.directory,
+                size=None if item.directory else item.size,
+            )
+            for item in sharepoint.children(relative)
+            if item.directory or not directories_only
+        ]
+        entries.sort(key=lambda entry: (not entry.directory, entry.name.casefold()))
+        return SourceListing(
+            configured=True,
+            name=settings.ASSETS_SOURCE_NAME,
+            path=relative,
+            entries=entries[skip : skip + limit],
+            count=len(entries),
+        )
     if not settings.ASSETS_ROOT:
         return SourceListing(
             configured=False,

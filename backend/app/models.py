@@ -200,6 +200,10 @@ class FilePreview(SQLModel, table=True):
     size: int = 0
     triangles: int = 0
     source_sha256: str | None = Field(default=None, max_length=64)
+    # Whose SharePoint permissions the conversion uses to read the original.
+    requested_by: uuid.UUID | None = Field(
+        default=None, foreign_key="user.id", ondelete="SET NULL"
+    )
     created_at: datetime = Field(
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),  # type: ignore

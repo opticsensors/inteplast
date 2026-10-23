@@ -1,6 +1,6 @@
 """Carga de ejemplo de la base de conocimiento: el Bolt Eye del 3212.
 
-Contenido sacado de `docs/modelo-datos.md` y `docs/3212/historial-molde.md`.
+Contenido sacado de `docs/modelo-datos.md` y `conocimiento/0-bolt-eye/3212/historial-molde.md`.
 No se ejecuta en el arranque: es opcional y se lanza a mano.
 
     docker compose exec backend python -m app.seed_features
@@ -85,7 +85,7 @@ BOLT_EYE_LESSONS = [
     ),
 ]
 
-# Los ficheros del 3212, uno por tipo. Ver docs/3212/README.md.
+# Los ficheros del 3212, uno por tipo. Ver conocimiento/0-bolt-eye/3212/README.md.
 BOLT_EYE_ASSETS = [
     (AssetKind.mold, "Molde 3212 (STEP, 247 MB)"),
     (AssetKind.part, "Pieza 3212 (STP)"),

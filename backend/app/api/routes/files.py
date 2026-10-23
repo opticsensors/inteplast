@@ -1,5 +1,3 @@
-import hashlib
-import json
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -11,8 +9,9 @@ from fastapi.responses import FileResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt.exceptions import InvalidTokenError
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import select
+from sqlmodel import col, select
 
+from app import sharepoint
 from app.api.deps import CurrentUser, SessionDep, get_current_user
 from app.core.config import settings
 from app.core.security import ALGORITHM
@@ -20,9 +19,11 @@ from app.file_sources import (
     SourceError,
     browse_source,
     content_type,
+    document_check,
     document_path,
     document_status,
-    local_path,
+    reference_key,
+    source_item,
     stamp,
 )
 from app.models import (
@@ -89,26 +90,45 @@ def list_source(
 
 def reference_metadata(body: LocalFileReference) -> dict[str, Any]:
     try:
-        path = local_path(body.path)
-        version = stamp(path)
+        item = source_item(body.path)
+        version = item.version or ""
+        filename = item.local.name if item.local else item.name
         return {
-            "filename": path.name,
-            "content_type": content_type(path.name),
-            "size": path.stat().st_size,
+            "filename": filename,
+            "content_type": content_type(filename),
+            "size": item.size or 0,
             "source": "local",
             "source_key": settings.ASSETS_SOURCE_ID,
             "source_path": body.path,
             "source_version": version,
             "version": uuid.uuid4(),
             "revision": body.revision or None,
-            "reference_key": hashlib.sha256(
-                json.dumps([settings.ASSETS_SOURCE_ID, body.path, version]).encode()
-            ).hexdigest(),
+            "reference_key": reference_key(body.path, version),
         }
     except SourceError as error:
         raise HTTPException(status_code=error.status_code, detail=error.message)
     except OSError:
         raise HTTPException(status_code=503, detail="No se puede acceder al archivo.")
+
+
+def existing_reference(
+    session: SessionDep, metadata: dict[str, Any]
+) -> StoredFile | None:
+    document = session.exec(
+        select(StoredFile).where(StoredFile.reference_key == metadata["reference_key"])
+    ).first()
+    if document is None and settings.SHAREPOINT_ENABLED:
+        # SharePoint always shows the latest version: one document per path.
+        document = session.exec(
+            select(StoredFile)
+            .where(
+                StoredFile.source == "local",
+                StoredFile.source_key == metadata["source_key"],
+                StoredFile.source_path == metadata["source_path"],
+            )
+            .order_by(col(StoredFile.created_at).desc())
+        ).first()
+    return document
 
 
 @router.post("/reference", response_model=FilePublic)
@@ -130,9 +150,7 @@ def reference_file(
             )
         return document
 
-    existing = session.exec(
-        select(StoredFile).where(StoredFile.reference_key == metadata["reference_key"])
-    ).first()
+    existing = existing_reference(session, metadata)
     if existing:
         return reuse(existing)
     document = StoredFile(**metadata)
@@ -141,11 +159,7 @@ def reference_file(
         session.commit()
     except IntegrityError:
         session.rollback()
-        existing = session.exec(
-            select(StoredFile).where(
-                StoredFile.reference_key == metadata["reference_key"]
-            )
-        ).first()
+        existing = existing_reference(session, metadata)
         if existing:
             return reuse(existing)
         raise
@@ -292,7 +306,7 @@ def create_file_access_url(
     document = session.get(StoredFile, file_id)
     if not document:
         raise HTTPException(status_code=404, detail="File not found")
-    document_path(document)
+    document_check(document)
     expires_at = datetime.now(timezone.utc) + timedelta(
         minutes=settings.FILE_ACCESS_TOKEN_EXPIRE_MINUTES
     )
@@ -320,7 +334,7 @@ def authorize_file_token(
     *,
     purpose: str = "file-access",
     cache_key: str | None = None,
-) -> None:
+) -> uuid.UUID:
     try:
         payload = jwt.decode(
             token,
@@ -346,6 +360,7 @@ def authorize_file_token(
             status_code=401,
             detail="El vínculo del documento ha cambiado. Vuelve a abrirlo.",
         )
+    return user_id
 
 
 @router.post("/{file_id}/preview", response_model=FilePreviewPublic)
@@ -361,7 +376,7 @@ def prepare_preview(
     ).first()
     if document is None:
         raise HTTPException(status_code=404, detail="File not found")
-    preview = request_preview(session, document, retry)
+    preview = request_preview(session, document, retry, current_user.id)
     result = FilePreviewPublic(state=preview.state, message=preview.message)
     if preview.state == "ready":
         expires_at = datetime.now(timezone.utc) + timedelta(
@@ -394,15 +409,16 @@ def read_preview(
 ) -> FileResponse:
     # Authenticate before exposing document state, just like original downloads.
     if credentials:
-        get_current_user(session, credentials.credentials)
+        user_id = get_current_user(session, credentials.credentials).id
     elif token:
-        authorize_file_token(session, file_id, token, purpose="file-preview")
+        user_id = authorize_file_token(session, file_id, token, purpose="file-preview")
     else:
         raise HTTPException(status_code=401, detail="Authentication required")
     document = session.get(StoredFile, file_id)
     if document is None:
         raise HTTPException(status_code=404, detail="File not found")
-    key = preview_key(document)
+    with sharepoint.acting_as(user_id):
+        key = preview_key(document)
     if token and not credentials:
         authorize_file_token(
             session, file_id, token, purpose="file-preview", cache_key=key
@@ -447,9 +463,9 @@ def read_file(
     Require an active user's bearer token or a purpose-bound, expiring file link.
     """
     if credentials:
-        get_current_user(session, credentials.credentials)
+        user_id = get_current_user(session, credentials.credentials).id
     elif token:
-        authorize_file_token(session, file_id, token)
+        user_id = authorize_file_token(session, file_id, token)
     else:
         raise HTTPException(
             status_code=401,
@@ -459,7 +475,8 @@ def read_file(
     stored = session.get(StoredFile, file_id)
     if not stored:
         raise HTTPException(status_code=404, detail="File not found")
-    path = document_path(stored)
+    with sharepoint.acting_as(user_id):
+        path = document_path(stored)
     media_type = stored.content_type.split(";", 1)[0].strip().lower()
     inline = media_type in INLINE_TYPES and not download
     return FileResponse(

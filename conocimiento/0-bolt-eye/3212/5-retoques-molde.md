@@ -27,7 +27,7 @@ Son las decisiones de retoque tomadas en reunión, una diapositiva por cota.
 ```
 
 **Solo hay 2 correcciones documentadas** (enero y marzo de 2024), pese a que los muestreos llegan hasta
-abril de 2025 → pregunta abierta A1 en [preguntas-abiertas.md](../preguntas-abiertas.md).
+abril de 2025 → pregunta abierta A1 en [preguntas-abiertas.md](../../../docs/preguntas-abiertas.md).
 
 ### Qué fichero usar
 
@@ -100,7 +100,7 @@ Marcador:  OK                                             ← estado (solo en al
    corrección 2 no hay desfase (`slide3.xml` = 2.3). **Leer el número del pie, no del nombre
    del fichero.**
 
-Campos a extraer y sus regex → [formatos-parsing.md](../formatos-parsing.md#3-pptx-de-corrección-de-molde).
+Campos a extraer y sus regex → [formatos-parsing.md](../../formatos-parsing.md#3-pptx-de-corrección-de-molde).
 
 ---
 
@@ -278,4 +278,4 @@ con las mediciones posteriores y las decisiones de aceptación disponibles.
 | Nombre del `.xls` acompañante | `CORRECCION_MOLDE.muestreo_origen` | **4** |
 | Frases de acoplamiento entre cotas | `DEPENDENCIA_COTA` (el plano A arrastra a las demás) | **4** |
 
-Ver [modelo-datos.md](../modelo-datos.md) y [historial-molde.md](historial-molde.md).
+Ver [modelo-datos.md](../../../docs/modelo-datos.md) y [historial-molde.md](historial-molde.md).

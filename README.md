@@ -22,7 +22,7 @@ Las etapas 2 y 3 son futuras. Ver la [hoja de ruta](docs/hoja-de-ruta.md).
   configuración local y futura integración con OneDrive.
 - [Vistas 3D ligeras](docs/vistas-3d.md): GLB automáticos del escaneo y el molde, con caché.
 - [Portadas CAD](docs/portadas-cad.md): superficies en rojo, captura y portada 3D interactiva.
-- [Datos del 3212](docs/3212/README.md) y [visores](prototypes/data-explorer/README.md).
+- [Datos del 3212](conocimiento/0-bolt-eye/3212/README.md) y [visores](prototypes/data-explorer/README.md).
 - [Desarrollo](development.md), [backend](backend/README.md), [frontend](frontend/README.md).
 - [Despliegue](deployment.md) y [correcciones de la revisión](docs/revision-2026-09-15.md).
 

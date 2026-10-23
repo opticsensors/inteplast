@@ -557,7 +557,15 @@ export const UsersService = {
     is_superuser: state().isSuperuser ?? false,
   }),
 }
-export const LoginService = {}
+export const LoginService = {
+  loginMethods: async () => ({
+    password: !state().sharepoint,
+    microsoft: Boolean(state().sharepoint),
+    microsoft_paste: true,
+    sharepoint: Boolean(state().sharepoint),
+    source_name: "Test originals",
+  }),
+}
 
 export const CatalogService = {
   searchCatalog: async (params = {}) => {

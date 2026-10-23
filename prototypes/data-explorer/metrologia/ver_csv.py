@@ -59,7 +59,7 @@ from plotly.offline import get_plotlyjs
 
 RAIZ = Path(
     r"C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\proyectos"
-    r"\11. inteplast\Exemples\3212 Pump Housing\4- Metrologia"
+    r"\11. inteplast\Exemples\0- Bolt Eye\3212 Pump Housing\4- Metrologia"
 )
 SALIDA = Path(__file__).resolve().parent.parent / "out"   # prototypes/data-explorer/out, compartida
 
@@ -67,7 +67,7 @@ ENCODING = "cp1252"          # los CSV de la CMM NO son utf-8
 LIMITE_FRAC = 3.0            # el grafico corta en +-3 x tolerancia; el hover da el valor real
 
 # Lote y contexto de cada muestreo con medicion 3D. Salen de la hoja HISTORY de los .xls
-# (es un log acumulativo; intern.09 los tiene los nueve). -> docs/3212/4-metrologia.md
+# (es un log acumulativo; intern.09 los tiene los nueve). -> conocimiento/0-bolt-eye/3212/4-metrologia.md
 # Las fechas se dejan fuera de la interfaz a proposito: lo que ordena los muestreos es su
 # numero, y lo que importa de cada uno es que paso antes (el retoque de molde).
 MUESTREOS = {

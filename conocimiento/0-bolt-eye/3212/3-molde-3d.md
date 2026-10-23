@@ -79,7 +79,7 @@ molde antes o después de los retoques de 2024. No hay fecha ni revisión en el 
 | Descarga desde el frontend | Vinculado al Bolt Eye por referencia local; descarga íntegra del STEP |
 | Previsualización 3D en el navegador | GLB generado en el servidor, con caché; el STEP contiene superficies que requieren reparación y la vista puede ser parcial |
 | **Enlace / referencia al fichero** | Implementado; original de solo lectura |
-| **Derivado ligero** (mallado → GLB) | OCP instalado en Docker; objetivo 500.000 triángulos, máximo 1.000.000 y 25 MiB. [Detalles](../vistas-3d.md) |
+| **Derivado ligero** (mallado → GLB) | OCP instalado en Docker; objetivo 500.000 triángulos, máximo 1.000.000 y 25 MiB. [Detalles](../../../docs/vistas-3d.md) |
 | Extraer geometría de la cavidad | ❌ Fuera de alcance |
 
 La visualización está incorporada; la extracción semántica de cavidades y componentes sigue
@@ -87,4 +87,4 @@ fuera de esta fase. El aviso **Vista parcial** señala las superficies que el co
 representar; no se deben deducir ausencias de componentes a partir de esa vista.
 
 Encaja en el modelo como `PROYECTO.FICHEROS.molde` y alimenta la sección *"moldes CAD"* de
-*piezas ejemplo* del frontend → ver [modelo-datos.md](../modelo-datos.md).
+*piezas ejemplo* del frontend → ver [modelo-datos.md](../../../docs/modelo-datos.md).

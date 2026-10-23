@@ -1,5 +1,9 @@
 # Los otros tres proyectos — documentados, sin tocar
 
+> **Nota (2026-10-21):** documento del inventario de agosto de 2026, cuando solo se trabajaba el 3212.
+> Las fichas actuales de cada pieza estan en [README.md](README.md), [3197.md](3197.md), [3051.md](3051.md)
+> y [2820.md](2820.md); las rutas ahora cuelgan de `Exemples/0- Bolt Eye/`.
+
 > **Decisión de alcance:** se trabaja **solo sobre `3212 Pump Housing`**
 > (→ [3212/README.md](3212/README.md)). Este documento deja constancia de que los otros tres
 > existen, qué contienen y **por qué no se usan**, para que nadie los descubra dentro de tres
@@ -12,7 +16,7 @@
 ## El conjunto completo
 
 ```
-Exemples/                       580 ficheros · 2,20 GB lógicos
+Exemples/0- Bolt Eye/           580 ficheros · 2,20 GB lógicos   (hasta 2026-10-20: Exemples/)
 ├── 2820 Pump Housing/            2 ficheros    5,8 MB
 ├── 3051 Pump Housing/          122 ficheros  591,7 MB
 ├── 3197 Pot/                   203 ficheros  817,4 MB
@@ -48,7 +52,7 @@ misma familia y por tanto comparables entre sí — eso los hace valiosos *más 
 > nuevo en el frontend, cuando llegue ese momento.
 
 ⚠️ Está pendiente confirmar con INTEPLAST si el resto del proyecto existe y no se compartió, o
-si realmente no hay más (pregunta abierta A7 en [preguntas-abiertas.md](preguntas-abiertas.md)).
+si realmente no hay más (pregunta abierta A7 en [preguntas-abiertas.md](../../docs/preguntas-abiertas.md)).
 
 ---
 
@@ -106,7 +110,7 @@ N1120  Profilform 0,2 at Hole 1 to A/C/B   → tolerancia de perfil
 | Referencias | A-B | A/C/B |
 
 > Es el argumento empírico para separar **`FEATURE`** de **`INSTANCIA_EN_PROYECTO`** en el
-> modelo de datos → [modelo-datos.md](modelo-datos.md).
+> modelo de datos → [modelo-datos.md](../../docs/modelo-datos.md).
 
 **2. Es el único con un DOE de proceso.** Tiene carpetas de condiciones:
 
@@ -160,7 +164,7 @@ PROYECTO (4) × MUESTREO intern.NN (1..11) × CAVIDAD (c13..c16 / C1..C8 / Cav_1
 🆕 (2026-08-13) se ha verificado que **son duplicados de las nubes `.txt`**: el `.igs` = el
 `_PUNTS.txt` (con offset Z), el `.dxf` = el `_Cav<NN>.txt`. Mismo dato y 2,5× más peso.
 **Solo descarga, nunca ingesta.**
-→ [formatos-parsing.md §4bis](formatos-parsing.md#4bis--los-igs-y-los-dxf-son-duplicados-de-los-txt)
+→ [formatos-parsing.md §4bis](../formatos-parsing.md#4bis--los-igs-y-los-dxf-son-duplicados-de-los-txt)
 
 ## Nomenclatura común a los cuatro
 

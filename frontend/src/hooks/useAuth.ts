@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router"
 
 import {
   type Body_login_login_access_token as AccessToken,
+  type LoginMethods,
   LoginService,
   type UserPublic,
   type UserRegister,
@@ -75,6 +76,11 @@ const useAuth = () => {
   })
 
   const logout = async () => {
+    const methods = queryClient.getQueryData<LoginMethods>(["login-methods"])
+    if (methods?.microsoft) {
+      // Forget the Microsoft tokens too; failing to do so must not block logout.
+      await LoginService.microsoftLogout().catch(() => undefined)
+    }
     await navigate({ to: "/login", search: { logout: true } })
     if (!localStorage.getItem("access_token")) queryClient.clear()
   }

@@ -24,6 +24,10 @@
 3. Con esos ejemplos, elegir el método: ampliar los adaptadores, una LLM con capacidad visual o
    una combinación.
 
+**21/10/2026:** los ejemplos han llegado (`Exemples`, 8 features, 21 piezas con datos). El plan
+medido de qué se extrae con reglas, qué con LLM y qué no está en los datos está en
+[ingesta automática](ingesta-automatica.md); falta el punto 2 (resultados esperados revisados).
+
 **Primer paso al recibirlos:** inventariar los documentos y comparar su estructura con la del
 3212 (títulos `Tool correction n.m`, campos `DIM. Nr.`, hoja `DR(100%)` con retoque en la
 columna O y previsiones en P:S). Escribir los resultados esperados **antes** de tocar código.
@@ -67,8 +71,9 @@ Detalle: [asistente, concurrencia y despliegue](asistente.md#concurrencia-y-desp
 | Tarea | Estado | Detalle |
 |---|---|---|
 | Adjuntos del feature que no siguen a la pieza | Tarea separada. Afecta a la portada CAD y al plano de la fila COTAS. Desvincular y volver a vincular la pieza pierde sus cotas en el feature y la configuración 3D de la portada | [portadas CAD](portadas-cad.md#origen-del-cad-de-la-portada) |
-| Política de finales de línea | Por decidir. El equipo de desarrollo tiene `core.autocrlf=true`: `git stash`, `checkout` o `reset` reescriben los ficheros en CRLF y Biome falla, aunque el contenido sea correcto. Recomendación: `* text=auto eol=lf` en `.gitattributes`; alternativa local: `git config core.autocrlf false`. Ya están en CRLF o mixtos en la copia de trabajo: `docs/3212/5-retoques-molde.md`, `docs/3212/6-metodo-medida.md`, `docs/3212/historial-molde.md` y `docs/formatos-parsing.md` | — |
+| Política de finales de línea | Por decidir. El equipo de desarrollo tiene `core.autocrlf=true`: `git stash`, `checkout` o `reset` reescriben los ficheros en CRLF y Biome falla, aunque el contenido sea correcto. Recomendación: `* text=auto eol=lf` en `.gitattributes`; alternativa local: `git config core.autocrlf false`. Ya están en CRLF o mixtos en la copia de trabajo: `conocimiento/0-bolt-eye/3212/5-retoques-molde.md`, `conocimiento/0-bolt-eye/3212/6-metodo-medida.md`, `conocimiento/0-bolt-eye/3212/historial-molde.md` y `conocimiento/formatos-parsing.md` | — |
 | Página antigua `/features/{id}/fichero/{assetId}` | Sin enlaces desde la interfaz. Su texto para un adjunto sin archivo aún remite a la edición del feature: corregir el texto o redirigir a la ficha de pieza | [aplicación](app-web.md) |
+| SharePoint: primera prueba real | Implementado el 22/10/2026 (`SHAREPOINT_ENABLED`). Falta: crear en Admin el usuario con el correo de Microsoft, activar, entrar pegando la dirección de Postman y comprobar listado, visores, Nueva pieza y Actualizar datos. El secret caducaba hacia el **24/11/2026**: confirmar con informática. Para el login automático, pedir que registren `http://localhost:8000/api/v1/login/microsoft/callback` | [SharePoint](ficheros-externos.md#sharepoint-microsoft-graph) |
 | Volcado OAuth en `TODO.md` | Contiene la salida de una prueba de Graph (tenant y un código ya canjeado). Retirarlo y valorar limpiar el historial de Git. Lo gestiona Eduard | — |
 
 ## Hecho el 20/10/2026
