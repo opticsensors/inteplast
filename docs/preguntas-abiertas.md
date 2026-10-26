@@ -3,7 +3,8 @@
 > **Antes de preguntar algo a INTEPLAST, mirar aquí.** Varias de las preguntas originales se
 > han resuelto leyendo los datos, sin necesidad de consultar.
 >
-> Última revisión: **2026-09-22**
+> Última revisión documental: **2026-10-26**. Los análisis y localizadores viven en
+> las fichas enlazadas; aquí se mantiene la pregunta o la resolución.
 
 ---
 
@@ -15,8 +16,8 @@ tenemos acceso. Conseguir un contacto de informática y una biblioteca/carpeta d
 El desarrollo continúa mientras tanto con el origen local de ejemplos en solo lectura.
 La organización de las carpetas de piezas queda pendiente en A12.
 
-> ⚠️ **Cómo se escriben estas preguntas.** El interlocutor de INTEPLAST no se acuerda de lo que
-> hizo — estos datos son de 2024 y 2025 — y tiene poca paciencia para leer. Cada pregunta va en
+> **Cómo se escriben estas preguntas.** Facilitar respuestas sin exigir que el interlocutor
+> recuerde documentos de años anteriores. Cada pregunta va en
 > tres bloques cortos: **Recordatorio** (el ancla: fichero, fecha, diapositiva, su propia frase
 > textual) → **Qué no nos cuadra** (con números) → **Pregunta** (una, directa, en negrita).
 > Lo de *"por qué nos importa para la BD"* es para nosotros: **no se lo mandes**.
@@ -26,7 +27,7 @@ La organización de las carpetas de piezas queda pendiente en A12.
 <a id="a1--se-cerró-el-molde-con-3-cotas-fuera-de-tolerancia--por-qué"></a>
 ### A1 · ¿Hubo más retoques y cómo se aceptaron las cotas NOK?
 
-**Recordatorio.** El 18/03/2024 hicisteis la **corrección de molde nº2** del 3212
+**Recordatorio.** El **plan de corrección de molde nº2** del 3212 está fechado el 18/03/2024
 (`20240318-Mold correction_2_P3212_rev1.pptx`). Después seguisteis midiendo hasta
 `intern.09`, en abril de 2025. Solo tenemos los documentos de dos correcciones. Los CSV
 posteriores no muestran otro cambio grande comparable, pero **no permiten descartar retoques
@@ -41,9 +42,11 @@ fuera de tolerancia **en las cuatro cavidades**:
 | **N165** (max) 1,35 −0,05 | 1,300 – 1,350 | 1,399 | 1,394 | 1,411 | 1,399 |
 | **N265** Ø59,7 −0,1 | 59,600 – 59,700 | 59,596 | 59,585 | 59,585 | 59,599 |
 
-Y en N161 os pasasteis de largo: en la diapositiva **2.16** pedíais *"reduir Ø −0,305 mm"*
-partiendo de 45,731, que estaba **por encima** del máximo. Acabó en 45,393, **por debajo** del
-mínimo. Cruzó la tolerancia de lado a lado.
+Para N161, la diapositiva **2.16** propone *"reduir Ø −0,305 mm"* desde 45,731,
+**por encima** del máximo. La medición posterior de c13 es 45,393, **por debajo** del
+mínimo. Necesitamos confirmar qué se ejecutó y qué explica ese cambio.
+
+Fuente de referencia de esta selección: [historial y resultados finales](../conocimiento/0-bolt-eye/3212/historial-molde.md#cómo-acabaron-las-cotas-problemáticas).
 
 **Preguntas:**
 
@@ -51,7 +54,7 @@ mínimo. Cruzó la tolerancia de lado a lado.
    documentos que faltan.
 2. **¿Bosch os firmó una concesión / desviación para estas tres cotas?** Si existe el documento,
    nos interesa.
-3. **¿Se detectó en su momento que N161 se había pasado al otro lado?**
+3. **¿Se detectó que la medición posterior de N161 quedó por debajo del mínimo?**
 4. **¿Qué motivó los informes posteriores hasta abril de 2025?**
 
 <details><summary>Contexto interno (no enviar)</summary>
@@ -66,9 +69,9 @@ encima del límite: hay que conservar ambas evaluaciones y no resumirlo como un 
 
 ### A3 · ¿Cuánto mide el pin del ensayo de inserción?
 
-**Recordatorio.** En el método de medida del 3212 tenéis el ensayo de los N287/N288: se mete un
-pin en el agujero del bolt eye a 0,1 mm/s y se registra la fuerza máxima, que debe caer entre
-**15 N y 50 N**.
+**Recordatorio.** El método de medida del 3212, `Pos. N287`, prescribe insertar el pin
+a **0,1 mm/s**. El plano rev.07 indica **15–50 N** en un recorrido de **1 mm** (globos
+288/288.1) y **0,2 mm/s** (globo 289). Los planes de corrección citan N288 y 15–50 N.
 
 **Qué no nos cuadra.** Aparecen tres diámetros distintos para ese pin:
 
@@ -78,17 +81,19 @@ pin en el agujero del bolt eye a 0,1 mm/s y se registra la fuerza máxima, que d
 | Corrección 1, diapositiva **1.37** | *"el pin fa **3,93**"* |
 | Corrección 2, diapositiva **2.18** | *"el pin fa **3,94**"* |
 
-**Pregunta: ¿cuál es el pin que se usa realmente, y los otros dos números qué son?**
-(¿un pin distinto, un desgaste, una medida de otra cosa?)
+**Pregunta: ¿qué diámetro de pin, velocidad y revisión de la especificación se aplicaron
+en estos ensayos?** Necesitamos reconciliar los tres diámetros y las dos velocidades.
+El análisis se mantiene en [ensayos funcionales](../conocimiento/0-bolt-eye/3212/6-metodo-medida.md#ensayos-funcionales).
 
 ### Contraste de N266 y del método de medida — 17/09/2026
 
-CSV y tablas XLS usan **67,1 +0,1**; el título PPTX de 1.24/2.8 dice **67,1 −0,1**.
-El contraste ya está hecho. Falta confirmar cuál es la especificación en el plano rev.06,
-no volver a deducir el signo por la frase sobre añadir acero. Según CSV/XLS, `.08` cumple.
-El DOCX tiene **55 imágenes: 43 PNG + 8 JPEG + 4 JPG**; el desglose anterior omitía `.JPG`.
+El contraste CSV/XLS frente al título PPTX de N266 está hecho; falta confirmar la
+especificación del plano rev.06. Ver [resultado y fuentes](../conocimiento/0-bolt-eye/3212/historial-molde.md#cómo-acabaron-las-cotas-problemáticas).
+El recuento de imágenes del DOCX ya está resuelto en la [ficha del método](../conocimiento/0-bolt-eye/3212/6-metodo-medida.md);
+no volver a plantearlo como una pregunta al cliente.
 
-### A11 · Uso exacto de PUNTS_NOUS y trazabilidad de ejecución
+<a id="a11--uso-exacto-de-punts_nous-y-trazabilidad-de-ejecución"></a>
+### A16 · Uso exacto de PUNTS_NOUS y trazabilidad de ejecución
 
 **Recordatorio:** en los doce pares, `PUNTS_NOUS` coincide exactamente con los últimos
 150 puntos de `PUNTS`. Xavier explicó que se envía al proveedor una nube hecha con la CMM.
@@ -104,64 +109,24 @@ Su aceptación o eventual concesión también debe aclararse, junto a A1.
 **Recordatorio.** El plano que nos disteis del 3212 es
 `0140S00237` rev. 07, en PDF (`20250523_DRW 0140S00237_07.pdf`).
 
-**Qué no nos cuadra.** Ese PDF **no tiene texto**: dentro hay **una sola imagen JPEG de
-3276×2317 px** y **cero fuentes**. Todo lo que se saque de él es una reconstrucción por OCR, y al
-ampliar se pixela.
-
-**Y es el único sitio donde se ve dónde está cada cota.** Los N-numbers **no aparecen en ningún
-otro fichero con su posición**: en las nubes de puntos (`3212_Cav13.txt`, `3212_PUNTS.txt`) **no
-hay ni una letra** — son tres columnas de coordenadas — y las gráficas de contorno `PA_*/PB_*`
-usan una numeración interna suya (`Contorno (21)`, `CONTORN (10)`). El único sitio donde un
-N-number aparece **junto al punto de la pieza al que se refiere** es el plano.
-
-**🆕 Qué hemos podido hacer nosotros (2026-08-18).** Montamos un visor con OCR
-([`ver_plano.py`](../prototypes/data-explorer/planos/ver_plano.py)) y el resultado acota mucho la petición:
-
-- ✅ **Las notas se leen bien** (1.504 palabras, confianza media 74).
-- ✅ **Confirmado que los N-numbers SÍ están en el plano**, en **globos verdes y sin la `N`**:
-  el racimo del Bolt Eye pone `170`, `170.2` … `170.7` junto a la cota `Ø4 −0,1 (4x)`. Hemos
-  localizado **178 globos**.
-- ❌ **Pero el número de dentro no se puede leer.** Mide ~9 píxeles. Con Tesseract sale basura;
-  con RapidOCR **parece** que sale bien y es peor: auditando 16 lecturas al azar contra la imagen,
-  **solo 6 son correctas (37 %)**, y falla `155`→`156` **con 0,99 de confianza**. Los errores son
-  de un dígito y no hay forma de detectarlos. Lo hemos quitado de nuestras herramientas.
-- ❌ **Los marcos GD&T son ilegibles** (`⌖0,15 A-B` sale como `[1]`, `G97]`), y el símbolo `Ø` se
-  lee como `9`/`@`/`$`.
-
-O sea: **la petición no es un lujo, es la única salida.** Hoy el mapeo `N-number → zona de la
-pieza` solo se puede hacer **a mano, ampliando globo a globo**, sobre 178 globos y para cada una
-de las cuatro piezas. Con texto seleccionable, incluidos los globos, sería mucho más fiable; habría que validar el mapeo.
-
-**Y si el CAD nativo no es posible, nos vale una alternativa más sencilla: el mismo plano
-escaneado a más resolución.** El actual son 3276×2317 px (~198 DPI) y las cifras de los globos
-miden 9 píxeles. Una digitalización real a 600 DPI podría ayudar, pero su precisión debe auditarse; reescalar la imagen actual no recupera detalles.
-
-Y además **no es el plano de vuestros informes**: todos los informes, hasta `intern.09` de abril
-de 2025, dicen `Drawing nº Level: 06`. El PDF que tenemos es la **rev. 07, del 23/05/2025** —
-posterior a toda la metrología.
+**Qué no nos cuadra.** El PDF disponible es un escaneo: los ensayos de OCR no dieron
+lecturas fiables de los números de globo. Además, el plano y los informes identifican
+revisiones distintas. El análisis, las fechas correctas y los resultados de OCR se mantienen
+en la [ficha del plano](../conocimiento/0-bolt-eye/3212/1-pieza-2d-3d.md).
 
 **Preguntas:**
 
-1. **¿Nos podéis pasar el plano en un formato con texto** — PDF vectorial, **SVG**, DWG o el
-   CATDrawing nativo? Nos vale cualquiera de los cuatro. Con el escaneo actual el mapeo
-   `N-number → zona de la pieza` **hay que hacerlo a mano, globo a globo**: los números están
-   impresos, pero a 9 píxeles ningún OCR los lee.
-2. **¿Nos podéis pasar la rev. 06**, que es la que corresponde a las mediciones?
+1. **¿Nos podéis pasar un PDF con texto, SVG, DWG o CATDrawing del plano, incluidos sus globos?**
+   Si solo existe escaneo, pedir una digitalización de mayor resolución, no una ampliación
+   de la imagen actual. Habrá que validar las lecturas igualmente.
+2. **¿Nos podéis pasar la rev.06 citada en los informes y aclarar sus cambios frente a la rev.07?**
 
 <details><summary>Contexto interno (no enviar)</summary>
 
-*Verificado el 2026-08-13. Sin el plano vectorial, el mapeo `N-number → zona de la pieza` solo se
-puede hacer (a) a mano sobre la imagen, (b) por OCR sobre los globos del plano, o (c) por anclaje
-geométrico: cruzar el nominal del CSV con la nube de puntos, que funciona para las cotas
-circulares pero deja fuera las que no están en la nube (N161/N162/N163) y las no circulares.
-→ [3212/4-metrologia.md](../conocimiento/0-bolt-eye/3212/4-metrologia.md)*
-
-*Actualización 2026-08-18: la vía (b) queda **descartada, y esta vez con la medida hecha**.
-Tesseract da basura evidente. RapidOCR parecía funcionar (131 N-numbers "leídos") pero al auditar
-16 lecturas al azar contra la imagen solo 6 eran correctas: **37 %**, con fallos de un dígito y
-confianza de 0,99. Se ha quitado de `ver_plano.py`, que ahora solo LOCALIZA los globos y explica
-por qué hay que pedir otro plano. Queda la vía (a), a mano.
-→ [visores.md](../conocimiento/visores.md) · [3212/1-pieza-2d-3d.md](../conocimiento/0-bolt-eye/3212/1-pieza-2d-3d.md)*
+La app ya dispone de [búsqueda y revisión de posiciones de cotas](cotas-y-evidencia-web.md#indexación-y-revisiones).
+Esa función admite propuestas y revisiones manuales; no convierte el OCR del escaneo en
+una transcripción fiable. La fecha del nombre del PDF tampoco identifica la fecha de su revisión:
+[contraste canónico](../conocimiento/0-bolt-eye/3212/1-pieza-2d-3d.md#-este-plano-no-es-el-de-los-informes).
 </details>
 
 ---
@@ -188,11 +153,11 @@ quedan colgando fuera del sistema.
 
 <details><summary>Contexto interno (no enviar)</summary>
 
-*Estos PDF son **fuente única**: la comparación contra el perfil teórico no está en el CSV ni es
-recalculable desde las nubes (⚠️ el `3212_CONTORN.igs` es el contorno **escaneado**, no el
-nominal). Y son valiosos: prueban que la corrección nº1 dividió por 5,5 la desviación del
-contorno en las 4 cavidades a la vez.
-→ [3212/4-metrologia.md](../conocimiento/0-bolt-eye/3212/4-metrologia.md), [3212/historial-molde.md](../conocimiento/0-bolt-eye/3212/historial-molde.md)*
+Los resultados de los contornos, su relación con los soportes geométricos y los límites
+de la comparación antes/después están en [metrología](../conocimiento/0-bolt-eye/3212/4-metrologia.md)
+y en el [historial del molde](../conocimiento/0-bolt-eye/3212/historial-molde.md).
+La pregunta pendiente es su correspondencia con el plano, no volver a extraer esos resultados.
+
 </details>
 
 ---
@@ -222,24 +187,24 @@ bloqueo a una licencia: faltan resultados exportados que nuestra aplicación pue
 (N170 + N117), y en el *Dubte 4* nos dijisteis que las **llenties** (N118) van con la misma
 filosofía pero **fichadas aparte**.
 
-**Qué no nos cuadra.** Nada — es una decisión vuestra que aún no está tomada. Mirando vuestros
-datos, estos son los candidatos que aparecen solos:
+**Estado actualizado.** La entrega ampliada ya incluye otras familias; su alcance se mantiene
+en la [comparativa](../conocimiento/comparativa.md). El acuerdo de febrero no basta para
+priorizar su incorporación a la aplicación. El [acta del 24/09](acta-reunion-2026-09-24.md)
+pide concretar piezas y features para las siguientes pruebas.
 
-| Candidato | Por qué sale |
-|---|---|
-| **Llenties** | N242 (L1…L6, variantes A y B) + N118. Ya lo dijisteis vosotros. Aparece en las correcciones 1.35 y 2.9. |
-| **Diámetros del perfil interior** | N161 / N162 / N163 — los que más se resistieron: hicieron falta las dos correcciones y N161 acabó fuera igual |
-| **Espesores locales** | N165, con 60 secciones medidas cada 6° |
-| **Tubuladuras** | N127 / N283 (Ø16,3−0,3) + cilindricidad N152 / N153, con el ensayo de estanqueidad |
-| **Nervios** | Solo aparece en el 3197 (`3197_Punts_nervis_Frontal*.csv`) |
+**Pregunta: ¿qué piezas y features de los ejemplos disponibles queréis incorporar primero
+y quién validará el resultado?**
 
-**Pregunta: ¿cuáles de estos cinco queréis que fichemos, y en qué orden?**
+Las llenties del 3212 siguen siendo un caso separado del Bolt Eye. Sus cotas y acciones se
+consultan en el [método de medida](../conocimiento/0-bolt-eye/3212/6-metodo-medida.md)
+y en los [planes de corrección](../conocimiento/0-bolt-eye/3212/5-retoques-molde.md).
 
 ---
 
 ### A7 · Del `2820 Pump Housing` solo tenemos 2 ficheros
 
-**Recordatorio.** En la carpeta `Exemples` nos disteis cuatro proyectos: 2820, 3051, 3197 y 3212.
+**Recordatorio.** El 2820 pertenece a la familia Bolt Eye de la entrega original;
+la entrega ampliada de `Exemples` contiene otras familias.
 
 **Qué no nos cuadra.** Del **2820** solo hay **dos ficheros**, los dos en `1-2D y 3D Pieza`:
 el plano (`20160817_DRW_3130516933_…pdf`, de 2016) y el STEP de la pieza. No hay carpeta de
@@ -256,8 +221,8 @@ antigua sin histórico?**
 Ø21,5−0,2), escribisteis: *"De momento no tocar. **Marc ha de fer comparativa amb 3181 i
 3157**"*.
 
-**Qué no nos cuadra.** Esos dos proyectos no están entre los que nos disteis — en `Exemples`
-solo hay 2820, 3051, 3197 y 3212.
+**Qué no nos cuadra.** Esos dos proyectos no figuran entre las piezas con datos
+del [inventario ampliado](../conocimiento/comparativa.md).
 
 **Pregunta: ¿nos podéis pasar el 3181 y el 3157?**
 
@@ -275,9 +240,9 @@ funcionando.
 
 **Recordatorio.** La base de conocimiento que estamos construyendo acabara corriendo en un
 servidor vuestro. Los ficheros pesados de cada proyecto —en el `3212 Pump Housing`, el molde en
-STEP de **247 MB**, el escaneo STL de **236 MB** y el estudio Moldflow de **184 MB**— **no se van
-a copiar dentro de la aplicacion**: la idea es que sigan donde ya estan y que la aplicacion los
-lea de ahi. Asi no hay dos copias de vuestro archivo CAD ni nada que sincronizar.
+STEP de **247 MB**, el escaneo STL de **236 MB** y el estudio Moldflow de **184 MB**— **seguirán en su ubicación como originales**. La aplicación guarda referencias;
+puede descargar una copia de lectura en caché y generar vistas ligeras. Hay que acordar
+el acceso y la gestión de revisiones, aunque no se editen los originales.
 
 **Preguntas:**
 
@@ -329,10 +294,11 @@ bibliotecas o ubicaciones. Esto determina dónde debe buscar el selector de piez
 **Pregunta: ¿Todas las carpetas de piezas cuelgan de una misma carpeta principal o están
 repartidas entre distintos proyectos o ubicaciones?**
 
-**Contexto interno (2026-09-17):** hasta confirmarlo, la aplicación asume una carpeta principal
-común y presenta sus subcarpetas directas. Seleccionar una registra o reutiliza la pieza sin
-crear ni modificar carpetas originales. El adaptador local es temporal; acceso y permisos
-de SharePoint/OneDrive siguen pendientes en A10.
+**Contexto interno actualizado:** el adaptador local y el de SharePoint están implementados;
+la configuración de la raíz y los permisos reales de INTEPLAST siguen pendientes de A10.
+El selector parte del origen configurado, no descubre automáticamente todas las bibliotecas
+ni resuelve las carpetas que solo remiten a otra pieza.
+[Contrato y configuración](ficheros-externos.md).
 
 ---
 
@@ -348,14 +314,10 @@ de metrología podría contrastar con nosotros la primera importación?
 cavidad, significado de archivos repetidos y si cada export contiene todas las mediciones
 de esa combinación o hay entregas parciales. Pedir un ejemplo de cambio de revisión.
 
-**Contexto interno (2026-09-21):** Features registra/reutiliza la pieza desde su carpeta;
-el flujo CSV permite revisar e incorporar mediciones y después asociar cotas al feature.
-Las importaciones comparten datos entre features y conservan versiones. El lector actual
-cubre el formato CMM por bloques, con pruebas sintéticas de otra pieza. Aún no se ha
-validado una segunda pieza real ni la generalización de correcciones XLS/PPTX.
-
-**Contexto interno (2026-10-20):** la generalización de correcciones queda en espera de estos
-ejemplos y de sus resultados esperados; requisitos en la
+**Contexto interno (26/10/2026):** ya se recibieron los ejemplos ampliados. Hay lectura
+genérica de mediciones y un contraste puntual documentado del 3197; eso no valida la
+interpretación completa de otra pieza ni sus correcciones. La tarea pendiente es revisar
+casos y resultados esperados con metrología. Estado y siguiente paso en la
 [hoja de ruta](hoja-de-ruta.md#pendiente-generalizar-la-importación-de-correcciones-pptx).
 
 ---
@@ -429,38 +391,13 @@ revisiones de pieza y molde coinciden. La política de la GUI queda pendiente de
 **Reabierta como A1 el 2026-09-15.** Esta entrada se conserva para que los enlaces y el historial
 de la revisión no oculten que la conclusión anterior cambió; **no es una pregunta resuelta**.
 
-Se compara el valor medido de cada fila entre dos muestreos. Antes de concluir, se **calibra el
-método** sobre un tramo donde sabemos que sí hubo retoque (`intern.03 → .05`, con la corrección
-nº2 en medio):
+La comparación posterior no descarta retoques pequeños. El método, su calibración y los
+bloques heredados de informes se conservan en
+[historial del molde, sección 8](../conocimiento/0-bolt-eye/3212/historial-molde.md#8-hubo-una-tercera-corrección-de-molde--no).
 
-| Tramo | ¿Corrección en medio? | Filas | **Δ ≥ 0,10 mm** | Δ máx |
-|---|---|--:|--:|--:|
-| `intern.03 → .05` | ✅ la nº2 | 211 ×4 cav. | **129 en cada cavidad** | 0,335–0,349 mm |
-| `intern.05 → .08` | ❓ | 211 ×4 cav. | **0 en las cuatro** | 0,055–0,081 mm |
-
-El retoque conocido nº2 coincide con **129 de 211 filas movidas más de 0,10 mm en cada cavidad**.
-Entre `intern.05` e `intern.08` no hay cambios por encima de ese umbral y el máximo es 0,081 mm.
-Esto **no descarta retoques menores**: las slides 2.3–2.5 documentan 0,02 mm y la 2.9, 0,03 mm.
-La afirmación previa de que 0,081 mm era menor que cualquier acción documentada era incorrecta.
-
-`intern.09` no tiene CSV y combina medidas con bloques copiados. La comparación utilizable
-en este análisis fue `N162`:
-49,858 (`.05`) → 49,855 (`.08`) → 49,840 (`.09`). El cambio de **−0,015 mm entre `.08` y `.09`**
-en esa cota tampoco permite excluir una intervención.
-
-> **Pendiente:** confirmar con INTEPLAST si hubo más correcciones y cómo se aceptaron las cotas
-> NOK → [A1](#a1--se-cerró-el-molde-con-3-cotas-fuera-de-tolerancia--por-qué).
-
-**De regalo**, el tramo de control valida las acciones de la corrección nº2 una por una
-(N161 −0,335 vs −0,305 pedidos; N162 +0,201 vs 0,22; N266 +0,124 vs 0,14; N265 +0,089 vs 0,11)
-**y confirma [R9](#r9--las-diapositivas-sin-cota-identificada-era-a2)**: la slide 2.13, que
-identificamos como `N240` leyendo una imagen, pedía bajar 0,08 mm — y N240 bajó 0,057 mm.
-
-🔴 **Hallazgo colateral:** el bloque `N117`+`N118` de `intern.09.xls` (02/04/2025) es **copia
-literal de `intern.01`** (25/01/2024) — los 32 valores idénticos, 15 meses después — y sus
-`N275`/`N276` son copia de `intern.08`. Tercer caso de copia-pega detectado.
-
-→ Todo el detalle en [3212/historial-molde.md §8](../conocimiento/0-bolt-eye/3212/historial-molde.md#8-hubo-una-tercera-corrección-de-molde--no).
+**Pendiente:** confirmar las intervenciones posteriores y la aceptación de cotas NOK con
+[A1](#a1--se-cerró-el-molde-con-3-cotas-fuera-de-tolerancia--por-qué). No tratar diferencias
+medidas o marcadores `OK` como confirmación documental de ejecución.
 
 ---
 
@@ -468,73 +405,30 @@ literal de `intern.01`** (25/01/2024) — los 32 valores idénticos, 15 meses de
 
 ### R9 · Las diapositivas sin cota identificada *(era A2)*
 
-**Resuelto el 2026-08-11 leyendo las imágenes del PPTX.** No hacía falta preguntar: el
-N-number **sí está en la diapositiva**, pero no en el texto, sino **dentro del recorte del
-informe** que ilustra el bloque *Current situation*. La primera columna de ese recorte es la
-columna `Nr` del `DR(3D)`.
-
-| Slide | Retoc | N-numbers |
-|---|:--:|---|
-| **1.16** | +0,29 | `N155` · `N258` · `N267` · `N268` |
-| **1.17** | +0,29 | `N154` · `N165` · `N166` · `N167` |
-| **1.18** | +0,29 | `N236` · `N237` · `N240` · `N241` · `N252` · `N256` |
-| **2.3** | +0,02 | `N154` · `N155` · `N258` · `N267` · `N268` |
-| **2.4** | +0,02 | `N165` · `N166` · `N167` |
-| **2.5** | +0,02 | `N236` · `N237` · `N240` · `N241` · `N252` · `N256` |
-| **2.13** | −0,08 | `N240` |
-
-🔑 **Las 6 primeras no son "diapositivas sin cota": son la diapositiva del PLANO A.** Las tres
-comparten *la misma imagen de zona roja* (`image54.png` en la corr. 1 = `image12.png` en la
-corr. 2, byte a byte 101.725 B), y en ella lo marcado en rojo es **la brida perimetral
-completa**. No llevan `DIM. Nr.` porque el retoque no es de una cota: es un **desplazamiento de
-la referencia** que arrastra a un grupo de cotas a la vez. Eso explica el `0,29 mm` que citan
-las slides 1.27 (N236) y 1.28 (N243) como *"tocar el pla A"*.
-
-**2.13 es distinta**: sí es una cota concreta, `N240` (18,5 +0,2 /5). El recorte del plano lleva
-el globo `[]240` rodeado en rojo con una flecha.
-
-**Evidencia** (ficheros y rutas dentro del ZIP):
-
-| Qué | Dónde |
-|---|---|
-| Slides huérfanas corr. 1 | `ppt/slides/slide15.xml`, `slide16.xml`, `slide17.xml` = 1.16/1.17/1.18 *(desfase de 1 por la slide 5/37 que falta)* |
-| Slides huérfanas corr. 2 | `ppt/slides/slide3/4/5/13.xml` = 2.3/2.4/2.5/2.13 *(sin desfase)* |
-| Recortes con el N-number | corr. 1 → `image50,55,56,57` (1.16), `58,59,60,61` (1.17), `62,66,67,68,69,70` (1.18) · corr. 2 → `image13-16` (2.3), `17,18` (2.4), `22-26` (2.5), `48` (2.13) |
-| Zona roja = plano A | corr. 1 `image54.png` · corr. 2 `image12.png` |
-
-Validado que **todas** las imágenes de los `_rels` están realmente colocadas: el número de
-`r:embed` distintos del `slideN.xml` coincide con el número de relaciones de imagen.
-
-→ Detalle en [3212/5-retoques-molde.md](../conocimiento/0-bolt-eye/3212/5-retoques-molde.md) y la comprobación numérica
-de que el retoque se aplicó en [3212/historial-molde.md](../conocimiento/0-bolt-eye/3212/historial-molde.md#6-la-segunda-prueba-el-plano-a).
+**Resuelto leyendo las imágenes de los PPTX.** Las acciones sobre el plano A agrupan
+varias cotas; 2.13 identifica N240. La tabla completa, recortes y rutas dentro del ZIP
+se mantienen en [retoques del molde](../conocimiento/0-bolt-eye/3212/5-retoques-molde.md).
+El contraste medido está en [historial, plano A](../conocimiento/0-bolt-eye/3212/historial-molde.md#6-la-segunda-prueba-el-plano-a).
 
 ### R1 · ¿Qué `intern.NN` corresponde a cada retoque de molde?
 
-**Resuelto.** El enlace está en el **nombre del `.xls`** que acompaña a cada PPTX:
-`3212-00_intern.01_mold_correction.xls`, `3212-00_intern.03_correction_2_.xls`. Las fechas
-confirman (reunión 1–4 días alrededor del informe).
-
-| Corrección | Origen | Validación |
-|---|---|---|
-| nº1 (24/01/2024) | `intern.01` (25/01/2024) | `intern.03` (14/03/2024) |
-| nº2 (18/03/2024) | `intern.03` | `intern.05` (01/05/2024) |
-
-Además la corrección 2 **audita explícitamente** la 1 en el texto de sus diapositivas, y 12 de
-18 llevan un marcador `OK`. → [3212/historial-molde.md](../conocimiento/0-bolt-eye/3212/historial-molde.md)
+**Resuelto.** Los XLS que acompañan a los planes identifican los muestreos de origen.
+La cronología y el par antes/después de cada plan se mantienen en
+[historial del molde](../conocimiento/0-bolt-eye/3212/historial-molde.md#1-cronología).
 
 ### R2 · ¿A qué muestreo pertenece el STL?
 
-**Resuelto.** `3212-315346-c13.stl` → lote **315346** = `Parts batch nº` de **`intern.03`
-(14/03/2024) y `intern.04` (15/04/2024)**. Ambos comparten lote, así que el escaneado
-corresponde a esa tirada — la **posterior a la corrección nº1**.
+**Resuelto a nivel de lote:** el STL pertenece a una tirada compartida por dos informes;
+no permite elegir uno de ellos como fecha exacta del escaneado. Ver
+[ficha del STL y sus fuentes](../conocimiento/0-bolt-eye/3212/8-stl-pieza-real.md#el-nombre-codifica-tres-cosas).
 
-### R3 · ¿Cuál es la versión buena entre rev0 / rev1 / rev1_?
+<a id="r3--cuál-es-la-versión-buena-entre-rev0--rev1--rev1_"></a>
+### R3 · Diferencias entre variantes rev0 / rev1 / rev1_
 
-El prototipo usa corrección 1 `rev1` y corrección 2 `rev1` sin guion bajo final.
-**Rectificado 17/09/2026:** los dos PPTX de corrección 2 no son idénticos byte a byte:
-8.024.315 y 8.024.918 B. No asumir equivalencia por tamaño redondeado o nombre.
-`Old/` conserva una versión anterior del XLS. Falta auditar diferencias entre variantes
-si se quiere automatizar su selección; guardar siempre qué archivo se utilizó.
+**Diferencias auditadas el 23/10/2026.** Las variantes de corrección 2 cambian magnitudes
+y marcadores. La selección del piloto es explícita; no demuestra cuál se ejecutó ni qué
+variante aprobó el cliente. Mantener la comparación y la regla de selección en
+[Qué fichero usar](../conocimiento/0-bolt-eye/3212/5-retoques-molde.md#qué-fichero-usar).
 
 ### R4 · ¿Dónde se documenta la corrección? (Dubte 5)
 
@@ -542,26 +436,23 @@ En **PPTX + XLS de retoques**. El PPTX explica la propuesta y muestra la zona; `
 del XLS aporta retoques, previsiones por cavidad y fórmulas encadenadas. La ejecución debe
 confirmarse por separado. La respuesta de Xavier habla de nubes hechas con CMM, sin
 identificar un archivo como geometría objetivo. `PUNTS_NOUS` es un subconjunto de PUNTS;
-su uso exacto y vínculo a acciones se recogen en A11.
+su uso exacto y vínculo a acciones se recogen en [A16](#a16--uso-exacto-de-punts_nous-y-trazabilidad-de-ejecución).
 
 ### R5 · ¿Funcionó el retoque del Bolt Eye?
 
-**Mejora parcial, no resolución completa.** GX de N170, c13 B1 H=1,5:
-3,429 → 3,974 → 3,981 → 3,978. LP máximo del mismo elemento:
-3,477 → 4,018 → 4,023 → 4,023, frente a máximo admisible 4,000.
-En `.03`, 0/32 GX están fuera, pero sí 30/32 LP máximos. No concluir que quedó aceptado
-porque desaparezca del segundo PPTX. [Fuentes](../conocimiento/0-bolt-eye/3212/revision-2026-09-17.md).
+**Mejora parcial, no resolución completa.** Hay que conservar GX y LP máximo por agujero
+y altura; la conformidad de GX no permite dar por aceptado el conjunto. Valores y fuentes:
+[historial del Bolt Eye](../conocimiento/0-bolt-eye/3212/historial-molde.md#4-bolt-eye-n170-mejora-parcial-no-resolución-completa).
 
 ### R6 · ¿Cómo se calcula la posición ⌖? *(Dubte 2)*
 
-**Verificado numéricamente** contra los datos reales:
-`2 · √(ΔX² + ΔZ²) = 2 · √(0,006² + 0,011²) = 0,0251 ≈ 0,026` ✅
+**Verificado numéricamente.** La fórmula y el ejemplo de contraste están en
+[Formatos y parsing](../conocimiento/formatos-parsing.md#verificación-del-cálculo-de-posición-confirma-la-respuesta-del-dubte-2).
 
 ### R7 · ¿Qué significan `GX`, `GN`, `LP(2)`?
 
-**Resuelto** con el método de medida: `GX` = Ø mínimo, `GN` = Ø máximo, `LP(2)` = distancia
-directa entre dos puntos opuestos a la misma altura.
-→ [3212/6-metodo-medida.md](../conocimiento/0-bolt-eye/3212/6-metodo-medida.md#2-vocabulario-de-evaluación)
+**Resuelto.** Definiciones y diferencias de evaluación en el
+[vocabulario del método de medida](../conocimiento/0-bolt-eye/3212/6-metodo-medida.md#2-vocabulario-de-evaluación).
 
 ### R8 · ¿Por qué se mide el agujero a dos alturas? *(Dubte 7)*
 

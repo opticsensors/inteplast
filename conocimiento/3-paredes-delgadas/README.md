@@ -5,14 +5,17 @@
 
 ## Piezas
 
-| Pieza | Qué es (cabecera PPAP) | Plano | Cavidades | Correcciones |
+| Pieza | Qué es (cabecera PPAP) | Plano | Columnas de cavidad en informes | Correcciones |
 |---|---|---|---|---|
-| **3233** | Isomask A Long - BDU34 | `0196S0000K` | 32 (algunas hojas 10) | 1 plan (3 diapositivas) |
-| **3237** | INSULATION MASK EL. SIDE | `3 130 589 019` / `3130589019` | 4 y 8 | 6 PPTX, 18 diapositivas |
-| **3238** | Insulation Mask | `3 130 589 01F` / `313058901F` | 4 y 8 | 8 PPTX, 28 diapositivas |
+| **3233** | Isomask A Long - BDU34 | `0196S0000K` | 32 (algunas hojas 10) | Solo plantilla genérica (3 diapositivas), sin plan propio PPTX |
+| **3237** | INSULATION MASK EL. SIDE | `3 130 589 019` / `3130589019` | 4 y 8 | 5 PPTX propios, 15 diapositivas; más plantilla de 3 |
+| **3238** | Insulation Mask | `3 130 589 01F` / `313058901F` | 4 y 8 | 7 PPTX propios, 25 diapositivas; más plantilla de 3 |
 
 Máscaras aislantes de motor eléctrico (cliente Bosch por la numeración `3 130 …`). El plano aparece con y
 sin espacios según el informe: normalizar antes de comparar.
+Los tres `YYYYMMDD-Mold correction_1_PXXXX.pptx` incluyen ejemplos **P3033 de 26/07/2019**
+(diapositivas 2–3); no son correcciones de 3233/3237/3238. El número de columnas de informe tampoco
+demuestra por sí solo el número físico de cavidades del molde.
 
 ## Qué es el feature aquí
 
@@ -20,6 +23,12 @@ Paredes del orden de **0,25 mm** (característica `1-1` de los export SupplyOn: 
 0,225–0,272) y espesores de laminación (`Measuring_comparison_313117181A_INTEPLAST_END_LAMINATION…xlsx`,
 *Thickness* 0,3 ±0,05 por CMM, en el 3233). Las correcciones van en la línea de **dar más espesor**:
 *«Tool correction 1.5 Increase the thickness of the part»* (3237) y 1.7 (3238).
+
+También hay decisiones de **no corregir acero** por discrepancias CMM/CT o por acondicionamiento:
+`3238/5- Retoques molde/20240410_2nd loop of corrections/20240426-Mold correction_2_P3238.pptx`,
+diapositivas 1 y 4, propone cambiar el programa CMM y señala que la cota 169 se deforma al humidificar.
+Son condiciones de medida y decisiones del plan, no prueba de ejecución. La diapositiva 2 reduce la
+propuesta del 22/04 de 0,14 a **0,07 mm por nervio**; conservar la versión y fecha junto a la acción.
 
 ## Formatos nuevos respecto al 3212
 
@@ -32,11 +41,12 @@ Paredes del orden de **0,25 mm** (característica `1-1` de los export SupplyOn: 
     (informe electrónico de muestras iniciales que pide Bosch). eISIR importa «protocolos de máquina» por
     cavidad, con un prefijo, y genera el informe cmk (manual eISIR 8.30, pp. 37–41). El marcador `#P#` no es
     Q-DAS y no está documentado públicamente.
-  - 🔴 **Los SPC no son mediciones**: los escribe la macro `Generate_Sheets` del libro «Cpk generator», que
-    fabrica 50 valores por cavidad con `NORM.INV(RAND(),…)` a partir de un valor real. Los 4
-    `3237_SPC_Cav_n.txt` coinciden valor a valor con `PPAP_3237_INF_02_SPC.xlsm`; los 88 de
-    `Support_V20_Inf_03/3237-20 SPC/` vienen de un `Cpk generator_IQS.xlsm` que no está en Exemples. Los
-    PPAP de cliente `.xlsm` del 3233, 3237 y 3238 también calculan muestras con `RAND()`. Detalle en
+  - 🔴 **Los cuatro `3237_SPC_Cav_n.txt` contienen valores generados**: coinciden valor a valor con
+    `PPAP_3237_INF_02_SPC.xlsm`, cuya macro `Generate_Sheets` exporta 50 valores por cavidad calculados
+    con `NORM.INV(RAND(),…)` a partir de un valor real. Para los 88 de
+    `Support_V20_Inf_03/3237-20 SPC/`, el título de sus PDF apunta a `Cpk generator_IQS.xlsm`, ausente
+    de Exemples; su procedencia queda por confirmar. Los PPAP de cliente `.xlsm` del 3233, 3237 y
+    3238 también calculan muestras con `RAND()`. Detalle en
     [I-003](../incongruencias.md#i-003-en-detalle).
   - **Relación con las cotas**: el id es `1-<cota>[.subpunto | .Cmk | .Cpk | .T]`. En el 3237, 187 de 215 ids
     son una cota del PPAP interno con el mismo nominal; 7 difieren porque el PPAP pone texto (`Burrs`) y 21 no

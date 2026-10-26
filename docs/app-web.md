@@ -7,6 +7,10 @@
 > están en [formatos-parsing.md](../conocimiento/formatos-parsing.md); el modelo del dominio completo (proyectos,
 > muestreos, mediciones, correcciones de molde) en [modelo-datos.md](modelo-datos.md).
 
+> **Revisión documental: 26/10/2026.** Describe el código disponible; los ensayos históricos
+> conservan su fecha y no se han repetido en esta revisión. Para localizar el contrato de
+> cada subsistema y distinguir propuestas e historial, empezar por [docs/README.md](README.md).
+
 ---
 
 ## Qué hay implementado
@@ -68,7 +72,8 @@ de sus retoques sigue pendiente; los puntos de coordenadas no se importan como c
 
 ---
 
-## Modelo de datos (`backend/app/models.py`)
+<a id="modelo-de-datos-backendappmodelspy"></a>
+## Modelo de datos implementado
 
 ```
 StoredFile                    identidad común de un documento subido o referenciado
@@ -77,8 +82,9 @@ StoredFile                    identidad común de un documento subido o referenc
   source_key, source_path, source_version
   version (UUID del vínculo), revision (etiqueta), reference_key (deduplicación)
 
-Part                          la pieza = el proyecto = el molde  → embrión de PROYECTO
-  id, code ("3212", UNIQUE), name ("Pump Housing")
+Part                          registro de pieza; no es una tabla independiente de moldes
+  id, code ("3212", UNIQUE), name, description, customer, folder_path
+  files_managed, last_read, created_at
 
 Feature                       la ficha del feature
   id, name, description, category, tags[], owner_id, image_id → StoredFile, cover_3d (JSON)
@@ -88,6 +94,12 @@ Feature                       la ficha del feature
   │    name, position, part_id → Part, file_id → StoredFile
   └─ FeaturePartLink (n:n)    → Part   embrión de INSTANCIA_EN_PROYECTO
 ```
+
+Los modelos están en [models.py](../backend/app/models.py),
+[knowledge_models.py](../backend/app/knowledge_models.py) y
+[measurement_models.py](../backend/app/measurement_models.py). La correspondencia entre
+las tablas reales de archivos, cotas y snapshots y el dominio propuesto se mantiene en
+[Modelo de datos, sección 5](modelo-datos.md#5-lo-que-el-frontend-ya-construido-espera).
 
 ### Las piezas: por qué el feature se agrupa por pieza y no por tipo de fichero
 
@@ -104,8 +116,7 @@ Ahora hay dos caminos —a propósito— para que una pieza salga en la ficha de
 | **Está declarada** (`FeaturePartLink`) | *«el Bolt Eye también está en el 3197»* aunque no haya todavía ni un CAD vinculado |
 
 La vista hace la **unión de los dos** (`frontend/src/components/Features/parts.ts`). Una pieza
-declarada sin ficheros sale con la fila entera vacía, que es justo lo que hace visible **lo que
-falta por vincular**.
+declarada puede mostrar sus cotas y el enlace a su ficha aunque no tenga adjuntos.
 
 Decisiones que conviene conocer antes de tocarlo:
 
@@ -116,19 +127,18 @@ Decisiones que conviene conocer antes de tocarlo:
 | Los enums se guardan como **VARCHAR** (`sa_type=AutoString`), no como tipo `ENUM` de Postgres | Añadir una categoría nueva no obliga a una migración. En la API y en el cliente TypeScript siguen siendo uniones cerradas |
 | `Feature.owner_id` es **`ON DELETE SET NULL`** | La ficha es conocimiento compartido: sobrevive al borrado del usuario que la creó. (El `Item` de la plantilla, en cambio, es `CASCADE`) |
 | Las notas y los adjuntos son **`ON DELETE CASCADE`** | No tienen sentido sin su feature |
-| `FeatureAsset.file_id` y `part_id` son **`SET NULL`** | Borrar un fichero no borra la fila que lo describía; borrar una pieza no borra sus adjuntos, que caen a un desplegable *«Sin pieza»* al final de la lista |
+| `FeatureAsset.file_id` y `part_id` son **`SET NULL`** | Las FK conservan la fila del adjunto ante un borrado directo del registro referenciado. La API bloquea el borrado de piezas usadas; no ofrece dejarlas sin pieza como flujo de usuario |
 | `Part.code` es **UNIQUE**; las piezas existentes se pueden vincular sin duplicarlas | Es la clave con la que se agrupa todo. El alta desde carpeta extrae un código editable del nombre |
 | `FeaturePartLink` es una tabla de unión **sin campos propios** | Solo dice *«este feature está en esta pieza»*. Las cotas no cuelgan de aquí: se asocian con `FeatureCharacteristicLink` (feature ↔ cota de una pieza y revisión, con rol). El modelo normalizado `INSTANCIA_EN_PROYECTO` sigue pendiente |
-| Borrar una pieza es **solo de superusuario y si no tiene uso** | Se rechaza con `409` si quedan vínculos directos o adjuntos en algún feature; no se borran carpetas ni documentos |
+| Borrar una pieza es **solo de superusuario y si no tiene uso** | Se rechaza con `409` si quedan vínculos/adjuntos en features, importaciones, cotas o documentos de evidencia; no se borran originales |
 
 ### Ficheros subidos y originales externos
 
-`FeatureAsset.file_id` sigue apuntando a un documento independiente de su origen. Para
-`source=local`, el backend resuelve una ruta relativa dentro de `ASSETS_ROOT`, montado en
-solo lectura; vincular solo guarda metadatos. Si cambia su fecha/tamaño, exige revisar y volver
-a vincular. El UUID se conserva, y cambia `version` para invalidar enlaces anteriores.
-No hay historial de bytes ni detección automática de renombrados locales. Ver
-[contrato de archivos](ficheros-externos.md#modelo-y-api).
+`FeatureAsset.file_id` apunta a un documento independiente de su origen. Las referencias
+locales conservan metadatos del original; SharePoint añade acceso delegado y caché de lectura.
+La detección de cambios y las versiones difieren entre ambos modos: consultar el
+[contrato de archivos](ficheros-externos.md#modelo-y-api) y la
+[integración Graph](ficheros-externos.md#sharepoint-microsoft-graph).
 
 Para `source=upload`, los bytes se guardan en disco, en `settings.UPLOADS_DIR`. El Dockerfile fija **`/app/uploads`**
 como ruta absoluta; el WORKDIR es `/app/backend`. En local el valor por defecto `uploads` es
@@ -179,6 +189,8 @@ HTML/SVG y tipos activos no permitidos se fuerzan como adjuntos, con `nosniff` y
 
 ## API (`backend/app/api/routes/`)
 
+Resumen de rutas, no inventario exhaustivo; contratos de [mediciones](cotas-y-evidencia-web.md#api-de-cotas-y-mediciones),
+[archivos](ficheros-externos.md) y [asistente](asistente.md) en sus referencias.
 Todo bajo `/api/v1`. Documentación interactiva en `http://localhost:8000/docs`.
 
 | Método | Ruta | Qué hace |
@@ -198,14 +210,14 @@ Todo bajo `/api/v1`. Documentación interactiva en `http://localhost:8000/docs`.
 | `PUT` `DELETE` | `/features/assets/{id}` | Editar / quitar un adjunto |
 | `POST` | `/parts/from-folder` | Registrar o reutilizar una carpeta de pieza existente, sin duplicados |
 | `GET` `POST` | `/parts/` | Listar (incluye `feature_count` por pieza) y dar de alta piezas |
-| `PUT` | `/parts/{id}` | Editar código o nombre. El código es único: choque → `409` |
+| `PUT` | `/parts/{id}` | Editar identidad, descripción, cliente, carpeta y archivos/referencias según `PartUpdate`. El código es único: choque → `409` |
 | `GET` | `/catalog` | Búsqueda paginada de piezas/features; cotas por pieza/revisión solo con texto. Filtros compartidos y `kind=all/part/feature` |
 | `GET` | `/parts/{id}/detail` | Identidad, portada/CAD, referencias y features vinculados |
 | `PUT` | `/parts/{id}/cover` | Guardar una captura del CAD actual, validando versión y SHA-256 |
 | `DELETE` | `/parts/{id}` | Borrar una pieza sin uso. **Solo superusuario**; usada → `409` |
 | `POST` | `/files/` | Subir un fichero (multipart) → devuelve el `id` que se referencia |
 | `GET` | `/files/source` | Listar una carpeta del origen configurado; `path`, `skip`, `limit` |
-| `POST` | `/files/reference` | Registrar/reutilizar un original local sin copiarlo |
+| `POST` | `/files/reference` | Registrar/reutilizar una referencia del origen configurado; ver contrato local/Graph |
 | `PUT` | `/files/{id}/reference` | Volver a vincular con control de versión; conserva el UUID |
 | `GET` | `/files/{id}/status` | Disponible, ausente, cambiado o inaccesible |
 | `GET` | `/files/{id}/access-url` | Obtener enlace temporal autenticado; `download=true` fuerza descarga |
@@ -231,7 +243,7 @@ el administrador. Las rutas privadas para crear usuarios de prueba requieren
 - **Borrar un feature**: solo el autor o un superusuario.
 - **Borrar notas, adjuntos y ficheros**: cualquier usuario autenticado, conforme al modelo
   colaborativo. También son acciones permanentes; quitar un adjunto no borra sus bytes.
-- **Borrar piezas**: solo superusuario y después de desvincularlas de todos los features.
+- **Borrar piezas**: solo superusuario, sin vínculos a features ni importaciones, cotas o documentos de evidencia.
 - **Gestión de usuarios**: superusuario, como en la plantilla.
 
 ---
@@ -294,7 +306,7 @@ Componentes en `components/Features/`:
 | `Parts/FeaturePartEvidence.tsx` | Fila **COTAS** compacta: números, plano, añadir y papelera. Añadir permite seleccionar una cota importada con su revisión o escribir otra al final de la fila. |
 | `Parts/PartDetailPage.tsx` | Ficha y alta de pieza (`/parts/{id}`, `/parts/nueva`): cabecera, carpeta, Cotas, Features y Archivos. **Actualizar datos** (`Parts/PartReadStatus.tsx`) relee la carpeta; no asigna cotas al feature. |
 | `viewers.ts` | Extensión → visor, carga directa hasta 50 MiB y GLB automático para STL/STEP grandes |
-| `ModelViewer.tsx` | El visor 3D (three.js + OpenCascade en WASM). Se carga con `import()` dinámico: no pesa nada hasta que alguien abre un 3D |
+| `ModelViewer.tsx` | El visor 3D (three.js + OpenCascade en WASM). Carga dinámica; también puede activarse al generar una portada CAD |
 | `modelControls.ts` | Giro libre en pantalla, desplazamiento y zoom 3D, sin bloqueo en los polos ni inercia al soltar |
 | `PdfViewer.tsx` | PDF.js en canvas: rueda sobre el cursor, arrastre del plano, encuadre y cambio de página |
 | `parts.ts` | La unión *piezas declaradas + piezas con ficheros* y el reparto por pieza y tipo. Es la lógica de la lista |
@@ -307,7 +319,7 @@ Componentes en `components/Features/`:
 | `SourceFilePicker.tsx` | Selector de originales: elegir un archivo y vincularlo a esta tarjeta, sin opciones adicionales |
 | `DocumentStatus.tsx` | Estado del original y aviso de archivo ausente/cambiado/inaccesible |
 | `constants.ts` | Las etiquetas en castellano de categorías y tipos, y el icono de cada tipo |
-| `queries.ts` | Las query keys. Todo cuelga de `["features"]`: invalidar esa raíz refresca todo |
+| `queries.ts` | Claves de consulta: catálogo/fichas de features bajo `["features"]`; las piezas tienen `["parts"]` y otras consultas invalidan sus propias claves |
 
 Y en `components/Common/`: `FileUpload.tsx` (drag and drop), `RichText.tsx` (editor y visor),
 `CollapsibleSection.tsx` (los paneles desplegables).
@@ -352,24 +364,16 @@ sección Cotas de la ficha de pieza, procesa las tablas compatibles automáticam
 asignar sus cotas al feature.
 Una pieza vinculada a varios features comparte las mismas importaciones.
 
-API autenticada de mediciones (prefijo `/api/v1`):
-
-| Método y ruta | Función |
-|---|---|
-| `POST /evidence/parts/{id}/measurements/preview` | Descubrir CSV o revisar una selección; devuelve contexto, hash, ejemplos y estado sin escribir datos. |
-| `POST /evidence/parts/{id}/measurements/import` | Verificar otra vez contexto y hashes, incorporar cotas y conservar versiones. Requiere confirmar las sustituciones; no exige que la pieza esté vinculada a un feature. |
-| `GET /evidence/parts/{id}/measurements/history` | Historial de importaciones, con revisiones y versión vigente por muestreo/cavidad. |
-| `GET /evidence/parts/{id}?revision=…&snapshot_id=…` | Consulta de la revisión elegida o del estado guardado hasta una importación concreta; devuelve `measurement_revisions`. |
-| `GET /files/{id}/table` | Vista autenticada de las celdas originales de CSV/XLS/XLSX, con hojas y coordenadas, sin modificar archivos ni recalcular fórmulas. Verifica que el original local siga siendo la versión registrada. |
-
-La migración `h39c25ebfa07` añade `MeasurementImport` (`measurement_models.py`). No
-importa originales durante la migración. La primera importación CSV conserva también
-una copia del estudio piloto previo, si existe, para que siga siendo consultable.
+La API de mediciones, su revisión explícita, los snapshots y los límites de cada vía se
+mantienen en [Cotas y evidencia](cotas-y-evidencia-web.md#api-de-cotas-y-mediciones).
+La tabla `MeasurementImport` conserva importaciones anteriores; consultar ese contrato
+antes de cambiar la lectura automática o asumir que equivale al flujo CSV revisado.
 
 Las piezas antiguas sin correspondencia en el origen siguen disponibles en el buscador.
 La papelera elimina directamente del catálogo las piezas sin uso, sin confirmación;
-las utilizadas muestran «Usada en X features» y tienen la papelera desactivada. Se mantiene
-el permiso de superusuario. La API cuenta vínculos directos y adjuntos de cada feature una
+las utilizadas muestran «Usada en X features» y tienen la papelera desactivada. Aunque el
+contador de features sea cero, la API también rechaza piezas con importaciones, cotas o
+documentos de evidencia. Se mantiene el permiso de superusuario. La API cuenta vínculos directos y adjuntos de cada feature una
 sola vez. Borrar el registro conserva los originales: si su carpeta sigue en el origen,
 continúa disponible para registrarla de nuevo. Las carpetas aún no registradas no muestran papelera.
 
@@ -388,21 +392,18 @@ tamaño. El nombre abre la página del archivo (`/parts/{id}/fichero/{fileId}`) 
 la fila descarga el original. La página muestra el visor que corresponda o, si no hay visor
 posible, indica que hay que descargar el original para abrirlo en su aplicación. La cabecera
 del visor omite tipo, nombre interno, ruta y revisión técnica; esos metadatos siguen en la
-BD. Un original ausente o modificado se rechaza en el servidor y el visor muestra el error;
-se corrige eligiendo de nuevo el archivo en **Editar pieza**.
+BD. En el modo local, un original ausente o modificado se rechaza y requiere revisar el vínculo
+en **Editar pieza**. El tratamiento de cambios en Graph sigue el
+[contrato del origen](ficheros-externos.md#sharepoint-microsoft-graph).
 
 La página antigua `/features/{id}/fichero/{assetId}` sigue respondiendo para enlaces
 guardados, con estado del original y **Volver a vincular**, pero la interfaz ya no enlaza a
 ella. Su texto para un adjunto sin archivo aún remite a la edición del feature.
 
-Lo decide `viewers.ts` a partir del tipo MIME, la extensión y el tamaño: los PDF con tipo
-`application/pdf` y las imágenes JPEG, PNG, GIF, WebP, AVIF y BMP se pintan en la página.
-La modal de edición de portada admite esos mismos formatos al seleccionar, arrastrar o pegar (Ctrl+V);
-SVG y otros tipos no admitidos se ofrecen como archivos descargables. STL, GLB, OBJ, PLY,
-STEP e IGES van directamente al visor 3D hasta **50 MiB**. Los STL y STEP/STP mayores usan
-un [GLB generado en el servidor](vistas-3d.md); otros formatos grandes solo se descargan.
-Los formatos sin visor —`.mfr` de Moldflow,
-`.sldprt`, `.CATPart`— solo se descargan.
+La selección del visor depende del MIME, extensión y tamaño. Los formatos admitidos,
+límites de carga y componentes se mantienen en
+[Ficheros externos, visores](ficheros-externos.md#visores-de-archivos). Los formatos sin
+visor se descargan para abrirlos con su aplicación.
 
 La aplicación no integra protocolos ni componentes de escritorio para abrir CAD local.
 Su flujo es descargar → abrir desde la barra de descargas → Windows usa el programa asociado.
@@ -411,48 +412,22 @@ en el equipo del usuario.
 
 ### El visor 3D
 
-La cabecera también permite crear una [portada desde el STEP de la pieza](portadas-cad.md),
-seleccionando superficies en rojo y guardando el encuadre. Las tarjetas usan una imagen;
-la ficha muestra una miniatura clicable que abre una modal ajustada al cuadrado. El 3D se
-activa automáticamente sobre la captura y su preparación se cancela al cerrar. El editor
-mantiene iguales dimensiones en Imagen y CAD. La selección queda ligada a la revisión del documento.
+La aplicación muestra CAD y mallas y permite crear portadas seleccionando superficies y
+encuadre. Consultar [interacción y formatos](ficheros-externos.md#visores-de-archivos),
+[portadas y selección de caras](portadas-cad.md) y
+[conversión de archivos grandes a GLB](vistas-3d.md).
 
-Interacción ajustada el **2026-09-15** a petición del usuario: arrastre izquierdo para girar
-libremente en el sentido de la pantalla, rueda para zoom, derecho/central para desplazar y
-**Encuadrar** para recuperar la vista inicial. Se usa `TrackballControls` con el eje Z configurado
-antes de inicializar el control y sin inercia al soltar. Se elimina el contador de triángulos
-y el texto de instrucciones. La versión anterior cambiaba `camera.up` después de construir
-`OrbitControls`; ese control había calculado su eje con otro valor y limitaba el paso por los polos.
-
-`ModelViewer.tsx`, con **three.js** para lo que ya son triángulos (STL, GLB, OBJ, PLY) y
-**`occt-import-js`** —OpenCascade compilado a WebAssembly, lo que usa Online 3D Viewer— para lo que
-es B-rep con NURBS y hay que teselar (STEP, IGES, BREP).
-
-El navegador tesela los CAD pequeños. El STEP de la pieza del 3212 son 10 MB y
-tarda unos segundos. Y los dos paquetes van en `import()` dinámico: en el build salen como chunks
-aparte (`three.module`, `occt-import-js`, `ModelViewer`), así que **quien no abre un 3D no se
-descarga three.js**.
-
-**Comprobado con el STEP real del 3212 el 2026-09-15:** 83.132 triángulos, giro, zoom,
-encuadre, descarga idéntica al original y salida/vuelta desde la ficha. El PDF real también
-se visualiza y amplía; su resolución original limita los detalles pequeños. Ver la
-[verificación](ficheros-externos.md#verificación-con-el-3212). El escaneo y el molde grandes
-usan `WebModelViewer.tsx`, que consulta la cola y entrega a `ModelViewer` únicamente su GLB.
-El enlace de descarga continúa apuntando al original. Implementación y límites en
-[vistas-3d.md](vistas-3d.md).
+La carga es dinámica, pero también puede producirse al generar automáticamente una captura
+de pieza en el catálogo. La comprobación histórica con originales del piloto está en
+[Ficheros externos](ficheros-externos.md#verificación-con-el-3212).
 
 ### El visor de planos PDF
 
-`PdfViewer.tsx` sustituye el iframe nativo por un canvas de PDF.js. La rueda amplía alrededor del
-cursor y el arrastre izquierdo mueve el plano en cualquier dirección sin desplazar la página
-web. Los controles visibles son acercar, alejar y encuadrar; los de página aparecen solo si el
-PDF tiene varias. Admite flechas y +/-/0 desde el teclado. El renderizador y su worker se sirven
-desde la propia aplicación y se cargan solo al abrir un PDF; no se envía el plano a otro servicio.
-
-El original sigue disponible mediante **Descargar** y **Abrir en pestaña**. El canvas se vuelve
-a renderizar al ampliar, manteniendo la imagen anterior mientras tanto, con un límite de
-16 megapíxeles para controlar memoria. El PDF escaneado del 3212 conserva su resolución de origen.
-No se han añadido OCR, anotaciones ni selección de texto al canvas.
+`PdfViewer.tsx` muestra el documento y los controles de página, zoom y encuadre. Su contrato
+técnico está en [Visores de archivos](ficheros-externos.md#visores-de-archivos). La búsqueda
+de cotas y sus marcas revisadas se describe en [Consulta del plano](interfaz.md#consulta-del-plano),
+y el índice que la alimenta en [Cotas y evidencia](cotas-y-evidencia-web.md#indexación-y-revisiones).
+El canvas no recupera detalle que no exista en la imagen de origen.
 
 ### La ficha es una página, no una modal (2026-08-19)
 
@@ -578,8 +553,8 @@ guardados pendientes. La cabecera se sigue guardando mediante su botón.
 3. **El editor de texto enriquecido es markdown reducido**, no TipTap: `**negrita**`,
    `*cursiva*`, `` `código` `` y listas con guion, con una barra de botones que los inserta. Es
    deliberado — cero dependencias nuevas y cero HTML que sanear. El campo del backend es texto
-   libre, así que sustituirlo por un editor completo el día que haga falta es un cambio
-   **solo de frontend**.
+   libre. Un editor futuro deberá mantener el contrato Markdown o adaptar también la
+   persistencia, renderización e imágenes; no asumir que será solo frontend.
 
 ---
 
@@ -597,14 +572,18 @@ existente. Configuración en [ficheros-externos.md](ficheros-externos.md).
 🔴 **Sin `docker compose watch backend`, hay que usar `--build` después de tocar `backend/`.** El Dockerfile copia el código
 dentro de la imagen; si ya existe un `backend:latest`, `docker compose up -d` a secas **lo
 reutiliza tal cual** y arrancas con el código viejo — sin errores, simplemente faltan los
-endpoints. Cómo se detecta:
+endpoints. Reconstruir la imagen o usar el modo de desarrollo apropiado.
+
+Para comprobar **el estado de las migraciones dentro de esa imagen**:
 
 ```powershell
 docker compose exec backend alembic current
 docker compose exec backend alembic heads     # current debe coincidir con heads
 ```
 
-El frontend no tiene este problema: Vite sirve desde el disco.
+Que `current` coincida con `heads` **no demuestra que la imagen contenga el código actual**:
+ambos comandos podrían estar usando una imagen antigua. El frontend en desarrollo con Vite
+sirve desde el disco; el frontend construido en Docker también requiere reconstrucción.
 
 ### Datos de ejemplo
 
@@ -619,7 +598,8 @@ Es idempotente: si el feature ya existe no toca nada. La creación completa usa 
 un fallo revierte el ejemplo entero y permite reintentar. Crea la pieza **3212 Pump Housing**, la
 declara en el feature y le cuelga los cinco adjuntos, uno por tipo. Los adjuntos se crean **sin
 fichero**: los originales se vinculan después desde la aplicación. El seed no depende de rutas
-personales. En desarrollo están vinculados el PDF, CAD, escaneo y molde del 3212.
+personales. También vincula N170, N117, N178 y N288 de la revisión del piloto; la carga
+no realiza una importación de medidas. Los vínculos a originales dependen de cada instalación.
 
 ### Regenerar el cliente TypeScript
 
@@ -636,6 +616,7 @@ Si `uv` no está disponible en el PATH, usar la alternativa Docker de
 
 ### Comprobaciones
 
+Comandos para ejecutar las comprobaciones; **no se han ejecutado en esta revisión documental**.
 Desde la raíz:
 
 ```powershell
@@ -676,15 +657,15 @@ La cobertura HTML se genera dentro del stack de tests y desaparece al limpiarlo.
 | **La ficha de una pieza** | Implementada el 22/09/2026: `/parts/{id}` con identidad, carpeta, Cotas, Features y Archivos (`Parts/PartDetailPage.tsx`) |
 | **Adjuntos del feature copiados de la pieza** | No se actualizan si cambian los archivos de la pieza; afecta a la portada CAD y al plano de la fila COTAS. Ver [portadas CAD](portadas-cad.md#origen-del-cad-de-la-portada) |
 | **Concurrencia del asistente** | Pendiente de decidir con el despliegue (proveedor, máquina, usuarios). Ver [asistente](asistente.md#concurrencia-y-despliegue) |
-| **Correcciones de otras piezas** | Las mediciones ya son genéricas; las correcciones XLS/PPTX solo se interpretan en el 3212. En espera de ejemplos y resultados esperados. Ver [hoja de ruta](hoja-de-ruta.md#pendiente-generalizar-la-importación-de-correcciones-pptx) |
+| **Correcciones de otras piezas** | Las mediciones ya son genéricas; las correcciones XLS/PPTX solo se interpretan en el 3212. Ejemplos recibidos; faltan resultados esperados revisados y generalizar el lector. Ver [hoja de ruta](hoja-de-ruta.md#pendiente-generalizar-la-importación-de-correcciones-pptx) |
 
 ### Nombre real del fichero en las tarjetas (2026-09-17)
 
-Una tarjeta con fichero vinculado muestra siempre `StoredFile.filename`, incluida la extensión,
-tanto al editar como al consultar o abrir el visor. Su nombre deja de ser una etiqueta editable.
-Las filas sin archivo conservan el nombre provisional hasta vincular o subir uno. La API impone
-el nombre real al crear o actualizar el adjunto; la migración `f170a3c9de85` corrige las etiquetas
-antiguas de los documentos ya vinculados, sin modificar sus originales ni sus identidades.
+La decisión del 17/09 afectaba a los adjuntos `FeatureAsset`: al vincularlos, la API toma
+el nombre de `StoredFile.filename`; la migración `f170a3c9de85` actualizó esas etiquetas.
+La ficha de pieza posterior usa **`PartFile.name`, un nombre visible editable**, separado
+del nombre original. Cambiarlo no renombra el fichero original. No aplicar la regla
+histórica de los adjuntos a todas las filas de archivos de la UI actual.
 
 El selector tiene una sola acción: vincular el archivo elegido a esta tarjeta. Cambiar el archivo
 de una tarjeta no cambia el documento de otros features. Se han retirado el texto introductorio

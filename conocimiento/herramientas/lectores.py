@@ -3,7 +3,7 @@
 Reglas comunes:
 - Solo lectura. Lo que necesita una aplicacion (Word/Excel por COM) se abre sobre una copia
   temporal, para que nunca aparezcan ficheros de bloqueo (~$) dentro de Exemples.
-- Un valor ausente no es cero: las celdas vacias no se guardan.
+- Un valor ausente no es cero: se conservan las formulas sin valor guardado como NULL.
 - Si un fichero es demasiado grande se recorta y se dice en `mensaje`/`estructura`.
 """
 
@@ -33,9 +33,10 @@ SIETE_ZIP = r"C:\Program Files\7-Zip\7z.exe"
 class Resultado:
     estado: str = "extraido"   # extraido | solo_metadatos | sin_texto | error
     elementos: list[tuple[str, str, str, dict | None]] = field(default_factory=list)
-    celdas: list[tuple[str, int, int, str, float | None, str | None]] = field(default_factory=list)
+    celdas: list[tuple[str, int, int, str | None, float | None, str | None]] = field(default_factory=list)
     estructura: dict[str, Any] = field(default_factory=dict)
     mensaje: str | None = None
+    lector: str | None = None  # formato real cuando difiere de la extension
 
     def elemento(self, tipo: str, localizador: str, texto: str, datos: dict | None = None) -> None:
         self.elementos.append((tipo, localizador, texto, datos))
@@ -244,6 +245,13 @@ def xls_por_excel(path: str) -> Resultado:
 def leer_xls(path: str) -> Resultado:
     import xlrd
 
+    # Hay un informe PDF nombrado .xls. Detectarlo antes de invocar Excel sobre una copia.
+    with open(path, "rb") as archivo:
+        if archivo.read(5) == b"%PDF-":
+            resultado = leer_pdf(path)
+            resultado.lector = "pdf"
+            resultado.mensaje = "Firma %PDF: PDF con extension .xls; leido como PDF."
+            return resultado
     try:
         return _leer_xls(path)
     except xlrd.biffh.XLRDError as error:
@@ -301,46 +309,61 @@ def leer_xlsx(path: str) -> Resultado:
     import openpyxl
 
     r = Resultado()
-    valores = openpyxl.load_workbook(path, read_only=True, data_only=True)
     formulas: dict[tuple[str, int, int], str] = {}
-    if os.path.getsize(path) < 25 * 1024 * 1024:
-        crudo = openpyxl.load_workbook(path, read_only=True, data_only=False)
-        for hoja in crudo.worksheets:
-            for fila in hoja.iter_rows():
-                for celda in fila:
-                    if isinstance(celda.value, str) and celda.value.startswith("="):
-                        formulas[(hoja.title, celda.row, celda.column)] = celda.value
-        crudo.close()
-    hojas = []
-    for hoja in valores.worksheets:
-        filas: dict[int, list[tuple[int, str]]] = {}
-        n = 0
-        for fila in hoja.iter_rows():
-            for celda in fila:
-                if celda.value is None or not hasattr(celda, "column"):
-                    continue
-                valor = texto_valor(celda.value).strip()
-                if not valor:
-                    continue
-                n += 1
-                if len(r.celdas) < MAX_CELDAS:
-                    clave = (hoja.title, celda.row, celda.column)
-                    r.celdas.append((hoja.title, celda.row, celda.column, valor,
-                                     numero(celda.value) if not isinstance(celda.value, str) else None,
-                                     formulas.get(clave)))
-                    filas.setdefault(celda.row, []).append((celda.column, valor))
-        filas_a_elementos(r, hoja.title, filas)
-        hojas.append({"nombre": hoja.title, "dimension": hoja.calculate_dimension(), "celdas": n})
-    props = valores.properties
-    r.estructura = {
-        "hojas": hojas,
-        "formulas": len(formulas),
-        "propiedades": {k: texto_valor(getattr(props, k)) for k in
-                        ("title", "subject", "creator", "lastModifiedBy", "created", "modified")
-                        if getattr(props, k, None)},
-        "macros": zipfile.is_zipfile(path) and "xl/vbaProject.bin" in zipfile.ZipFile(path).namelist(),
-    }
-    valores.close()
+    # Abrir streams permite tambien OOXML con extension .xls. Ninguna pasada recalcula.
+    with open(path, "rb") as archivo:
+        crudo = openpyxl.load_workbook(archivo, read_only=True, data_only=False)
+        try:
+            for hoja in crudo.worksheets:
+                for fila in hoja.iter_rows():
+                    for celda in fila:
+                        # Un sharedString que empieza por '=' sigue siendo texto.
+                        if celda.data_type == "f":
+                            formula = celda.value
+                            if not isinstance(formula, str):
+                                formula = getattr(formula, "text", None)  # formula matricial
+                            if formula is not None:
+                                formulas[(hoja.title, celda.row, celda.column)] = formula
+        finally:
+            crudo.close()
+    with open(path, "rb") as archivo:
+        valores = openpyxl.load_workbook(archivo, read_only=True, data_only=True)
+        try:
+            hojas = []
+            for hoja in valores.worksheets:
+                filas: dict[int, list[tuple[int, str]]] = {}
+                n = 0
+                for fila in hoja.iter_rows():
+                    for celda in fila:
+                        if not hasattr(celda, "column"):
+                            continue
+                        clave = (hoja.title, celda.row, celda.column)
+                        formula = formulas.get(clave)
+                        valor = texto_valor(celda.value).strip() if celda.value is not None else None
+                        if not valor and formula is None:
+                            continue
+                        n += 1
+                        if len(r.celdas) < MAX_CELDAS:
+                            r.celdas.append((*clave, valor,
+                                             numero(celda.value) if not isinstance(celda.value, str) else None,
+                                             formula))
+                            if valor:
+                                filas.setdefault(celda.row, []).append((celda.column, valor))
+                filas_a_elementos(r, hoja.title, filas)
+                hojas.append({"nombre": hoja.title, "dimension": hoja.calculate_dimension(), "celdas": n})
+            props = valores.properties
+            with zipfile.ZipFile(path) as paquete:
+                macros = "xl/vbaProject.bin" in paquete.namelist()
+            r.estructura = {
+                "hojas": hojas,
+                "formulas": len(formulas),
+                "propiedades": {k: texto_valor(getattr(props, k)) for k in
+                                ("title", "subject", "creator", "lastModifiedBy", "created", "modified")
+                                if getattr(props, k, None)},
+                "macros": macros,
+            }
+        finally:
+            valores.close()
     if len(r.celdas) >= MAX_CELDAS:
         r.mensaje = f"Recortado a {MAX_CELDAS} celdas."
     return r
@@ -898,9 +921,9 @@ def ignorar(nota: str) -> Callable[[str], Resultado]:
 # extension -> (nombre del lector, version, funcion). Subir la version obliga a re-extraer.
 LECTORES: dict[str, tuple[str, int, Callable[[str], Resultado]]] = {
     "csv": ("csv", 1, leer_csv),
-    "xls": ("xls", 1, leer_xls),
-    "xlsx": ("xlsx", 1, leer_xlsx),
-    "xlsm": ("xlsx", 1, leer_xlsx),
+    "xls": ("xls", 2, leer_xls),
+    "xlsx": ("xlsx", 2, leer_xlsx),
+    "xlsm": ("xlsx", 2, leer_xlsx),
     "ods": ("ods", 1, leer_ods),
     "pptx": ("pptx", 1, leer_pptx),
     "docx": ("docx", 1, leer_docx),

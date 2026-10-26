@@ -1,8 +1,9 @@
 # Formatos y parsing
 
-> Esquemas exactos, columna a columna, de los tres formatos que hay que ingerir:
+> Esquemas del piloto 3212, columna a columna, de tres formatos que hay que ingerir:
 > el CSV de la CMM, el XLS PPAP y el PPTX de corrección de molde.
 > Dónde vive cada uno → [3212/README.md](0-bolt-eye/3212/README.md).
+> No generalizar sus columnas a otras piezas: ver [comparativa.md](comparativa.md).
 
 ---
 
@@ -24,7 +25,7 @@ N178 PLAN. 0.10 MAX.                                                  ← CABECE
 |:--:|---|---|
 | 1 | **ID de elemento CMM** | `11`, `31`, `201`, `1050` |
 | 2 | **Característica (ES)** | `Diámetro`, `Posición`, `Planitud`, `Cilindricidad`, `Redondez`, `Oscilación radial`, `Perpendicularidad`, `Posición X/Y/Z`, `Distancia`, `Cálculo de fórmula` |
-| 3 | Característica (DE) o `Variable` | `Durchmesser`, `Rundheit` — **solo en 3197** (bilingüe ES/DE) |
+| 3 | Característica (DE) o `Variable` | `Durchmesser`, `Rundheit` en 3197; también hay variantes bilingües fuera de Bolt Eye |
 | 4 | **Nominal** | `4.000` |
 | 5 | **Tol +** | `0.000` |
 | 6 | **Tol −** | `-0.100` |
@@ -110,8 +111,9 @@ Verificado el 2026-08-13 en `intern.01/c13`, `.01/c14`, `.03/c13`, `.05/c13` y `
 `intern.01/c13` e `intern.08/C13` (aproximadamente un año después) es **vacío**.
 
 **Los exports conservan la estructura; eso no acredita que nunca cambiara el programa.** Por eso el emparejamiento por
-`cabecera + índice` de la receta siguiente es fiable, y por eso se remidió *todo* en cada
-muestreo con CMM: la "parcialidad" de `.03`/`.05` es un artefacto del XLS, no de la medición.
+`cabecera + índice` de la receta siguiente permite comparar los registros, verificando las
+cabeceras repetidas. Los CSV conservan todas las filas frente a la selección XLS de `.03`/`.05`;
+esa cobertura no prueba por sí sola una nueva adquisición de cada característica.
 
 ### Receta: cruzar dos muestreos
 
@@ -138,7 +140,7 @@ awk -F'|' 'NR==FNR{k=$1"|"$2; v[k]=$6; next} {k=$1"|"$2; if(k in v) printf "%-46
 **~130 de 211 filas más de 0,10 mm**; en `.05 → .08` ninguna supera ese umbral y el máximo es
 ~0,08 mm. **Esto no prueba que ese segundo tramo carezca de retoques**: los hay documentados
 de 0,02 y 0,03 mm. El umbral sirve para describir estos tramos, no para cerrar el historial.
-→ [3212/historial-molde.md §8](0-bolt-eye/3212/historial-molde.md#8-hubo-una-tercera-corrección-de-molde--no)
+→ [3212/historial-molde.md §8](0-bolt-eye/3212/historial-molde.md#8-hubo-una-tercera-corrección-de-molde--pendiente-de-confirmar)
 
 ---
 
@@ -159,50 +161,24 @@ de 0,02 y 0,03 mm. El umbral sirve para describir estos tramos, no para cerrar e
 
 ⚠️ **Las hojas varían entre ficheros.** En el 3212 solo `intern.01`, `.03`, `.05` tienen
 `DR(3D)`; `.08` y `.09` la llaman `DR` (plantilla nueva); `.02`, `.04`, `.06` **no tienen
-ninguna** (solo `DR(100%)`); `.07` tiene una hoja `Comparation KnO x VdB`.
+esa tabla** (sí `DR(100%)` y croquis); `.07` tiene una hoja `Comparation KnO x VdB`.
 → **Buscar la hoja por patrón (`DR*`), no por nombre exacto.**
 
 ### Cabecera del informe
 
-| Celda | Campo | Ejemplo |
-|---|---|---|
-| `H3` | Nombre pieza | `Pump Housing PAD2 FL` |
-| `C5` | ITP Ref. | `732120000` |
-| `H5` | Part nº | `3130517012` |
-| `L5` | Part nº Level | `3E1005491360` |
-| `C6` | **PPAP Ref.** | `PPAP-3212-00_int.01` |
-| `H6` | Nº Plano | `0140S00237` |
-| `L6` | Drawing nº Level | `06/3E1005491360` |
-| `L8` | **Report date** | `25/01/2024` |
-| `L9` | **Parts batch nº** | `315252` |
-| `L10` | Metrology responsible | `DB`, `Katarína Kopcová` |
+El mapa de celdas, los valores identificativos y las excepciones de los nueve libros se
+mantienen en [Metrología: cabecera del informe](0-bolt-eye/3212/4-metrologia.md#la-cabecera--contrastar-las-hojas-del-mismo-libro).
+Seleccionar la hoja por contenido, combinar con `HISTORY` y conservar hoja/celda de cada
+dato. No imponer el esquema del 3212 a las otras plantillas PPAP.
 
-✅ **La posición de estas celdas es idéntica en 8 de los 9 ficheros del 3212**, incluidos `.08` y
-`.09` — el cambio de plantilla movió el *nombre de la hoja* (`DR(3D)` → `DR`), no la cabecera.
-
-🆕 **La cabecera está replicada en TODAS las hojas del libro**, no solo en `DR*`. Verificado
-leyendo los mismos campos desde `DR(3D)`, `DR(100%)` y `DR(SKETCH)`.
-→ **Para los metadatos, abrir cualquier hoja; no hace falta localizar la buena.**
-
-⚠️ **Lo que falla es el contenido, no la posición** — cuatro casos verificados en el 3212:
-
-| Fichero | Fallo |
-|---|---|
-| `intern.06` | 🔴 **La única excepción a la regla de la posición**: `H3` y `H6` devuelven `#¡REF!` (fórmulas rotas) y el nº de plano aparece corrido a `L6` |
-| `intern.02` | `C6` dice `PPAP-3212-00_int.01` — copia-pega sin actualizar |
-| `intern.01`, `.03` | `L10` (responsable) devuelve `0`; el dato real está en `HISTORY` |
-| `intern.08`, `.09` | `L9` contiene la fecha `08/01/2025`. **No es un error de captura**: el remark de `HISTORY` dice literalmente `Batch 08/01/2025` — ese lote se identifica por fecha. **Admitir el tipo, no "corregirlo".** `intern.08` sí tiene mal el **año** del `Report date` (2024 → debería ser 2025) |
-
-**Validar el tipo del dato, no la posición de la celda.**
-
-### 🆕 La hoja `HISTORY` — log acumulativo, la mejor fuente de metadatos
+### 🆕 La hoja `HISTORY` — log acumulativo de metadatos
 
 `HISTORY` **no repite la cabecera: acumula una entrada por informe**, y cada muestreo hereda el
 historial de los anteriores.
 
-> 🔑 **`intern.09.xls!HISTORY` contiene la cronología completa de los 9 muestreos del 3212.**
-> Un solo fichero da fechas, lotes, responsables y **el motivo de cada muestreo** — datos que las
-> cabeceras no tienen (`.02` y `.06` las tienen vacías, `.06` además rota).
+> 🔑 **`intern.09.xls!HISTORY` contiene entradas de los 9 informes del 3212.**
+> Reúne fechas, responsables y remarks (lote o motivo, cuando se consignan). Complementa la
+> cabecera de `DR(SKETCH)` y permite contrastar discrepancias entre hojas.
 
 **Layout** (constante): fila 6 = cabecera
 `Date | Engin. Change Level | Document afectat | Nº Docum/Nº Revisió | Responsable | Remarks`.
@@ -222,8 +198,7 @@ tiene **dos** filas de dato (`02/04/2025` y `04/04/2025 · Update to 5 pcs`). El
 admitir **n filas por informe**, no exactamente una.
 
 ⚠️ **`HISTORY` y la cabecera se contradicen** en `.04` (12 vs 15/04/2024), `.07` (30 vs
-31/10/2024) y `.08` (17 vs 20/01/2024). Sin criterio para decidir cuál manda: **guardar las dos**
-o quedarse con `HISTORY`, que es la que está completa.
+31/10/2024) y `.08` (17 vs 20/01/2024). **Guardar ambas fechas con su hoja de origen**.
 
 ### Tabla `DR(3D)` — filas 12–13 cabecera doble, datos desde la fila 14
 
@@ -250,9 +225,10 @@ El significado de `GX` / `GN` / `LP(2)` está en
 
 1. **Datos caducados.** El bloque N117/N118 de `intern.05.xls` es copia-pega **idéntica** de
    `intern.03.xls` (`30,996 / 30,999 / 31,008 / 30,979`), mientras el CSV de `intern.05` da
-   `31,016`. **El CSV es el correcto.**
+   `31,016`. Para esa observación CMM se prioriza el CSV de la tanda, conservando la discrepancia.
 2. **Informes parciales.** Solo `intern.01` cubre todas las cotas. Del `.03` en adelante el
-   `DR(3D)` solo contiene lo que fallaba (N242 + N117 + N118). Mirando solo los XLS parecería
+   `DR(3D)` de `.03` y `.05` contiene una selección (N242 + N117 + N118), sin que la
+   selección demuestre por sí sola qué fallaba. Mirando solo esas hojas parecería
    que N170 nunca se volvió a medir; sí se midió, está en los CSV.
 
 → **CSV primero para medidas CMM coincidentes.** Los XLS aportan también ensayos y medidas
@@ -260,26 +236,25 @@ de otros equipos. En los XLS de retoques, `DR(100%)` incluye O=`Retoc/Retocs`, P
 y H:K=medidas iniciales. Separar previsiones de observaciones y conservar celdas/etapas.
 Ejemplo: corrección 2, N240 `P224=H224+$O$224`, `P225=P224+$O$225`.
 `xlrd` lee el valor guardado de fórmulas BIFF8; no las recalcula. Para auditar fórmulas usar
-Excel en solo lectura. Los mapeos deben comprobar característica, equipo y evaluación;
+Excel sobre una copia temporal en solo lectura. Los mapeos deben comprobar característica, equipo y evaluación;
 no propagar un N-number ciegamente a filas de cálculos intermedios.
 Ver [revisión 17/09/2026](0-bolt-eye/3212/revision-2026-09-17.md).
 
 ### Receta (PowerShell + Excel COM)
 
-```powershell
-$xl = New-Object -ComObject Excel.Application
-$xl.Visible = $false; $xl.DisplayAlerts = $false
-$wb = $xl.Workbooks.Open($ruta, 0, $true)                 # read-only
-foreach ($s in $wb.Worksheets) { $s.Name }                # listar hojas
-$ws = $wb.Worksheets.Item("DR(3D)")
-$ws.UsedRange.Rows.Count ; $ws.UsedRange.Columns.Count
-$ws.Cells.Item($r,$c).Text                                # .Text respeta el formato mostrado
-$wb.Close($false); $xl.Quit()
-[void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($xl)
-```
+Consultar primero las celdas extraídas con `consultar.py celdas`. Para regenerar o auditar
+fórmulas, usar las [herramientas de conocimiento](README.md#cómo-se-actualiza), que trabajan
+sobre copias cuando necesitan Excel; el lector de valores guardados no recalcula el libro.
 
-`.Interior.ColorIndex` y `.Font.ColorIndex` sirven para detectar marcado manual
-(`-4142` = sin relleno, `2` = blanco, `-4105`/`1` = fuente automática/negra).
+Si hace falta inspeccionar formato o colores mediante COM, abrir **una copia temporal**,
+con `AutomationSecurity = 3`, `UpdateLinks = 0` y `ReadOnly = true`; cerrar el libro sin
+guardar y terminar la instancia propia de Excel en `finally`. Abrir en solo lectura no
+impide que Excel recalcule en memoria, por lo que sus resultados no deben sustituir al
+valor almacenado en el original.
+
+`.Text` da el texto mostrado; `.Interior.ColorIndex` y `.Font.ColorIndex` permiten detectar
+marcado manual (`-4142` = sin relleno, `2` = blanco, `-4105`/`1` = fuente automática/negra).
+Mantener los scripts `.ps1` en ASCII según la convención de [CLAUDE.md](../CLAUDE.md).
 
 ---
 
@@ -329,10 +304,10 @@ Marcador:  OK                                               ← estado (solo en 
 grep -o 'media/image[0-9]*\.png' ppt/slides/_rels/slide15.xml.rels
 ```
 
-Por tamaño se distinguen sin abrirlas: **< 30 KB** = recorte del informe (la tabla con el
-N-number) · **> 80 KB** = recorte del plano 2D o render 3D. Validación de integridad: el
-número de `r:embed="rId…"` distintos en `slideN.xml` debe coincidir con el de relaciones de
-imagen del `.rels`.
+El tamaño puede orientar la inspección, pero **no identifica la función de una imagen**:
+hay que abrirla y comprobar qué representa. Las relaciones de imagen pueden incluir
+recursos que no se muestran; comprobar que cada `r:embed` utilizado resuelve a su imagen,
+sin exigir igualdad con todas las relaciones de imagen del `.rels`.
 
 ### ⚠️ Trampas del PPTX
 
@@ -351,7 +326,9 @@ imagen del `.rels`.
    fichero.**
 4. **Ortografía irregular** en catalán (`creixre`/`creixe`/`créixer`, `rondundesa`/`rodunesa`,
    `Corretgir`/`Corregir`). No hacer match exacto sobre los verbos.
-5. **Duplicados**: `_rev0` / `_rev1` / `_rev1_`. Quedarse con el `rev` mayor.
+5. **Versiones**: `_rev0` / `_rev1` / `_rev1_` no son duplicados necesariamente. En la corrección 2
+   del 3212, `rev1_` cambia magnitudes de 2.15/2.16 y cuatro marcas `OK` respecto a `rev1` (I-204).
+   Comparar contenido y conservar versiones; el sufijo mayor no prueba cuál se ejecutó.
 
 ### Receta
 
@@ -387,29 +364,14 @@ el vínculo a una acción se debe confirmar. [Detalle](0-bolt-eye/3212/revision-
 
 ---
 
-## 4bis. 🔴 Los `.igs` y los `.dxf` son **duplicados** de los `.txt`
+## 4bis. Relación de los `.igs` y `.dxf` con los `.txt`
 
-Verificado en el 3212 el 2026-08-13. Antes de escribir un parser IGES o instalar `ezdxf`:
+El contraste de coordenadas, la precisión comprobada y las fechas de adquisición se
+mantienen en [Metrología: IGES/DXF/TXT](0-bolt-eye/3212/4-metrologia.md#rectificación-dxf-equivalente-con-redondeo-iges-con-z-aplanada).
 
-| Fichero | Contenido real | Equivale a |
-|---|---|---|
-| `*_CONTORN.igs` (3,3 MB) | **12.827 entidades IGES tipo 110 (LINE)** — una polilínea | **`_PUNTS.txt`** (12.828 puntos). X e Y coinciden punto a punto; la **Z lleva un offset constante de −3,8807 mm** |
-| `Perfil_*.dxf` (1,5 MB) | **Una `POLYLINE` con 17.656 `VERTEX`** | **`_Cav<NN>.txt`** (17.656 puntos). El primer vértice es literalmente la primera línea del `.txt` |
-
-→ **No ingerirlos.** Mismo dato, 2,5× más peso, y el `.dxf` obligaría a instalar `ezdxf`.
-Conservarlos solo como fichero descargable.
-
-**La cabecera del `.igs` sí es útil** — trae la **fecha real de medición**:
-
-```
-GENERATING SYSTEM   : TRANSPAK
-DATE OF CREATION    : 19/01/2024        ← el informe intern.01 declara 25/01/2024
-NAME OF CONTOUR     : GEOPAK-WIN SCANNING
-sección G: Mitutoyo GmbH · unidades MM · timestamp 240119.105452
-```
-
-⚠️ **La fecha del XLS es la de emisión del informe, no la de la medición.** Para fechar una
-medición, usar el `.igs` o los PDF `PA`/`PB` (`19.01.2024 10:50`), no `L8`.
+**Regla de ingesta:** conservar el IGES como soporte distinto de la nube 3D. Deduplicar
+puntos DXF/TXT solo después de verificar equivalencia y mantener el vínculo a ambos
+originales. La fecha de la cabecera geométrica no sustituye a la fecha de emisión PPAP.
 
 ---
 
@@ -486,21 +448,21 @@ tenemos (el `.igs` es el *escaneado*, no el nominal).
 | 2 | **cp1252** en los CSV | `iconv -f cp1252` / `encoding="cp1252"` |
 | 3 | **Nombres de carpeta inconsistentes** | `support intern.01` / `Suport_Int_01` / `Support_Inf_04` / `support.intern.08`. Regex, no match exacto. |
 | 4 | **Nombres de fichero inconsistentes** | `3212_c13.csv`, `3212c14.csv`, `3212 C1.csv`, `13_3212.csv`. Cavidad con `[cC]\.?\s?_?(\d{1,2})`. |
-| 5 | **Cavidades no empiezan en 1** | 3212 → **c13–c16** (molde de 16, se controlan 4). 3197 → C1–C8. 3051 → Cav_1–Cav_4. |
+| 5 | **Cavidades no empiezan en 1** | Conservar los identificadores originales, sin renumerar ni inferir el tamaño del molde. [Evidencia del 3212](0-bolt-eye/3212/4-metrologia.md#la-cabecera--contrastar-las-hojas-del-mismo-libro). |
 | 6 | **Error de signo CMM** | B2 y B4, `Posición Z`, IDs `32`/`34`. Invertir si `\|medido\| ≈ \|nominal\|` con signo opuesto, conservando originales y recalculando desviación, exceso y NOK. |
 | 7 | **Erratas en cabeceras de sección** | Fiarse del ID de elemento CMM. |
 | 8 | **`2- Moldflow` vacía** | Los estudios están en `7- Moldflow`. |
-| 9 | **Duplicados y comprimidos** | `.rar`/`.zip` redundantes, `Copia de Copia de …`, `_rev0/_rev1/_rev1_`. Deduplicar antes de ingerir. |
+| 9 | **Duplicados y comprimidos** | Deduplicar solo tras comparar contenido. El nombre, la revisión o la presencia de un comprimido no prueban redundancia; el contenido de los archivos comprimidos sigue pendiente de contraste completo. |
 | 10 | **Multilingüismo** | Catalán, castellano, inglés y alemán, a veces en el mismo fichero. El frontend debe asumirlo. |
 | 11 | **Planos 2D sin texto extraíble** | El plano 3212 es un escaneo confirmado. OCR solo como ayuda visual; números de globo manuales hasta recibir mejor fuente. No confundir el fallo de extracción de un PDF PA/PB con una medición OK. |
 | 12 | **`.mfr` ilegible** | Binario propietario. Requiere Moldflow Communicator + exportación manual de imágenes. |
 | 13 | **STEP de molde de 645 MB** | No servible al navegador. Derivado ligero o solo enlace de descarga. |
 | 14 | **XLS con datos caducados** | `intern.05.xls` copia el bloque N117/N118 de `intern.03`; **`intern.09.xls` lo copia de `intern.01` (15 meses antes) y sus N275/N276 de `intern.08`**. El CSV manda. |
-| 17 | **Detectar copia-pega entre informes** | Si un bloque coincide **valor a valor en las 4 cavidades** con un muestreo anterior, es copia. Regla de ingesta: hashear el bloque por muestreo y marcar `sospecha_de_copia` cuando el hash se repita. |
+| 17 | **Detectar repetición entre informes** | Si un bloque coincide **valor a valor en las 4 cavidades**, marcar `sospecha_de_copia`. La igualdad prueba repetición de valores, no el mecanismo ni la intención; contrastar lote, fecha y export de la tanda. |
 | 15 | **Informes XLS parciales** | Solo `intern.01` es completo. |
-| 16 | **Hojas del XLS variables** | `DR(3D)` / `DR` / ninguna. Buscar por patrón `DR*`. 🆕 Para **metadatos** da igual: la cabecera está replicada en todas las hojas. |
-| 18 | 🆕 **`.igs` y `.dxf` son duplicados de los `.txt`** | El `.igs` = `_PUNTS.txt` (con offset Z −3,8807); el `.dxf` = `_Cav<NN>.txt`. No ingerirlos: mismo dato y 2,5× más peso. → [§4bis](#4bis--los-igs-y-los-dxf-son-duplicados-de-los-txt) |
-| 19 | 🆕 **Los metadatos buenos están en `HISTORY`, no en la cabecera** | Es un log **acumulativo**: `intern.09.xls!HISTORY` trae los 9 muestreos con fecha, lote, responsable y **motivo**. Rótulos `INFORME n` en filas irregulares y hasta 2 filas de dato por informe. → [§2](#-la-hoja-history--log-acumulativo-la-mejor-fuente-de-metadatos) |
+| 16 | **Hojas del XLS variables** | `DR(3D)` / `DR` / ninguna. Buscar por patrón `DR*` y validar las etiquetas. `INTRO`, `HISTORY` y las comparativas no comparten necesariamente la cabecera de DR. |
+| 18 | **IGES y DXF tienen distinta relación con TXT** | Conservar la geometría y verificar equivalencia antes de deduplicar. → [§4bis](#4bis-relación-de-los-igs-y-dxf-con-los-txt) |
+| 19 | 🆕 **Combinar `HISTORY` y `DR(SKETCH)`** | `intern.09.xls!HISTORY` acumula los 9 informes; `DR(SKETCH)` conserva su cabecera incluso en `.02/.06/.07`. En `HISTORY`, E26 está vacío y F29/F32 no indican lote; hay rótulos `INFORME n` en filas irregulares y hasta 2 filas de dato por informe. → [§2](#-la-hoja-history--log-acumulativo-de-metadatos) |
 | 20 | 🆕 **Colisión de nombres al aplanar** | En `intern.05`, `c15/` y `c16/` llaman a sus ficheros **igual** (`3212_Cav_.txt`, `Perfil_3212_C.dxf`): la cavidad **solo está en el nombre de la carpeta padre**. Derivar la cavidad de la ruta completa, nunca del basename. |
 | 21 | **Fecha del informe ≠ fecha de la medición** | El `.xls` fecha la **emisión** (25/01/2024); el `.igs` y los PDF `PA`/`PB` llevan 19/01/2024. Conservar fecha y fuente, sin trasladar automáticamente la fecha de un perfil a todas las filas CSV. |
 | 22 | **`_PUNTS_NOUS.txt` no demuestra un objetivo** | En los doce pares coincide exactamente con los últimos 150 puntos de PUNTS. Conservar como soporte geométrico, sin asignar una acción automáticamente. |

@@ -6,7 +6,7 @@
 
 ## Piezas
 
-| Pieza | Qué es | Plano / nº pieza | Cavidades | Correcciones |
+| Pieza | Qué es | Plano / nº pieza | Cavidades / columnas documentadas | Correcciones |
 |---|---|---|---|---|
 | **3205** | SHROUD, WATER PUMP | `213137-10300` (y variante `-B`) | 8 (algunas hojas 2–38 columnas) | 10 loops (09/2023 → 04/2026) |
 | **3206** | SHROUD, WATER PUMP | `213137-10280-A` y `-B` | 4 | unas 9 entregas (09/2023 → 07/2025) |
@@ -48,13 +48,17 @@ atribuye defectos a causas del molde, no del proceso: *«0,1mm runout difference
   del propio informe de metrología** (`Dim`, `Corr.`, CAV.1… desde la columna 20). En el 3212 la
   previsión estaba en un libro aparte.
 - Hojas `DR_100%` y `DR_100% (costumer)` (informe interno y para el cliente).
-- Planes de corrección en **dos plantillas** que conviven en la misma pieza: `Tool correction n.m` (2023–2024)
-  y `Correcció nr. n.m` / `Pla de correccions nº10 – P3205` con `Situació actual:` / `Pla de correcció:` (2025–2026),
+- Planes de corrección en **dos plantillas** que conviven en la misma pieza: `Tool correction n.m`
+  y `Correcció nr. n.m` / `Pla de correccions nº10 – P3205` con `Situació actual:` / `Pla de correcció:`
+  (esta segunda ya aparece en marzo–abril de 2024, no solo en 2025–2026),
   más presentaciones libres (`Rebaves.pptx`, `8 cavity tool_23.10.2023.pptx`, `Insert explanation`).
 - **La numeración se reinicia**: tras los postizos, el loop 7 vuelve a `Correcció nr. 1.1`; los loops 9 y 10 se
   numeran `9.x` y `10.x`.
-- **Versiones del mismo plan con magnitudes distintas**: `20250723_Pla de correció_1 (after…)` propone
-  +0,15/+0,3 y `20250729_…` +0,05/+0,25 (3206) o +0,1/+0,25 (3205). No consta cuál se ejecutó.
+- **Versiones del mismo plan con magnitudes distintas**: en `3206/…/20250709_correction after ribs inserts/`,
+  diapositiva 2, `20250723_Pla de correció_1 (after…)` propone +0,15/+0,3; `20250729_…` sin sufijo,
+  +0,05/+0,25; y `20250729_…_customer`, **+0,1/+0,15/+0,25** según la zona. No consta cuál se ejecutó.
+  El archivo de 29/07 dentro del loop 7 del **3205** conserva las cotas 6, 7, 8, 12, 19, 83 y 84 del 3206;
+  las versiones propias del 25/08 citan otras cotas. No decidir la pieza solo por la carpeta.
 - 3205 y 3206 tienen **planos con globos** (`6- Método de medición/DRW ballooned/…`, `.icp`/`.prf`/`.tif`),
   como el 3288.
 - Moldflow: `.mfr` de 779 MB en 3205; en 3206 solo un **vídeo de llenado** `RP-3083_Movie_RevA.avi` (10 s),

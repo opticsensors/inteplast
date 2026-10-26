@@ -46,9 +46,10 @@ bytes 80–83  : 4.942.900                          ← nº de triángulos (uint
 | Triángulos | **4.942.900** |
 | Tamaño esperado (`84 + 50 × N`) | 247.145.084 bytes |
 | Tamaño real | 247.145.084 bytes |
-| **Coherencia** | ✅ **exacta** — el fichero no está truncado ni corrupto |
+| **Coherencia de tamaño** | ✅ **exacta** — no hay truncamiento respecto al recuento declarado; no valida integridad geométrica |
 
-Malla muy densa (~5 M triángulos) → es un escaneado óptico completo, no una teselación de CAD.
+Malla muy densa (~5 M triángulos), guardada como pieza real. La densidad y la cabecera
+por sí solas no acreditan tecnología de captura ni que la superficie esté completa.
 
 ---
 

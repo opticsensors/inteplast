@@ -5,6 +5,42 @@ organizan, qué significan, qué diferencias hay entre features y piezas, y qué
 **No es parte de la aplicación**: es el contexto para entender los datos y mejorar la app.
 La documentación de la app sigue en `docs/`.
 
+## Entrada para una sesión sin contexto
+
+1. Leer [comparativa.md](comparativa.md) para situar la pieza y su familia. **La app sigue
+   con el piloto 3212**; la biblioteca ya cubre las ocho familias.
+2. Abrir el README de esa familia y la ficha de la pieza. Para el piloto:
+   [3212/README.md](0-bolt-eye/3212/README.md). Seguir solo los enlaces del tema que se necesita.
+3. Consultar [trampas.md](trampas.md) antes de interpretar datos y buscar los IDs relevantes
+   en [incongruencias.md](incongruencias.md) / [hallazgos.jsonl](hallazgos.jsonl).
+4. Resolver cifras y localizar evidencia con `consultar.py` (abajo). Abrir el original concreto
+   si falta detalle visual o hay contradicción; no hace falta releer todo `Exemples`.
+5. Para desarrollar la aplicación, seguir el [índice de docs](../docs/README.md) y las instrucciones de `CLAUDE.md`.
+
+Las fichas temáticas recogen el conocimiento vigente. `AVANCE.md` y las revisiones fechadas
+son historial de trabajo: no usar una cifra antigua de cobertura como si fuera el estado actual.
+
+## Referencias por tema
+
+Cada tema tiene una ubicación de referencia para su detalle y evidencia. Los resúmenes
+conservan la conclusión útil y enlazan aquí; una cifra corregida se mantiene en la ficha
+propietaria. `hallazgos.jsonl` sigue siendo el registro estructurado verificable, no una
+segunda explicación en prosa.
+
+| Tema | Referencia que se actualiza |
+|---|---|
+| Inventario y diferencias entre familias | [Comparativa](comparativa.md); detalles propios en cada ficha de familia/pieza |
+| Identidad, cabeceras PPAP y cavidades del 3212 | [Metrología: cabecera y excepciones](0-bolt-eye/3212/4-metrologia.md#la-cabecera--contrastar-las-hojas-del-mismo-libro) |
+| Revisión del plano 3212, fechas y limitaciones del escaneo | [Definición de pieza](0-bolt-eye/3212/1-pieza-2d-3d.md) |
+| Correspondencia IGES/DXF/TXT y fechas de adquisición | [Metrología: soportes geométricos](0-bolt-eye/3212/4-metrologia.md#rectificación-dxf-equivalente-con-redondeo-iges-con-z-aplanada) |
+| Columnas CSV y reglas de parsing | [Formatos y parsing](formatos-parsing.md) |
+| Variantes PPTX y contenido de acciones del 3212 | [Retoques: qué fichero usar](0-bolt-eye/3212/5-retoques-molde.md#qué-fichero-usar) |
+| Cronología y comparación antes/después | [Historial del molde](0-bolt-eye/3212/historial-molde.md) |
+| Vocabulario metrológico y ensayos | [Método de medida](0-bolt-eye/3212/6-metodo-medida.md) |
+| Fórmulas aleatorias, procedencia y recuentos I-003 | [Incongruencias I-003](incongruencias.md#i-003-en-detalle) |
+| Cómo regenerar y comprobar la biblioteca | [Cómo se actualiza](#cómo-se-actualiza); resultados fechados en [AVANCE](AVANCE.md) |
+| Funciones implementadas y propuestas de la aplicación | [Índice de docs](../docs/README.md); no deducirlas de la cobertura de esta biblioteca |
+
 ## Qué hay aquí
 
 | Ruta | Qué es | En Git |
@@ -40,7 +76,9 @@ medidas, I-003), `auditoria` (resultado de `verificar.py`) y `lectura_dr`/`medid
 lector PPAP generalizado: una fila por hoja y una por valor, con marcas; ver
 [docs/ingesta-automatica.md](../docs/ingesta-automatica.md)).
 
-🔴 Antes de dar por buena una cifra de un libro, comprobar que la celda no está en `celda_aleatoria`:
+🔴 Antes de dar por buena una cifra de un libro, comprobar `celda_aleatoria`, su fórmula y
+procedencia. La ausencia en esa tabla **no certifica que sea una medición**: puede depender de
+una fórmula aleatoria, ser una copia como valores o una previsión de retoque.
 
 ```sql
 SELECT d.ruta, a.hoja, count(*) FROM celda_aleatoria a JOIN documento d ON d.id = a.documento_id
@@ -64,15 +102,52 @@ $PY conocimiento/herramientas/lector_dr.py              # medidas PPAP con regla
   Exemples; Word/Excel por COM trabajan sobre copias temporales.
 - La base usa diario clásico (no WAL) porque está en OneDrive. Si se corrompe, borrar
   `datos/biblioteca.sqlite` y regenerar: los Markdown y `hallazgos.jsonl` no dependen de ella.
+- **I-003 e I-004 ya se resuelven en los lectores (versión 2).** Los XLSX/XLSM conservan las
+  fórmulas sin valor guardado como NULL y distinguen las fórmulas del texto literal `=`.
+  Un `.xls` con firma `%PDF-` se lee como PDF; `documento.lector` refleja el formato real y
+  `version_extraida` conserva la versión del selector por extensión. Después de extraer,
+  ejecutar `formulas_aleatorias.py` para reconstruir sus marcas. No requieren parches manuales.
+  Esta reconstrucción lee cada XLS en un proceso de Excel aislado, con macros desactivadas,
+  y solo sustituye `celda_aleatoria` cuando termina sin errores; si falla, conserva la tabla anterior
+  y devuelve un código de salida de error. El resultado queda registrado en `ejecucion`.
 - Subir la versión de un lector en `lectores.py` hace que esos ficheros se vuelvan a extraer.
+- `verificar.py --semilla 20261023 --n 10` conserva las coordenadas y resultados de cada
+  comprobación en `auditoria`, y los parámetros y cobertura en `ejecucion`. La semilla controla
+  tanto la selección de documentos como la de celdas; el resumen distingue documentos con y
+  sin muestra. Para repetir exactamente una selección deben mantenerse la biblioteca y los filtros.
+  Contrasta las fórmulas y la presencia de valor guardado con el XML original; los perfiles PPAP/DR
+  conservan la distinción entre ausencia de medida y cero.
+- Pruebas de regresión de los lectores, sin tocar los originales ni la biblioteca:
+  `conocimiento/.venv/Scripts/python.exe -B -m unittest discover -s conocimiento/herramientas -p "test_*.py"`.
+
+### Rutas largas en Windows
+
+Hay **38 JPEG de WhatsApp del 3205 con rutas de 260 caracteres o más**. Python y PowerShell
+pueden enumerarlos, pero en este equipo (`LongPathsEnabled = 0`) abrirlos por la ruta ordinaria
+falla. Las herramientas usan `comun.original()` / `comun.larga()` para leer con el prefijo
+`\\?\`. Todo lector nuevo debe mantener ese soporte; listar un fichero no demuestra que pueda
+abrirse. Esto también se debe comprobar al implementar la ingesta de la aplicación.
 
 ## Reglas al documentar
 
 - Cada afirmación numérica sale de un fichero leído; citar ruta y localizador (hoja!celda,
   diapositiva, página, línea). Las conclusiones importantes van también a `hallazgos.jsonl`.
+- Mantener el detalle y la evidencia en una ficha temática de referencia. Los resúmenes de
+  familia, las trampas y `docs/` deben enlazarla, sin copiar todo el análisis. Si cambia un hecho,
+  buscar también sus copias y el ID del hallazgo antes de cerrar la revisión.
 - Si la cifra clave de un hallazgo se puede recalcular con SQL, añadir `"comprobacion": {"sql": …,
   "esperado": [...]}`; `verificar.py --hallazgos` la recalcula junto con rutas, SHA-256 e ids. Pasarlo
   después de tocar la biblioteca o los Markdown.
 - Antes de usar un valor de un libro, comprobar que no está en `celda_aleatoria` (I-003).
 - Separar lo extraído de lo interpretado. Una propuesta de corrección no prueba ejecución.
+- Marcar una inferencia como **probable** o una duda como **pendiente** una vez, junto a la
+  conclusión. Evitar repetir cautelas que no cambian cómo se usa el dato.
 - Los N-numbers son locales a cada plano: no unir cotas de piezas distintas por el número.
+
+## Alcance de la revisión del 23/10/2026
+
+Dos pasadas sobre todos los Markdown y los 56 hallazgos anteriores, con contraste de originales
+y una segunda revisión cruzada. El inventario y los SHA-256 de los 4.530 originales coinciden
+con la biblioteca. La cobertura de inventario no implica lectura semántica completa: hay CAD,
+imágenes, vídeos y comprimidos pendientes de interpretación. Resultados y límites en
+[AVANCE.md](AVANCE.md#revisión-doble-del-23102026).

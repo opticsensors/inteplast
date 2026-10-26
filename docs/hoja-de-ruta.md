@@ -28,11 +28,11 @@ del conocimiento con INTEPLAST forma parte de esta etapa.
 
 ### Pendiente: generalizar la importación de correcciones PPTX
 
-**Estado (20/10/2026): en espera de ejemplos de otra pieza.** La recopilación está en
-curso. No se programa nada hasta disponer de ellos y de sus resultados esperados.
-
-**21/10/2026:** `Exemples` ya trae correcciones de 21 piezas. Qué se puede leer con reglas y qué
-necesita LLM, medido sobre todos los ficheros: [ingesta automática](ingesta-automatica.md).
+**Estado (26/10/2026): ejemplos recibidos; falta validar los resultados esperados.**
+La entrega ampliada ya está inventariada en la biblioteca de conocimiento. No hace falta
+volver a esperar otra entrega para estudiar formatos; hace falta seleccionar casos de
+otras piezas y acordar qué debe producir su importación. El análisis y la propuesta están
+en [ingesta automática](ingesta-automatica.md); no describen un lector general ya desplegado.
 
 Qué funciona ya con otras piezas y qué no:
 
@@ -52,8 +52,8 @@ No usa una LLM para interpretar las diapositivas ni está validado con otras est
 
 **Antes de programar hace falta:**
 
-1. **Documentos de corrección de otra pieza:** PPTX y XLS de retoques, junto con las
-   mediciones de antes y después de cada corrección.
+1. **Seleccionar casos de la entrega disponible:** PPTX y XLS de retoques de otra pieza,
+   junto con las mediciones de antes y después; identificar variantes y revisiones.
 2. **Resultados esperados contrastados:** qué acción corresponde a qué cota y muestreo, qué
    previsión debe leerse de cada celda y qué diapositivas son decisiones de no actuar.
    Idealmente, revisados con quien prepara esos documentos (preguntas A13 y A14 en
@@ -64,6 +64,12 @@ No usa una LLM para interpretar las diapositivas ni está validado con otras est
 La solución deberá conservar la procedencia de cada dato, señalar las asociaciones ambiguas
 y validar las extracciones contra esos resultados esperados antes de dar por resuelta la
 generalización.
+
+También falta llevar al importador productivo las protecciones verificadas en las
+herramientas de conocimiento: comprobar fórmulas y procedencia antes de tratar números
+como medidas, reconocer archivos por su firma y admitir las variantes PPAP detectadas.
+La lectura genérica actual de CSV/XLS/XLSX no equivale a cobertura completa de `Exemples`.
+El contrato implementado se mantiene en [Cotas y evidencia](cotas-y-evidencia-web.md).
 
 ## 2. Features reutilizables y adaptables dentro de SolidWorks
 

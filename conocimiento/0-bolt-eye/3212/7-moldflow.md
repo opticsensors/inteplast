@@ -54,8 +54,9 @@ De `inteplast_notas_reunion_20_2_2026.md`, dos de los warnings del feature depen
 fichero:
 
 1. **Ubicación de los puntos de inyección**
-2. **No líneas de soldadura en la zona del agujero** — es una nota del plano 2D, y **la única
-   forma de comprobar si se cumple es mirando el patrón de llenado aquí**.
+2. **No líneas de soldadura en la zona del agujero** — es una nota del plano 2D. El patrón
+   de llenado es una fuente para evaluar la posición prevista de las líneas; los documentos
+   citados no acreditan por sí solos la conformidad física de las piezas.
 
 Lo que INTEPLAST explicó (Dubte 6):
 
@@ -100,6 +101,6 @@ soldadura sin depender del `.mfr`.
 
 **Prioridad de ingesta: 8 (la última), y bloqueada** hasta que llegue la exportación manual.
 
-> 💡 **No confundir con `3- 3D Molde`**: aquel es la geometría del molde (247 MB, en la nube);
+> 💡 **No confundir con `3- 3D Molde`**: aquel es la geometría del molde (247 MiB; disponibilidad volátil);
 > este es la simulación del llenado (184 MB, formato propietario). Sus limitaciones actuales
 > son distintas: disponibilidad local y herramienta de lectura, respectivamente.

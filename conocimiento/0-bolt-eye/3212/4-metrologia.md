@@ -3,7 +3,7 @@
 **239 ficheros · 91,5 MB**
 `144 pdf · 40 txt · 19 csv · 15 dxf · 12 igs · 9 xls`
 
-Es la carpeta con más valor del proyecto. Contiene **toda la historia de medición del molde**:
+Es la carpeta con más valor del proyecto. Contiene **el histórico de medición compartido**:
 9 muestreos entre enero de 2024 y abril de 2025.
 
 > ⚠️ **Hidratación re-verificada el 2026-08-13: 195 de los 239 están EN LA NUBE.**
@@ -55,14 +55,14 @@ punto). Normalizar con regex, nunca con match exacto.
 | `intern.03` | 14/03/2024 | 315346 | DB | *cotes marcades en gris* | `DR(3D)` | ✅ | CSV completo; XLS parcial |
 | `intern.04` | **12/04/2024** ⚠️ | 315346 | KK | **FOT** | *(solo `DR(100%)`)* | ❌ | ❌ |
 | `intern.05` | 01/05/2024 | 315426 | DB | *cotes marcades en gris* | `DR(3D)` | ✅ | CSV completo; XLS parcial |
-| `intern.06` | **15/05/2024** | **—** | **KK** | ***ICL + water + Push-in*** | *(solo `DR(100%)`)* | ❌ | ❌ |
+| `intern.06` | **15/05/2024** | **315426** | **KK** | ***ICL + water + Push-in*** | *(solo `DR(100%)`)* | ❌ | ❌ |
 | `intern.07` | **30/10/2024** ⚠️ | **315714** | **MH** | *Comparation of the technologies KnO x VdB* | `Comparation KnO x VdB` | ❌ | ❌ |
 | `intern.08` | **17/01/2025** ⚠️ *(el fichero dice 2024, ver abajo)* | *Batch 08/01/2025* | NV | *Cotes CMM* | `DR` | ✅ | ✅ |
 | `intern.09` | 02/04/2025 | *Batch 08/01/2025* | MH | *Sizes Nr.128/134/162 GN evolvation* | `DR` | ❌ | ✅ |
 
-🆕 **Casi todo lo que antes figuraba como `—` sale de la hoja `HISTORY`, no de la cabecera**
-(→ [§2](#la-hoja-history-es-un-log-acumulativo--rellena-todos-los-huecos)). Las ⚠️ marcan
-**discrepancias entre `HISTORY` y la cabecera del informe**, verificadas el 2026-08-13:
+**Fuentes:** `HISTORY` aporta la cronología y los motivos; `DR(SKETCH)!L8:L10` completa
+fecha, lote y responsable, incluido el lote 315426 de `.06`. Las ⚠️ marcan discrepancias
+entre `HISTORY` y esa cabecera:
 
 | Muestreo | `HISTORY` | Cabecera `L8` | Comentario |
 |---|---|---|---|
@@ -113,11 +113,11 @@ Verificado el 2026-08-13 abriendo los 9 libros con Excel COM:
 | Fichero | Hojas | `L8` fecha | `L9` lote | `L10` resp. | Filas hoja `DR*` |
 |---|---|---|---|---|--:|
 | `3212-00_intern.01.xls` | INTRO · HISTORY · **DR(3D)** · DR(N165) · DR(100%) · DR(SKETCH) · DR_SKETCH(2) · DR_SKETCH(3) | 25/01/2024 | 315252 | ⚠️ `0` | **115** |
-| `…intern.02.xls` | INTRO · HISTORY · DR(100%) · DR(SKETCH) | *(vacío)* | *(vacío)* | *(vacío)* | — |
+| `…intern.02.xls` | INTRO · HISTORY · DR(100%) · DR(SKETCH) | 08/02/2024 | 315252 | Michal Heidenreich | — |
 | `…intern.03.xls` | *idem `.01`* | 14/03/2024 | 315346 | ⚠️ `0` | **46** |
 | `…intern.04.xls` | INTRO · HISTORY · DR(100%) · DR(SKETCH) | 15/04/2024 | 315346 | Katarína Kopcová | — |
 | `…intern.05.xls` | INTRO · HISTORY · **DR(3D)** · DR(100%) · DR(SKETCH) · DR_SKETCH(2) · DR_SKETCH(3) *(sin DR(N165))* | 01/05/2024 | 315426 | DB | **47** |
-| `…intern.06.xls` | INTRO · HISTORY · DR(100%) · DR(SKETCH) | *(vacío)* | *(vacío)* | *(vacío)* | — |
+| `…intern.06.xls` | INTRO · HISTORY · DR(100%) · DR(SKETCH) | 15/05/2024 | 315426 | Katarína Kopcová | — |
 | `…intern.07.xls` | INTRO · HISTORY · **Comparation KnO x VdB** · DR(SKETCH) | 31/10/2024 | 315714 | Michal Heidenreich | — |
 | `…intern.08.xls` | INTRO · HISTORY · **DR** · DR(SKETCH) | ⚠️ 20/01/2024 | ⚠️ `08/01/2025` | NV | **281** |
 | `…intern.09.xls` | INTRO · HISTORY · **DR** · DR(SKETCH) | 02/04/2025 | ⚠️ `08/01/2025` | Michal Heidenreich | **118** |
@@ -125,7 +125,11 @@ Verificado el 2026-08-13 abriendo los 9 libros con Excel COM:
 Las **115 → 46 → 47** filas de `DR(3D)` son la prueba visual de que los informes son parciales
 del `.03` en adelante. `.08` tiene 281 porque su hoja `DR` fusiona las filas de `DR(100%)`.
 
-### La cabecera — casi idéntica en los 9, con una excepción
+### La cabecera — contrastar las hojas del mismo libro
+
+La tabla anterior contrasta fecha y lote con `DR(SKETCH)!L8:L9`. Para responsable se
+combina `L10` con `HISTORY` cuando la cabecera devuelve cero (ver excepciones).
+Esta es la referencia de identidad, cabeceras y cavidades del 3212; las otras fichas la enlazan.
 
 | Celda | Campo | Ejemplo |
 |---|---|---|
@@ -137,27 +141,34 @@ del `.03` en adelante. `.08` tiene 281 porque su hoja `DR` fusiona las filas de 
 | `L9` | **Parts batch nº** | `315252` |
 | `L10` | Metrology responsible | `DB`, `NV`, `Katarína Kopcová`, `Michal Heidenreich` |
 
-🆕 **La cabecera está replicada en TODAS las hojas del libro**, no solo en `DR*`. Comprobado
-leyendo los mismos campos desde `DR(3D)`, `DR(100%)` y `DR(SKETCH)`: dan lo mismo.
-→ **Para los metadatos no hace falta localizar la hoja buena**; sirve cualquiera.
+**Comprobado en los nueve informes:** `DR(SKETCH)!L6` contiene `06/3E1005491360` e
+`INTRO!C40` declara `3212 /4 / Injection` bajo la etiqueta de molde/cavidades/proceso.
+El molde tiene cuatro cavidades, identificadas como c13–c16 en el informe dimensional.
+Las cabeceras de otras hojas pueden estar incompletas: `.07!Comparation KnO x VdB!L8:L10`
+está vacío, pero `DR(SKETCH)` aporta los datos. Conservar hoja y celda de procedencia.
 
 ⚠️ **Excepciones verificadas — la cabecera no siempre es fiable:**
 
 | Fichero | Problema |
 |---|---|
-| `intern.06` | 🔴 **Fórmulas rotas**: `H3` y `H6` devuelven `#¡REF!`, y el nº de plano aparece corrido a `L6`. Es el único que rompe la regla "las celdas no se movieron". |
-| `intern.02` | `C6` sigue diciendo `PPAP-3212-00_int.01` — copia-pega sin actualizar (el nombre del fichero sí dice `.02`) |
+| `intern.06!DR(100%)` | `H3` y `H6` devuelven `#¡REF!`, y el nº de plano aparece corrido a `L6`. `L8:L10` están vacías. **`DR(SKETCH)` conserva los campos correctos**, además de fecha, lote y responsable. |
+| `intern.02` | `C6` sigue diciendo `PPAP-3212-00_int.01` en `DR(100%)` y `DR(SKETCH)`; el nombre del fichero sí dice `.02`. `DR(100%)!L6:L10` está vacío, pero `DR(SKETCH)` conserva revisión, fecha, lote y responsable |
 | `intern.01`, `intern.03` | `L10` devuelve `0`, no el responsable. Los de estos dos hay que sacarlos de `HISTORY` (`DB` en ambos) |
 | `intern.08`, `intern.09` | `L9` contiene la fecha `08/01/2025` — **no es un error, así se identifica ese lote** (ver §1) |
 
-### La hoja `HISTORY` es un log acumulativo — rellena todos los huecos
+En `DR(SKETCH)!L8:L10`, `.02` declara 08/02/2024, lote 315252, Michal Heidenreich;
+`.06`, 15/05/2024, lote 315426, Katarína Kopcová; `.07`, 31/10/2024, lote 315714,
+Michal Heidenreich. Las fechas discrepantes de `.04/.07/.08` se conservan con sus fuentes
+al contrastar `HISTORY`, incluida la errata de año del informe `.08`.
+
+### La hoja `HISTORY` es un log acumulativo con campos incompletos
 
 🆕 Hallazgo del 2026-08-13. `HISTORY` **no repite la cabecera: acumula una entrada por informe**,
 y cada muestreo hereda el historial de los anteriores. Consecuencia directa:
 
-> 🔑 **`intern.09.xls!HISTORY` contiene la cronología completa de los 9 muestreos.**
-> Es la mejor fuente de fechas, lotes y responsables del proyecto — mucho mejor que las
-> cabeceras, que están incompletas (`.02`, `.06`) o rotas (`.06`).
+> 🔑 **`intern.09.xls!HISTORY` contiene entradas de los 9 informes.**
+> Aporta fechas, lotes, responsables y motivos; se completa con `DR(SKETCH)`.
+> E26 no tiene responsable y F29/F32 no indican lote; las cabeceras sí cubren esos datos.
 
 **Layout** (constante en los 9): fila 6 = cabecera `Date | Engin. Change Level | Document afectat
 | Nº Docum/Nº Revisió | Responsable | Remarks`. Después, un rótulo `INFORME n` en la columna A y
@@ -193,12 +204,12 @@ Dos problemas verificados:
 
 1. **Datos caducados.** El bloque N117/N118 de `intern.05.xls` es copia-pega **idéntica** de
    `intern.03.xls` (`30,996 / 30,999 / 31,008 / 30,979`), mientras el CSV de `intern.05` da
-   `31,016`. Alguien duplicó el fichero y no actualizó ese bloque.
+   `31,016`. La coincidencia es compatible con un bloque heredado, sin demostrar cómo se guardó.
    🔴 **Y no es un caso aislado**: `intern.09.xls` (02/04/2025) tiene el bloque **N117 + N118
    copiado de `intern.01`** (25/01/2024) — los **32 valores** (4 bolts + 4 llenties × 4
    cavidades) idénticos 15 meses después — y sus `N275`/`N276` copiados de `intern.08`.
    **`intern.09.xls` es un collage de tres muestreos distintos.**
-   → [historial-molde.md §8](historial-molde.md#8-hubo-una-tercera-corrección-de-molde--no)
+   → [historial-molde.md §8](historial-molde.md#8-hubo-una-tercera-corrección-de-molde--pendiente-de-confirmar)
 2. **Informes parciales.** Solo `intern.01` cubre todas las cotas: 115 filas de `DR(3D)` frente a
    46 en `.03` y 47 en `.05`, donde la hoja contiene **solo N242 + N117 + N118**. Mirando
    únicamente los XLS parecería que N170 nunca se volvió a medir. **Sí se midió: está en los
@@ -207,29 +218,15 @@ Dos problemas verificados:
 
 → **Priorizar CSV para las medidas CMM coincidentes**. Los XLS aportan metadatos, medidas de
 otros equipos y ensayos; los de retoques, previsiones en `DR(100%)`. No descartar esas hojas
-ni tratar sus previsiones como medidas. Ver [revisión 17/09/2026](revision-2026-09-17.md). Y para los metadatos, **`HISTORY` antes que la
-cabecera**: está completa y no tiene fórmulas rotas.
+ni tratar sus previsiones como medidas. Ver [revisión 17/09/2026](revision-2026-09-17.md).
+Para los metadatos, combinar `HISTORY` y `DR(SKETCH)`, conservando las discrepancias.
 
 ### Cómo abrirlo
 
-Lo más cómodo sigue siendo **Excel vía COM desde PowerShell**, siempre en solo lectura
-(también valdría `pandas` + `xlrd`, pero el COM lee el `.Text` ya formateado y los colores de
-celda):
-
-```powershell
-$xl = New-Object -ComObject Excel.Application
-$xl.Visible = $false; $xl.DisplayAlerts = $false
-$wb = $xl.Workbooks.Open($ruta, 0, $true)        # 0, $true = read-only
-foreach ($s in $wb.Worksheets) { $s.Name }        # listar hojas
-$ws = $wb.Worksheets.Item("DR(3D)")
-$ws.Cells.Item(17,8).Text                         # .Text respeta el formato mostrado
-$wb.Close($false); $xl.Quit()
-[void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($xl)
-```
-
-⚠️ **Cerrar siempre**: si no, quedan procesos `EXCEL.EXE` colgados.
-⚠️ La convención del repo es mantener los scripts `.ps1` en **ASCII** para evitar problemas de
-codificación con PowerShell 5.1. Ver [CLAUDE.md](../../../CLAUDE.md).
+Consultar primero `consultar.py celdas <id> --hoja "DR(3D)" --filas 12-20`. Si se necesita
+volver al libro para colores o formato, seguir la [receta de lectura Excel](../../formatos-parsing.md#receta-powershell--excel-com):
+COM sobre copia temporal, macros desactivadas y cierre garantizado. Distinguir el valor
+guardado del resultado que Excel pueda recalcular en memoria.
 
 ---
 
@@ -245,12 +242,12 @@ support intern.01/
 │   ├── 3212_Cav13.txt       600 KB   ← pieza entera escaneada (17.656 pts)
 │   ├── 3212_PUNTS.txt       436 KB   ← solo el perfil interior (12.828 pts)
 │   ├── 3212_PUNTS_NOUS.txt    5 KB   ← últimos 150 puntos de PUNTS (6 grupos x 25)
-│   ├── 3212_CONTORN.igs     3,3 MB   ← 🔁 duplicado de 3212_PUNTS.txt
-│   ├── Perfil_3212_C_c13.dxf 1,5 MB  ← 🔁 duplicado de 3212_Cav13.txt
+│   ├── 3212_CONTORN.igs     3,3 MB   ← XY de PUNTS con Z constante; no es copia 3D
+│   ├── Perfil_3212_C_c13.dxf 1,5 MB  ← 🔁 mismos vértices que Cav13, con más precisión
 │   └── PA_1..6.pdf, PB_1..6.pdf      ← 12 gráficas de desviación de contorno
 ├── c14/  c15/  c16/                  ← idem
 ```
-🔁 = **no ingerir, es el mismo dato que el `.txt`** → [§4](#-el-igs-y-el-dxf-son-duplicados-de-los-txt)
+🔁 = **no ingerir, es el mismo dato que el `.txt`** → [§4](#rectificación-dxf-equivalente-con-redondeo-iges-con-z-aplanada)
 
 ⚠️ **La estructura no es uniforme entre muestreos.** En `intern.03` y `.05` los CSV y los TXT
 principales están en la **raíz** de la carpeta `support`, no dentro de `c13/`. En
@@ -318,9 +315,10 @@ Dos consecuencias para comparar estas muestras:
 1. **Los CSV son comparables fila a fila entre muestreos** sin hacer *matching* difuso: basta
    `cabecera_de_bloque + índice dentro del bloque` (ver
    [formatos-parsing.md](../../formatos-parsing.md#receta-cruzar-dos-muestreos)).
-2. **Se remidió *todo* en cada muestreo con CMM**, no solo lo que fallaba. La sensación de
-   "informe parcial" es **exclusiva del XLS**: 211 mediciones × 4 cavidades × 4 muestreos =
-   **3.376 mediciones reales** disponibles. Es el argumento definitivo para ingerir el CSV.
+2. Cada export contiene **las mismas 211 filas de resultados**, frente a las hojas XLS
+   parciales: 211 × 4 cavidades × 4 muestreos = **3.376 registros** disponibles.
+   La cobertura de los ficheros no acredita por sí sola que todas las filas se remidieran
+   ni que correspondan a piezas físicas distintas.
 
 📌 **El bloque de N165 son 60 secciones** (`POINT 1` … `POINT 60`, dos filas cada una: min y
 max). Coincide exactamente con el método de medida: *"take these 4 points every 6° (60
@@ -378,18 +376,23 @@ ese archivo ni una transformación correctiva. Mantenerlo como soporte del muest
 su vínculo con una acción y su finalidad exacta siguen pendientes. No crear `PUNTOS_OBJETIVO`.
 Ver [evidencia completa](revision-2026-09-17.md#3-punts_nous-es-un-subconjunto-de-punts).
 
-### 🔴 El `.igs` y el `.dxf` son **duplicados** de los `.txt`
+<a id="-el-igs-y-el-dxf-son-duplicados-de-los-txt"></a>
+### Rectificación: DXF equivalente con redondeo; IGES con Z aplanada
 
-Verificado el 2026-08-13, y cambia la prioridad de ingesta:
+**Contraste completo del 23/10/2026:** la comparación parcial de agosto confundió el
+desplazamiento de los primeros puntos IGES con un offset constante para toda la nube.
 
 | Fichero | Qué contiene realmente |
 |---|---|
-| `3212_CONTORN.igs` (3,3 MB) | **12.827 entidades IGES tipo 110 (LINE)** = la polilínea que une **los 12.828 puntos de `3212_PUNTS.txt`**. X e Y coinciden punto a punto; **la Z lleva un offset constante de −3,8807 mm** (otro origen en el export). |
-| `Perfil_3212_C*.dxf` (1,5 MB) | **Una sola `POLYLINE` con 17.656 `VERTEX`** = exactamente **los 17.656 puntos del `.txt` de perfil de cavidad**. El primer vértice (`−0,01126 / 0,02092 / 27,738`) es literalmente la primera línea de `3212_Cav13.txt`. |
+| `3212_CONTORN.igs` (3,3 MB), `.01/c13` | **12.827 entidades 110 (LINE)**, 12.828 puntos. X/Y coinciden con PUNTS hasta **0,0001 mm**, pero **todos los Z son 0,8533**; el TXT va de −16,9586 a 16,6318. **No hay offset Z constante ni equivalencia 3D**. |
+| `Perfil_3212_C*.dxf` (1,5 MB), `.01/c13` | Una `POLYLINE` con **17.656 `VERTEX`**, mismo orden y número que el TXT. Diferencia máxima por coordenada **0,00005 mm**, compatible con redondeo del TXT. |
 
-→ **No ingerir ninguno de los dos.** El `.txt` tiene el mismo dato, pesa 2,5× menos y se lee con
-`awk` o `pandas`; el `.dxf` además necesitaría instalar `ezdxf`. Conservarlos solo como descarga
-para el usuario que quiera abrirlos en un CAD.
+La comprobación abarcó **los 15 pares DXF/TXT y los 12 pares IGES/PUNTS**. Todos los DXF
+conservan el número y orden de puntos con ese redondeo máximo. Los 12 IGES tienen Z
+constante (0,7491–0,9014 según fichero), tipos 110/102 y punteros de transformación cero;
+no hay matriz tipo 124 que restituya Z. Conservar el IGES como exportación geométrica
+distinta y su relación XY con PUNTS. Se puede evitar duplicar la ingesta de los DXF dentro
+de esa precisión, pero la política anterior de descartar IGES como duplicados 3D no está justificada.
 
 **Cabecera del `.igs`** — de aquí sale la **fecha real de medición**:
 
@@ -448,9 +451,9 @@ filas, y `Contorno (21)` sale separado de sus números. Hay que **agrupar las pa
 coordenada Y**. Receta en
 [formatos-parsing.md §4ter](../../formatos-parsing.md#4ter-pdf-pa_16--pb_16--tolerancia-de-contorno).
 
-#### 🔑 La prueba de que el retoque enderezó el perfil interior
+#### Evolución del perfil interior tras los planes de corrección
 
-Extraídos los 144 PDF, la **infracción media de tolerancia** por cavidad:
+Extraídos los 144 PDF, la **media del peor exceso absoluto por PDF** (12 por cavidad):
 
 | Muestreo | c13 | c14 | c15 | c16 | Peor caso |
 |---|--:|--:|--:|--:|--:|
@@ -460,13 +463,15 @@ Extraídos los 144 PDF, la **infracción media de tolerancia** por cavidad:
 | ⚙️ *corrección de molde nº2* | | | | | |
 | `intern.05` | 0,027 | 0,031 | 0,024 | 0,026 | 0,060 |
 
-**La corrección nº1 dividió la desviación del contorno por 5,5**, y lo hizo **en las cuatro
-cavidades a la vez** — huella de un cambio en la geometría común del molde, no de un retoque
-cavidad a cavidad. La nº2 apenas coincide con cambio en el resumen del contorno
+**Entre `.01` y `.03`, el exceso medio de c13 se divide por 5,5** y mejora en las cuatro
+cavidades. La secuencia es compatible con el plan nº1, pero estos informes no distinguen
+una intervención común de retoques por cavidad ni prueban causalidad exclusiva.
+El plan nº2 apenas coincide con cambio en el resumen del contorno
 (0,029 → 0,027); ese dato por sí solo no prueba que no se tocara esta zona.
 
 ⚠️ **Matiz honesto: los 12 elementos siguen fuera de tolerancia en los tres muestreos** (12/12 en
-todos). La banda es ±0,025 mm y la infracción residual es de 0,01–0,06 mm. El perfil **mejoró
+todos). La banda es ±0,025 mm y, en `.03/.05`, el peor exceso por PDF va de **0,001 a 0,060 mm**.
+El perfil **mejoró
 mucho pero nunca llegó a entrar en tolerancia**. Es una evidencia independiente de la del Bolt
 Eye, y en un dato que el CSV no contiene.
 → [historial-molde.md](historial-molde.md)
@@ -487,8 +492,8 @@ Eye, y en un dato que el CSV no contiene.
 | XLS de retoques `DR(100%)` | 2 principales | Previsiones por cavidad y efectos encadenados (ver carpeta 5) | **1** |
 | `.txt` de perfil y `PUNTS` | 28 | Ficheros adjuntos a `MEDICION` / materia prima de geometría | 6 |
 | ~~`totes.csv`~~ | 3 | ❌ **No ingerir**: subconjunto pobre del CSV de cavidad (sin desviación, sin NOK, sin semáforo) | — |
-| ~~`.igs`~~ | 12 | ❌ **No ingerir**: 🆕 = `PUNTS.txt` con offset en Z. Solo descarga | — |
-| ~~`.dxf`~~ | 15 | ❌ **No ingerir**: 🆕 = `.txt` de perfil. Solo descarga | — |
+| `.igs` | 12 | Conservar como soporte distinto: XY relacionado con PUNTS, Z aplanada; no deduplicar como nube 3D | 6 |
+| `.dxf` | 15 | Evitar duplicar puntos ya representados por TXT, conservando original y diferencia de precisión ≤0,00005 mm | — |
 
 ### 📊 Para ver todo esto hay visores hechos
 
@@ -541,7 +546,7 @@ se puede saber a qué cota pertenece un punto de la nube leyendo el fichero.
 Pregunta natural: *¿el CSV se saca del TXT?* **No.** Verificado el 2026-08-13 sobre
 `intern.01/c13`:
 
-**Los puntos del TXT sí son los del palpado que generó las cotas.** En `3212_Cav13.txt`, los
+**La geometría TXT es compatible con la estrategia que generó las cotas.** En `3212_Cav13.txt`, los
 puntos del bolt B1 están en **exactamente tres alturas** — `Y=0` (92 puntos, el plano A),
 `Y=1,5` (20) e `Y=5,0` (20) — que son justo las que pide el plan de medición. Ajustando un
 círculo a esos 20 puntos:
@@ -551,9 +556,9 @@ círculo a esos 20 puntos:
 | N170 B1 · H=1,5 mm | 3,451 (mín. 3,420 / máx. 3,484) | **3,429** |
 | N170 B1 · H=5,0 mm | 3,449 (mín. 3,434 / máx. 3,467) | **3,436** |
 
-El valor del CSV cae dentro del mín/máx de la nube: **mismo palpado**, y la diferencia es la
-esperable entre un ajuste rápido por mínimos cuadrados y el algoritmo real de la CMM
-(`GX`/`GN`/`LP(2)`, compensación del radio del palpador).
+El valor del CSV cae dentro del mín/máx de la nube: es **compatible con el mismo palpado**.
+La coincidencia de alturas y valores no demuestra por sí sola la identidad de la pieza
+ni permite atribuir la diferencia a un algoritmo o compensación concretos.
 
 🔴 **Pero el TXT no contiene todos los elementos.** Buscando puntos al radio de cada diámetro
 del plano en `3212_Cav13.txt`:
@@ -576,22 +581,25 @@ y conservar las nubes como soporte; su visor no es obligatorio en la vista princ
 📌 **Cómo se generan.** La medición es **automática**: los PDF llevan la firma
 `GEOPAK MMC modo repetición in MCOSMOS-3 v4.3` — el programa de pieza se ejecuta en modo
 repetición y emite sus informes (los 12 PDF de una cavidad salen en 4 minutos seguidos).
-**El guardado, en cambio, es manual**, y se nota: los nombres son inconsistentes entre cavidades
+Los nombres son inconsistentes entre cavidades
 del *mismo* muestreo (`3212_c13.csv` junto a `3212c14.csv`), las carpetas también
 (`support intern.01` / `support.intern.08`), y en `intern.05` dos cavidades conservan el
-**nombre por defecto sin rellenar** (`3212_Cav_.txt`). Un pipeline automático no produce eso.
+**nombre sin cavidad explícita** (`3212_Cav_.txt`). Estos nombres no permiten determinar
+si el guardado fue manual o automático.
 
-### 🆕 Cada CSV es UNA pieza, no un promedio
+### Unidad de registro: cavidad, elemento y evaluación
 
-`3212c14.csv` son las medidas de **la única pieza que salió del hueco 14** en esa tanda.
-Verificado el 2026-08-13 por cuatro vías independientes:
+`3212c14.csv` contiene un conjunto de resultados asociado a la cavidad 14. La interpretación
+como una pieza individual es plausible, pero el fichero no incluye un identificador físico
+de pieza ni un tamaño muestral que la confirme. Los indicios de la revisión de agosto fueron:
 
 1. Las **12 gráficas PA/PB de una cavidad** están tomadas en una **sesión continua de 4 minutos**
-   (`10:50` → `10:54` en `intern.01/c13`). No da tiempo a desmontar y realinear otra pieza.
+   (`10:50` → `10:54` en `intern.01/c13`); esto fecha los informes de perfil, no identifica la pieza.
 2. El `3212_CONTORN.igs` de esa misma carpeta lleva el timestamp `240119.105452` = **10:54:52**,
    justo el cierre de esa sesión.
 3. El `DR(3D)` del XLS tiene **una sola columna por cavidad** (`Cav.13`…`Cav.16`).
-4. `HISTORY` de `intern.09` anota *"Update to 5 pcs"* → hasta ese momento **no** eran 5.
+4. `HISTORY` de `intern.09` anota *"Update to 5 pcs"*; no especifica cuántas piezas respaldaban
+   los CSV anteriores.
 
 📌 **Los `MIN`/`MAX` no son dos piezas.** Son el valor mínimo y máximo **del mismo elemento en la
 misma pieza** — el diámetro más estrecho y el más ancho del mismo agujero, que es como se detecta

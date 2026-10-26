@@ -15,8 +15,10 @@ con el valor guardado en el fichero (el ultimo que calculo Excel antes de guarda
 from __future__ import annotations
 
 import collections
+import json
 import re
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -41,6 +43,8 @@ TOKEN_RAND = re.compile(rb"[\x21\x41\x61]\x3f\x00")
 def xls_sospechoso(path: str) -> bool:
     import olefile
 
+    if not olefile.isOleFile(path):
+        return False  # p. ej. PDF nombrado .xls (I-004)
     with olefile.OleFileIO(path) as ole:
         flujo = next((n for n in ("Workbook", "Book") if ole.exists(n)), None)
         if flujo is None:
@@ -59,17 +63,19 @@ def xls_sospechoso(path: str) -> bool:
     return False
 
 
-def celdas_xls(path: str) -> list[tuple[str, int, int, str]]:
+def _celdas_xls_com(path: str) -> list[tuple[str, int, int, str]]:
     import pythoncom
     import win32com.client
 
     carpeta, copia = copia_temporal(path)
     pythoncom.CoInitialize()
-    excel = win32com.client.DispatchEx("Excel.Application")
-    excel.Visible = False
-    excel.DisplayAlerts = False
+    excel = None
     salida = []
     try:
+        excel = win32com.client.DispatchEx("Excel.Application")
+        excel.Visible = False
+        excel.DisplayAlerts = False
+        excel.AutomationSecurity = 3  # no ejecutar macros al abrir la copia
         libro = excel.Workbooks.Open(copia, 0, True)
         try:
             for hoja in libro.Worksheets:
@@ -85,17 +91,38 @@ def celdas_xls(path: str) -> list[tuple[str, int, int, str]]:
         finally:
             libro.Close(False)
     finally:
-        excel.Quit()
-        pythoncom.CoUninitialize()
-        shutil.rmtree(carpeta, ignore_errors=True)
+        try:
+            if excel is not None:
+                excel.Quit()
+        finally:
+            pythoncom.CoUninitialize()
+            shutil.rmtree(carpeta, ignore_errors=True)
     return salida
+
+
+def celdas_xls(path: str) -> list[tuple[str, int, int, str]]:
+    """Un proceso COM por libro evita propagar un fallo de Excel a los siguientes."""
+    error = ""
+    for _ in range(2):
+        # Dejar que el hijo cierre su instancia de Excel y elimine la copia antes de reintentar.
+        # Un timeout que solo mate Python impediria ejecutar ese finally y dejaria Excel abierto.
+        salida = subprocess.run(
+            [sys.executable, "-B", str(Path(__file__).resolve()), "--leer-xls", path],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+        )
+        if salida.returncode == 0:
+            return [tuple(c) for c in json.loads(salida.stdout)]
+        error = salida.stderr.strip()[-1000:] or f"Excel termino con codigo {salida.returncode}"
+    raise RuntimeError(error)
 
 
 def main() -> None:
     con = conectar()
     con.executescript(ESQUEMA)
     ejecucion = registrar(con, "formulas_aleatorias", {})
-    con.execute("DELETE FROM celda_aleatoria")
+    # La tabla publicada permanece completa durante la reconstruccion y ante cualquier error.
+    con.executescript(ESQUEMA.replace("CREATE TABLE IF NOT EXISTS celda_aleatoria",
+                                    "CREATE TEMP TABLE celda_aleatoria_nueva"))
     filas = [
         (d, h, f, c, fo, v)
         for d, h, f, c, fo, v in con.execute(
@@ -105,7 +132,7 @@ def main() -> None:
         )
         if ALEATORIA.search(fo)
     ]
-    con.executemany("INSERT OR IGNORE INTO celda_aleatoria VALUES (?,?,?,?,?,?)", filas)
+    con.executemany("INSERT OR IGNORE INTO celda_aleatoria_nueva VALUES (?,?,?,?,?,?)", filas)
     # XLS leidos con xlrd: sin formulas en la BD.
     xls = con.execute(
         "SELECT id, ruta FROM documento d WHERE ext='xls' AND estado='extraido' "
@@ -123,17 +150,30 @@ def main() -> None:
             continue
         # Al abrir, Excel recalcula RAND: el valor que vale es el guardado en el fichero (el de xlrd).
         con.executemany(
-            "INSERT OR IGNORE INTO celda_aleatoria SELECT ?,?,?,?,?,"
+            "INSERT OR IGNORE INTO celda_aleatoria_nueva SELECT ?,?,?,?,?,"
             "(SELECT valor FROM celda WHERE documento_id=? AND hoja=? AND fila=? AND col=?)",
             [(doc_id, h, f, c, fo, doc_id, h, f, c) for h, f, c, fo in celdas],
         )
         con.commit()
-    por_doc = collections.Counter(d for (d,) in con.execute("SELECT documento_id FROM celda_aleatoria"))
+        if sospechosos % 10 == 0:
+            print(f"XLS con token revisados: {sospechosos}; errores: {len(errores)}", flush=True)
+    por_doc = collections.Counter(d for (d,) in con.execute("SELECT documento_id FROM celda_aleatoria_nueva"))
     resumen = {"celdas": sum(por_doc.values()), "documentos": len(por_doc), "xls_revisados": len(xls),
-               "xls_con_token": sospechosos, "errores": errores}
+               "xls_con_token": sospechosos, "errores": errores, "publicada": not errores}
+    if not errores:
+        with con:
+            con.execute("DELETE FROM celda_aleatoria")
+            con.execute("INSERT INTO celda_aleatoria SELECT * FROM celda_aleatoria_nueva")
     cerrar_registro(con, ejecucion, resumen)
-    print(resumen)
+    con.close()
+    print(json.dumps(resumen, ensure_ascii=False))
+    if errores:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) == 3 and sys.argv[1] == "--leer-xls":
+        sys.stdout.reconfigure(encoding="utf-8")
+        print(json.dumps(_celdas_xls_com(sys.argv[2]), ensure_ascii=False))
+    else:
+        main()

@@ -1,7 +1,7 @@
 # 3212 Pump Housing — proyecto piloto
 
-> **Este es el único proyecto sobre el que se trabaja.** Los otros tres (2820, 3051, 3197)
-> quedan documentados pero sin tocar → [otros-proyectos.md](../otros-proyectos.md).
+> **El 3212 sigue siendo el proyecto piloto de la aplicación.** La base de conocimiento
+> incluye también otros proyectos y familias. Contexto → [otros-proyectos.md](../otros-proyectos.md).
 >
 > **Ruta:** `…\Exemples\0- Bolt Eye\3212 Pump Housing` *(hasta el 2026-10-20, `…\Exemples\3212 Pump Housing`)*
 > **Volumen:** 253 ficheros · 834 MB lógicos
@@ -19,19 +19,17 @@
 | Part nº (Bosch) | `3130517012` | `DR(3D)!H5` |
 | Part nº Level | `3E1005491360` | `DR(3D)!L5` |
 | Nº Plano | `0140S00237` | `DR(3D)!H6` |
-| Drawing nº Level | **`06/3E1005491360`** en *todos* los informes | `DR(3D)!L6` |
+| Drawing nº Level | Rev.06 en los informes | [Cabeceras contrastadas](4-metrologia.md#la-cabecera--contrastar-las-hojas-del-mismo-libro) |
 | Cliente | Robert Bosch, división BueP | Metadatos de los ficheros |
-| Nº de molde | *(no aparece en ningún fichero)* | — |
-| Cavidades controladas | **c13, c14, c15, c16** | Cabecera `DR(3D)!H13:K13` |
-| Nº total de cavidades del molde | 16 (se controlan 4) | Se deduce de la numeración |
-| Material | *(no consta en los datos)* | — |
+| Nº de molde | **3212** | [Identidad y cavidades](4-metrologia.md#la-cabecera--contrastar-las-hojas-del-mismo-libro) |
+| Cavidades | **4**, identificadas como c13–c16 | [Fuente y localizadores](4-metrologia.md#la-cabecera--contrastar-las-hojas-del-mismo-libro) |
+| Material documentado | **PA 6T/6I-GF 50%**, identificación visual del marcado | `intern.01.xls!DR(100%)!H166:K166`, N196; corroborado en `.03` fila 170 y `.05` fila 164. No es certificado de resina |
 
 ### ⚠️ Dos incoherencias de identificación (sin resolver)
 
-1. **El plano que tenemos no es el de los informes.** Todos los informes —incluido `intern.09`
-   de abril de 2025— dicen `Drawing nº Level: 06/…`, pero el PDF en disco es la **revisión 07**,
-   emitida el **23/05/2025**, es decir *posterior a toda la metrología*.
-   → **Las cotas del plano que tenemos pueden no coincidir con las medidas.**
+1. **Plano rev.07 frente a informes rev.06.** La fecha del nombre del PDF no es la fecha
+   de la revisión. [Contraste de revisiones y fechas](1-pieza-2d-3d.md#-este-plano-no-es-el-de-los-informes).
+   Comparar revisiones antes de aplicar sus tolerancias a los informes.
 2. **El part nº del STEP no coincide con el de los informes.** El sólido se llama
    `3 130 516 987_AllCATPart.stp` y su entidad `PRODUCT` es `3 130 516 987`, pero los informes
    dicen Part nº `3130517012`. Puede ser una revisión anterior o una pieza hermana.

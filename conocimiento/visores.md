@@ -56,8 +56,8 @@ $s  = "C:\Users\eduard.almar\OneDrive - EURECAT\Escritorio\repos\inteplast\proto
 
 Python 3.11.8 con `pandas`, `numpy` y `plotly` ya instalados. → [CLAUDE.md](../CLAUDE.md)
 
-⚠️ `ver_txt.py` **hidrata ficheros de OneDrive** (36 de los 40 `.txt` son placeholders, ~22 MB).
-La primera pasada tarda un par de minutos.
+⚠️ `ver_txt.py` **hidrata ficheros de OneDrive** si están solo en la nube. Los 36 de 40
+placeholders (~22 MB) eran el estado de la revisión inicial, no un recuento actual.
 
 ---
 
@@ -126,17 +126,14 @@ capa reconstruida con Tesseract (1.504 palabras, confianza media 74). Además lo
 
 ## Lo que confirmaron sobre los datos
 
-🆕 **Cada CSV es UNA pieza, no un promedio.** `3212c14.csv` son las medidas de la única pieza que
-salió del hueco 14 en esa tanda. Evidencia:
-
-1. Las **12 gráficas de contorno** de una cavidad están tomadas en una **sesión continua de 4
-   minutos** (10:50 → 10:54): no da tiempo a desmontar y realinear piezas distintas.
-2. El `.igs` de esa misma carpeta lleva el timestamp `240119.105452` — el cierre de esa sesión.
-3. El `DR(3D)` del XLS tiene **una sola columna por cavidad**.
-4. `HISTORY` de `intern.09` anota *"Update to 5 pcs"*, señal de que hasta entonces era una.
+**Cada CSV individual del 3212 probablemente corresponde a una pieza de una cavidad.** Lo
+apoyan la única columna por cavidad del `DR(3D)` y los soportes de `intern.01/c13`: 12 gráficas
+en una sesión de 10:50 a 10:54, cerrada por el timestamp IGES `240119.105452`. El CSV no
+identifica la muestra, por lo que sigue siendo una inferencia. `HISTORY` de `intern.09` anota
+*"Update to 5 pcs"*.
 
 📌 Los **MIN/MAX** que aparecen por todo el CSV **no son dos piezas**: son el valor mínimo y
-máximo del mismo elemento en la misma pieza (el diámetro más estrecho y el más ancho del mismo
+máximo del mismo elemento (el diámetro más estrecho y el más ancho del mismo
 agujero, que es como se detecta la ovalidad).
 
 ---
@@ -180,9 +177,9 @@ dice que no se puede y enciende los 178 globos para que lo busques a ojo con el 
 1. **Cobertura no es precisión.** Se midió "cuántos N-numbers encontramos" (26/34, 76 %) y se dio
    por bueno, **sin comprobar si lo leído era correcto**. La métrica que importaba era otra.
 2. **La confianza del OCR no vale para validar.** `155` por `156` a 0,99 de confianza.
-3. **Había una señal de alarma y se ignoró**: 131 N-numbers base distintos con solo 178 globos es
-   imposible, porque muchos globos son sufijos (`.1`, `.2`, `.T`) del mismo número. **Cuando un
-   recuento no cuadra con la física del problema, es que hay invención.**
+3. **Un recuento inverosímil es una alarma para auditar.** Los 131 N-numbers base entre 178
+   globos justificaban revisar la extracción contra el plano. El recuento orienta la revisión;
+   la comparación visual de las lecturas confirma los errores.
 
 > **Antes de dar por buena cualquier extracción automática, auditar una muestra al azar contra
 > la fuente y contar aciertos.** No mirar solo cuántos resultados salen.

@@ -4,9 +4,10 @@
 > Contexto de arquitectura (FastAPI + React + PostgreSQL) → `inteplast_PADIH_fase_B.md`.
 > Discusión Neo4j vs PostgreSQL → `inteplast_database.md`.
 
-> Implementación web del 18/09/2026: [cotas por pieza/revisión, índice de planos y snapshots
+> **Propuesta de dominio, revisada contra el código el 26/10/2026.** Implementación web: [cotas por pieza/revisión, índice de planos y snapshots
 > de mediciones/correcciones](cotas-y-evidencia-web.md). El diagrama siguiente describe el
 > dominio completo, no implica que todas sus tablas estén ya implementadas.
+> El 3212 sigue siendo el piloto de la aplicación; la biblioteca de conocimiento abarca más piezas.
 
 ---
 
@@ -40,25 +41,15 @@
 
 ## 2. El mismo feature en otra pieza — 3197 Pot
 
-El Pot tiene la misma geometría con **otro esquema de tolerancia**:
+El Pot comparte la familia Bolt Eye, pero sus cotas, referencias y tolerancias pertenecen
+a su propia pieza y revisión. El análisis y las diferencias entre especificaciones se
+mantienen en la [ficha del 3197](../conocimiento/0-bolt-eye/3197.md), incluido el conflicto
+entre tolerancias de informes (I-206). No copiar una tolerancia del 3212 ni fijar una única
+para todos los documentos del 3197.
 
-```
-N230   ø4 (GX) Hole 1                      → Ø4 +0,1/0   (¡tolerancia INVERSA a la del 3212!)
-N220   Position ø0,25 A/C/B ø4 Hole 1      → posición 0,25 con MMC (Ø0,328 efectivo)
-N220   … less MMC value                    → valor corregido por MMC
-N1120  Profilform 0,2 at Hole 1 to A/C/B   → tolerancia de perfil
-```
-
-| | 3212 Pump Housing | 3197 Pot |
-|---|---|---|
-| Diámetro | Ø4 **−0,1** | Ø4 **+0,1** |
-| Posición | ⌖0,15 | ⌖0,25 **con MMC** |
-| Referencias | A-B | A/C/B |
-
-> 🔑 **Misma geometría, reglas distintas.** Esto obliga a separar **`FEATURE`** (abstracto) de
-> **`INSTANCIA_EN_PROYECTO`** (feature materializado en una pieza concreta, con sus N-numbers y
-> sus tolerancias). Sin esa separación no se puede responder *"¿qué pasó con este feature en
-> piezas anteriores?"*.
+Esto obliga a separar **feature** (concepto transversal) de **cota de una pieza y revisión**.
+La implementación usa `PartCharacteristic` y `FeatureCharacteristicLink`; la entidad
+`INSTANCIA_EN_PROYECTO` del esquema siguiente es una propuesta más amplia.
 
 ---
 
@@ -74,9 +65,9 @@ PROYECTO (=molde)          3212, 3051, 3197, 2820
   │
   ├─ MUESTREO (intern.NN)  fecha_informe, fecha_medicion, lote(TEXTO), responsable,
   │    │                   motivo, ppap_ref, es_completo(bool)
-  │    │                     ↑ fecha_medicion ≠ fecha_informe (del .igs/PDF, no del .xls)
+  │    │                     ↑ fecha_medicion con fuente y alcance; perfil ≠ toda la tanda
   │    │                     ↑ lote es TEXTO: en .08/.09 vale "08/01/2025", una fecha
-  │    │                     ↑ motivo y responsable salen de la hoja HISTORY (log acumulativo)
+  │    │                     ↑ motivo y responsable: HISTORY y cabeceras contrastadas
   │    ├─ MEDICION         n_number, tipo, sub_ref(Ø1..Ø4 / B1..B4 / L1..L6),
   │    │                   nominal, tol+, tol−, equipo, altura_H, cavidad,
   │    │                   valor, desviacion, fuera_tol, nok, comentario,
@@ -86,9 +77,8 @@ PROYECTO (=molde)          3212, 3051, 3197, 2820
   │    │                       ↑ de los 144 PDF; no está en ningún CSV ni XLS
   │    ├─ SOPORTE_GEOMETRICO cavidad, archivo, subconjunto_de
   │    │                       ↑ PUNTS_NOUS = últimos 150 de PUNTS; objetivo no demostrado
-  │    └─ FICHEROS CRUDOS: csv_cmm, nube_puntos.txt
-  │       (derivados, solo descarga: contorno.igs = nube_puntos.txt con offset Z;
-  │        perfil.dxf = nube de cavidad; totes.csv = subconjunto del csv_cmm)
+  │    └─ FICHEROS CRUDOS: csv_cmm, nube_puntos.txt, contorno.igs
+  │       (relaciones entre formatos: ver la ficha de metrología del 3212)
   │
   ├─ CORRECCION_MOLDE (nº) fecha, revision,
   │    │                   muestreo_origen ──┐    ← del nombre del .xls que la acompaña
@@ -116,8 +106,8 @@ DEPENDENCIA_COTA (n:n)     n_number_origen → n_number_afectado, tipo, texto
 1. **`INSTANCIA_EN_PROYECTO`** conecta un feature abstracto con todas sus mediciones y
    correcciones históricas a través de los N-numbers. Es lo que responde a *"estoy diseñando un
    bolt eye nuevo, ¿qué pasó en piezas anteriores?"*.
-2. **`CORRECCION_MOLDE.muestreo_origen` / `.muestreo_validacion`** es lo que permite demostrar
-   *"esta corrección mejoró esta cota"* — el par antes/después.
+2. **`CORRECCION_MOLDE.muestreo_origen` / `.muestreo_validacion`** permite comparar
+   el antes y el después de un plan. Confirmar ejecución y causalidad requiere evidencia adicional.
    Reconstruido para el 3212 en [3212/historial-molde.md](../conocimiento/0-bolt-eye/3212/historial-molde.md).
 3. **`DEPENDENCIA_COTA`** captura el acoplamiento entre cotas (el plano A arrastra todo lo
    demás). Es conocimiento tácito que no está en ninguna tabla, solo en el texto de las
@@ -127,7 +117,9 @@ DEPENDENCIA_COTA (n:n)     n_number_origen → n_number_afectado, tipo, texto
 
 ## 4. Prioridad de ingesta
 
-⚠️ **Revisada respecto a la versión inicial**: el XLS ya no va primero. Ver
+**Prioridad propuesta para ampliar la ingesta**, no una lista de lectores ya implementados.
+El contrato actual está en [Cotas y evidencia](cotas-y-evidencia-web.md).
+El XLS no debe prevalecer automáticamente sobre el export CMM; ver
 [formatos-parsing.md](../conocimiento/formatos-parsing.md#discrepancias-entre-medidas-xls-y-csv).
 
 | Prioridad | Fuente | Por qué | Esfuerzo |
@@ -135,48 +127,41 @@ DEPENDENCIA_COTA (n:n)     n_number_origen → n_number_afectado, tipo, texto
 | **1** | **CSV de CMM por cavidad** (`3212_c13.csv`) | Fuente prioritaria para las evaluaciones CMM exportadas en los cuatro muestreos. Conservar valores y semáforo originales, junto con las correcciones verificadas. No cubre todos los requisitos ni ensayos del plano. | Bajo |
 | **2** | XLS de retoques, `DR(100%)` | Previsiones por cavidad, hipótesis y efectos encadenados, con celdas de origen | Medio |
 | 3 | PDF `PA`/`PB` | Mediciones de contorno que no están en CSV ni XLS; conservar estado desconocido si falla la extracción | Medio |
-| 4 | XLS: **`HISTORY` primero**, cabecera como complemento | `intern.09!HISTORY` reúne fechas, lotes, responsables y motivos; la cabecera aporta PPAP y revisión, pero puede estar vacía o rota | Bajo |
+| 4 | XLS: `HISTORY` y cabeceras contrastadas | Cronología e identificación: combinar hojas según la [cabecera contrastada del 3212](../conocimiento/0-bolt-eye/3212/4-metrologia.md#la-cabecera--contrastar-las-hojas-del-mismo-libro) | Bajo |
 | 5 | Texto e imágenes de los PPTX de corrección | Lessons learned, acciones y zonas de retoque, con su evidencia | Medio |
 | 6 | Método de medida (DOCX) | Decodifica el vocabulario y aporta la consecuencia funcional. **Entrada manual**, es un documento por proyecto. | Bajo |
 | 7 | `.txt` de perfil, `PUNTS` y `PUNTS_NOUS` | Soporte geométrico; NOUS es subconjunto, no objetivo demostrado | Medio |
 | 8 | Plano 2D, Moldflow, STEP/STL | Referencias y visualización; análisis automático pendiente | Alto |
-| — | CSV `*_totes.csv`, `.igs`, `.dxf` | **No ingerir otra vez:** duplican datos de las fuentes anteriores. Conservar como adjuntos si hace falta | — |
+| — | `.igs` del 3212 | Conservar como soporte distinto; no deduplicar como nube 3D. Evidencia en la ficha de metrología enlazada debajo | — |
+| — | `.dxf` y CSV `*_totes.csv` del 3212 | Evitar duplicar puntos solo tras verificar equivalencia y conservar procedencia. `totes` compara CSV individuales; no aplicar la relación del 3212 a otras piezas sin contrastar | — |
 
 La marca NOK del XLS sirve para contrastar la medición; no sustituye al CSV cuando el informe
-contiene bloques copiados de otra tanda. La prioridad 4 de metrología corresponde a `HISTORY`;
-después se completa con la cabecera y se incorporan las correcciones.
+contiene bloques copiados de otra tanda. Completar los metadatos cruzando las hojas del libro.
+Contraste geométrico: [3212, IGES y DXF](../conocimiento/0-bolt-eye/3212/4-metrologia.md#rectificación-dxf-equivalente-con-redondeo-iges-con-z-aplanada).
 
 ---
 
 ## 5. Lo que el frontend ya construido espera
 
-> 🔑 **El bloque `FEATURE` + `WARNING` + `LESSON_LEARNED` + ficheros de ejemplo ya está
-> implementado** en `backend/` y `frontend/`. Ver [app-web.md](app-web.md).
->
-> Desde el **2026-08-18** también existen los dos primeros trozos de este esquema:
-> **`PROYECTO`** (como tabla `Part`: código + nombre, y los ficheros cuelgan de ella) e
-> **`INSTANCIA_EN_PROYECTO`** (como tabla `FeaturePartLink`: dice qué feature aparece en qué
-> pieza; desde el 18/09/2026 las cotas se vinculan con `FeatureCharacteristicLink`). Las
-> mediciones y correcciones se guardan como snapshots ([Cotas y evidencia](cotas-y-evidencia-web.md));
-> sigue pendiente el modelo normalizado: `MUESTREO`, `MEDICION`, `CORRECCION_MOLDE`.
+**Tablas reales consultadas en el código el 26/10/2026.** El diagrama de la sección 3 no
+es el esquema SQL desplegado. Estas son las correspondencias actuales:
 
-El frontend tiene búsqueda global de features, tarjetas con imagen, nombre, descripción y tags,
-y una página propia `/features/{id}` con secciones desplegables de **warnings**,
-**lessons learned** y **piezas ejemplo** con sus cotas. Las notas se editan en línea; los
-archivos pertenecen a la pieza y se gestionan en su ficha (`/parts/{id}`). El estado actual de
-la aplicación se mantiene en [app-web.md](app-web.md).
+| Concepto o sección | Persistencia implementada | Fuente del código |
+|---|---|---|
+| Pieza e identidad | `Part`: código, nombre, descripción, cliente y carpeta | [models.py](../backend/app/models.py) |
+| Feature y piezas asociadas | `Feature`, `FeaturePartLink`; los adjuntos heredados también pueden aportar una pieza | [models.py](../backend/app/models.py) |
+| Advertencias y lecciones | `FeatureNote`, con `kind=warning/lesson`; contenido editado o aceptado por una persona | [models.py](../backend/app/models.py) |
+| Cotas del feature | `PartCharacteristic` por pieza/código/revisión y `FeatureCharacteristicLink` con rol | [knowledge_models.py](../backend/app/knowledge_models.py) |
+| Archivos y referencias de pieza | `PartFile`, `PartReference` y `PartDocument`, asociados a `StoredFile` | [knowledge_models.py](../backend/app/knowledge_models.py) |
+| Mediciones importadas | `MeasurementImport`: filas, contexto, huella y estado previo en JSON | [measurement_models.py](../backend/app/measurement_models.py) |
+| Estudio piloto, correcciones e índices | `EvidenceJob`: estados y resultados estructurados en JSON | [knowledge_models.py](../backend/app/knowledge_models.py) |
+| Imagen y zona CAD | `Feature.image_id` / `cover_3d`; captura de pieza y archivos derivados | [Portadas CAD](portadas-cad.md) |
 
-El mapeo es directo:
-
-| Sección del frontend | De dónde sale |
-|---|---|
-| Imagen representativa del feature | Imagen CAD con la zona en rojo — o `ppt/media/` de los PPTX |
-| **Warnings** | Plano 2D + Moldflow + respuestas de `inteplast_resposta_dubtes.md` |
-| **Lessons learned** | Texto de las diapositivas de corrección de molde |
-| **Piezas ejemplo → moldes CAD** | `3- 3D Molde/*.step` (derivado ligero) |
-| **Piezas ejemplo → piezas ref.** | `1-2D y 3D Pieza/*.stp` + `8- STL peça real/*.stl` |
-| **Piezas ejemplo → planos 2D** | `1-2D y 3D Pieza/*.pdf` |
-| Cotas | `MEDICION` filtrada por los N-numbers del feature |
+No existen todavía las tablas normalizadas `MUESTREO`, `MEDICION`, `CORRECCION_MOLDE`
+y `DEPENDENCIA_COTA` del esquema propuesto. Las notas de la GUI tampoco son una extracción
+automática del texto de los PPTX. La importación y la consulta de snapshots se describen
+una sola vez en [Cotas y evidencia](cotas-y-evidencia-web.md); la navegación, en
+[Interfaz](interfaz.md).
 
 ### Warnings del Bolt Eye ya identificados
 

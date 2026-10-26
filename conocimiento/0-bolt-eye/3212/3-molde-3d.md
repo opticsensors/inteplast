@@ -47,8 +47,9 @@ Comparación entre proyectos:
 | 3197 | `M1176_P-3197 6_05_2025.step` | 645 MB | Ensamblaje completo (`M1176` = nº de molde) |
 | **3212** | `3212.step` | **247 MB** | Ensamblaje completo |
 
-⚠️ **El nombre del 3212 no lleva el número de molde.** En el 3197 sí (`M1176`). En todo el
-proyecto 3212 no aparece el número de molde en ningún fichero.
+**Los nueve informes `.01`–`.09` identifican el molde como 3212 y declaran cuatro cavidades**:
+`INTRO!B40:D40`, campo `Tool nº / Cavities / Production Process`, valor `3212 /4 / Injection`.
+Los informes dimensionales identifican esas cavidades como c13–c16.
 
 **Cabecera y entidades verificadas el 15/09/2026:** STEP con esquema `automotive_design`
 (AP214), 5.265 entidades `PRODUCT`, 62.387 `ADVANCED_FACE`, 5.267 `CLOSED_SHELL` y 1.439
@@ -63,9 +64,9 @@ Las acciones correctivas de [`5- Retoques de molde`](5-retoques-molde.md) se apl
 esta geometría**: *"fer créixer el plàstic Ø0,23 mm en la zona marcada en vermell"* significa
 quitar acero de una zona concreta de este ensamblaje.
 
-En particular, la corrección que arregló el Bolt Eye —*"podem utilitzar els **expulsors** de 4
-com en els altres motlles"*— es un cambio de componente del molde: los **expulsores** son
-piezas de este STEP.
+En particular, la acción 1.33 propone usar **expulsores de 4**, como en otros moldes.
+Los CSV posteriores muestran mejora de GX y LP máximos todavía fuera de tolerancia.
+El texto no acredita qué componente se sustituyó ni permite identificarlo en este STEP.
 
 ⚠️ **No conocemos la revisión del STEP en disco.** No sabemos si refleja el
 molde antes o después de los retoques de 2024. No hay fecha ni revisión en el nombre.

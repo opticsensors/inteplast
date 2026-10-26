@@ -1,3 +1,9 @@
+# Acta de la reunión del 24/09/2026
+
+> **Registro histórico de la reunión.** Se conservan los acuerdos y peticiones de ese día;
+> no equivalen a funciones implementadas. Estado actual: [aplicación](app-web.md),
+> [hoja de ruta](hoja-de-ruta.md) y [pendientes](proximos-pasos.md).
+
 Temas tratados: 
 
 EA muestra los avances del aplicativo para gestionar el conocimiento interno de Inteplast teniendo como ejemplo el "feature" Bolt Eye. Esta aplicación permite, entre otras cosas: 

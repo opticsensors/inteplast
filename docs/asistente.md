@@ -1,7 +1,14 @@
 # Asistente local de consulta
 
-El chat opcional usa Ollama en el PC del servidor y el modelo `qwen3.5:2b` con
-`think: false`. Muestra texto progresivamente, admite detener/reintentar y conserva
+**Estado contrastado con el código el 26/10/2026.** Esta ficha describe el chat
+implementado. Esta revisión documental no ha ejecutado tests ni consultas al modelo.
+La importación que alimenta sus lecturas se describe en
+[cotas y evidencia](cotas-y-evidencia-web.md); su ampliación, en
+[ingesta automática](ingesta-automatica.md).
+
+El chat opcional usa Ollama en la URL configurada por el servidor; el modelo por
+defecto es `qwen3.5:2b`, con `think: false`. Muestra texto progresivamente,
+admite detener/reintentar y conserva
 la conversación al navegar dentro de la app. Se abre abajo a la derecha y se
 minimiza a su cabecera. Cerrar no borra el historial; «Nueva conversación», salir de
 la sesión o recargar sí. El historial solo vive en memoria del navegador.
@@ -40,13 +47,17 @@ No hay límite de palabras: se pide responder de forma directa y con la extensi�
 necesaria. Si alcanza el límite técnico de tokens, la interfaz lo indica. Se atiende una petición por proceso;
 las simultáneas reciben un aviso para reintentar, sin acumular cola. En producción hay varios
 procesos: ver [Concurrencia y despliegue](#concurrencia-y-despliegue), pendiente de decisión.
-Las respuestas largas se conservan completas en pantalla; solo se abrevia su copia
-enviada como historial, manteniendo la pregunta anterior y sus identificadores.
+Las respuestas largas se conservan completas en pantalla. El navegador conserva
+hasta 30 turnos y envía como máximo cuatro intercambios completos anteriores,
+abreviando las respuestas largas, más la pregunta actual. La API admite hasta nueve
+mensajes, 3.000 caracteres por mensaje y 12.000 en conjunto; el servicio selecciona
+además un historial reciente de hasta 4.000 caracteres para el modelo. La memoria de
+la conversación es limitada aunque los turnos anteriores sigan visibles.
 
 ## Concurrencia y despliegue
 
-**Estado (20/10/2026): pendiente de decisión.** No se ha cambiado el comportamiento. Esta
-sección recoge cómo funciona hoy y qué hay que decidir antes de abrir el asistente a varios
+**Decisión abierta desde el 20/10/2026; implementación revisada el 26/10/2026.** Esta
+sección recoge cómo funciona el código y qué hay que decidir antes de abrir el asistente a varios
 usuarios. Se decidirá cuando se elija el despliegue (ver el
 [acta del 24/09/2026](acta-reunion-2026-09-24.md): asistente local o vinculado a Copilot).
 
@@ -56,10 +67,10 @@ usuarios. Se decidirá cuando se elija el despliegue (ver el
 |---|---|---|
 | Chat | Cada proceso del backend atiende **una consulta a la vez**. Si llega otra, espera 0,1 s y recibe «El asistente está atendiendo otra consulta…», sin cola. | `assistant/router.py` (`_slot`) |
 | Procesos | Desarrollo: `fastapi run --reload`, **un proceso** (`compose.override.yml`). Producción: `--workers 4` (`backend/Dockerfile`), es decir, **hasta cuatro consultas de chat a la vez por contenedor**. | |
-| Límite de tiempo | `ASSISTANT_TIMEOUT_SECONDS` (120 s por defecto) cubre toda la consulta, esperas incluidas. | `assistant/router.py`, `assistant/providers.py` |
+| Límite de tiempo | Tras adquirir el turno, `ASSISTANT_TIMEOUT_SECONDS` (120 s por defecto) limita la ejecución de la consulta, incluidas las esperas al proveedor. La espera inicial de hasta 0,1 s del semáforo es independiente. | `assistant/router.py`, `assistant/providers.py` |
 | Indexador | Cada `ASSISTANT_INDEX_INTERVAL_SECONDS` (60 s) comprueba qué textos han cambiado y solo calcula los embeddings pendientes, en lotes de cuatro, con un segundo de pausa mientras quede trabajo. Un bloqueo de PostgreSQL impide que dos procesos indexen a la vez. Funciona aparte del chat y **puede coincidir con él**, también en desarrollo. | `assistant/index.py` |
 | Búsqueda semántica | `search_knowledge` calcula durante el chat el embedding de la pregunta. | `assistant/semantic.py` |
-| Ollama | Chat (`qwen3.5:2b`) y embeddings (`embeddinggemma`) son modelos distintos. Según la [FAQ de Ollama](https://docs.ollama.com/faq), `OLLAMA_NUM_PARALLEL` limita las peticiones simultáneas **por modelo** (1 por defecto) y puede haber varios modelos cargados a la vez si caben en memoria (`OLLAMA_MAX_LOADED_MODELS`). Ollama **no garantiza** una única operación en todo el servidor. | |
+| Proveedor | Chat y embeddings usan adaptadores separados hacia la URL de Ollama. La app no establece un límite compartido entre ambos; la capacidad y configuración del servidor deben comprobarse en el despliegue elegido. | `assistant/providers.py`, `assistant/embeddings.py` |
 
 **Riesgo, no medido:** en producción, varias consultas pueden competir por el mismo modelo.
 Las que esperan consumen su límite de tiempo y pueden terminar con «La consulta ha tardado
@@ -81,7 +92,7 @@ máquina. No hay tiempos medidos que permitan cuantificarlo.
 | Opción | Alcance |
 |---|---|
 | Mantener Ollama y limitar a **un chat en todo el servidor** | Acotado. Bloqueo compartido entre procesos (por ejemplo, un bloqueo asesor de PostgreSQL, como las colas de vistas 3D y de evidencias), respuesta clara de «ocupado» y liberación ante errores, cancelaciones y desconexiones. Debe probarse con **dos procesos**: dos peticiones dentro del mismo proceso no demuestran nada. Hay que definir cómo convive con el indexador y los embeddings de las búsquedas. |
-| Permitir **N chats a la vez** | El mismo mecanismo con un límite configurable, ajustado a la capacidad medida y a `OLLAMA_NUM_PARALLEL`. |
+| Permitir **N chats a la vez** | El mismo mecanismo con un límite configurable, ajustado a la capacidad medida y a la configuración del proveedor. |
 | **Cola con espera** | Requiere diseño propio: posición en la cola, límites de tiempo y cancelación. |
 | **Modelo en la nube** como motor de este chat | Implementar otro `ChatProvider` (hoy solo existe Ollama), con su autenticación, coste y cuotas. Sigue haciendo falta un límite, ajustado a las cuotas en vez de a la máquina. Los embeddings seguirían usando Ollama, salvo que se añada otro proveedor o se use solo la búsqueda por palabras. |
 | **Agente de Copilot Studio** | Trabajo distinto: el agente puede vivir en Teams, en Microsoft 365 o integrarse en esta web, y consultaría nuestras lecturas expuestas como API con autenticación de Microsoft (Entra ID). Hay que concretarlo antes de estimarlo. |
@@ -198,7 +209,7 @@ recuentos, tolerancias y documentos) y estadísticas por serie/unidad/tolerancia
 Por defecto no se envían filas individuales, para evitar que el modelo confunda
 ejemplos parciales con el conjunto. `include_rows=true` o un filtro de cavidad y
 muestreo devuelve hasta ocho filas con localizadores; `offset` permite continuar.
-`summary_offset` pagina estadísticas.
+`summary_offset` pagina el índice de series y las estadísticas de veinte en veinte.
 `include_statistics=true` añade mínimos/máximos/medias por serie cuando se solicitan.
 Se transmiten con una cabecera de columnas compartida para reducir el contexto
 repetido. Las consultas exactas resueltas con una lectura completa pasan
@@ -207,7 +218,7 @@ Las consultas puramente numéricas en español sobre una pieza explícita se pre
 directamente desde el backend cuando la lectura está completa. Así el modelo no
 confunde cavidades con recuentos, ni convierte límites asimétricos en tolerancias ±.
 Las explicaciones, comparaciones, búsqueda de conocimiento y otras preguntas siguen
-usando Qwen. Los casos sin identificación suficiente conservan las herramientas.
+usando el modelo configurado. Los casos sin identificación suficiente conservan las herramientas.
 Las notas se leen de veinte en veinte. `coverage` conserva el total, lo realmente
 entregado y el siguiente desplazamiento, incluso cuando el presupuesto de contexto
 recorta una lista. Los cuerpos de notas muy largos señalan su recorte.
@@ -235,8 +246,9 @@ Configuración: `ASSISTANT_SEMANTIC_ENABLED=true`,
 `ASSISTANT_SEMANTIC_MIN_SIMILARITY=0.24`,
 `ASSISTANT_EMBEDDING_TIMEOUT_SECONDS=30`, `ASSISTANT_INDEX_INTERVAL_SECONDS=60`.
 El umbral coseno es configurable y depende del modelo/corpus; no expresa una
-probabilidad de que una respuesta sea correcta. Se comprobó con paráfrasis del
-conocimiento piloto y debe revisarse al cambiar de modelo.
+probabilidad de que una respuesta sea correcta. Los tests incluyen paráfrasis con
+embeddings sintéticos; la calidad del modelo real debe evaluarse sobre el corpus y
+revisarse al cambiar de modelo.
 Cambiar modelo o dimensiones invalida los vectores anteriores. Desactivar semántica
 mantiene las consultas estructuradas y la búsqueda por texto. Desactivar todo el
 asistente también detiene su indexador. No hay hooks en los editores/importadores.
@@ -244,7 +256,8 @@ asistente también detiene su indexador. No hay hooks en los editores/importador
 Las fichas se buscan según la pregunta y el historial de conversación. La página
 abierta, su pieza/feature y sus filtros no se envían ni condicionan la consulta.
 Una revisión pedida explícitamente prevalece; si se omite, la lectura utiliza la
-última disponible. No se mezclan revisiones ni se atribuyen todas las cotas de una
+última disponible según la ordenación de revisiones del servicio; esto no certifica
+que sea la versión entregada o aprobada. No se mezclan revisiones ni se atribuyen todas las cotas de una
 pieza a cada feature.
 
 No se leen los Markdown del repositorio, README, código, notas de desarrollo,
@@ -282,6 +295,11 @@ automáticamente cada afirmación de un modelo pequeño.
 
 ## Verificación
 
+Los archivos `backend/tests/api/routes/test_assistant*.py` y
+`frontend/tests/components/assistant.test.cjs` contienen los casos siguientes.
+Se han inspeccionado como evidencia de cobertura prevista; no se han ejecutado en
+esta revisión del 26/10/2026.
+
 `scripts/test.ps1 -k assistant` usa una BD aislada. Incluye autenticación,
 desactivación, validación, transacciones de solo lectura, revisiones, pertenencia de
 cotas, consultas reales de datos sintéticos y el contrato de Ollama sin thinking.
@@ -292,5 +310,9 @@ y caída del proveedor semántico. No necesita Ollama para las pruebas automáti
 `node --test frontend/tests/components/assistant.test.cjs` verifica streaming UTF-8,
 fuentes, minimizar/reabrir, navegación sin enviar contexto de pantalla, detener,
 reiniciar y errores.
-La conexión real a Ollama se comprueba por separado con consultas de solo lectura;
-los tests automáticos no dependen del modelo ni de los datos de trabajo.
+Los tests automáticos no dependen del modelo ni de los datos de trabajo. Quedan
+separadas la prueba de conexión al Ollama desplegado y la evaluación de respuestas
+abiertas. La prueba futura de `conocimiento/` en una sesión nueva de desarrollo es
+otra tarea, recogida en [Próximos pasos](proximos-pasos.md). También siguen pendientes
+la decisión de despliegue y las mediciones de
+concurrencia descritas arriba.

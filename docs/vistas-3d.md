@@ -6,6 +6,12 @@ que los del CAD de la pieza. **Descargar** sigue entregando el original íntegro
 Por petición del usuario se elimina el pie informativo permanente «Vista simplificada…».
 El aviso específico de **Vista parcial** sigue apareciendo cuando faltan superficies.
 
+**Revisión documental del 26/10/2026:** comportamiento contrastado con el conversor,
+la cola, las rutas de archivos y el frontend. No se han ejecutado conversiones ni pruebas
+en esta pasada. Esta ficha concentra los derivados GLB; los formatos y controles comunes
+están en [Visores de archivos](ficheros-externos.md#visores-de-archivos), y las selecciones
+de caras en [Portadas CAD](portadas-cad.md).
+
 ## Funcionamiento
 
 1. Se vincula el original desde la carpeta de referencia o se utiliza un documento ya registrado.
@@ -16,15 +22,20 @@ El aviso específico de **Vista parcial** sigue apareciendo cuando faltan superf
 4. Si cambia el original local, se pide **Volver a vincular**, igual que para PDF/CAD. Tras
    confirmar la nueva revisión, la siguiente apertura genera su vista. Nunca se presenta
    deliberadamente una vista anterior como si correspondiera a la revisión nueva.
+   En modo SharePoint se consulta la versión actual de Graph y se invalida la caché sin
+   exigir revinculación. El trabajo utiliza la cuenta de Microsoft de quien lo solicitó.
 
-No se suben ni se copian los originales a la aplicación. Los GLB y su manifiesto JSON se
+Los originales locales vinculados se leen directamente. En modo SharePoint se descarga
+una copia de la versión actual a la caché del adaptador; las subidas manuales también
+pueden servir como origen. Ninguna conversión modifica el original. Los GLB y su manifiesto JSON se
 guardan en `UPLOADS_DIR/previews/{documento}/{clave}.glb`, dentro del volumen persistente de
 subidas. Son caché desechable, no originales ni un archivo histórico. Si se borra el GLB,
 la aplicación lo vuelve a generar; al eliminar el documento se elimina su caché.
 
 ## Geometría y límites
 
-- STL: `trimesh` y `fast-simplification`, objetivo de **300.000 triángulos**.
+- STL: `trimesh` y `fast-simplification`, objetivo de **300.000 triángulos** y máximo
+  aceptado de **330.000**.
 - STEP/STP: OpenCascade 7.9 mediante `cadquery-ocp`, importando todas las raíces y aplicando las
   transformaciones de cada cara. Teselación con desviación absoluta de **0,1 mm** y ángulo
   **0,35 rad**; simplificación posterior con objetivo de **500.000 triángulos**. Se admiten
@@ -57,8 +68,9 @@ la aplicación lo vuelve a generar; al eliminar el documento se elimina su cach�
 - Las normales para la iluminación se calculan con acumulación vectorizada de NumPy.
   Se evita el cálculo alternativo de trimesh sin SciPy, que recorría todas las caras por
   cada vértice y retrasaba mucho la exportación aun después de simplificar la malla.
-- Se rechazan geometrías vacías/no finitas, STEP que excedan el límite de caras incompletas, resultados que excedan
-  el presupuesto y cambios de más del 1 % en los límites globales. Esto **no certifica precisión
+- Se rechazan geometrías vacías/no finitas, STEP que excedan el límite de caras incompletas y resultados que excedan
+  el presupuesto. La comparación de límites globales usa una tolerancia absoluta del 1 % de
+  la mayor extensión original (`np.allclose`), no un control del 1 % para cada dimensión. Esto **no certifica precisión
   dimensional**: el control de cotas y los análisis deben utilizar el original.
 - Entrada máxima **512 MiB**, GLB máximo **25 MiB**. La carga directa de otros formatos 3D
   mantiene el límite de 50 MiB. La subida manual también mantiene su límite de 50 MiB.
@@ -87,8 +99,9 @@ Los errores no se reintentan en bucle: el usuario dispone de **Reintentar** y de
 | `PREVIEW_TIMEOUT_SECONDS` | `900` (15 minutos) |
 | `PREVIEW_MEMORY_MB` | `8192` (memoria virtual, Linux) |
 
-El caché se identifica por UUID/revisión del documento, origen, tamaño/fecha del archivo y
-versión de la receta. Se calcula SHA-256 antes y después de convertir y se guarda en el
+El caché se identifica por UUID/versión del documento, origen, versión actual de sus bytes
+y receta. Para archivos locales, esa versión procede de tamaño/fecha; para SharePoint,
+del `cTag` (con alternativas `eTag` o fecha si falta) y tamaño. Se calcula SHA-256 antes y después de convertir y se guarda en el
 manifiesto. En cada acceso se vuelve a comprobar la disponibilidad/revisión mediante el
 adaptador. **No se recalcula el hash completo en cada visita**: la limitación del detector
 local por tamaño/fecha sigue siendo la descrita en [ficheros-externos.md](ficheros-externos.md).
@@ -108,7 +121,8 @@ o sustituirlo por almacenamiento de objetos; no basta con replicar los contenedo
 Reconstruir mediante `docker compose up -d --build db prestart backend` para cargar
 el `.env` privado, montar los originales en solo lectura y aplicar la migración. El Dockerfile
 instala las bibliotecas nativas necesarias. Python admitido: **3.10–3.13**; las dependencias
-están fijadas en `uv.lock`. No requiere instalar CAD en el navegador ni credenciales Graph.
+están fijadas en `uv.lock`. No requiere instalar CAD en el navegador. El origen local no
+necesita Graph; el remoto requiere la [configuración y sesión Microsoft](ficheros-externos.md#sharepoint-microsoft-graph).
 
 En desarrollo, `docker compose watch backend` conserva el origen configurado en `.env`. Las
 pruebas y sus cachés se excluyen de la sincronización: modificarlas no debe reiniciar una
@@ -116,13 +130,17 @@ conversión larga. Los cambios del código de la aplicación sí reinician el ba
 el trabajo en curso desde el principio. Los patrones de exclusión son relativos a `backend/`,
 según la [configuración de Compose Watch](https://docs.docker.com/compose/how-tos/file-watch/#ignore).
 
-Las pruebas de `backend/tests/api/routes/test_previews.py` usan modelos sintéticos y la BD
+Las pruebas existentes de [`test_previews.py`](../backend/tests/api/routes/test_previews.py) usan modelos sintéticos y la BD
 aislada: conversión real STL/STEP, posición y orientación de componentes, caché, recuperación,
 URLs protegidas, descarga original, cambio durante la conversión, reintento y límites.
 También se comprueba la exclusión mutua entre trabajadores y se exporta una malla sintética
 de 327.680 triángulos prohibiendo explícitamente el cálculo lento de normales.
 Las pruebas simulan además una cara imposible de mallar: una pieza pequeña se rechaza;
 un conjunto con menos del 1 % de caras afectadas conserva la vista y su advertencia visible.
+La interacción del GLB y sus avisos tiene cobertura en
+[`preview.test.cjs`](../frontend/tests/components/preview.test.cjs). El 26/10/2026 se
+revisaron estas aserciones y `previews.py`, `preview_converter.py`, `api/routes/files.py`,
+`file_sources.py`, `WebModelViewer.tsx` y `viewers.ts`; no se ejecutaron las suites.
 Para los dos originales reales se conservan hashes y capturas fuera del repositorio, en
 el scratch de la sesión `inteplast-derivatives`.
 

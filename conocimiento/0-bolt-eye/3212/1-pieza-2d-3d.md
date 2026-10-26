@@ -11,7 +11,9 @@ Es la carpeta de la **definición nominal**: qué debe ser la pieza. Todo lo dem
 └── 20200204_3 130 516 987_AllCATPart.stp      10,06 MB   ← sólido 3D de la pieza
 ```
 
-El prefijo `AAAAMMDD` del nombre es la **fecha de emisión de la revisión**, no la de copia.
+El prefijo `AAAAMMDD` del nombre es una fecha de archivo que debe contrastarse con el
+contenido. En el STEP, `20200204` no coincide con la exportación interna del 18/10/2019;
+el prefijo por sí solo no acredita la emisión de una revisión.
 
 ---
 
@@ -105,10 +107,19 @@ se leen bien) y, sobre todo, **pedir el plano en condiciones**.
 
 ### ⚠️ Este plano no es el de los informes
 
-Es la **revisión 07**, emitida el **23/05/2025**. Todos los informes dimensionales —incluido
-`intern.09` de abril de 2025— referencian `Drawing nº Level: 06/3E1005491360`.
-**El plano que tenemos es posterior a toda la metrología.** No dar por hecho que una cota del
-plano coincide con el nominal que aparece en los informes.
+Es la **revisión 07**. El contraste visual del cajetín en la segunda revisión del
+23/10/2026 identifica **20220621 (21/06/2022), cambio 3E1005636560**; el origen rev.01
+figura como 20190313. **23/05/2025 corresponde al nombre y creación del PDF**, no a
+la emisión de rev.07. **Los nueve informes `.01`–`.09` identifican la revisión 06**:
+`DR(SKETCH)!L6` contiene `06/3E1005491360` en todos. Los campos vacíos o desplazados de
+otras hojas no significan que falte esa revisión en el libro.
+Persiste la discordancia **rev.07 del plano frente a rev.06 en los DR**: no dar por hecho
+que todas las cotas coincidan sin comparar revisiones.
+
+Ejemplo comprobado visualmente: el recuadro `PRESS-IN FORCE` de rev.07 indica
+**15N–50N**, recorrido **1 mm** (globos 288/288.1) y velocidad **0,2 mm/s** (globo 289).
+El DOCX rotula `Pos. N287` y prescribe **0,1 mm/s**. Es una discrepancia documental;
+ver [método de medida](6-metodo-medida.md#ensayos-funcionales), I-207.
 
 ---
 
@@ -134,7 +145,7 @@ FILE_SCHEMA(('AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }'));
 | `ADVANCED_FACE` | 2.670 caras |
 | `CYLINDRICAL_SURFACE` | 431 superficies cilíndricas |
 | `CARTESIAN_POINT` | 80.467 puntos |
-| `CLOSED_SHELL` | 7 |
+| `CLOSED_SHELL` | **4**, más **3 `ORIENTED_CLOSED_SHELL`**; el recuento anterior de 7 mezclaba ambos tipos |
 
 ### 🔴 Es geometría B-Rep pura, sin árbol de features
 

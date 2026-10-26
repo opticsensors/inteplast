@@ -18,6 +18,7 @@ import datetime as dt
 import json
 import math
 import os
+import posixpath
 import random
 import re
 import shutil
@@ -26,9 +27,10 @@ import sys
 import tempfile
 import zipfile
 from pathlib import Path
+from xml.etree import ElementTree as ET
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from comun import ahora, conectar, original  # noqa: E402
+from comun import ahora, cerrar_registro, conectar, original, registrar  # noqa: E402
 
 ESQUEMA = """
 CREATE TABLE IF NOT EXISTS auditoria (
@@ -95,29 +97,98 @@ def texto_xml(path: str, patron: str) -> str:
     return re.sub(r"\s+", " ", texto)
 
 
+def muestra_sql(con, rnd: random.Random, sql: str, parametros: tuple, n: int) -> list:
+    """Muestreo reproducible y acotado en memoria. La consulta debe tener ORDER BY estable."""
+    muestra = []
+    for i, fila in enumerate(con.execute(sql, parametros)):
+        if i < n:
+            muestra.append(fila)
+        else:
+            j = rnd.randrange(i + 1)
+            if j < n:
+                muestra[j] = fila
+    return muestra
+
+
+def comprobar_formulas_xml(con, doc_id: int, path: str, rnd: random.Random) -> list:
+    """Contrasta clasificacion y ausencia de cache con XML, sin recalcular ni usar el lector."""
+    muestra = []
+    for condicion in ("formula IS NOT NULL AND valor IS NULL",
+                      "formula IS NOT NULL AND valor IS NOT NULL",
+                      "formula IS NULL AND valor LIKE '=%'"):
+        muestra.extend(muestra_sql(con, rnd,
+            "SELECT hoja, fila, col, formula, valor FROM celda WHERE documento_id=? AND "
+            + condicion + " ORDER BY hoja, fila, col", (doc_id,), 2))
+    if not muestra:
+        return []
+    ns = "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}"
+    relacion = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
+    salida = []
+    with zipfile.ZipFile(path) as paquete:
+        # Un XLS OLE puede contener un ZIP de dibujos: is_zipfile no demuestra que sea OOXML.
+        if not {"xl/workbook.xml", "xl/_rels/workbook.xml.rels"}.issubset(paquete.namelist()):
+            return []
+        relaciones = {r.attrib["Id"]: r.attrib["Target"]
+                      for r in ET.fromstring(paquete.read("xl/_rels/workbook.xml.rels"))}
+        hojas = {}
+        for h in ET.fromstring(paquete.read("xl/workbook.xml")).iter(ns + "sheet"):
+            destino = relaciones[h.attrib[relacion]]
+            hojas[h.attrib["name"]] = (destino.lstrip("/") if destino.startswith("/")
+                                      else posixpath.normpath(posixpath.join("xl", destino)))
+        for nombre in sorted({h for h, *_ in muestra}):
+            celdas = {c.attrib["r"]: c for c in ET.fromstring(paquete.read(hojas[nombre])).iter(ns + "c")}
+            for hoja, fila, col, formula, valor in muestra:
+                if hoja != nombre:
+                    continue
+                letras, indice = "", col
+                while indice:
+                    indice, resto = divmod(indice - 1, 26)
+                    letras = chr(65 + resto) + letras
+                celda = celdas.get(f"{letras}{fila}")
+                f = celda.find(ns + "f") if celda is not None else None
+                v = celda.find(ns + "v") if celda is not None else None
+                es_formula = f is not None
+                ok = celda is not None and es_formula == (formula is not None)
+                if formula is not None:
+                    ok = ok and ((valor is None) == (v is None or not v.text))
+                if f is not None and f.text:
+                    ok = ok and formula == "=" + f.text
+                esperado = {"formula": formula, "sin_valor": valor is None}
+                obtenido = {"formula_xml": es_formula, "texto": f.text if f is not None else None,
+                            "cache": v.text if v is not None else None}
+                salida.append((f"formula/cache XML {hoja}!{letras}{fila}",
+                               json.dumps(esperado), json.dumps(obtenido), bool(ok)))
+    return salida
+
+
 def comprobar(con: sqlite3.Connection, doc: tuple, rnd: random.Random) -> list[tuple[str, str, str, bool]]:
     doc_id, ruta, ext = doc
     path = original(ruta)
     salida = []
+    # El formato detectado tiene prioridad sobre la extension (I-004).
+    formato = con.execute("SELECT lector FROM documento WHERE id=?", (doc_id,)).fetchone()
+    if formato and formato[0] == "pdf":
+        ext = "pdf"
     if ext in ("xls", "xlsx", "xlsm"):
         # Las celdas con RAND() cambian al abrir el libro: no se pueden comparar.
-        muestra = con.execute(
-            "SELECT hoja, fila, col, valor FROM celda c WHERE documento_id=? AND NOT EXISTS (SELECT 1 FROM "
+        # Las formulas sin cache se verifican en XML, no contra Excel que las recalcula.
+        muestra = muestra_sql(con, rnd,
+            "SELECT hoja, fila, col, valor FROM celda c WHERE documento_id=? AND valor IS NOT NULL AND NOT EXISTS (SELECT 1 FROM "
             "celda_aleatoria a WHERE a.documento_id=c.documento_id AND a.hoja=c.hoja AND a.fila=c.fila "
-            "AND a.col=c.col) ORDER BY random() LIMIT 8", (doc_id,)
-        ).fetchall()
+            "AND a.col=c.col) ORDER BY hoja, fila, col", (doc_id,), 8)
         if muestra:
             obtenidos = celdas_por_excel(path, [(h, f, c) for h, f, c, _ in muestra])
             for (h, f, c, v), o in zip(muestra, obtenidos):
                 salida.append((f"celda {h}!R{f}C{c}", v, str(o), mismo(v, o)))
+        if zipfile.is_zipfile(path):
+            salida.extend(comprobar_formulas_xml(con, doc_id, path, rnd))
     elif ext == "csv":
         lineas = Path(path).read_bytes().decode("cp1252", "replace").splitlines()
         # El separador lo eligio el lector (la coma tambien es el decimal); aqui se corta sin modulo csv.
         sep = json.loads(con.execute(
             "SELECT valor FROM estructura WHERE documento_id=? AND clave='delimitador'", (doc_id,)).fetchone()[0])
-        for f, c, v in con.execute(
-            "SELECT fila, col, valor FROM celda WHERE documento_id=? ORDER BY random() LIMIT 8", (doc_id,)
-        ):
+        for f, c, v in muestra_sql(con, rnd,
+            "SELECT fila, col, valor FROM celda WHERE documento_id=? ORDER BY fila, col", (doc_id,), 8):
             campos = [x.strip('"') for x in lineas[f - 1].split(sep)] if f <= len(lineas) else []
             salida.append((f"linea {f} campo {c}", v, campos[c - 1] if c <= len(campos) else "",
                            c <= len(campos) and v.strip() == campos[c - 1].strip()))
@@ -129,13 +200,12 @@ def comprobar(con: sqlite3.Connection, doc: tuple, rnd: random.Random) -> list[t
                 n = sum(1 for x in z.namelist() if re.fullmatch(r"ppt/slides/slide\d+\.xml", x))
             guardadas = con.execute("SELECT count(*) FROM elemento WHERE documento_id=? AND tipo='diapositiva'", (doc_id,)).fetchone()[0]
             salida.append(("numero de diapositivas", str(guardadas), str(n), guardadas == n))
-        for (texto,) in con.execute(
-            "SELECT texto FROM elemento WHERE documento_id=? AND length(texto)>20 ORDER BY random() LIMIT 3", (doc_id,)
-        ):
+        for loc, texto in muestra_sql(con, rnd,
+            "SELECT localizador, texto FROM elemento WHERE documento_id=? AND length(texto)>20 ORDER BY orden, id", (doc_id,), 3):
             trozo = re.sub(r"\s+", " ", rnd.choice([l for l in texto.splitlines() if len(l.strip()) > 8] or [texto])).strip()[:40]
             # Las celdas de tabla se guardaron separadas por " | ": cada trozo tiene que estar.
             partes = [p for p in re.split(r"\s*\|\s*", trozo) if p]
-            salida.append(("texto presente en el XML", trozo, "", all(p in crudo for p in partes)))
+            salida.append((f"texto presente en el XML: {loc}", trozo, "", all(p in crudo for p in partes)))
     elif ext == "pdf":
         import pdfplumber
 
@@ -143,9 +213,9 @@ def comprobar(con: sqlite3.Connection, doc: tuple, rnd: random.Random) -> list[t
             paginas = len(pdf.pages)
             guardadas = con.execute("SELECT count(*) FROM elemento WHERE documento_id=? AND tipo='pagina'", (doc_id,)).fetchone()[0]
             salida.append(("numero de paginas", str(guardadas), str(paginas), guardadas == paginas))
-            fila = con.execute(
-                "SELECT localizador, texto FROM elemento WHERE documento_id=? AND length(texto)>30 ORDER BY random() LIMIT 1", (doc_id,)
-            ).fetchone()
+            candidatas = muestra_sql(con, rnd,
+                "SELECT localizador, texto FROM elemento WHERE documento_id=? AND length(texto)>30 ORDER BY orden, id", (doc_id,), 1)
+            fila = candidatas[0] if candidatas else None
             if fila:
                 n = int(fila[0].split()[-1])
                 palabras = [w for w in re.findall(r"[A-Za-zÀ-ÿ]{5,}", fila[1])]
@@ -168,9 +238,10 @@ def comprobar(con: sqlite3.Connection, doc: tuple, rnd: random.Random) -> list[t
         salida.append(("triangulos", str(guardado), str(n), guardado == n))
     elif ext == "txt":
         crudo = Path(path).read_bytes().decode("utf-8", "replace") + Path(path).read_bytes().decode("cp1252", "replace")
-        for (texto,) in con.execute("SELECT texto FROM elemento WHERE documento_id=? AND tipo='lineas' ORDER BY random() LIMIT 2", (doc_id,)):
+        for loc, texto in muestra_sql(con, rnd,
+            "SELECT localizador, texto FROM elemento WHERE documento_id=? AND tipo='lineas' ORDER BY orden, id", (doc_id,), 2):
             linea = rnd.choice([l for l in texto.splitlines() if l.strip()] or [""]).strip()
-            salida.append(("linea presente", linea[:60], "", linea in crudo))
+            salida.append((f"linea presente: {loc}", linea[:60], "", linea in crudo))
         est = con.execute("SELECT valor FROM estructura WHERE documento_id=? AND clave='puntos'", (doc_id,)).fetchone()
         if est:
             n = sum(1 for l in crudo[: len(crudo) // 2].splitlines() if l.strip())
@@ -228,11 +299,16 @@ def main() -> None:
     if args.hallazgos:
         problemas = comprobar_hallazgos(con)
         print("\n".join(problemas) or "hallazgos.jsonl: sin problemas")
+        con.close()
+        if problemas:
+            raise SystemExit(1)
         return
     con.executescript(ESQUEMA)
     extensiones = [args.ext] if args.ext else ["xls", "xlsx", "xlsm", "csv", "pptx", "docx", "pdf", "stp", "step", "stl", "txt"]
     marca = ahora()
+    ejecucion = registrar(con, "verificar", {**vars(args), "auditoria_ejecutada": marca})
     resumen = {}
+    cobertura = {}
     for ext in extensiones:
         ids = [r for r in con.execute(
             "SELECT id, ruta, ext FROM documento WHERE ext=? AND estado='extraido' ORDER BY id", (ext,)).fetchall()]
@@ -243,6 +319,8 @@ def main() -> None:
                 resultados = comprobar(con, doc, rnd)
             except Exception as error:  # se registra como fallo de la verificacion
                 resultados = [("error al verificar", "", f"{type(error).__name__}: {error}"[:200], False)]
+            seleccionados, con_muestra = cobertura.get(ext, (0, 0))
+            cobertura[ext] = (seleccionados + 1, con_muestra + int(bool(resultados)))
             for nombre, esperado, obtenido, ok in resultados:
                 con.execute("INSERT INTO auditoria(ejecutada, documento_id, ext, comprobacion, esperado, obtenido, ok) VALUES (?,?,?,?,?,?,?)",
                             (marca, doc[0], ext, nombre, str(esperado)[:300], str(obtenido)[:300], int(bool(ok))))
@@ -251,8 +329,15 @@ def main() -> None:
             con.commit()
     for ext, (total, buenos) in resumen.items():
         print(f"{ext:<5} {buenos}/{total} comprobaciones correctas")
+    for ext, (seleccionados, con_muestra) in cobertura.items():
+        print(f"{ext:<5} {seleccionados} documentos seleccionados; {con_muestra} con comprobaciones; "
+              f"{seleccionados - con_muestra} sin muestra")
     for fila in con.execute("SELECT documento_id, ext, comprobacion, esperado, obtenido FROM auditoria WHERE ejecutada=? AND ok=0", (marca,)):
         print("FALLO", *fila, sep=" | ")
+    cerrar_registro(con, ejecucion, {"comprobaciones": resumen, "documentos_seleccionados_y_con_muestra": cobertura})
+    con.close()
+    if any(total != buenos for total, buenos in resumen.values()):
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

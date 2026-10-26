@@ -2,42 +2,19 @@
 
 Integración del 18/09/2026; separación de lectores y simplificación de la interfaz del
 21/09/2026. Los prototipos se conservan en `prototypes/data-explorer/` y no forman parte de la web.
+**Implementación revisada el 26/10/2026, sin ejecutar pruebas ni reimportar datos.**
+Esta es la ficha técnica de cotas, mediciones y evidencia; la ampliación a otras
+plantillas se propone en [ingesta automática](ingesta-automatica.md).
 
 ## Navegación
 
-- **Catálogo** (`/features`) reúne tarjetas de piezas y features. Solo al buscar aparecen
-  también cotas con pieza y revisión. Todo/Piezas/Features limita los tipos de tarjeta;
-  Nueva pieza y Nuevo feature están juntos. `/parts` redirige al catálogo de piezas.
-- La **ficha de feature** conserva el conocimiento transversal. En cada bloque de pieza
-  aparece una fila **COTAS** con icono, números y acceso al plano, del mismo estilo y altura
-  que los ficheros. El icono abre la búsqueda de esa cota; el número abre sus mediciones.
-  En edición, Añadir cota inserta al final un selector de cotas importadas con revisión,
-  o un campo manual si no hay mediciones. La papelera retira el vínculo. Los recuadros
-  guardados conservan revisión y relación internamente, sin texto adicional en la fila.
-  Las mediciones se preparan desde Nueva pieza/Actualizar datos; no crean asociaciones al feature.
-- La **ficha de pieza** (`/parts/{id}`) muestra el CAD completo con ampliación interactiva,
-  sus features y la sección Cotas, que reutiliza la consulta anterior de Metrología.
-  La pieza queda fijada por la ficha. Feature tiene búsqueda interna; Categoría y Tag se
-  despliegan desde Más filtros. Editar permite vincular features en la misma relación
-  compartida que «Añadir pieza» del editor de features.
-- La pieza abre la consulta sin seleccionar una cota arbitraria. El filtro Feature
-  permite consultar todas sus cotas (también las no vinculadas) o solo las asignadas al
-  feature de entrada. Las cotas sin mediciones siguen disponibles; pertenecer a la pieza
-  no atribuye sus cotas a un feature que no las tenga vinculadas.
-- La consulta usa el buscador superior compartido con
-  Features, filtros independientes de Elemento/Altura/Evaluación y gráfica con cavidades
-  activables. Plano, a la derecha del buscador, abre una página propia del archivo con
-  el visor de Features. El enlace del PDF en la pieza usa la misma página. Atrás conserva
-  la consulta anterior. Correcciones queda debajo a la izquierda.
-  No hay pestañas ni listas de
-  documentos, perfiles o nubes de puntos. Las reglas están en [interfaz.md](interfaz.md).
-- La URL conserva pieza, búsqueda, feature, categoría, tag, cota, revisión, filtros, cavidades y modo de consulta. Atrás y Adelante
-  restauran el contexto al visitar otra cota, una corrección o el plano. No hay enlaces de retorno.
-- El **visor PDF existente** conserva zoom, arrastre y paginación. Su búsqueda ofrece propuestas
-  OCR, texto nativo y ubicaciones revisadas; seleccionarlas encuadra y resalta la zona.
-  Cada resultado indica su origen y las propuestas OCR se señalan como sin verificar.
-  Usa el buscador compartido; acepta prefijos y subcotas. Las coincidencias y su contador
-  aparecen sobre el plano, sin columna lateral ni formulario de revisión.
+La consulta parte del catálogo y de las fichas de pieza/feature. Las reglas de
+pantalla, filtros, gráficas y navegación se mantienen en [interfaz.md](interfaz.md),
+en particular [COTAS en el feature](interfaz.md#cotas-dentro-de-una-pieza-del-feature),
+[página de cotas](interfaz.md#página-de-cotas) y
+[consulta del plano](interfaz.md#consulta-del-plano).
+Importar mediciones no crea vínculos automáticos entre cotas y features; esos
+vínculos se eligen explícitamente y conservan su revisión.
 
 `GET /evidence/metrology/filters` devuelve el catálogo ligero de piezas y features con
 categoría, tags y pertenencia a piezas, sin snapshots de mediciones. La pertenencia feature/pieza une declaración explícita, ficheros y
@@ -66,14 +43,16 @@ features por las cotas vinculadas.
 | `PartDocument` | Original o imagen derivada compartido por la pieza. Protege su uso como evidencia. |
 | `EvidenceJob` | Cola persistente y resultado de importación/indexación por versión. |
 | `DrawingLocation` | Revisión humana de una ubicación, ligada a SHA-256, usuario y fecha. |
-| `MeasurementImport` (`measurement_models.py`) | Export CSV interpretado e inmutable, con pieza, revisión, muestreo, cavidad, hash y autor; las sustituciones añaden versiones. |
+| `MeasurementImport` (`measurement_models.py`) | Lote interpretado de CSV/tablas y snapshot base del piloto, con pieza, revisión, muestreo, cavidad, huella y autor; los cambios añaden versiones. |
 
-El primer importador es **específico del 3212**. Sus lectores propios están en
+El adaptador de correcciones es **específico del piloto 3212**, identificado por
+código `3212` y carpeta `3212 Pump Housing` (`pilot.py`). Sus lectores propios están en
 `backend/app/ingestion/pilot_3212/`: 16 CSV, catálogo completo de evaluaciones,
 cuatro casos contrastados, acciones PPTX, previsiones XLS, perfiles A/B y referencias a TXT.
 El modelo, la navegación, las asociaciones y el buscador PDF son reutilizables. El lector
-CSV por bloques de `backend/app/ingestion/measurement_csv.py` permite incorporar otra
-pieza del mismo formato, con contexto revisado. No ejecuta el adaptador del 3212 sobre
+CSV por bloques de `backend/app/ingestion/measurement_csv.py`, junto al lector automático
+descrito abajo, permite incorporar mediciones de otras piezas con formatos compatibles.
+No ejecuta el adaptador del 3212 sobre
 otros proyectos ni deduce reglas de B/H/GX/LP por el número de cota.
 
 El resultado importado se conserva como **snapshot JSON estructurado** en `EvidenceJob`,
@@ -90,8 +69,13 @@ los casos y las cotas se refieren a ella. No se crean lessons learned automátic
 
 ## Alta y actualización de piezas (22/09/2026)
 
+La selección de origen se amplió a SharePoint el 22/10/2026. Su configuración y
+validación con el entorno de INTEPLAST se siguen en
+[ficheros externos](ficheros-externos.md#sharepoint-microsoft-graph).
+
 1. Nueva pieza abre una ficha vacía en `/parts/nueva` y permite seleccionar una carpeta
-   con el diálogo de Windows. La detección usa rutas,
+   con el diálogo de Windows o el navegador SharePoint, según el origen configurado.
+   La detección usa rutas,
    extensiones y metadatos para proponer CAD, escaneo, molde y plano, sin leer su contenido.
    Las cuatro propuestas se pueden cambiar antes de guardar.
 2. El usuario puede cambiar título, descripción, código, cliente y propuestas, añadir
@@ -100,15 +84,18 @@ los casos y las cotas se refieren a ella. No se crean lessons learned automátic
    `PartDocument`, y prepara las mediciones. Si la carpeta ya existe, se ofrece abrir
    su ficha. Cancelar descarta todo el borrador.
 3. `automatic_measurements.py` incorpora CSV individuales/comparativos y tablas DR de
-   informes PPAP XLS/XLSX, sin revisión manual por archivo. Obtiene la revisión de las
-   cabeceras y conserva temperatura, presión, boquilla y repetición en el muestreo.
-   Si un contexto realmente falta, queda identificado como sin-revision/sin-cavidad;
-   nunca se inventa una revisión o cavidad. Los CSV prevalecen sobre resúmenes XLS de
+   informes PPAP XLS/XLSX, sin revisión manual por archivo. Busca la revisión en la ruta
+   y en cabeceras `Drawing…Level`; la ruta tiene prioridad. Si falta, reutiliza la única
+   revisión encontrada para ese muestreo o, si este no tiene ninguna, para el conjunto.
+   Es una regla de agrupación, no una confirmación documental de cada archivo.
+   Conserva las condiciones de temperatura, presión, boquilla y repetición que reconoce.
+   Sin contexto suficiente usa `sin-revision`, `sin-cavidad` o un identificador de archivo
+   para el muestreo. Los CSV prevalecen sobre resúmenes XLS de
    las mismas cotas y contexto. Dos exports individuales discrepantes conservan series
    separadas con procedencia. Las tolerancias ausentes en un CSV comparativo se recuperan
    del XLS del mismo contexto solo si cota, nominal y límites son inequívocos.
    Una pieza sin mediciones también se registra y aparece en el catálogo.
-4. Actualizar datos repite la lectura por acción explícita. Las mediciones existentes se
+4. Actualizar datos repite la lectura por acción explícita. Los grupos sin cambios se
    omiten; los cambios generan versiones consultables, incluso si se recuperan bytes de
    una versión anterior. La ficha permanece abierta y muestra los archivos utilizados,
    progreso, fecha e incidencias. Consultar el resumen no vuelve a importar datos.
@@ -123,15 +110,32 @@ los casos y las cotas se refieren a ella. No se crean lessons learned automátic
    escoger explícitamente qué cotas pertenecen al feature y de qué revisión.
 
 El lector automático limita cada tabla a 16 MB y el conjunto a 128 MB; los originales
-se leen in situ. Cada observación conserva archivo y línea CSV o celda XLS/XLSX. El
+se leen mediante el [adaptador de origen](ficheros-externos.md). Cada observación
+conserva archivo y línea CSV o celda XLS/XLSX. El
 piloto 3212 conserva sus identidades CMM y su adaptador de XLS/correcciones. Los CSV de
-puntos espaciales no son tablas de cotas y se omiten. Contraste de la 3197: 60 valores
-muestreados (30 CSV y 30 XLS) coinciden con sus fuentes. Ejemplos: `Support_intern.02/
+puntos espaciales no son tablas de cotas y se omiten. El contraste registrado en
+septiembre de la 3197 obtuvo 60 coincidencias en 60 valores muestreados (30 CSV y
+30 XLS). Ejemplos: `Support_intern.02/
 135ºC/500bar/3197 C1.csv`, línea 2, y cabeceras/celdas de `3197-00_intern.02.xls!DR_PAR`.
+
+`measurement_tables.py` lee resultados guardados, sin recalcular fórmulas. Usa
+`xlrd` para XLS y XML para XLSX; no incorpora el lector alternativo, la detección de
+fórmulas aleatorias ni el reconocimiento del PDF con extensión XLS de
+`conocimiento/`. Solo lee tablas con el nombre de hoja y las cabeceras reconocidos;
+la exclusión de `100%` es una regla del lector, no una prueba de que toda hoja así
+nombrada sea una previsión. Estas limitaciones y su ampliación están en
+[ingesta automática](ingesta-automatica.md).
 
 El refresco explícito del estudio piloto avanza la base actual y conserva snapshots
 anteriores. Las comparaciones nuevas esperan la revisión de mediciones pendientes.
 Una publicación ordinaria del adaptador no sustituye por sí sola la base congelada.
+
+### Contrato de importación CSV con revisión explícita
+
+La API de `measurement_imports.py` sigue disponible, separada del flujo automático
+de Crear/Actualizar datos. Sus límites y decisiones no deben atribuirse a ese flujo:
+la ruta automática conserva exports discrepantes como series separadas; esta API
+exige elegir un export completo por combinación de revisión/muestreo/cavidad.
 
 Se reconoce el export CMM con bloques de cotas N y columnas separadas por `;`, nominal,
 tolerancias y medición; decimales con punto o coma, UTF-8 o Windows-1252. Este formato
@@ -151,27 +155,43 @@ La revisión y el hash se verifican de nuevo al incorporar; si cambia el archivo
 pieza/carpeta, hay que revisar de nuevo. Las importaciones de una pieza se serializan y
 se guardan en una transacción. Límites: 250 CSV detectados, 10 MB por archivo y 64 MB por
 selección. Solo se leen los CSV, sin recorrer el contenido de CAD o escaneos ni copiarlos.
-No se importa ninguna pieza real durante el despliegue. La generalización se ha probado
-con datos sintéticos; falta contrastar una segunda pieza real con metrología (A13).
+No se importa ninguna pieza real durante el despliegue. Hay tests con datos sintéticos
+y el contraste puntual de la 3197 registrado arriba. Queda pendiente la validación
+representativa de otras plantillas y de su interpretación; 60 coincidencias no
+validan el conjunto completo de esa pieza ni de `Exemples`.
+
+### API de cotas y mediciones
+
+Rutas autenticadas bajo `/api/v1`; la especificación OpenAPI es la referencia del
+contrato completo. Código: `api/routes/evidence.py`, `measurement_imports.py`,
+`part_setup.py` y `files.py`.
+
+| Ruta | Función |
+|---|---|
+| `GET /evidence/metrology`, `GET /evidence/metrology/filters` | Catálogo y filtros ligeros. |
+| `GET /evidence/parts/{part_id}` | Estudio, cotas, documentos y revisiones; admite `revision` y `snapshot_id`. |
+| `POST /parts/register`, `POST /parts/{part_id}/refresh` | Alta y actualización automática descritas arriba. |
+| `POST /evidence/parts/{part_id}/import` | Encola exclusivamente el estudio del adaptador piloto. |
+| `POST /evidence/parts/{part_id}/measurements/preview` y `/import` | Revisión e incorporación explícita de CSV. |
+| `GET /evidence/parts/{part_id}/measurements/history` | Versiones de mediciones y snapshots conservados. |
+| `GET /evidence/features/{feature_id}/parts/{part_id}` | Cotas vinculadas y números pendientes del feature. |
+| `PUT /evidence/features/{feature_id}/parts/{part_id}/characteristics` | Asigna explícitamente una cota/revisión. |
+| `DELETE /evidence/features/{feature_id}/characteristics/{characteristic_id}` | Retira el vínculo. |
+| `GET /evidence/drawings/{file_id}`, `POST …/index`, `PUT …/review` | Consulta, preparación y revisión del índice del plano. |
+| `GET /files/{file_id}/table` | Tabla original de solo lectura. |
 
 ## Lectura de resultados
 
-- Correcciones conserva intern.01/.03/.05/.08 y permite seleccionar cada tramo pulsando
-  su región dentro de la gráfica, que queda resaltada en gris. No hay botones de tramo
-  debajo. Las acciones
-  ya vinculadas de ambos planes se consultan incluso si la cota no pertenece a uno de los
-  cuatro casos cuantitativos. Los tramos sin documentación conservan las mediciones.
-- El detalle muestra una gráfica con los dos muestreos del tramo: original en el primero,
-  medición posterior y predicción documentada en el segundo. Comparte colores y selección
-  de cavidades con la gráfica superior; la predicción usa línea discontinua y punto vacío.
-  Sus ventanas muestran el tipo, valor y variación. Conserva «Cambio propuesto en el molde»
-  y, si falta una acción, indica brevemente «No hay una acción vinculada a N…».
-  Los controles mantienen su selección al volver del plano con el navegador;
-  buscar en el dibujo no sustituye la búsqueda previa de cotas.
-- Cavidad y valor aparecen al pasar el cursor o enfocar un punto. Pulsarlo fija la ventana,
-  incluidos los puntos solapados; otro punto cambia la selección y Escape, cerrar o pulsar
-  fuera la descartan. En la gráfica de mediciones, cada valor fijado permite abrir su origen
-  en la página de fichero. La trazabilidad del detalle de correcciones sigue pendiente.
+La interacción de las gráficas y la selección de tramos se mantienen en
+[interfaz: gráficas y detalle](interfaz.md#gráficas-y-detalle). Aquí se conserva su
+significado técnico:
+
+- Correcciones compara los tramos intern.01/.03/.05/.08 del piloto. Las acciones
+  vinculadas de ambos planes se consultan también fuera de los cuatro casos
+  cuantitativos. Un tramo sin documentación conserva las mediciones sin inventar
+  una acción. La pantalla indica que la ejecución no está confirmada.
+- Los puntos de la gráfica de mediciones enlazan a su origen; el detalle de
+  correcciones aún no ofrece ese enlace por punto.
 - El visor de CSV/XLS/XLSX muestra hojas, filas y columnas originales en solo lectura, con
   buscador precargado, salto y resaltado de la línea/celda guardada. Resuelve también los
   bloques CMM repetidos del piloto por aparición y fila; no atribuye una coincidencia solo
@@ -232,7 +252,8 @@ No hay todavía herramienta para dibujar una ubicación nueva que el detector no
 - El lector prepara los ficheros de metrología y retoques en una carpeta temporal del
   contenedor: evita miles de accesos pequeños al montaje de Windows. Se elimina al terminar;
   no incluye los directorios de CAD/escaneados grandes.
-- Originales enlazados con el adaptador local de solo lectura. Imágenes derivadas en el volumen
+- Originales enlazados mediante los adaptadores local o SharePoint de solo lectura,
+  descritos en [ficheros externos](ficheros-externos.md). Imágenes derivadas en el volumen
   de uploads, accesibles mediante los enlaces autenticados habituales. No se exponen `file://`
   ni rutas físicas del ordenador al navegador.
 - Los originales incorporados como evidencia no se pueden borrar o volver a vincular sobre el
@@ -250,6 +271,12 @@ Despliegue local: `docker compose up -d --build db prestart backend`, frontend V
 La actualización de datos se inicia desde la ficha de la pieza. No se modifican los originales.
 
 ## Validación de la nueva consulta (21/09/2026)
+
+**Registro histórico.** Las tres secciones de validación siguientes conservan las
+comprobaciones documentadas en septiembre. No se han repetido en la revisión del
+26/10/2026 y no describen necesariamente la interfaz o el lector actuales. En
+particular, el flujo automático posterior admite CSV comparativos y sustituye la
+antigua revisión de importación desde la pantalla.
 
 - Flujo CSV: pruebas en base aislada de contexto incompleto, hashes cambiados,
   duplicados, sustituciones, versiones anteriores, revisiones independientes, piezas

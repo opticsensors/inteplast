@@ -100,10 +100,11 @@ def codigo_normal(texto: str) -> str | None:
     return (m.group(1) or m.group(2)).upper()
 
 
-def leer_hoja(hoja: str, celdas: dict[tuple[int, int], str], aleatorias: set[tuple[int, int]]) -> dict | None:
+def leer_hoja(hoja: str, celdas: dict[tuple[int, int], str | None], aleatorias: set[tuple[int, int]]) -> dict | None:
     filas = collections.defaultdict(dict)
     for (f, c), v in celdas.items():
-        filas[f][c] = v
+        if v is not None:  # conservar NULL en celda, sin convertirlo en medida ni texto 'None'
+            filas[f][c] = v
     cabecera = None
     for f in sorted(x for x in filas if x <= 40):
         etiquetas = {c: etiqueta(v) for c, v in filas[f].items()}

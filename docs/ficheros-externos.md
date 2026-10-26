@@ -4,13 +4,21 @@ Implementado y comprobado el **2026-09-15**. La aplicación puede vincular archi
 existen en una carpeta accesible al backend. Se guardan sus metadatos y su referencia; los
 originales se leen cuando se abre el visor o se descarga. Las subidas siguen disponibles.
 
+**Revisión documental del 26/10/2026:** contrato contrastado con el código actual, incluida
+la integración SharePoint del 22/10. No se ha accedido a Microsoft ni se han ejecutado
+pruebas en esta pasada. Los resultados fechados más abajo se conservan como históricos.
+Esta ficha concentra origen, acceso, selección y visores de archivos; el diseño de las
+pantallas está en [interfaz.md](interfaz.md), las portadas en [portadas-cad.md](portadas-cad.md)
+y la conversión de modelos grandes en [vistas-3d.md](vistas-3d.md).
+
 ## Uso en la ficha de pieza
 
 Desde el 22/09/2026 los archivos pertenecen a la **pieza** y se gestionan en su ficha
 (`/parts/{id}`). La ficha del feature ya no muestra ni edita archivos.
 
 1. **Catálogo → Nueva pieza**, o **Editar pieza** en una pieza existente. El botón de carpeta
-   abre el selector de Windows en la raíz configurada (`ASSETS_HOST_PATH`). Al elegir la
+   abre el selector de Windows en modo local, en la raíz configurada (`ASSETS_HOST_PATH`),
+   o el navegador web de carpetas en modo SharePoint. Al elegir la
    carpeta se proponen CAD, escaneo, molde y plano por ruta, extensión y nombre, sin leer su
    contenido. En una pieza nueva se proponen también título y código; en una existente se
    conservan los que ya tiene.
@@ -23,28 +31,23 @@ Desde el 22/09/2026 los archivos pertenecen a la **pieza** y se gestionan en su 
    «mould», y CAD en otro caso; STL/OBJ/PLY/GLB/GLTF → escaneo; MFR/MPI → Moldflow; el
    resto → documento. Se puede cambiar antes de guardar.
 3. **Guardar cambios** guarda cabecera y archivos en una sola operación (`PUT /parts/{id}`);
-   **Cancelar** los descarta. En esta ficha no hay autoguardado. Si cambió la carpeta, al
-   guardar se leen los datos de la pieza.
+   **Cancelar** los descarta. Cabecera y archivos no tienen autoguardado; los vínculos con
+   features de una pieza existente sí se guardan al modificarlos. Si cambió la carpeta,
+   la interfaz inicia una lectura después de guardar. **Crear pieza** registra primero
+   la ficha y después solicita esa lectura: un fallo de importación conserva la pieza creada.
 4. En consulta, el nombre de cada archivo abre su página (`/parts/{id}/fichero/{fileId}`) y
    el botón de la fila descarga el original.
 
-La página del archivo muestra el visor que corresponda:
-
-- **PDF**: buscador de cotas sobre el plano y visor interactivo (**rueda para ampliar donde
-  está el cursor y arrastre izquierdo para mover el plano**, acercar/alejar, **Encuadrar** y
-  cambio de página si hay varias). **Abrir en pestaña** da acceso al PDF original.
-- **CSV/XLS/XLSX**: las celdas originales en solo lectura.
-- **Imágenes**: se muestran en la página.
-- **3D**: giro con arrastre izquierdo, zoom con la rueda, desplazamiento con el arrastre
-  derecho o central y **Encuadrar**. STL y STEP de más de 50 MiB usan un
-  [GLB generado en el servidor](vistas-3d.md).
-- **Sin visor** (Moldflow, SolidWorks, CATIA…): **Descargar original**.
+La página del archivo elige el [visor compatible](#visores-de-archivos) o propone descargar
+el original. La descarga nunca se sustituye por el GLB derivado.
 
 Quitar un archivo de la lista o elegir otro no borra ni modifica el original. Elegir de nuevo
-el mismo archivo, con la misma fecha y tamaño, reutiliza su registro; si cambió, se registra
+el mismo archivo **local**, con la misma fecha y tamaño, reutiliza su registro; si cambió, se registra
 como un documento nuevo y el anterior se conserva asociado a la pieza como evidencia. Si un
-original desaparece o cambia, el servidor se niega a servirlo y el visor muestra el error;
+original local desaparece o cambia, el servidor se niega a servirlo y el visor muestra el error;
 se corrige eligiendo de nuevo el archivo en **Editar pieza**.
+SharePoint reutiliza el documento por ruta y sirve su versión actual sin revinculación
+([diferencias entre modos](#sharepoint-microsoft-graph)).
 
 Al vincular una pieza a un feature por primera vez, sus archivos principales se copian como
 adjuntos del feature, sin copiar bytes. No se muestran en la ficha del feature: los usan la
@@ -60,6 +63,44 @@ de una pieza.
 
 La cabecera puede usar una [portada creada desde el STEP](portadas-cad.md), con superficies
 marcadas en rojo. El marcado se guarda en la aplicación y mantiene intacto el original.
+
+## Visores de archivos
+
+La selección se implementa en [`viewers.ts`](../frontend/src/components/Features/viewers.ts)
+y en la ruta `/parts/{id}/fichero/{fileId}`. Se mantienen las rutas antiguas de adjuntos
+del feature para enlaces guardados.
+
+| Archivo | Comportamiento implementado |
+|---|---|
+| PDF (`application/pdf`) | `DrawingSearch` y `PdfViewer`: buscador de cotas y canvas PDF.js. **Abrir en pestaña** abre el original; la descarga está en la fila Archivos de la pieza |
+| CSV, XLS, XLSX | `SourceTableViewer`: celdas en solo lectura, búsqueda y localizador de origen. Las fórmulas muestran su resultado guardado si existe; no se recalculan ni se ejecutan macros |
+| Imágenes JPEG, PNG, GIF, WebP, AVIF y BMP | Imagen en la página; SVG se descarga |
+| STL, GLB/GLTF, OBJ, PLY | `ModelViewer` con three.js; carga directa hasta 50 MiB |
+| STEP/STP, IGES/IGS, BREP | `ModelViewer` con `occt-import-js`/OpenCascade WASM; teselación en el navegador hasta 50 MiB |
+| STL y STEP/STP de más de 50 MiB | `WebModelViewer` solicita un [GLB al servidor](vistas-3d.md); máximo de entrada 512 MiB |
+| Otros formatos 3D grandes o sin lector (Moldflow, SolidWorks, CATIA, DWG/DXF…) | **Descargar original** para abrirlo en su aplicación |
+
+Los controles 3D usan `TrackballControls`: arrastre izquierdo para girar sin bloqueo en
+los polos, rueda para zoom, derecho/central para desplazar y **Encuadrar** para restablecer
+la vista. `modelControls.ts` fija el eje Z antes de inicializar el control y desactiva la
+inercia. Los módulos se cargan de forma diferida; generar una portada STEP que falta en el
+catálogo también puede cargar three.js y el worker de CAD, sin abrir un visor manualmente.
+No existe integración con programas del escritorio: los archivos sin visor se descargan.
+
+En PDF, la rueda amplía alrededor del cursor y el arrastre izquierdo desplaza el plano
+sin mover la página web. Se ofrecen acercar, alejar y encuadrar; los controles de página
+solo aparecen cuando hay varias. Con el visor enfocado, las flechas desplazan, `+`/`-`
+amplían o reducen y `0` encuadra. PDF.js y su worker se sirven desde la aplicación.
+Al ampliar se vuelve a renderizar, conservando la imagen anterior y limitando el canvas
+a **16 megapíxeles**. No hay selección de texto ni edición de anotaciones en el canvas.
+La búsqueda de cotas y las propuestas OCR pertenecen a `DrawingSearch` y al índice del
+backend; su presentación está en [Consulta del plano](interfaz.md#consulta-del-plano).
+
+La vista tabular usa `GET /files/{id}/table`. Admite archivos de hasta **16 MiB**, con
+límites de **20.000 filas, 512 columnas y 500.000 celdas**; el XLSX descomprimido tiene
+además un límite de 64 MiB. Es una lectura de valores y coordenadas, no una reproducción
+del formato de Excel. XLSM no tiene visor tabular. Al abrir un valor fijado en la gráfica,
+la ruta conserva archivo, hoja/fila/celda, cavidad y valor para localizar su procedencia.
 
 ## Configuración local con Docker
 
@@ -169,7 +210,8 @@ FeatureAsset.file_id → StoredFile.id → adaptador del origen → contenido
 ```
 
 `StoredFile` conserva su nombre y sus UUID anteriores, pero ahora representa un documento con
-origen `upload` o `local`. El visor y la ficha siguen usando `file_id`; no reciben rutas absolutas
+origen `upload` o `local`; este último representa la ruta del conjunto tanto en modo local
+como en SharePoint. El visor y la ficha siguen usando `file_id`; no reciben rutas absolutas
 del PC. [file_sources.py](../backend/app/file_sources.py) concentra la resolución de contenido.
 
 Campos nuevos: `source`, `source_key`, `source_path`, `source_version`, `version`, `revision`
@@ -191,13 +233,15 @@ Rutas autenticadas, bajo `/api/v1`:
 | `POST /files/reference` | Registrar/reutilizar `{path, revision?}` sin subir bytes |
 | `PUT /files/{id}/reference` | Volver a vincular con `{path, revision?, expected_version}` |
 | `GET /files/{id}/status` | Estado y ruta relativa; nunca la raíz del equipo |
+| `GET /files/{id}/table` | Valores originales CSV/XLS/XLSX en solo lectura, con los límites del visor tabular |
 | `GET /files/{id}/access-url` | Enlace temporal para el visor o para descargar con `download=true` |
 | `GET /files/{id}` | Contenido autorizado; admite peticiones de rangos de bytes del PDF |
-| `DELETE /files/{id}` | Borrar el registro; solo borra bytes si el origen es una subida |
+| `DELETE /files/{id}` | Borrar el registro y su caché; rechaza documentos conservados como evidencia de una pieza. Solo borra bytes originales si el origen es una subida |
 
 Se rechazan rutas absolutas, `..`, enlaces simbólicos y archivos especiales. Todos los usuarios
-activos de esta base colaborativa pueden leer el origen configurado y vincular archivos; no se
-han añadido permisos por documento. Un UUID solo no autoriza una descarga.
+activos de esta base colaborativa pueden leer el origen local configurado y vincular archivos;
+no hay permisos locales por documento. En SharePoint se aplican además los permisos delegados
+descritos debajo. Un UUID solo no autoriza una descarga.
 
 La migración `a62f58d4e930` asigna `source=upload` a registros anteriores y mantiene sus enlaces.
 Su downgrade se rechaza mientras existan referencias externas. Hacer copia de BD antes de
@@ -225,8 +269,8 @@ cambia de comportamiento.
   llegan al navegador, que sigue recibiendo el token propio de la aplicación.
 - **Una caché de tokens MSAL por usuario**, cifrada (Fernet con clave derivada de
   `SECRET_KEY`) en la tabla `microsoftaccount`. Graph se llama con
-  `acquire_token_silent_with_error`, que renueva el acceso con el token de renovación
-  ([90 días en apps web, se renueva con el uso](https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens)).
+  `acquire_token_silent_with_error`, que intenta renovar el acceso con la sesión Microsoft
+  ([tokens de renovación](https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens)).
   Si Microsoft exige iniciar sesión otra vez, la API devuelve 401 y la web vuelve al login.
 - **Permisos de cada persona**: se lee con los permisos delegados del usuario, así que
   Microsoft aplica sus propios permisos. Un elemento sin permiso devuelve 409 con mensaje (no
@@ -237,14 +281,16 @@ cambia de comportamiento.
   contraseña está desactivado; cerrar sesión borra también los tokens de Microsoft.
 - **Lectura** (`app/sharepoint.py`): direcciones por ruta desde `SHAREPOINT_ROOT_PATH`, con cada
   segmento codificado según las [reglas de Graph](https://learn.microsoft.com/en-us/graph/onedrive-addressing-driveitems).
-  Los 429/5xx se reintentan respetando `Retry-After`
+  Los errores 429 y 500/502/503/504 se reintentan respetando `Retry-After`
   ([guía de limitaciones](https://learn.microsoft.com/en-us/graph/throttling)). Los contenidos
-  se descargan una vez por versión (`cTag`) desde la URL preautenticada de Graph, sin cabecera
+  se descargan una vez por versión (`cTag`, o `eTag`/fecha si falta, junto al tamaño) desde la URL preautenticada de Graph, sin cabecera
   de autorización ([descarga](https://learn.microsoft.com/en-us/graph/api/driveitem-get-content)),
   a `uploads/sharepoint/`. Se conserva solo la última versión de cada elemento.
 - **Siempre la última versión**: un cambio en SharePoint no exige volver a vincular. Hay un
   documento por ruta (`StoredFile` se reutiliza). Las vistas 3D, el índice del plano y el
-  estudio del piloto usan la versión actual como clave y se regeneran solos.
+  estudio del piloto usan la versión actual como clave y se regeneran al solicitarse de nuevo.
+  No hay vigilancia de cambios: las mediciones importadas requieren **Actualizar datos**.
+  La miniatura de pieza tiene una [limitación distinta de invalidación](portadas-cad.md#cambios-remotos-y-miniatura-de-pieza).
 - **Trabajos en segundo plano** (vistas 3D, índice del plano, estudio del 3212): leen
   SharePoint con la cuenta de quien los pidió (`FilePreview.requested_by` y `_source_user` en
   `EvidenceJob`). El estudio copia a una carpeta temporal solo los CSV/XLS/PPTX/PDF/TXT de
@@ -261,12 +307,12 @@ cambia de comportamiento.
 
 En `.env` (plantilla en `.env.example`; Compose las pasa al backend):
 
-| Variable | Valor en el equipo de Eduard |
+| Variable | Configuración documentada el 22/10/2026 |
 |---|---|
 | `SHAREPOINT_ENABLED` | `false` (local) / `true` (SharePoint) |
 | `SHAREPOINT_ROOT_PATH` | `Escritorio/proyectos/11. inteplast/Exemples`, dentro de la unidad |
 | `SHAREPOINT_DRIVE_ID` | vacío = OneDrive del usuario conectado. Para otros usuarios haría falta el ID de la unidad y la carpeta compartida con ellos: sin comprobar |
-| `MICROSOFT_TENANT_ID`, `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | App registrada por informática de Eurecat (25/09/2026). El secret caducaba a unos 60 días: hacia el 24/11/2026 si no se amplió |
+| `MICROSOFT_TENANT_ID`, `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | App registrada por informática de Eurecat (25/09/2026). La nota inicial indicaba unos 60 días de vigencia del secret; verificar su caducidad efectiva en el registro antes de activar |
 | `MICROSOFT_REDIRECT_URI` | `https://oauth.pstmn.io/v1/browser-callback` (la de Postman, ya registrada) |
 | `MICROSOFT_SCOPES` | `https://graph.microsoft.com/.default`: los permisos ya concedidos a la app |
 
@@ -286,7 +332,7 @@ automático: el backend redirige a `/login?microsoft=<ticket>`, un ticket de un 
    (p. ej. `eduard.almar@eurecat.org`), activo y, si procede, superusuario.
 2. Poner `SHAREPOINT_ENABLED=true` y recrear el backend: `docker compose up -d backend`
    (si el código cambió, con `--build`). El frontend consulta el modo en
-   `GET /login/methods`; no hace falta reconstruirlo.
+   `GET /login/methods`; recargar la web tras cambiar de modo. No hace falta reconstruirla.
 3. En la web: **Entrar con Microsoft** → iniciar sesión en la pestaña nueva → copiar la
    dirección de la página de Postman → pegarla → **Continuar**.
 4. Para volver a local: `SHAREPOINT_ENABLED=false` y recrear el backend.
@@ -312,9 +358,11 @@ dentro de la web).
 - Se direcciona por ruta: renombrar o mover un archivo en SharePoint rompe su vínculo, como en
   local. Guardar también el ID del elemento permitiría seguirlo.
 - La caché de descargas no tiene límite de tamaño más allá de una versión por archivo. La
-  primera apertura de un original grande (molde STEP de 247 MB) espera a la descarga completa.
-- Los datos ya importados (mediciones, vistas, índice del plano) son visibles para todos los
-  usuarios de la web, aunque alguno no tuviera permiso sobre el original en SharePoint.
+  primera apertura de un original grande (molde STEP de unos 247 MiB) espera a la descarga completa.
+- Las mediciones, cotas y estudios ya importados son datos compartidos de la aplicación,
+  aunque un usuario no tenga acceso al original en SharePoint. Lo mismo ocurre con las
+  miniaturas PNG guardadas como imágenes. En cambio, las vistas GLB y el índice del plano
+  vuelven a comprobar el acceso y la versión del original mediante Graph antes de servirse.
 - Si `SHAREPOINT_DRIVE_ID` está vacío, cada usuario lee su propio OneDrive: solo sirve para
   el propietario de `Exemples`.
 
@@ -329,7 +377,28 @@ para todos, se puede valorar acceso de aplicación limitado con
 [permisos Selected](https://learn.microsoft.com/en-us/graph/permissions-selected-overview);
 el modo implementado es delegado, con los permisos de cada usuario.
 
+## Cobertura de la revisión documental
+
+El 26/10/2026 se contrastaron `file_sources.py`, `sharepoint.py`, `microsoft_auth.py`,
+las rutas `files`, `microsoft`, `part_setup` y `evidence`, `part_files.py` y
+`source_tables.py`; en la interfaz, `PartFiles`, `PartDetailPage`, las rutas de archivos,
+`viewers.ts`, `ModelViewer`, `PdfViewer`, `DrawingSearch`, `sourcePicker.ts` y el selector nativo.
+Se revisó también la configuración de Compose y los límites del conversor de vistas 3D.
+
+Las pruebas existentes incluyen [`test_sharepoint.py`](../backend/tests/api/routes/test_sharepoint.py),
+[`test_file_sources.py`](../backend/tests/api/routes/test_file_sources.py),
+[`test_source_tables.py`](../backend/tests/api/routes/test_source_tables.py),
+[`piece-editor.test.cjs`](../frontend/tests/components/piece-editor.test.cjs),
+[`native-picker.test.cjs`](../frontend/tests/components/native-picker.test.cjs) y
+[`source-tables.test.cjs`](../frontend/tests/components/source-tables.test.cjs).
+Se leyeron el código y las aserciones relevantes; no se ejecutaron estas suites, el selector
+de Windows ni un inicio de sesión real en Microsoft en esta revisión.
+
 ## Verificación con el 3212
+
+**Registro histórico de la fase local del 15/09/2026.** Las versiones de navegador,
+migración y cifras de pruebas siguientes pertenecen a aquella comprobación, no al estado
+del despliegue actual ni a una ejecución del 26/10/2026.
 
 En la instalación local se han vinculado a las filas existentes del Bolt Eye:
 
@@ -402,7 +471,9 @@ su GLB en el servidor y lo reutiliza al volver; la descarga entrega el original.
 `FilePreview`, migración `b73c69e5fa41` y endpoints `POST/GET /files/{id}/preview`.
 Configuración, límites y pruebas en [vistas-3d.md](vistas-3d.md).
 
-Quedan para las siguientes fases: Graph, mediciones/N-numbers y marcado de zonas.
+En aquella fase quedaban Graph, mediciones/N-numbers y marcado de zonas. Después se
+incorporaron la [consulta de cotas](cotas-y-evidencia-web.md), las [portadas CAD](portadas-cad.md)
+y [SharePoint](#sharepoint-microsoft-graph); el marcado libre sobre imágenes/planos sigue pendiente.
 El límite de carga directa de 50 MiB sigue vigente para otros formatos 3D grandes.
 
 ### Alta de piezas desde carpetas existentes (2026-09-17; sustituida el 22/09)

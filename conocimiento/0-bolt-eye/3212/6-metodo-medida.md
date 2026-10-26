@@ -7,9 +7,10 @@
 └── Measurement_Method_Pump_Housing _012_V01.docx     3,45 MB
 ```
 
-Documento **del cliente (Robert Bosch)** que define cómo se alinea la pieza y cómo se mide cada
-característica. Firmado por **Xavier Arcos, Metrology Manager Inteplast Group** — la "XA" que
-responde en `inteplast_resposta_dubtes.md`.
+Documento de correlación **INTEPLAST–Robert Bosch** que define cómo se alinea la pieza y cómo
+se mide cada característica. El bloque `Accepted by` identifica a **Xavier Arcos, Metrology
+Manager Inteplast Group**; la línea `Signature and Date` está sin completar en el texto.
+Esto no acredita una firma. Es la "XA" que responde en `inteplast_resposta_dubtes.md`.
 
 > 🔑 **Es la piedra Rosetta del proyecto.** Sin él, las columnas `GX` / `GN` / `LP(2)` del XLS y
 > los bloques del CSV son ilegibles. Leer este documento **antes** que los datos.
@@ -151,13 +152,22 @@ Es la forma de detectar a la vez **agujero pequeño** y **ovalización**.
 | Pos. | Ensayo | Procedimiento |
 |---|---|---|
 | **220 / 280** | **Estanqueidad** | Útil con conectores que taponan ambas tubuladuras. Inyectar aire a **5 bar**, sumergir el banco en agua y comprobar que no salen burbujas durante **30 s**. Bosch suministra las juntas tóricas. |
-| **N287 / N288** | **Fuerza de inserción del pin** | Pin de **Ø3,992** con una marca, guiado por un casquillo abierto. Presionar a **0,1 mm/s** hasta que la marca quede al nivel del chaflán. Reportar la **fuerza máxima**. Rango: **15N–50N**. |
+| **N287 en el DOCX** | **Fuerza de inserción del pin** | Pin de **Ø3,992** con una marca, guiado por un casquillo abierto. Presionar a **0,1 mm/s** hasta que la marca quede al nivel del chaflán. Reportar la **fuerza máxima**. El rango **15N–50N** y el identificador **N288** aparecen en los títulos PPTX 1.37/2.18, no en el texto de este procedimiento. |
 
-> 🔑 **N288 es la consecuencia funcional del bolt eye.** Con el agujero a Ø3,43 (`intern.01`) un
-> pin de Ø3,992 no entra → ver [historial-molde.md](historial-molde.md).
+> El método rotula el ensayo **N287**, mientras los planes de corrección usan **N288**.
+> El diámetro inicial Ø3,43 plantea un problema de ajuste respecto al pin Ø3,992, pero
+> esos diámetros por sí solos no demuestran el resultado del ensayo ni la inutilidad de la pieza.
+> Ver [historial-molde.md](historial-molde.md).
 >
 > ⚠️ **Discrepancia sin resolver**: la especificación dice **Ø3,992**, pero las diapositivas de
 > corrección dicen *"el pin fa **3,93**"* (corr. 1) y *"el pin fa **3,94**"* (corr. 2).
+
+**Contraste con el plano rev.07 (23/10/2026):** el recuadro `PRESS-IN FORCE` del PDF
+`1-2D y 3D Pieza/20250523_DRW 0140S00237_07.pdf` prescribe **15N–50N**, recorrido **1 mm**
+(globos 288/288.1) y **TESTING SPEED 0,2 mm/s** (globo 289). El DOCX, sección
+`INSERTION PIN / Pos. N287`, prescribe **0,1 mm/s**. Conservar ambas condiciones y
+versiones; no aplicar automáticamente la velocidad de rev.07 a ensayos documentados
+con rev.06 ni unificar los identificadores N287/N288 sin confirmación (I-207).
 
 ---
 

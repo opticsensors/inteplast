@@ -14,10 +14,9 @@
 
 ## 1. Cronología
 
-> 🆕 **Actualizada el 2026-08-13 con la hoja `HISTORY`.** Los huecos que había en esta tabla no
-> eran datos perdidos: estaban en `HISTORY`, que es un **log acumulativo**. `intern.09.xls!HISTORY`
-> tiene por sí solo la cronología entera.
-> → [4-metrologia.md §2](4-metrologia.md#la-hoja-history-es-un-log-acumulativo--rellena-todos-los-huecos)
+> **Fuentes:** `intern.09.xls!HISTORY` reúne los nueve informes. La revisión del 23/10/2026
+> completa sus campos con `DR(SKETCH)` de cada libro; por ejemplo, `.06!L9` aporta el lote 315426.
+> → [4-metrologia.md §2](4-metrologia.md#la-hoja-history-es-un-log-acumulativo-con-campos-incompletos)
 
 | Evento | Fecha | Lote | Responsable | Motivo (remark) | Datos 3D |
 |---|---|---|---|---|---|
@@ -29,7 +28,7 @@
 | ⚙️ **Corrección nº2** — 18 diapositivas | 18/03/2024 | — | — | — | — |
 | `intern.04` | **12/04/2024** ⚠️ | **315346** | KK | **FOT** | ❌ |
 | **`intern.05`** | 01/05/2024 | 315426 | DB | *cotes marcades en gris* | CSV completo; XLS parcial |
-| `intern.06` | **15/05/2024** | — | **KK** | ***ICL + water + Push-in*** | ❌ |
+| `intern.06` | **15/05/2024** | **315426** | **KK** | ***ICL + water + Push-in*** | ❌ |
 | `intern.07` | **30/10/2024** ⚠️ | **315714** | **MH** | *Comparation of the technologies KnO x VdB* | ❌ |
 | **`intern.08`** | **17/01/2025** ⚠️ | *Batch 08/01/2025* | NV | *Cotes CMM* | ✅ |
 | `intern.09` | 02/04/2025 | *Batch 08/01/2025* | **MH** | *Sizes Nr.128/134/162 GN evolvation* | ✅ |
@@ -52,8 +51,8 @@ exports CMM completos disponibles. La ausencia de `support` no demuestra que no 
 
 ### 🆕 Segunda prueba independiente: el contorno del perfil interior
 
-Extraídos los 144 PDF `PA`/`PB` (2026-08-13), la **infracción media de tolerancia** del perfil
-interior por cavidad:
+Extraídos los 144 PDF `PA`/`PB` (2026-08-13), la **media del peor exceso absoluto por PDF**
+del perfil interior por cavidad (12 PDF por cavidad):
 
 | Muestreo | c13 | c14 | c15 | c16 |
 |---|--:|--:|--:|--:|
@@ -63,17 +62,17 @@ interior por cavidad:
 | ⚙️ **corrección nº2** | | | | |
 | `intern.05` | 0,027 | 0,031 | 0,024 | 0,026 |
 
-🔑 **La corrección nº1 dividió la desviación del contorno por 5,5, y en las cuatro cavidades a la
-vez** — la huella de un cambio en la geometría común del molde, no de un retoque cavidad a
-cavidad. El cambio del resumen tras la nº2 es pequeño (0,029 → 0,027); no permite concluir
-por sí solo si esa zona se tocó.
+Entre `.01` y `.03`, **el exceso medio de c13 se divide por 5,5** y mejora en las cuatro
+cavidades. Es compatible con el plan nº1, sin demostrar si la intervención fue común o por
+cavidad ni su causalidad exclusiva. El cambio del resumen tras la nº2 es pequeño
+(0,029 → 0,027); no permite concluir por sí solo si esa zona se tocó.
 
 Es una evidencia **independiente** de la del Bolt Eye y sobre un dato que **el CSV no contiene**.
 
 ⚠️ **Matiz**: los 12 elementos siguen fuera de tolerancia en los tres muestreos (12/12). La banda
-es ±0,025 mm y queda una infracción residual de 0,01–0,06 mm. El perfil mejoró mucho pero **nunca
+es ±0,025 mm y el peor exceso por PDF en `.03/.05` va de **0,001 a 0,060 mm**. El perfil mejoró mucho pero **nunca
 llegó a entrar en tolerancia** — un candidato claro de pregunta para INTEPLAST.
-→ [4-metrologia.md](4-metrologia.md#los-144-pdf-pa_16--pb_16--tolerancia-de-contorno-fuente-única)
+→ [4-metrologia.md](4-metrologia.md#los-144-pdf-pa_16--pb_16---tolerancia-de-contorno-fuente-única)
 
 📌 **El STL `3212-315346-c13.stl` es del lote 315346** = `intern.03` / `intern.04`, es decir
 **posterior a la corrección nº1**. → [8-stl-pieza-real.md](8-stl-pieza-real.md)
@@ -157,9 +156,10 @@ Los 4 bolts a la vez (H = 1,5 mm, cav. 13):
 
 ### Por qué importaba (consecuencia funcional)
 
-El método de medida define el ensayo **N287/N288**: se inserta un **pin de Ø3,992** a 0,1 mm/s
-y se registra la fuerza máxima (rango 15N–50N). Con el agujero a **Ø3,43 el pin no entra**.
-No era una cota fuera de tolerancia: era la pieza inservible.
+El método de medida define el ensayo como **N287**: se inserta un **pin de Ø3,992** a 0,1 mm/s
+y se registra la fuerza máxima. Los planes 1.37/2.18 rotulan **N288, 15N–50N**; conservar
+esa discrepancia. El agujero inicial de **Ø3,43** plantea un problema de ajuste, pero los
+diámetros por sí solos no demuestran el resultado de fuerza ni que la pieza fuera inservible.
 → [6-metodo-medida.md](6-metodo-medida.md#ensayos-funcionales)
 
 ### Posición N117 (⌖0,15) — el bolt 3 nunca acaba de ir bien
@@ -171,28 +171,31 @@ No era una cota fuera de tolerancia: era la pieza inservible.
 | `intern.05` | 0,036 | 0,031 | **0,086** | 0,021 |
 | `intern.08` | 0,050 | 0,039 | **0,072** | 0,027 |
 
-Todos dentro de tolerancia, pero **B3 es sistemáticamente el peor**. Y el operario ya lo sabía:
-slide **1.34** dice *"**L'ull de la posición 3 es corretgeix menys**"*. Es un ejemplo perfecto
-de conocimiento tácito que la base de datos debe capturar.
+Todos dentro de tolerancia, pero **B3 es sistemáticamente el mayor en esta cavidad**.
+La acción **1.35** (`slide34.xml`) dice *"només mouria el B3 aprofitant que el fem gran"*.
+La frase de **1.34** sobre *"l'ull de la posición 3"* corresponde a **N113**, no demuestra
+una decisión sobre N117/B3.
 
 ---
 
 ## 5. Qué cambió entre los dos planes de corrección
 
-Cotas que estaban en la corrección 1 y **desaparecen** en la 2 (no demuestra que quedaran OK):
+Cotas que dejan de tener una **acción individual explícita en el título** del segundo plan
+(no demuestra que quedaran OK; N154/N167/N236 siguen en las tablas del plano A):
 
 ```
 N113  N127  N134  N137  N138  N141  N142  N145  N150  N154  N159
 N163  N167  N170 ★  N171  N175  N211  N214  N233  N236  N243  N283  N117/N118
 ```
 
-Cotas que **persisten** (la corrección 1 no bastó):
+Cotas con acciones individuales que **persisten** en el segundo plan:
 
 ```
 N128  N158/N168  N161  N162  N165  N166  N242  N265  N266  N267  N268  N288
 ```
 
-Cotas **nuevas** en la corrección 2: `N241`, `N284`.
+Acciones individuales **nuevas** en la corrección 2: `N241`, `N284`; N241 ya figuraba
+entre las cotas afectadas por el plano A en el primer plan.
 
 > ⚠️ **Ojo con la inferencia.** "Desaparecer de la corrección 2" es un indicio fuerte, no una
 > prueba. N170 es un contraejemplo: GX entra, muchos LP máximos siguen fuera. Verificar todas
@@ -228,9 +231,9 @@ los de la corrección 1 son de `intern.01` mientras los de la corrección 2 son 
 | N236 | 12 +0,05 /5 | 12,027 | 11,982 | −0,045 |
 | **N256** | **15,7 +0,10** | **15,331** | **15,10** | **−0,231** |
 
-🔑 **El retoque de 0,29 mm del plano A se aplicó.** Siete cotas del grupo se mueven
-**+0,23…+0,30 mm**, muy cerca del valor pedido, y pasan de rojo (NOK) a negro (OK) en el
-recorte de la corrección 2.
+Siete cotas del grupo se mueven **+0,23…+0,30 mm**, cerca de los 0,29 mm pedidos.
+Es evidencia compatible con el retoque del plano A, sin acreditar por sí sola su ejecución
+exacta ni excluir otras intervenciones. La conformidad debe comprobarse cota a cota.
 
 ### El efecto secundario: N256
 
@@ -238,9 +241,9 @@ recorte de la corrección 2.
 por debajo del mínimo (15,331 < 15,70) y acaba en 15,10. Es la firma de un desplazamiento de
 referencia: lo que se mide *desde* el plano A crece, lo que se mide *hacia* él decrece.
 
-Y **la corrección 2 no lo arregla**: le aplica el mismo `Retocs` genérico de +0,02 mm del
-grupo, que no basta ni de lejos. N256 sale de la corrección 2 **todavía NOK** y no hay
-corrección 3 en los datos → refuerza la pregunta abierta **A1**.
+La **previsión** de corrección 2 le aplica `Retocs` +0,02 mm, insuficiente para llegar al
+límite. Esa previsión sigue **NOK**, pero no es una medición posterior ni prueba de ejecución.
+No hay un tercer plan en los datos compartidos → pregunta abierta **A1**.
 
 > ⚠️ Ojo con N165, N166 y N167: también aparecen en el grupo del plano A, pero además tienen
 > diapositiva propia (1.29, 1.21, 1.20) con su propia acción. Su Δ **no es atribuible solo al
@@ -274,8 +277,8 @@ N154  N155  N165  N166  N167  N236  N237  N240  N241  N252  N256  N258  N267  N2
 
 más `N243` por la 1.28 y `N242` por la 2.17. **Son 16 cotas colgando de una sola referencia.**
 
-⚠️ Y **el signo no es uniforme**: de las que se pueden medir limpiamente, 8 crecen ≈ +0,25 mm,
-`N236`/`N237` no se mueven y **`N256` decrece −0,23 mm** (§6). La dependencia hay que modelarla
+⚠️ Y **el signo no es uniforme**: de las que se pueden medir limpiamente, 7 crecen entre +0,23 y +0,30 mm, `N267` crece +0,16 mm;
+`N236`/`N237` cambian −0,045/−0,005 mm y **`N256` decrece −0,23 mm** (§6). La dependencia hay que modelarla
 **con signo por cota**, no como "tocar A sube todo".
 
 Esto conecta directamente con el **warning de planitud N178** (Dubte 3): *"si no és recte pot
@@ -362,8 +365,8 @@ por sí sola si hubo retoque, cambio de proceso o variación de medida.
 ### 🔴 Hallazgo colateral: `intern.09` también tiene datos caducados
 
 Verificado valor a valor contra los CSV: **el bloque N117 + N118 de `intern.09.xls` (02/04/2025)
-es copia literal de `intern.01` (25/01/2024)**. Los 32 valores — 4 bolts × 4 llenties ×
-4 cavidades — coinciden exactamente, 15 meses después:
+coincide con `intern.01` (25/01/2024)**. Los 32 valores — (4 bolts + 4 llenties) ×
+4 cavidades — coinciden exactamente, 15 meses después; es un indicio de arrastre de datos:
 
 ```
 N117 intern.01 CSV   c13: 0.026 0.036 0.087 0.061      N118 intern.01 CSV   c13: 0.015 0.130 0.235 0.148
@@ -389,7 +392,7 @@ Estado en `intern.08`, la última medición 3D completa, en **las 4 cavidades**:
 |---|---|--:|--:|--:|--:|---|
 | **N161** | Ø45,4 **+0,12** | 45,393 | 45,367 | 45,380 | 45,384 | 🔴 **NOK — pasada de rosca** |
 | **N165** (max) | 1,35 **−0,05** | 1,399 | 1,394 | 1,411 | 1,399 | 🔴 **NOK** en las 4 |
-| **N265** | Ø59,7 **−0,1** | 59,596 | 59,585 | 59,585 | 59,599 | 🔴 **NOK** (por 4–15 µm) |
+| **N265** | Ø59,7 **−0,1** | 59,596 | 59,585 | 59,585 | 59,599 | 🔴 **NOK** (por 1–15 µm) |
 | N162 | Ø49,89 −0,12 | 49,855 | 49,856 | 49,834 | 49,863 | 🟢 ok |
 | N163 | Ø52,79 +0,12 | 52,807 | 52,807 | 52,824 | 52,806 | 🟢 ok |
 | N266 | Ø67,1 +0,1 según CSV/XLS | 67,126 | 67,120 | 67,121 | 67,130 | Dentro según CSV; título PPTX discrepante |
@@ -406,9 +409,10 @@ learned que justifica el proyecto: *"cuidado, en el 3212 este retoque se pasó"*
 
 Y hay un segundo matiz: N161 se evalúa con **dos filas**, `GX` (Ø mínimo) y `LP(2) MAX.`
 (distancia máxima entre puntos opuestos). En `intern.08` c13 salen **45,393** (`<<` por debajo)
-y **45,525** (`>>` por encima) a la vez. No es solo que el agujero sea pequeño: **está ovalado**,
-y ninguna corrección de diámetro puro lo va a arreglar. Las dos acciones que recibió (1.31 y
-2.16) eran reducciones de Ø.
+y **45,525** (`>>` por encima) a la vez. Hay un problema de forma compatible con falta de
+redondez; esas dos cifras no identifican por sí solas una ovalidad concreta. Además, **1.31
+pide explícitamente mejorar la redondez** y consultar la nube, mientras 2.16 propone
+conservarla y reducir Ø0,305. No resumir ambas acciones como simples reducciones de diámetro.
 
 `N265` es el caso opuesto: falla **por 4 µm** (59,596 frente a un mínimo de 59,600). Al ingerir
 conviene guardar la distancia al límite, no solo el booleano NOK — no es lo mismo pasarse 4 µm

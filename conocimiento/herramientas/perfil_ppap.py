@@ -43,10 +43,11 @@ CREATE TABLE IF NOT EXISTS perfil_ppap (
 """
 
 
-def perfilar(celdas: list[tuple[int, int, str, float | None]]) -> dict | None:
+def perfilar(celdas: list[tuple[int, int, str | None, float | None]]) -> dict | None:
     por_fila: dict[int, dict[int, tuple[str, float | None]]] = defaultdict(dict)
     for fila, col, valor, num in celdas:
-        por_fila[fila][col] = (valor, num)
+        if valor is not None:  # formula sin valor guardado: sigue siendo una medida ausente
+            por_fila[fila][col] = (valor, num)
     cabecera = next(
         (f for f in sorted(por_fila)
          if any(v.strip().lower() == "nominal" for v, _ in por_fila[f].values())),

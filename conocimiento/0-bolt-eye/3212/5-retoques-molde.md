@@ -38,6 +38,14 @@ abril de 2025 → pregunta abierta A1 en [preguntas-abiertas.md](../../../docs/p
 | Leerlo a ojo rápido | El `.pdf` de la corrección 1 |
 | Previsiones y efectos encadenados | `DR(100%)` de los XLS: H:K medidas, O retoque, P:S previsiones |
 
+**Contraste de variantes del 23/10/2026:** las dos `rev1` de corrección 2 contienen
+diferencias de contenido, no solo de bytes. En `rev1_.pptx`, la acción **2.15** propone
+**Ø0,21 mm** (frente a **Ø0,22** en `rev1.pptx`) y **2.16** propone **Ø−0,300 mm**
+(frente a **Ø−0,305**). La variante con guion bajo añade `OK` en **2.13, 2.15, 2.16 y
+2.17**. Fuentes: `ppt/slides/slide13.xml`, `slide15.xml`, `slide16.xml` y `slide17.xml`
+de ambos originales. La tabla de abajo describe exclusivamente `rev1.pptx`; no mezclar
+sus magnitudes con marcadores de la otra variante ni inferir cuál se ejecutó.
+
 ### Los XLS contienen el efecto previsto de los retoques
 
 **Rectificado el 17/09/2026:** no son clones sin valor adicional. En `DR(100%)` hay
@@ -206,8 +214,9 @@ relaciones de imagen — si coincide, ninguna imagen del `rels` está huérfana.
 
 ## 4. Contenido de la corrección nº2 — 18/03/2024
 
-**18 diapositivas.** Sale del muestreo `intern.03`. **Es un subconjunto de la primera**: solo
-las cotas que seguían mal.
+**18 diapositivas.** Sale del muestreo `intern.03`. Retoma parte del primer plan y añade
+acciones específicas, como N284; no es un subconjunto estricto ni prueba por sí solo qué
+cotas quedaron conformes.
 
 | Slide | DIM Nr. | Cota | Acción | Estado |
 |---|---|---|---|:--:|
@@ -225,7 +234,7 @@ las cotas que seguían mal.
 | 2.12 | N241 | 20,7+0,25 | **Erosionar 0,08 mm** en la direcció de la fletxa | OK |
 | **2.13** | **N240** | 18,5+0,2 /5 | Pujar **0,08 mm** després de tocar el pla A | |
 | 2.14 | N284 | Rz 6,3 / Rmax 10 | **Polir la superfície** | OK |
-| 2.15 | N162 | 49,89−0,12 | Retoc màx **Ø0,22 mm** | OK |
+| 2.15 | N162 | 49,89−0,12 | Retoc màx **Ø0,22 mm** | |
 | 2.16 | N161 | 45,4+0,12 | **Reduir Ø−0,305 mm** (en diàmetre total) | |
 | 2.17 | N242 | 0,05 | Segons núvol de punts, *tenint en compte que mourem el pla A 0,02 mm* | |
 | 2.18 | N288 | 15N–50N | *El pin fa **3,94**… Espera remesura* | |

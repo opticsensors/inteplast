@@ -9,8 +9,8 @@
 | Grupo | Pieza | Qué es | Nº pieza cliente | Plano en la carpeta | Correcciones |
 |---|---|---|---|---|---|
 | Tipo A | **3174** | Bearing Plate STD | 649473000A | `6494730` rev 004 | 11 loops (03/2023 → 05/2026) |
-| Tipo A | **3186** | Bearing Plate | 654169100A | `6494730` rev 002 ⚠️ | 6 loops (04/2023 → 02/2024) |
-| Tipo A | **3218** | Bearing Plate R230 P2 SAMS | 654695200B | `6494730` rev 004 ⚠️ (copia exacta del de 3174) | **15 loops** (01/2024 → 08/2026): [3218.md](3218.md) |
+| Tipo A | **3186** | Bearing Plate | 654169100A | `6494730` rev 002 ⚠️ | 6 loops con PPTX hasta 02/2024; entregas XLS posteriores hasta loop 9 (06/2025) |
+| Tipo A | **3218** | Bearing Plate R230 P2 SAMS | 654695200B | `6494730` rev 004 ⚠️ (copia exacta del de 3174) | Numeración hasta **loop 15** (01/2024 → 08/2026), con lagunas: [3218.md](3218.md) |
 | Tipo B | **3195** | Brush holder (Bosch) | 3134341864 | `0130S0002K` D 01 | N1–N6 (10/2023 → 12/2025) |
 | Tipo B | **3226** | Manifold (`DW-UMED-2-2`) | — | `DW-UMED-2-2` REV01 | Solo análisis de holguras con la pieza 3227 |
 | Tipo B | **3309** | Support stopper (`77217-12300`, *fuel tank filler pipe*) | — | `77217-02200-000A` (escaneo) | 3 entregas (04/2026 → 08/2026) |
@@ -31,9 +31,14 @@ con clips de otro tipo (portaescobillas, soporte). Qué criterio usa INTEPLAST p
 
 Correcciones que tocan directamente el clip (selección, `perfil_correccion`):
 3174 2.12 (*«Move the clips num. 2 and num. 3»*, 0,1 mm), 3195 1.17 (*«correct 0,04mm only in the clip
-surface»*), 3218 1.28/1.34 (*«Correct the clip on both side 0,07 mm (total of 0,14 mm)»*), 3218 1.9,
-10.4, 10.7, 10.9 (posición del clip por cavidad, solo en Z), 3218 15.1 (redondez 0,1 frente a
-0,02–0,03 de los otros clips).
+surface»*) y 3218 10.4/10.7 (diámetro; el texto dice que la posición está OK), 10.9 (posición del clip
+por cavidad, solo en Z) y 15.1 (redondez 0,1 frente a 0,02–0,03 de los otros clips).
+Las acciones 1.9, 1.28 y 1.34 están en `3218/…/20240119_1st loop of correction/20230314-Mold
+correction_1_P3174.pptx`: pese al nombre heredado **P3174**, la diapositiva 1 identifica explícitamente
+*«these tool 3218»* y lo compara con 3186/3174 (I-302). Sí aporta evidencia del 3218: 1.9 propone
+0,05 mm por lado del clip; 1.28/1.34, 0,07 mm por lado (0,14 mm total).
+En 3195, la versión `Toolmaker_comments_rev3` renumera 1.17 como 1.16 y añade *«It is not need to correct
+acording Anita 26/01/2024»*; la propuesta de 0,04 mm no acredita un retoque ejecutado.
 
 ## Diferencias con el 3212
 
@@ -41,7 +46,7 @@ surface»*), 3218 1.28/1.34 (*«Correct the clip on both side 0,07 mm (total of 
 |---|---|---|
 | Método de medida | DOCX | **XLS estructurado** (`MM_revNN.xls`, hoja `DIMENSIONS`: N-number, equipo, instrucción), varias revisiones; ensayos del cliente en DOCX |
 | Metrología | CSV CMM + XLS | **Casi solo XLS PPAP** (1 CSV en toda la carpeta); hojas `DR_CMM`, `DR (2)`…; subcarpetas `Interns/`, `Version 00/Customer/` |
-| Cavidades | 4 de 16 | 4, 8, 12, 16, 24… según hoja; varias hojas con columnas de cavidad repetidas |
+| Cavidades | Cuatro: c13–c16 (`INTRO!C40` en los nueve informes) | 4, 8, 12, 16, 24… según hoja; varias hojas con columnas de cavidad repetidas |
 | Correcciones | 2 planes | Hasta 15 loops, cada uno en carpeta `YYYYMMDD_Nth loop…`, con varias versiones (`draft`, `rev1`, `Updated`, `V1/V2`, `Toolmaker_comments`) |
 | Plantilla | `Tool correction n.m (DIM. Nr.x)` | La misma en 3174, 3186, 3195 y 3218; **3309 usa `Tool correction DIM#5: …`** con autor y fecha; 3226 no es un plan sino holguras de montaje |
 | Marcador `OK` | 11–15 | 100 en 3195 (versiones con comentarios del matricero) |
@@ -59,5 +64,5 @@ un `README.txt`.
 ## Incongruencias
 
 Detalle en [incongruencias.md](../incongruencias.md): planos de 3186/3218 que son el del 3174 (I-301),
-plan del 3174 dentro de la carpeta del 3218 (I-302), cabeceras PPAP de otros proyectos (I-303), fechas
+plan del 3218 con nombre heredado P3174 (I-302), cabeceras PPAP de otros proyectos (I-303), fechas
 imposibles (I-304).

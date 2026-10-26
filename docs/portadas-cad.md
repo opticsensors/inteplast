@@ -1,11 +1,20 @@
 # Portadas de features y piezas desde el CAD
 
+**Estado contrastado con el código el 26/10/2026.** Esta ficha es la referencia de miniaturas,
+selección de caras y persistencia de portadas. Los visores de archivos se describen en
+[ficheros externos](ficheros-externos.md#visores-de-archivos), y los GLB de modelos grandes
+en [vistas 3D](vistas-3d.md). Las verificaciones fechadas al final son antecedentes;
+no se han repetido en esta revisión documental.
+
 ## Piezas (22/09/2026)
 
 El catálogo y `/parts/{id}` comparten una captura PNG del STEP completo, sin selección
 de superficies. Se reutilizan el lector STEP en worker, los controles, `FeatureThumbnail`,
 `CoverButton`, `CoverDialog` y `StepCoverCanvas`. Las capturas nuevas se calculan una a una
 y se guardan para que volver al catálogo no vuelva a cargar todos los STEP.
+La generación se realiza en el navegador y admite STEP/STP de hasta **50 MiB**; puede
+cargar el motor 3D al entrar en el catálogo si faltan capturas. No hay editor manual de
+imagen ni selección de caras para la pieza: su portada abre la consulta 3D incluso al editar.
 
 `PUT /parts/{id}/cover` comprueba el CAD actual, su versión y SHA-256. La imagen derivada
 se asocia a la pieza; cambiar el CAD invalida la portada anterior. El CAD se obtiene de
@@ -14,7 +23,7 @@ Pulsar la portada abre el 3D interactivo completo, con giro, zoom y encuadre.
 
 ## Uso
 
-En **Editar**, pulsar la portada (también si está vacía) abre **Editar portada**.
+En el feature, pulsar la portada en **Editar** (también si está vacía) abre **Editar portada**.
 La pestaña **Imagen** admite:
 
 - Clic para seleccionar una imagen del ordenador.
@@ -86,8 +95,9 @@ Al limpiar una selección válida se conserva el encuadre y no se vuelve a impor
 No se ha añadido
 una correspondencia automática de caras ni un historial de originales.
 
-El origen sigue resolviéndose mediante el UUID interno y enlaces autenticados, igual que los
-visores existentes. La integración futura con Graph puede conservar este contrato.
+El origen se resuelve mediante el UUID interno y enlaces autenticados. La integración
+[SharePoint](ficheros-externos.md#sharepoint-microsoft-graph), incorporada el 22/10/2026,
+mantiene este contrato y lee los bytes de la ruta vinculada; sigue pendiente su prueba real.
 
 ## Implementación
 
@@ -128,9 +138,32 @@ actuales, pero tiene dos efectos que no se recuperan al volver a vincular:
   seleccionadas y cámara; `unlink_feature_part` en `api/routes/features.py`). La imagen
   estática de la portada se conserva, pero la selección hay que rehacerla.
 
-La portada de la pieza en el catálogo sí usa siempre su CAD principal actual.
+La portada de la pieza se selecciona a partir de su CAD principal actual. Esto no garantiza
+que el PNG se regenere si cambian únicamente los bytes remotos, como se explica debajo.
+
+## Cambios remotos y miniatura de pieza
+
+**Pendiente detectado al leer el código el 26/10/2026:** `part_card` en
+[`catalog.py`](../backend/app/api/routes/catalog.py) y `usePartImage` en
+[`PartCover.tsx`](../frontend/src/components/Parts/PartCover.tsx) reutilizan la imagen por
+`cad.id` y `StoredFile.version`. No comparan el `cTag` de Graph ni vuelven a calcular el
+SHA-256 al servir una miniatura existente. En modo SharePoint, cambiar el contenido en la
+misma ruta puede dejar un PNG anterior, porque la lectura remota no cambia esos UUID.
+
+La validación SHA-256 sí se hace **al guardar** la portada. En features, además,
+`StepCoverCanvas` comprueba los bytes antes de aplicar las caras guardadas y bloquea una
+selección incompatible. Las vistas GLB usan otra caché que sí incluye la versión actual
+del origen ([vistas 3D](vistas-3d.md#cola-recursos-y-seguridad)). Falta invalidar también la
+miniatura de pieza ante cambios remotos; no hay una acción específica de regeneración
+en la interfaz. Este caso se ha identificado en código, no mediante una prueba real de Graph.
 
 ## Comprobaciones
+
+Cobertura leída el 26/10/2026: componentes enumerados en Implementación, `PartCover.tsx`,
+`capturePartCad.ts`, `api/routes/catalog.py`, `api/routes/features.py` y los esquemas de portada.
+Las pruebas existentes están en [`test_cad_covers.py`](../backend/tests/api/routes/test_cad_covers.py),
+[`cover-ui.test.cjs`](../frontend/tests/components/cover-ui.test.cjs) y
+[`catalog.test.cjs`](../frontend/tests/components/catalog.test.cjs). Cubren, entre otros:
 
 - Backend: persistencia, cambios de imagen, ediciones parciales, CAD de otro feature,
   original modificado y rechazo de selecciones/cámaras inválidas.
@@ -142,14 +175,14 @@ La portada de la pieza en el catálogo sí usa siempre su CAD principal actual.
 - Ejecutar las pruebas con `scripts/test.ps1` y `npm run test:components`; la BD de trabajo
   nunca se usa para las pruebas. Ver también [la guía de la aplicación](app-web.md).
 
-Verificado el 15/09/2026: 131 pruebas del backend y 28 de interfaz, build de producción,
+**Registro histórico del 15/09/2026:** 131 pruebas del backend y 28 de interfaz, build de producción,
 Biome, Ruff y mypy correctos. En una instalación aislada se ha comprobado el STEP real del
 3212: marcar/desmarcar, arrastrar sin seleccionar, guardar, girar, ampliar y reabrir con la
 misma selección y cámara. La descarga conserva el SHA-256 del original. Cambiar la versión
 del vínculo bloquea las marcas antiguas y permite iniciar una selección nueva sin perder
 la imagen guardada. La revisión visual de la instalación de trabajo no modificó la ficha.
 
-Reorganización del 16/09/2026: 41 pruebas de componentes, build y Biome correctos.
+**Registro histórico de la reorganización del 16/09/2026:** 41 pruebas de componentes, build y Biome correctos.
 Comprobación en navegador con los estilos reales y datos/API simulados: icono de 32 px en
 la esquina inferior derecha, hover/foco/táctil, ampliación, editor único y captura conservada
 ante un error del visor CAD real. Revisadas las capturas de escritorio y móvil sin modificar

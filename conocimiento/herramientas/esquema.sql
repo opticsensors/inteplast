@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS documento (
   duplicado_de     INTEGER REFERENCES documento(id),
   inventariado_el  TEXT NOT NULL,
   extraido_el      TEXT,
-  version_extraida TEXT               -- tamano:mtime_ns:lector@version de la ultima extraccion
+  version_extraida TEXT               -- tamano:mtime_ns:selector@version; lector puede reflejar otra firma
 );
 CREATE INDEX IF NOT EXISTS documento_feature ON documento(feature, pieza, carpeta_norm);
 CREATE INDEX IF NOT EXISTS documento_ext ON documento(ext);

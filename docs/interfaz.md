@@ -4,6 +4,14 @@ Estas reglas se aplican a las nuevas pantallas y a los cambios de las existentes
 La referencia visual es el catálogo y el editor de Features. Antes de crear una composición
 nueva, comprobar qué componente o patrón de la aplicación ya resuelve esa tarea.
 
+**Revisión documental: 26/10/2026.** Los patrones descritos se han contrastado con el código;
+las comprobaciones de interfaz que deben ejecutarse se indican al final. Esta revisión no
+incluye una nueva ejecución de pruebas ni una sesión de navegador.
+
+Esta ficha concentra composición, interacción y navegación. El contrato de archivos está en
+[ficheros externos](ficheros-externos.md), la selección de superficies en
+[portadas CAD](portadas-cad.md) y la conversión de modelos grandes en [vistas 3D](vistas-3d.md).
+
 ## Búsqueda y filtros
 
 - Usar `Common/SearchField`: campo a todo el ancho, lupa a la izquierda y limpieza
@@ -69,7 +77,7 @@ nueva, comprobar qué componente o patrón de la aplicación ya resuelve esa tar
   al pasar el ratón explica la lectura. No tiene panel vacío. El progreso aparece solo
   durante la lectura y el resultado, incidencias y fuentes quedan en un resumen desplegable.
 - Reutilizar `Input`, el botón con Plus, la papelera, `useAutosave` y `SaveStatus` del
-  editor de ficheros. Los borradores fallidos se conservan y participan en Guardar.
+  editor de cotas. Los borradores fallidos se conservan y participan en Guardar.
 - Las cotas guardadas abren sus mediciones; el icono de plano contiguo abre esa cota
   directamente en el dibujo. En edición se pueden retirar con la papelera.
 - Ocultar metadatos no los borra: conservar revisión y relación de los vínculos existentes.
@@ -102,14 +110,16 @@ nueva, comprobar qué componente o patrón de la aplicación ya resuelve esa tar
 - En edición, Archivos muestra CAD, Escaneo, Molde y Plano 2D, incluso si están vacíos.
   La carpeta selecciona otro archivo y la papelera quita el vínculo, sin borrar el original
   ni su historial. No aparece Descargar hasta volver a consulta. Los cambios se guardan
-  junto al nombre/código, sin importar mediciones; un error conserva el borrador.
+  junto a la cabecera; cambiar solo archivos no importa mediciones. Si se cambia la carpeta,
+  la interfaz inicia una lectura después de guardar. Un error conserva el borrador.
 - Las subtarjetas de piezas dentro de Features conservan la papelera de desvincular,
   pero no ofrecen el menú de tres puntos para cambiar la carpeta de origen.
 - Cotas integra la consulta anterior de Metrología. La pieza la fija la ficha; no mostrar
   Feature ni Más filtros. Mantener buscador local y controles de revisión, evaluación,
   cavidades y correcciones. No elegir una cota automáticamente.
-- Los selectores usan `Common/SearchSelect`, compartido con los filtros de Features:
-  misma altura y borde, búsqueda interna, teclado, limpieza y opciones con desplazamiento.
+- Los selectores de vínculos usan `Common/SearchSelect`, compartido con los filtros del
+  catálogo: misma altura y borde, búsqueda interna, teclado, limpieza y opciones con
+  desplazamiento. Los filtros de revisión y evaluación usan los controles `Select` de detalle.
 - Feature, Categoría y Tag se filtran en el catálogo. La ficha ofrece todas las cotas de
   la pieza, incluidas las que no tienen feature; ignora esos filtros en enlaces antiguos
   y los limpia al seleccionar cotas o abrir el plano desde la consulta.
@@ -135,12 +145,14 @@ en una fila, también en móvil; el botón tiene la misma altura que el campo.
 No repetir debajo del buscador el número o el título de la cota seleccionada, ni añadir
 el subtítulo «Cotas y mediciones · revisión…» bajo el nombre de pieza.
 Al abrir Correcciones se mantiene esta misma estructura y selección, con **todos los
-muestreos** en la gráfica. Nunca recortar el historial al antes/después de un solo plan.
+muestreos disponibles de la cota** en la gráfica. Nunca recortar el historial al antes/después
+de un solo plan.
 Los tramos se seleccionan **dentro de la gráfica**, pulsando la región entre dos muestreos.
 La región seleccionada se rellena en gris; la tarjeta se actualiza sin mover la gráfica.
 No añadir una fila de botones debajo para cambiar de tramo. Las regiones admiten ratón,
-toque y teclado; consultar un punto no cambia el tramo. El detalle muestra la
-propuesta del molde, el efecto previsto y el cambio medido para la cavidad seleccionada;
+toque y teclado; consultar un punto no cambia el tramo. El detalle incluye una segunda
+gráfica del tramo con las cavidades visibles y la propuesta del molde. Distingue mediciones
+con línea continua y punto lleno de predicciones con línea discontinua y punto vacío;
 no muestra fotografías/capturas ni «Documentos y valores de origen».
 
 Ofrecer todas las acciones ya vinculadas a la cota y a cada plan, también las que no tienen
@@ -148,26 +160,26 @@ una previsión cuantitativa validada. Distinguir «sin acción vinculada» de «
 documentada». Una diferencia entre mediciones nunca basta para inventar una intervención.
 Mantener separadas la base del XLS para la previsión y las mediciones CSV para el cambio real.
 
-El alta de piezas parte de **Catálogo → Nueva pieza**. La cabecera contiene título,
-descripción opcional, código y cliente, junto a la portada cuadrada de la pieza. La carpeta
-ocupa una fila compacta con etiqueta y nombre en la misma línea. Al elegirla
-con el diálogo de Windows se proponen nombre, código, CAD, escaneo, molde y plano.
-Si ya pertenece a una pieza, se ofrece abrir esa ficha y no se modifica su identidad.
-Las propuestas son editables antes de registrar la pieza. Crear procesa automáticamente
-los CSV/XLS/XLSX compatibles sin formularios de revisión por archivo.
-Archivos permite varios ficheros por tipo, con nombre visible propio y un principal por
-tipo de referencia. «Añadir fichero» usa el botón con Plus, borde y tamaño de «Añadir feature».
-Solo admite originales dentro de la carpeta de la pieza y sus subcarpetas. En edición
-se cambia el tipo, nombre y vínculo; carpeta y papelera sustituyen a la descarga.
-Cada archivo ocupa como máximo dos líneas: tipo y nombre truncado debajo. El tamaño es
-un elemento aparte, centrado verticalmente con los botones de carpeta, papelera o descarga.
+El alta de piezas parte de **Catálogo → Nueva pieza**. La cabecera exige título, código y
+cliente, admite descripción opcional y reserva una portada cuadrada. La carpeta ocupa una
+fila compacta con etiqueta y nombre en la misma línea. El selector es nativo de Windows en
+modo local y está dentro de la web con SharePoint. Las propuestas siguen siendo borradores
+hasta **Crear pieza**; la interfaz inicia después la lectura de los CSV/XLS/XLSX compatibles.
+El registro y la lectura son operaciones separadas: un fallo al leer conserva la pieza creada
+y permite reintentar. Contrato de selección, archivos y guardado en
+[Uso en la ficha de pieza](ficheros-externos.md#uso-en-la-ficha-de-pieza).
+
+«Añadir fichero» usa el botón con Plus, borde y tamaño de «Añadir feature». Cada archivo
+ocupa como máximo dos líneas: tipo y nombre truncado debajo. El tamaño queda aparte,
+centrado verticalmente con los botones de carpeta/papelera en edición o descarga en consulta.
 En consulta, código y cliente aparecen juntos bajo la descripción, alineados a la izquierda.
 La tarjeta del catálogo muestra la descripción opcional bajo el nombre, hasta dos líneas
 como en Features. En la fila siguiente, «código · cliente» acompaña a la etiqueta azul
 Pieza, con el cliente truncado y el texto completo al pasar el ratón. Si no hay cliente,
 se muestra únicamente el código.
-Guardar aplica cabecera y archivos juntos; Cancelar los descarta. Ninguna acción renombra
-ni borra los originales. Cotas muestra datos extraídos, sin alta manual en la ficha de pieza.
+Guardar aplica cabecera y archivos juntos; Cancelar los descarta. Los vínculos con features
+de una pieza existente se guardan al modificarlos y no se deshacen con Cancelar.
+Cotas muestra datos extraídos, sin alta manual en la ficha de pieza.
 **Actualizar datos** inicia otra lectura únicamente al pulsarlo. Se conservan el historial
 y las revisiones. No hay vigilancia automática. La cabecera mantiene el título, con los
 botones a la derecha.
@@ -203,11 +215,15 @@ revisiones ya guardadas siguen siendo utilizadas al buscar.
 
 - Mostrar información solo sobre un punto, al pasar el cursor, tocarlo o enfocarlo con
   el teclado. Las zonas vacías y los segmentos de línea no activan información.
-- Colocar el recuadro junto al punto y ajustarlo a los bordes. Contiene solo el muestreo,
-  cavidad y valor con unidad. Si varios puntos se solapan, mostrar esas cavidades juntas;
+- Colocar el recuadro junto al punto y ajustarlo a los bordes. En la evolución contiene
+  muestreo, cavidad y valor con unidad. Si varios puntos se solapan, mostrar esas cavidades juntas;
   no añadir otras alejadas aunque pertenezcan al mismo muestreo.
+- Pulsar el punto fija el recuadro. En la gráfica principal, si existe procedencia,
+  el valor enlaza al CSV/XLS/XLSX original y a su localizador. Se cierra con la X, Escape
+  o pulsando fuera. En el detalle de correcciones también se muestran «Original»,
+  «Cambio medido» o «Predicción» y la variación cuando está disponible.
 - La leyenda permite activar cavidades. No incluir el texto «Banda de tolerancia» ni
-  instrucciones como «Pasa el cursor…». No añadir estado, límites o enlaces al recuadro.
+  instrucciones como «Pasa el cursor…». No añadir estado ni límites al recuadro.
 - No duplicar los valores en tablas permanentes bajo la gráfica.
 - Conservar los huecos si faltan mediciones. Una ausencia no es cero.
 - Distinguir una previsión de una medición real. Una propuesta del PPTX no demuestra
@@ -219,20 +235,32 @@ revisiones ya guardadas siguen siendo utilizadas al buscar.
 
 - No añadir botones o enlaces de retorno como «← Piezas» o «Volver a…».
   Atrás y Adelante corresponden al navegador. Los títulos pueden mostrar contexto.
-- Conservar pieza, búsqueda, feature, categoría, tag, cota, revisión, elemento, altura, evaluación, cavidades visibles, tramo, acción
-  y cavidad del detalle en la URL. Cambiar de evaluación conserva el tramo seleccionado.
+- Conservar pieza, búsqueda, feature, categoría, tag, cota, revisión, elemento, altura,
+  evaluación, cavidades visibles, tramo y acción en la URL. Cambiar de evaluación conserva
+  el tramo seleccionado. `cavity` se sigue admitiendo en enlaces antiguos; el detalle actual
+  utiliza la selección compartida de cavidades visibles.
 - La página del plano usa `drawingQ` sin sobrescribir la consulta de cotas.
-  Los enlaces desde una cota conservan además `drawingFile`, el PDF concreto vinculado
-  en Features; no cambiarlo por otro documento según su nombre.
+  La ruta contiene el `fileId` del PDF concreto vinculado; no cambiarlo por otro documento
+  según su nombre. Los enlaces antiguos con `drawingFile` conservan esa elección al redirigir.
   Atrás vuelve a la entrada anterior; la búsqueda del PDF reemplaza únicamente el estado
   de su propia página. Recargar conserva el documento y la búsqueda.
-- Escribir o ajustar evaluaciones reemplaza la entrada actual. Cambiar pieza o filtros de
-  feature/categoría/tag, seleccionar otra cota o abrir
-  correcciones/plano añade una entrada: Atrás restaura la consulta anterior completa.
+- En el catálogo, escribir, cambiar tipo o ajustar filtros reemplaza la entrada actual;
+  abrir una ficha añade una entrada. En Cotas, escribir, ajustar evaluaciones/cavidades,
+  tramo o acción reemplaza la entrada; seleccionar otra cota o abrir correcciones, plano
+  u origen añade una entrada. Atrás recupera la consulta anterior.
+- El origen tabular conserva `sourceLocator`, `sourceQ`, `sourceCavity` y `sourceValue`.
+  Su búsqueda no sobrescribe `q` ni `drawingQ`.
 - Mantener los enlaces antiguos de cotas/correcciones interpretando sus parámetros,
   sin recuperar las pestañas eliminadas.
 
 ## Comprobación
+
+La lectura del 26/10/2026 ha contrastado `CatalogPage`, `FeatureSearch`, `FeatureForm`,
+`NoteList`, `FeaturePartEvidence`, `PartDetailPage`, `PartFiles`, `MetrologyPage`,
+`Measurements`, `MeasurementPlot`, `Corrections`, `DrawingSearch` y las rutas de archivos.
+Hay pruebas de regresión en `frontend/tests/components/catalog.test.cjs`,
+`piece-editor.test.cjs`, `parts-ui.test.cjs` y `part-evidence-ui.test.cjs`; su existencia
+y sus aserciones se revisaron, pero no se ejecutaron en esta pasada documental.
 
 Revisar escritorio y móvil, teclado, ausencia de desplazamiento horizontal, consulta
 de valores, combinaciones de filtros e historial del navegador. Los cambios compartidos

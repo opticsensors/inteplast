@@ -55,7 +55,7 @@ def guardar(con, doc_id: int, resultado, version: str, lector: str, sha: str) ->
     con.execute(
         "UPDATE documento SET estado=?, lector=?, mensaje=?, sha256=?, duplicado_de=NULL, "
         "extraido_el=?, version_extraida=? WHERE id=?",
-        (resultado.estado, lector, resultado.mensaje, sha, ahora(), version, doc_id),
+        (resultado.estado, resultado.lector or lector, resultado.mensaje, sha, ahora(), version, doc_id),
     )
 
 

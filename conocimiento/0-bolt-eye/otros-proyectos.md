@@ -4,12 +4,17 @@
 > Las fichas actuales de cada pieza estan en [README.md](README.md), [3197.md](3197.md), [3051.md](3051.md)
 > y [2820.md](2820.md); las rutas ahora cuelgan de `Exemples/0- Bolt Eye/`.
 
-> **Decisión de alcance:** se trabaja **solo sobre `3212 Pump Housing`**
-> (→ [3212/README.md](3212/README.md)). Este documento deja constancia de que los otros tres
-> existen, qué contienen y **por qué no se usan**, para que nadie los descubra dentro de tres
-> meses y piense que se pasaron por alto.
+> **Alcance de la aplicación:** `3212 Pump Housing` sigue siendo el piloto
+> (→ [3212/README.md](3212/README.md)). La biblioteca de conocimiento ya incluye los otros
+> proyectos y familias; documentarlos no amplía automáticamente el piloto de la aplicación.
 >
 > Inspección: 2026-08-07. No re-verificados el 2026-08-11.
+
+> **Rectificaciones contrastadas el 23/10/2026:** la biblioteca se ha ampliado, manteniendo
+> el 3212 como piloto de la aplicación. En 3197, `intern.08.xls!DR-55º/65º/90º!I12` identifica
+> **temperaturas de boquilla en ºC**, no diámetros. Las 118 CSV se reparten en 59 informes
+> individuales, 9 comparativas y 50 exports de puntos. Un estudio MSA evalúa el sistema de
+> medida; no equivale por sí solo a una incertidumbre completa. Véanse las fichas actuales.
 
 ---
 
@@ -20,20 +25,20 @@ Exemples/0- Bolt Eye/           580 ficheros · 2,20 GB lógicos   (hasta 2026-1
 ├── 2820 Pump Housing/            2 ficheros    5,8 MB
 ├── 3051 Pump Housing/          122 ficheros  591,7 MB
 ├── 3197 Pot/                   203 ficheros  817,4 MB
-└── 3212 Pump Housing/          253 ficheros  834,0 MB   ← EL ÚNICO QUE SE TRABAJA
+└── 3212 Pump Housing/          253 ficheros  834,0 MB   ← PILOTO DE LA APLICACIÓN
 ```
 
 **Hay 3 Pump Housing** (2820, 3051, 3212) y **1 Pot** (3197). Los tres Pump Housing son de la
-misma familia y por tanto comparables entre sí — eso los hace valiosos *más adelante*, no ahora.
+misma familia; su comparación está documentada en las fichas actuales.
 
-## Por qué solo el 3212
+## Por qué el 3212 es el piloto
 
 | Motivo | Detalle |
 |---|---|
 | **Tiene el histórico más documentado** | Metrología (9 muestreos) + retoques de molde (2 correcciones documentadas) + escaneado STL. Permite estudiar *problema → acción → resultado*; faltan confirmar posibles retoques posteriores y la aceptación de cotas NOK. |
 | **Es sobre el que se trabajó el feature *Bolt Eye*** | Todas las preguntas y respuestas de `inteplast_resposta_dubtes.md` se refieren a él. |
 | **Es el que INTEPLAST usó para explicarnos el dominio** | El conocimiento que tenemos está anclado a esta pieza. |
-| **Alcance** | Modelar bien una pieza y validar el modelo vale más que ingerir cuatro a medias. Los otros tres se incorporan cuando el esquema esté probado. |
+| **Alcance** | Validar la aplicación con el 3212; las otras piezas aportan conocimiento para su futura generalización. |
 
 ---
 
@@ -58,13 +63,13 @@ si realmente no hay más (pregunta abierta A7 en [preguntas-abiertas.md](../../d
 
 ## `3051 Pump Housing` — 122 ficheros, 591,7 MB
 
-Proyecto **completo**, con la misma estructura de 8 carpetas que el 3212.
+Proyecto **completo**, con la numeración de carpetas 1–8; en el 3212 falta físicamente la carpeta 2.
 
 | Carpeta | Contenido destacado |
 |---|---|
-| `1-2D y 3D Pieza` | `20211205_0140S00275-DRW_pendent acceptació.pdf` ← *"pendiente aceptación"*, el plano no estaba aprobado · `20190718_3130516996-Pumphousing_VDA12mm.stp` |
+| `1-2D y 3D Pieza` | `20211205_0140S00275-DRW_pendent acceptació.pdf` ← *"pendiente aceptación"*, etiqueta del fichero, sin acreditar aprobación vigente · `20190718_3130516996-Pumphousing_VDA12mm.stp` |
 | `2- Moldflow` | **existe pero VACÍA** |
-| `3- 3D Molde` | `3051-cela_forma.stp` (78 MB) — *"cela forma"* = **solo el postizo/cavidad**, no el molde entero. Es el único de los cuatro que no es el ensamblaje completo. |
+| `3- 3D Molde` | `3051-cela_forma.stp` (78 MB) — contiene 460 entidades `PRODUCT`; el nombre por sí solo no demuestra que sea solo un postizo ni que represente todo el molde. |
 | `4- Metrologia` | Muestreos hasta **`intern.11`**. Carpetas `Suport_Int_01`, `Support_Inf_04`… Cavidades `Cav_1`–`Cav_4`. Incluye `3051_Cloud_of_Points.xlsm` (libro **con macros** que post-procesa las nubes de puntos). |
 | `5- Retoques de molde` | Nomenclatura alternativa: `3051_Correction_plan_N<N>_rev<N>.pptx`. Subcarpetas `2nCorrection_plan/`, `3rCorretion_plan/`, `4tCorretion_plan/`, `Old/` → **al menos 4 iteraciones de corrección** (el 3212 solo tiene 2). |
 | `6- Métode de mesura` | `0140Y0038S_01_measuring description.docx` |
@@ -86,8 +91,8 @@ Proyecto completo, **de otra familia de pieza** (*Pot*, no *Pump Housing*).
 | `1-2D y 3D Pieza` | `20240222_0140S00363 D 02.pdf` · `20230404_0140S00363_SPT_001.stp` |
 | `2- Moldflow` | **existe pero VACÍA** |
 | `3- 3D Molde` | `M1176_P-3197 6_05_2025.step` (**645 MB**, el fichero más pesado del conjunto). `M1176` = nº de molde — es el único proyecto que lo lleva en el nombre. |
-| `4- Metrologia` | Muestreos hasta `intern.11`. Cavidades **C1–C8**. Informes **bilingües ES/DE** (`Diámetro;Durchmesser`). Incluye `3197_MSA.xls` + `.pdf` (**Measurement System Analysis**, estudio R&R → da la incertidumbre de medida). También `3197_Punts_nervis_Frontal*.csv` (puntos de los **nervios**). |
-| `5- Retoques de molde` | `Burrs_3197_20240318.pdf` (informe de rebabas), `GPF_*.pdf` (reuniones con cliente) |
+| `4- Metrologia` | Muestreos hasta `intern.11`. Cavidades **C1–C8**. Informes **bilingües ES/DE** (`Diámetro;Durchmesser`). Incluye `3197_MSA.xls` + `.pdf` (**Measurement System Analysis**, estudio R&R del sistema de medida; no equivale por sí solo a su incertidumbre completa). También `3197_Punts_nervis_Frontal*.csv` (puntos de los **nervios**). |
+| `5- Retoques de molde` | `Burrs_3197_20240318.pdf` (informe de rebabas), `GPF_*.pdf` (documentos rotulados GPF) |
 | `6- Métode de mesura` | `3 130 516 01B_01_measurement_description_pot.docx` |
 | `7- Moldflow` | `3197 - RB - Pot.mfr` (150 MB) |
 | `8- STL peça real` | **no existe** |
@@ -116,7 +121,7 @@ N1120  Profilform 0,2 at Hole 1 to A/C/B   → tolerancia de perfil
 
 ```
 Support_intern.02/135ºC|140ºC|145ºC / 500bar|600bar/
-Support_intern.08/3197_totes_nozzle 55|65|90          ← diámetro de boquilla
+Support_intern.08/3197_totes_nozzle 55|65|90          ← temperatura de boquilla (ºC)
 ```
 
 Relaciona **parámetros de proceso con desviación dimensional** — dato muy valioso. Pero
@@ -142,29 +147,30 @@ PROYECTO (4) × MUESTREO intern.NN (1..11) × CAVIDAD (c13..c16 / C1..C8 / Cav_1
 
 | Ext. | Nº | Dónde | ¿Legible? |
 |---|--:|---|---|
-| `.pdf` | 162 | Planos 2D, gráficas PA/PB, planes de corrección, MSA | ⚠️ Parcial (PA/PB sí, planos no) |
+| `.pdf` | 162 | Planos 2D, gráficas PA/PB, planes de corrección, MSA | ⚠️ PA/PB con texto; planos vectoriales y escaneados según pieza |
 | `.txt` | 158 | Nubes de puntos XYZ | ✅ Trivial |
-| `.csv` | 137 | Informes CMM por cavidad + resúmenes "totes" | ✅ `;` + cp1252, por bloques |
+| `.csv` | 137 | 75 informes individuales CMM + 12 comparativas + 50 exports de puntos | ✅ `;` + cp1252, por bloques |
 | `.xls` | 44 | Informes PPAP + correcciones + MSA | ✅ BIFF8 → Excel COM |
-| `.dxf` | 15 | Perfiles 2D medidos | 🔁 **Duplicados** — no ingerir |
+| `.dxf` | 15 | Perfiles medidos | Mismos vértices que TXT hasta redondeo de 0,00005 mm |
 | `.pptx` | 14 | Planes de corrección de molde | ✅ Es un ZIP |
-| `.igs` | 12 | Contornos escaneados | 🔁 **Duplicados** — no ingerir |
-| `.rar` | 7 | Copias redundantes | ⚠️ Necesita unrar |
+| `.igs` | 12 | Exportación de contornos | XY de PUNTS con Z constante; no son duplicados 3D |
+| `.rar` | 7 | Comprimidos; redundancia no contrastada íntegramente | ⚠️ Necesita unrar |
 | `.stp`/`.step` | 7 | Sólidos de pieza y de molde | ✅ pero pesado |
-| `.zip` | 6 | Copias redundantes | ✅ |
+| `.zip` | 6 | Comprimidos; redundancia no contrastada íntegramente | ✅ |
 | `.dwg` | 6 | Perfiles de sección | ❌ Propietario (convertir a DXF) |
 | `.xlsm` | 3 | Post-proceso de nubes (con macros) | ✅ |
 | `.mfr` | 3 | Moldflow | ❌ Binario propietario |
-| `.docx` | 3 | Instrucciones de medición | ⚠️ Texto sí, 90 % son imágenes |
+| `.docx` | 3 | Instrucciones de medición | ⚠️ Texto e imágenes: requieren lectura de ambos |
 | `.stl` | 2 | Escaneado 3D de pieza real | ✅ |
 | `.xlsx` | 1 | Resumen ad-hoc | ✅ |
 
 🔁 **Los 15 `.dxf` y los 12 `.igs` del inventario global son exactamente los de
 `3212/4- Metrologia`** — las cifras coinciden, no hay ninguno en los otros tres proyectos. Y
-🆕 (2026-08-13) se ha verificado que **son duplicados de las nubes `.txt`**: el `.igs` = el
-`_PUNTS.txt` (con offset Z), el `.dxf` = el `_Cav<NN>.txt`. Mismo dato y 2,5× más peso.
-**Solo descarga, nunca ingesta.**
-→ [formatos-parsing.md §4bis](../formatos-parsing.md#4bis--los-igs-y-los-dxf-son-duplicados-de-los-txt)
+La conclusión de agosto de que ambos formatos eran duplicados 3D queda **rectificada el
+23/10/2026**: los 15 DXF comparten vértices y orden con el TXT hasta redondeo de 0,00005 mm;
+los 12 IGES conservan XY hasta 0,0001 mm, pero **aplanan Z a una constante**, sin matrices
+de transformación. Conservar los IGES como soporte distinto, no como nubes 3D equivalentes.
+→ [formatos-parsing.md §4bis](../formatos-parsing.md#4bis-relación-de-los-igs-y-dxf-con-los-txt)
 
 ## Nomenclatura común a los cuatro
 
