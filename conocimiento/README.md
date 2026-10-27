@@ -54,6 +54,7 @@ segunda explicación en prosa.
 | `0-bolt-eye/` … `7-planitudes/` | Una carpeta por feature: `README.md` del feature y fichas de pieza (`3212/` en detalle) | ✅ |
 | `herramientas/` | Inventario, extracción, perfiles y consultas (Python) | ✅ |
 | `datos/biblioteca.sqlite` | Inventario + contenido extraído de todos los ficheros | ❌ (datos del cliente) |
+| `datos/rag/` | Índice RAG, caché de embeddings y registro de construcciones ([rag.md](rag.md)) | ❌ (datos del cliente) |
 | `.venv/` | Entorno de las herramientas (`--system-site-packages`) | ❌ |
 
 ## Cómo se consulta (lo primero antes de abrir originales)
@@ -84,6 +85,25 @@ una fórmula aleatoria, ser una copia como valores o una previsión de retoque.
 SELECT d.ruta, a.hoja, count(*) FROM celda_aleatoria a JOIN documento d ON d.id = a.documento_id
 WHERE d.codigo = '3237' GROUP BY 1, 2;
 ```
+
+### Búsqueda con citas (RAG)
+
+Una sola interfaz para buscar por significado y por literal en las fichas, `hallazgos.jsonl`,
+la biblioteca y `docs/`, con procedencia y acceso exacto de solo lectura. Usa `embeddinggemma`
+en Ollama local; sin Ollama la búsqueda se declara solo léxica. Referencia: [rag.md](rag.md).
+
+```bash
+R=conocimiento/herramientas/rag.py
+$PY $R estado                                          # índice, modelo, frescura y cobertura
+$PY $R buscar "rebabas en nervios de soldadura" --json # híbrida; filtros --pieza --feature --coleccion --vigencia
+$PY $R buscar "N170" --pieza 3212                      # los N-numbers son locales a cada plano
+$PY $R ver <id> --contexto 2                           # fragmento completo y vecinos
+$PY $R exacto medidas --pieza 3212 --cota N170         # valores con celda original, fórmula y marcas
+$PY $R construir                                       # incremental; tras cambiar fichas o biblioteca
+```
+
+Los resultados indican relevancia, no certeza, y no son un inventario: las cifras se citan
+desde `exacto` (o `consultar.py`) con sus filtros.
 
 ## Cómo se actualiza
 

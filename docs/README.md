@@ -22,6 +22,7 @@ su cobertura no implica que el importador de la aplicación soporte los mismos f
 | Consultar el alcance futuro | [Hoja de ruta](hoja-de-ruta.md) | Etapas y condiciones para avanzar |
 | Elegir la siguiente tarea | [Próximos pasos](proximos-pasos.md) | Pendientes resumidos, enlazados al detalle |
 | Preparar preguntas al cliente | [Preguntas abiertas](preguntas-abiertas.md) | Dudas vigentes y resoluciones enlazadas a evidencia |
+| Buscar con citas en `conocimiento/` y `docs/` al desarrollar | [RAG local](../conocimiento/rag.md) | Herramienta de desarrollo; no forma parte de la aplicación |
 
 Leer primero la visión general y después solo el documento del tema. Consultar su código
 enlazado antes de cambiar el contrato. Si cambia un comportamiento, actualizar su referencia

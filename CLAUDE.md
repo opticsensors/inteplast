@@ -288,6 +288,7 @@ Leer bajo demanda, no de entrada.
 🔑 **Antes de abrir un original, consultar la biblioteca** (`conocimiento/datos/biblioteca.sqlite`,
 fuera de Git): inventario y contenido extraído de los 4.530 ficheros, con búsqueda de texto y SQL.
 Uso en [conocimiento/README.md](conocimiento/README.md); estado en [conocimiento/AVANCE.md](conocimiento/AVANCE.md).
+🔎 **Búsqueda con citas** (semántica + literal + datos exactos) sobre fichas, hallazgos, biblioteca y `docs/`: `conocimiento/herramientas/rag.py` → [conocimiento/rag.md](conocimiento/rag.md).
 
 | Documento | Léelo cuando… |
 |---|---|
