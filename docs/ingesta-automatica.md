@@ -137,7 +137,7 @@ de las piezas ni ejecutadas:
 | Campo | Diapositivas | Regla |
 |---|--:|---|
 | Número `n.m` | 1.234 (80 %) | Títulos `Tool correction n.m`, `Correcció nr.`, `DIM#n`, `Correction n` |
-| Cotas (`DIM. Nr. a, b and c`) | 945 (62 %) | Varias cotas por título, subpuntos `1320.2` |
+| Cotas (`DIM. Nr. a, b and c`) | 945 (62 %); 1.141 (74 %) con el extractor corregido el 27–28/10/2026; nominales sin cota y citas ambiguas aparte (`cotas_ambiguas`) | Varias cotas por título, subpuntos `1320.2`; también `DIM.3320`, `DIM#6`, `Dim Nº630`, `dimension 3970`, `4100,1` y listas escritas a mano ([AVANCE](../conocimiento/AVANCE.md)) |
 | Bloques situación actual / plan | 1.033 (67 %) | `Current/Actual situation`, `Tool correction plan`/`Correction proposal`/`Pla de correcció` |
 | Magnitud en mm | 771 (50 %) | Regex; **qué significa** (total, por lado, en radio) no sale por regex |
 | Cavidades explícitas | 250 (16 %) | En el resto, `no_consta`; no asumir todas |

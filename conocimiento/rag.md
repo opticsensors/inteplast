@@ -21,7 +21,10 @@ $PY $R ver <id> [--contexto 2] [--json]             # fragmento completo, otras 
 $PY $R exacto medidas --pieza 3212 --cota N170 [--hoja H] [--cavidad c13] [--max 200] [--json]
 $PY $R exacto celdas <id|ruta> [--hoja H] [--filas 10-40] [--max 500] [--json]
 $PY $R exacto hallazgo I-003 [--comprobar] [--json]
+$PY $R exacto cadena --pieza 3212 [--cota N170] [--json]  # correccion -> medidas de origen y validacion
 $PY $R exacto sql "SELECT …" [--max 200] [--json]
+$PY $R glosario [--contar] [--json]                 # conceptos del glosario y documentos que contienen cada termino
+$PY conocimiento/herramientas/evaluar_rag.py [--k 5] [--sin-glosario] [--registrar]   # preguntas con respuesta conocida
 $PY $R consultar arbol "0- Bolt Eye" --pieza 3212   # pasa a consultar.py, cuya CLI no cambia
 $PY $R construir [--solo-lexico] [--forzar] [--lote 16]
 ```
@@ -158,11 +161,29 @@ menciones: subir `MENCIONES` (reescribe el índice sin recalcular vectores).
    (`I-003` → su registro) y filas literales de la biblioteca (FTS en AND y, si hace falta, en OR).
 3. **RRF** (`k = 60`): `Σ peso / (60 + rango)`. Pesos: semántica 1, literal 1, mención 2,
    identidad propia 3, fila literal 0,6 y fila con el identificador exacto 2. Factores: `historial`
-   0,5, `revision_fechada` 0,8, `inventario` 0,5. Desempate estable por clave.
+   0,5, `revision_fechada` 0,8, `inventario` 0,5 y `tablas` 0,5 (27/10/2026: sus tarjetas repiten la misma
+   cabecera en `cav_1…cav_n` y en cada copia del libro, y con `--pieza 3167` ocupaban 7 de 8 resultados).
+   Desempate estable por clave.
 4. **Agrupación**: un resultado por texto (con `otras_apariciones`), como máximo `--por-fuente`
    (3) por fichero o documento y uno por hallazgo.
 
 La similitud expresa relevancia, no certeza factual.
+
+### Glosario multilingüe (27/10/2026)
+
+Los originales están sobre todo en inglés y catalán; las preguntas, en castellano. `venteo` no aparece en
+ningún original y `venting`, en 12 documentos: sin ampliar la consulta, ni la búsqueda literal ni la
+semántica (`embeddinggemma`) encontraban esas diapositivas. `conocimiento/rag/glosario.json` (propuesta
+pendiente de validar) agrupa por concepto los términos en ES/CA/EN/DE/CS; `herramientas/glosario.py`:
+
+- Un término **dispara** su concepto si aparece como palabra o frase en la consulta (sin mayúsculas ni
+  acentos; `créixer*` es prefijo). Los de `solo_destino` (`draft`, `flash`, `burn the`) se añaden pero no
+  disparan: son ambiguos. Como máximo 24 términos añadidos por consulta.
+- La expresión FTS en OR (índice y filas de la biblioteca) recibe los términos añadidos; la AND literal no.
+- La parte semántica calcula en **una** llamada el vector de la consulta y el de la consulta ampliada y
+  usa la mayor similitud de los dos.
+- El JSON trae `expansion` (concepto, disparadores, términos) y el texto imprime `Glosario: …`.
+  `--sin-glosario` lo desactiva. El índice no cambia: solo la consulta.
 
 ### Resultado JSON
 
@@ -225,6 +246,29 @@ cuenta en `alcance.excluidas_no_vigentes`.
   (vacía o no extraída); marca las RAND y si el texto de las fórmulas está disponible (no en XLS BIFF).
   Un duplicado se lee desde su original, con aviso.
 - `exacto hallazgo` devuelve el registro y, con `--comprobar`, ejecuta su `comprobacion.sql`.
+- `exacto cadena` lee `cadena_correccion` (`herramientas/cadena_correcciones.py`): por cada cota citada
+  en una diapositiva, el muestreo de origen (XLS de la carpeta del plan o de una subcarpeta con su número;
+  si no hay, por fecha ±7 días) y el siguiente con valores nuevos, con recuento, valores evaluables (con
+  nominal y dos tolerancias), mínimo, máximo, valores fuera y su proporción. Un muestreo es serie + número
+  (`3168-00` y `3168-10` no se mezclan; `intern.122` es la versión 2 de `intern.12`); los `INF.NN` (entregas PPAP)
+  no cuentan. Para saber si un informe repite otro compara las filas de la cota con sus valores utilizables (sin
+  `RAND()`, ceros ni atípicos) por posición y, si no, por contenido: misma cavidad y muestra, la misma etiqueta de
+  elemento cuando la hay en los dos lados (LEFT/RIGHT) y, sin etiqueta, filas de tres valores o más (un bloque
+  duplicado en columnas cuenta una vez). Salta el que repite el bloque entero, aunque esté reordenado (I-001),
+  marca `parcial` el que repite una parte, `herencia_indeterminada` si la correspondencia es dudosa y
+  `sin_medidas_validas` si los informes posteriores solo traen valores excluidos. Cada copia lleva su fecha: el
+  origen usa una copia no posterior a la corrección, la validación una no anterior, y se avisa si las copias de un
+  muestreo tienen fechas distintas. Si la fecha del plan no cuadra con su XLS de origen, se avisa y, si la carpeta
+  tiene una fecha que sí cuadra, se usa como estimada en `fecha_orden`, sin tocar `fecha_correccion`; si no, o si el
+  plan no tiene fecha, el orden y la validez temporal de las copias quedan sin comprobar (`admisible: null`). Una corrección anterior de otro plan que ya parte de un
+  muestreo posterior deja el vínculo `indeterminada` (3167, 3309 T3), sin elegir otro origen. Las copias del
+  mismo muestreo con valores, nominales o tolerancias distintos se guardan en `alternativas`, y `depende_copia` = 1
+  si la conclusión cambia según la copia (I-006, I-007). Una cota sin medidas propias usa sus subpuntos (`210` → `210.1`…`210.5`); una
+  cita ambigua (`DIM. Nr.45,1`) se lee como subpunto o lista según lo que se mida, o se dejan las dos lecturas
+  con aviso. Excluye `RAND()`, ceros y atípicos. Avisa de diapositivas copiadas de otra pieza (I-309). Muestra
+  **secuencia, no causa**, y no incluye los CSV de la CMM. Una validación `parcial` mezcla valores nuevos y
+  repetidos en sus cifras. Validada contra el 3212 (`historial-molde.md` §2 y §4) y el 3197
+  (`0-bolt-eye/README.md`, N230 3,770–3,787 → 4,068–4,073).
 - `exacto sql` (y la `comprobacion.sql` de los hallazgos) ejecuta con un autorizador de SQLite que
   solo admite lectura: `SELECT`/`WITH`, funciones y `PRAGMA` sin asignación o de esquema
   (`table_info`, `index_list`…). `ATTACH` (que crearía un fichero vacío aunque la conexión sea de solo
@@ -271,6 +315,19 @@ dos equipos.
   como referencia de alineación. Es un aviso de más, no cambia los resultados.
 - La interfaz admite otro recuperador (visual o geométrico) como una lista más en la fusión y una
   colección más, sin cambiar la salida.
+- El glosario amplía por concepto, no traduce frases: una paráfrasis sin términos del glosario
+  («no corregir en este loop y esperar» frente a *«Do not corrected… Wait»*) sigue dependiendo de la
+  semántica. `conocimiento/rag/` no se indexa (investigación, glosario y preguntas de evaluación).
+
+## Evaluación (27/10/2026)
+
+`herramientas/evaluar_rag.py` busca las preguntas de `conocimiento/rag/preguntas.jsonl` con sus filtros y
+mide en qué posición sale la primera fuente esperada (recall@k, MRR, por tipo y por conjunto). Las 40 del
+conjunto `ajuste` sirvieron para ajustar el glosario; las 15 de `control` se escribieron después y no.
+Con k = 5 y el índice del 27/10: código anterior 0,775 (ajuste) y 0,80 (control); código actual 0,975 y
+0,933. El 28/10, con cuatro fichas nuevas en el índice, control 0,867: el fragmento correcto sale 1.º en
+C-012, pero el evaluador no lo reconoce. Detalle, límites y fallos restantes en [rag/README.md](rag/README.md). `--registrar` añade el
+resultado a `datos/rag/evaluacion.jsonl`.
 
 ## Pruebas
 
@@ -298,6 +355,18 @@ cambiado, sin falsas discrepancias en partes, tablas con cabecera repetida y dup
 `PRODUCT` completo y encontrable; `--tipo-fuente elemento:fila`; `drawing_level = #REF!`; límites
 negativos, `ATTACH`, `PRAGMA` de asignación, FTS5 y CTE recursivas bajo el autorizador.
 
+Revisión del 27–28/10/2026 (26 pruebas en `test_rag.py`, 16 en `test_lectores.py`): el glosario encuentra
+`venting` al buscar `venteo` y `--sin-glosario` no; un término de solo destino no dispara; una sola
+llamada de embeddings para las dos consultas; `conocimiento/rag/` fuera del índice; hoja sin valores
+marcada como plantilla; `exacto cadena` sin tabla derivada. En `test_lectores.py`: 21 formas reales de
+citar cotas (`DIM.3320`, `DIM#6`, `Dim Nº630`, `dimension 3970`, `4100,1`, `3900.1.2.3…`, `rozměru 210`,
+`dim.: 202`, listas escritas a mano) y la cadena con bloque heredado, XLS de la carpeta, subcarpeta `Old/`
+ignorada y celdas `RAND()` excluidas; y el caso del 3309 (subcarpeta del plan 2, sin retroceso para el T3,
+subpuntos, aviso de copia de otra pieza y de dos versiones del mismo muestreo, `INF.01` fuera). Tras la revisión
+externa del 28/10/2026: series distintas, filas desplazadas, valores contenidos en el bloque anterior pero distintos
+celda a celda (3218 cota 2402), copia que repite el muestreo anterior, valores sin tolerancia, contradicción de orden con
+fechas desconocidas (3167), citas ambiguas resueltas con las medidas (3214 `45,1`) y nominales sin cota (`Dim 7,5+0,1`).
+
 ## Resultados medidos (2026-10-26)
 
 Equipo: i7-1365U sin GPU, Ollama 0.40.9, `embeddinggemma:latest` (digest `85462619ee72…`, 768 dim,
@@ -313,7 +382,7 @@ BF16). Cifras de `registro.jsonl` y de `rag.py estado --verificar`.
 | `indice.sqlite` / `cache_embeddings.sqlite` | 98,1 MB / 44,6 MB |
 | Apariciones / textos únicos / con vector | 15.339 / 14.044 / 9.553 |
 | Consulta híbrida desde la CLI (incluye arranque de Python) | 4,3–4,5 s |
-| Pruebas (`test_lectores.py` + `test_rag.py`) | 32 OK (9 + 23) |
+| Pruebas (`test_lectores.py` + `test_rag.py`) | 32 OK (9 + 23); 37 OK (11 + 26) el 27/10/2026 |
 
 Cobertura por colección (apariciones; *solo léxico* = sin vector, con motivo):
 

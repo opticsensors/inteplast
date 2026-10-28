@@ -1,0 +1,55 @@
+{"id": "R-001", "tipo": "curado", "pregunta": "por qué salió pequeño el agujero del bolt eye", "esperado": ["H-001", "historial-molde.md#4", "0-bolt-eye/README.md"]}
+{"id": "R-002", "tipo": "curado", "pregunta": "qué es un nervio de soldadura", "esperado": ["2-nervios-soldadura/README.md#qué-es"]}
+{"id": "R-003", "tipo": "curado", "pregunta": "cuántas cavidades tiene el molde del 3288", "esperado": ["I-101"]}
+{"id": "R-004", "tipo": "curado", "pregunta": "qué significa GX y LP en la medición", "esperado": ["6-metodo-medida.md"]}
+{"id": "R-005", "tipo": "curado", "pregunta": "hay valores inventados o generados aleatoriamente en los excel", "esperado": ["I-003"]}
+{"id": "R-006", "tipo": "curado", "pregunta": "el plano del 3218 es el correcto", "esperado": ["I-301"]}
+{"id": "R-007", "tipo": "curado", "pregunta": "qué versión del plan de corrección del 3206 se ejecutó", "esperado": ["I-401"]}
+{"id": "R-008", "tipo": "curado", "pregunta": "cómo se corrigió la planitud del 3168", "esperado": ["7-planitudes/README.md"]}
+{"id": "R-009", "tipo": "curado", "pregunta": "velocidad del ensayo de inserción del 3212", "esperado": ["I-207"]}
+{"id": "R-010", "tipo": "curado", "pregunta": "material del 3197 PPS distinto en cada cavidad", "esperado": ["I-201"]}
+{"id": "R-011", "tipo": "curado", "pregunta": "qué significa intern.NN en los nombres de fichero", "esperado": ["3212/README.md#nomenclatura"]}
+{"id": "R-012", "tipo": "curado", "pregunta": "informes PPAP que copian medidas de informes anteriores", "esperado": ["I-001", "I-203"]}
+{"id": "R-013", "tipo": "curado", "pregunta": "desviación aceptada por el cliente en los pockets", "esperado": ["H-602", "I-603"]}
+{"id": "R-014", "tipo": "filtro", "pregunta": "qué aceptó el cliente como desviación", "filtros": {"pieza": "3167"}, "esperado": ["H-602", "I-603", "6-pockets/README.md"], "nota": "con --pieza, las tarjetas de hoja llenaban el top-k (7 de 8 el 27/10/2026)"}
+{"id": "R-015", "tipo": "curado", "pregunta": "por qué hay rebabas en los nervios del 3206 según el matricero", "esperado": ["Presentation Schroud", "2-nervios-soldadura/README.md"]}
+{"id": "R-016", "tipo": "curado", "pregunta": "el plan del loop 5 del 3205 es realmente del 3205", "esperado": ["I-402"], "nota": "hallazgo anadido el 27/10/2026"}
+{"id": "R-017", "tipo": "curado", "pregunta": "se puede saber el cliente por el campo Customer Name de los informes", "esperado": ["I-005"], "nota": "hallazgo anadido el 27/10/2026"}
+{"id": "R-018", "tipo": "crudo", "pregunta": "qué se hizo cuando el clip se cerraba demasiado en la inyección", "esperado": ["closing too much"]}
+{"id": "R-019", "tipo": "multilingue", "pregunta": "en qué piezas hubo quemados por aire atrapado y se añadió venteo", "esperado": ["air trap"]}
+{"id": "R-020", "tipo": "multilingue", "pregunta": "en qué piezas se propuso añadir venteo o salida de gases en el molde", "esperado": ["venting", "air trap"], "nota": "fallaba: 'venteo' no aparece en ningun original"}
+{"id": "R-021", "tipo": "crudo", "pregunta": "qué textura se propuso para el pegado en cavidad del stopper", "esperado": ["VDI30"]}
+{"id": "R-022", "tipo": "filtro", "pregunta": "qué textura se propuso para el pegado en cavidad", "filtros": {"pieza": "3309"}, "esperado": ["VDI30"]}
+{"id": "R-023", "tipo": "filtro", "pregunta": "cuánto se propuso ampliar el ángulo de desmoldeo", "filtros": {"pieza": "3309"}, "esperado": ["10°/side"]}
+{"id": "R-024", "tipo": "crudo", "pregunta": "fuerza mínima de extracción del stopper", "esperado": ["250N"]}
+{"id": "R-025", "tipo": "metadato", "pregunta": "quién es el cliente de la pieza 3309", "esperado": ["TOYODA"], "nota": "fallaba: el dato solo esta en INTRO!C23 y en el metodo de medida"}
+{"id": "R-026", "tipo": "multilingue", "pregunta": "error de electroerosión en el acabado del shroud", "esperado": ["sparkerosion", "spare erosion"]}
+{"id": "R-027", "tipo": "multilingue", "pregunta": "problema de pieza pegada al molde al expulsar", "esperado": ["sticking"]}
+{"id": "R-028", "tipo": "multilingue", "pregunta": "el agujero salió grande y se añadió plástico", "esperado": ["increase plastic", "incrementar plastic", "créixer"], "nota": "fallaba: 55 diapositivas en ingles o catalan"}
+{"id": "R-029", "tipo": "filtro", "pregunta": "acciones de corrección de la planitud con lamelas", "filtros": {"pieza": "3168"}, "esperado": ["lamel"]}
+{"id": "R-030", "tipo": "filtro", "pregunta": "acciones sobre los pockets fuera de especificación", "filtros": {"pieza": "3167"}, "esperado": ["pocket"]}
+{"id": "R-031", "tipo": "filtro", "pregunta": "acciones de corrección de rebabas", "filtros": {"pieza": "3205"}, "esperado": ["burr", "rebav", "rebab"]}
+{"id": "R-032", "tipo": "filtro", "pregunta": "acciones de corrección del bolt eye", "filtros": {"pieza": "3212"}, "esperado": ["1.33", "N170"]}
+{"id": "R-033", "tipo": "multilingue", "pregunta": "postizos nuevos en los nervios para quitar las rebabas", "esperado": ["inserts on the ribs", "rib inserts", "postizos en los nervios"]}
+{"id": "R-034", "tipo": "multilingue", "pregunta": "hacer el expulsor más grande de diámetro", "esperado": ["ejector 0,03 bigger"]}
+{"id": "R-035", "tipo": "multilingue", "pregunta": "pines nuevos más grandes por falta de redondez", "esperado": ["new pins 0,2mm bigger"]}
+{"id": "R-036", "tipo": "multilingue", "pregunta": "quitar acero en la zona marcada en rojo 0,18 mm en total", "esperado": ["burn the red surface 0,18"]}
+{"id": "R-037", "tipo": "curado", "pregunta": "condiciones de proceso del 3197 que aparecen en la ruta de los CSV", "esperado": ["135ºC/500bar"]}
+{"id": "R-038", "tipo": "filtro", "pregunta": "correcciones de la cota 3320", "filtros": {"pieza": "3195"}, "esperado": ["DIM.3320"]}
+{"id": "R-039", "tipo": "multilingue", "pregunta": "análisis de causa raíz del NOK en el montaje de Bosch", "esperado": ["End lamination NOK", "root cause"]}
+{"id": "R-040", "tipo": "multilingue", "pregunta": "fotos de rebabas por lote y fuerza de cierre", "esperado": ["Força tanca"]}
+{"id": "C-001", "conjunto": "control", "tipo": "curado", "pregunta": "qué dijo el matricero local del 3206 sobre el núcleo de expulsión", "esperado": ["runout difference"]}
+{"id": "C-002", "conjunto": "control", "tipo": "curado", "pregunta": "cuántos valores por cavidad genera el Cpk generator", "esperado": ["I-003", "Cpk generator"]}
+{"id": "C-003", "conjunto": "control", "tipo": "curado", "pregunta": "qué tolerancia tiene el diámetro del bolt eye en el 3197", "esperado": ["N230"]}
+{"id": "C-004", "conjunto": "control", "tipo": "multilingue", "pregunta": "cómo se mide la posición del clip", "esperado": ["position of the clip"]}
+{"id": "C-005", "conjunto": "control", "tipo": "multilingue", "pregunta": "la pieza de los clips se mide montada o suelta", "esperado": ["clipped"]}
+{"id": "C-006", "conjunto": "control", "tipo": "curado", "pregunta": "con qué equipo se medía la posición del clip en el 3174", "esperado": ["CT - SCAN", "CT-SCAN"]}
+{"id": "C-007", "conjunto": "control", "tipo": "curado", "pregunta": "qué comentó el cliente sobre la esquina rugosa del end lamination", "esperado": ["Customer says", "esquina rugosa"]}
+{"id": "C-008", "conjunto": "control", "tipo": "curado", "pregunta": "qué significa totes en el nombre de los CSV", "esperado": ["totes"]}
+{"id": "C-009", "conjunto": "control", "tipo": "multilingue", "pregunta": "mover los clips número 2 y 3", "esperado": ["Move the clips"]}
+{"id": "C-010", "conjunto": "control", "tipo": "multilingue", "pregunta": "rebabas en los nervios por cavidad en el loop 10", "esperado": ["Burrs on the ribs"]}
+{"id": "C-011", "conjunto": "control", "tipo": "curado", "pregunta": "el plano del 3051 está aprobado", "esperado": ["I-205"]}
+{"id": "C-012", "conjunto": "control", "tipo": "curado", "pregunta": "medidas con valor cero en los informes del 3288", "esperado": ["I-002"]}
+{"id": "C-013", "conjunto": "control", "tipo": "curado", "pregunta": "carpeta del 3168 con una fecha en el futuro", "esperado": ["I-701"]}
+{"id": "C-014", "conjunto": "control", "tipo": "multilingue", "pregunta": "pulir toda la cara de inyección por la planitud", "esperado": ["polish all the injection side"]}
+{"id": "C-015", "conjunto": "control", "tipo": "multilingue", "pregunta": "no corregir en este loop y esperar", "esperado": ["Do not corrected"]}

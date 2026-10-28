@@ -600,6 +600,50 @@ class RagTest(unittest.TestCase):
         recursiva = "WITH RECURSIVE n(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM n WHERE x < 3) SELECT count(*) FROM n"
         self.assertEqual(rag.exacto_sql(self.rutas, recursiva)["filas"], [[3]])
 
+    # --- Revision del 27/10/2026: glosario, conocimiento/rag/ y hojas sin valores ---
+
+    def test_glosario_amplia_la_consulta_a_otros_idiomas(self):
+        escribir(self.raiz / "conocimiento/1-clips/README.md",
+                 "# Clips\n\nTool correction 1.31 Diesel defects due to an air trap: make more venting on the pin.\n")
+        escribir(self.raiz / "conocimiento/rag/glosario.json", json.dumps({"conceptos": [
+            {"id": "venteo", "es": ["venteo", "salida de gases"], "en": ["venting", "air trap"]},
+            {"id": "desmoldeo", "es": ["desmoldeo"], "en": ["draft angle", "draft"], "solo_destino": ["draft"]}]}))
+        escribir(self.raiz / "conocimiento/rag/README.md", "# Evaluacion\n\nPregunta: venteo en los clips (no debe indexarse).\n")
+        self.construir()
+        con_glosario = self.buscar("venteo", modo="lexico")
+        self.assertEqual(con_glosario["expansion"][0]["concepto"], "venteo")
+        self.assertIn("venting", con_glosario["expansion"][0]["terminos"])
+        self.assertTrue(any(x["ruta"] == "conocimiento/1-clips/README.md" for x in con_glosario["resultados"]))
+        sin_glosario = self.buscar("venteo", modo="lexico", glosario=False)
+        self.assertEqual(sin_glosario["expansion"], [])
+        self.assertFalse(any(x["ruta"] == "conocimiento/1-clips/README.md" for x in sin_glosario["resultados"]))
+        self.assertFalse(any((x.get("ruta") or "").startswith("conocimiento/rag/") for x in con_glosario["resultados"]))
+        # Un termino de solo destino no dispara su concepto; un disparador del mismo concepto, si.
+        self.assertEqual(self.buscar("draft del informe", modo="lexico")["expansion"], [])
+        self.assertEqual(self.buscar("Desmoldeo", modo="lexico")["expansion"][0]["terminos"], ["draft angle", "draft"])
+        # La parte semantica recibe la consulta original y la ampliada en una sola llamada.
+        llamadas = self.falso.llamadas
+        hibrida = self.buscar("salida de gases")
+        self.assertEqual(hibrida["modo_efectivo"], "hibrido")
+        self.assertEqual(self.falso.llamadas, llamadas + 1)
+        self.assertTrue(any(x["ruta"] == "conocimiento/1-clips/README.md" for x in hibrida["resultados"][:3]))
+        with closing(rag.abrir_indice(self.rutas)) as con:
+            self.assertEqual(con.execute("SELECT count(*) FROM aparicion WHERE ruta LIKE 'conocimiento/rag/%'").fetchone()[0], 0)
+
+    def test_hoja_sin_valores_se_identifica_como_plantilla(self):
+        self.modificar_biblioteca(
+            "INSERT INTO lectura_dr VALUES (3, 'cav_1', 'cliente_por_cavidad', 'informe', 7, '{}', '[\"c1.m1\"]', 0, 0, 0, "
+            "'{}', 0, 0, 0, '[0,0,0,0]', '{}', '{}')")
+        fragmentos = self.fragmentos_biblioteca()
+        self.assertIn("Sin valores de medida: plantilla sin rellenar", fragmentos["hoja:3:cav_1"].contenido)
+        self.assertNotIn("Sin valores de medida", fragmentos["hoja:3:DR(SKETCH)"].contenido)
+        self.assertLess(rag.FACTOR_COLECCION["tablas"], 1.0)
+
+    def test_exacto_cadena_exige_la_tabla_derivada(self):
+        with self.assertRaises(rag.RagError) as error:
+            rag.exacto_cadena(self.rutas, "3212", "N170")
+        self.assertIn("cadena_correcciones.py", str(error.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

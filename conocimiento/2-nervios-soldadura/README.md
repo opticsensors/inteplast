@@ -29,7 +29,7 @@ Los informes PPAP lo citan como *«Draft angle of blade groove, and welding ribs
 |---|---|---|
 | 1 | `1st loop of correction/20230915-Mold correction_1_P3205.pptx` | Primer plan (plantilla `Tool correction`) |
 | 2–3 | `2on loop … burrs and diameter 20231012`, `3rd loop of correction burrs` | Rebabas y diámetros; incluye fotos de WhatsApp |
-| 5 | `5th loop of correction GPF` | Correderas nuevas (`new sliders update GPF`) |
+| 5 | `5th loop of correction GPF` | Correderas nuevas (`new sliders update GPF`). ⚠️ El PPTX base es el plan **del 3206** (cabecera P3206, mismo texto que el de `3206/20240320_After new sliders correction/`); las versiones `_v1`/`_v2` no nombran pieza ([I-402](../incongruencias.md)) |
 | 6 | `6th loop of correction (possible-rib inserts)` | Mover el director de energía; propuesta de **rediseño del nervio** (`Insert explanation`: *CURRENT / PROPOSED SHROUD RIB DESIGN*) |
 | 7–8 | `7th / 8th loop … (after new inserts on the ribs)` | Tras poner **postizos en los nervios**: altura de nervios y ranuras, diámetros +0,1…+0,3, rebabas en nervios por cavidad |
 | 9–10 | `9th`, `10th loop of correction` | *«Correcció 10.1 Burrs on the ribs / CAVITY 2: NERVI 1, 7, 9»*… |

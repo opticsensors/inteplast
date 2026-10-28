@@ -35,7 +35,8 @@ segunda explicación en prosa.
 | Correspondencia IGES/DXF/TXT y fechas de adquisición | [Metrología: soportes geométricos](0-bolt-eye/3212/4-metrologia.md#rectificación-dxf-equivalente-con-redondeo-iges-con-z-aplanada) |
 | Columnas CSV y reglas de parsing | [Formatos y parsing](formatos-parsing.md) |
 | Variantes PPTX y contenido de acciones del 3212 | [Retoques: qué fichero usar](0-bolt-eye/3212/5-retoques-molde.md#qué-fichero-usar) |
-| Cronología y comparación antes/después | [Historial del molde](0-bolt-eye/3212/historial-molde.md) |
+| Cronología y comparación antes/después | [Historial del molde](0-bolt-eye/3212/historial-molde.md) (3212, a mano); otras piezas: tabla `cadena_correccion` (`rag.py exacto cadena`) |
+| Cliente, plano, nº de cliente e ITP de cada pieza | [Identidad de las piezas](identidad-piezas.md) (generada); cliente poco fiable: [I-005](incongruencias.md) |
 | Vocabulario metrológico y ensayos | [Método de medida](0-bolt-eye/3212/6-metodo-medida.md) |
 | Fórmulas aleatorias, procedencia y recuentos I-003 | [Incongruencias I-003](incongruencias.md#i-003-en-detalle) |
 | Cómo regenerar y comprobar la biblioteca | [Cómo se actualiza](#cómo-se-actualiza); resultados fechados en [AVANCE](AVANCE.md) |
@@ -47,6 +48,8 @@ segunda explicación en prosa.
 |---|---|---|
 | [AVANCE.md](AVANCE.md) | Estado de la lectura de Exemples y qué queda pendiente | ✅ |
 | [comparativa.md](comparativa.md) | Diferencias entre features y piezas: esqueleto, formatos, plantillas | ✅ |
+| [identidad-piezas.md](identidad-piezas.md) | Nombre, plano, nº de cliente, ITP, cliente y columnas de cavidad por pieza, con recuentos y valores anómalos. **Generado** por `identidad_piezas.py` | ✅ |
+| [rag/](rag/README.md) | Investigación de arquitectura (27/10/2026), glosario multilingüe y preguntas de evaluación del RAG. No se indexa | ✅ |
 | [incongruencias.md](incongruencias.md) | Lo que no cuadra o habría que pedir a INTEPLAST, con evidencia | ✅ |
 | [hallazgos.jsonl](hallazgos.jsonl) | Un registro por hallazgo o incongruencia: afirmación, fuentes (ruta, SHA-256, localizador), estado | ✅ |
 | [formatos-parsing.md](formatos-parsing.md) | Formatos del 3212 columna a columna (CSV CMM, XLS PPAP, PPTX) | ✅ |
@@ -72,10 +75,12 @@ $PY conocimiento/herramientas/consultar.py sql "SELECT … FROM perfil_ppap …"
 Tablas: `documento` (un fichero, con feature/pieza/carpeta normalizada, estado y SHA-256),
 `elemento` (texto con localizador: diapositiva, página, fila de hoja, línea), `celda` (hojas y CSV con
 coordenada), `estructura` (huella por fichero), `elemento_fts` (búsqueda de texto completo).
-Derivadas: `perfil_ppap`, `perfil_correccion`, `globo`, `celda_aleatoria` (celdas con `RAND()`: no son
-medidas, I-003), `auditoria` (resultado de `verificar.py`) y `lectura_dr`/`medida_dr` (prototipo de
-lector PPAP generalizado: una fila por hoja y una por valor, con marcas; ver
-[docs/ingesta-automatica.md](../docs/ingesta-automatica.md)).
+Derivadas: `perfil_ppap`, `perfil_correccion` (cotas citadas normalizadas y su literal en `cotas_texto`),
+`globo`, `celda_aleatoria` (celdas con `RAND()`: no son medidas, I-003), `auditoria` (resultado de
+`verificar.py`), `lectura_dr`/`medida_dr` (prototipo de lector PPAP generalizado: una fila por hoja y una
+por valor, con marcas; ver [docs/ingesta-automatica.md](../docs/ingesta-automatica.md)) y
+`cadena_correccion` (cota corregida → medidas del muestreo de origen y del siguiente con valores nuevos;
+secuencia, no causa: `rag.py exacto cadena`).
 
 🔴 Antes de dar por buena una cifra de un libro, comprobar `celda_aleatoria`, su fórmula y
 procedencia. La ausencia en esa tabla **no certifica que sea una medición**: puede depender de
@@ -99,8 +104,13 @@ $PY $R buscar "rebabas en nervios de soldadura" --json # híbrida; filtros --pie
 $PY $R buscar "N170" --pieza 3212                      # los N-numbers son locales a cada plano
 $PY $R ver <id> --contexto 2                           # fragmento completo y vecinos
 $PY $R exacto medidas --pieza 3212 --cota N170         # valores con celda original, fórmula y marcas
+$PY $R exacto cadena --pieza 3197 --cota N230          # corrección → muestreo de origen y de validación
 $PY $R construir                                       # incremental; tras cambiar fichas o biblioteca
+$PY conocimiento/herramientas/evaluar_rag.py           # preguntas con respuesta conocida (rag/preguntas.jsonl)
 ```
+
+Las consultas en castellano se amplían con el glosario de `rag/glosario.json` (los originales están
+sobre todo en inglés y catalán); el resultado muestra la ampliación y `--sin-glosario` la desactiva.
 
 Los resultados indican relevancia, no certeza, y no son un inventario: las cifras se citan
 desde `exacto` (o `consultar.py`) con sus filtros.
@@ -113,9 +123,12 @@ $PY conocimiento/herramientas/extraer.py            # solo lo nuevo, cambiado, c
 $PY conocimiento/herramientas/perfil_ppap.py
 $PY conocimiento/herramientas/perfil_correcciones.py
 $PY conocimiento/herramientas/globos_icp.py
+$PY conocimiento/herramientas/identidad_piezas.py      # reescribe identidad-piezas.md
 $PY conocimiento/herramientas/formulas_aleatorias.py   # abre con Excel los xls con token RAND
 $PY conocimiento/herramientas/verificar.py --n 10       # muestra al azar contra los originales
 $PY conocimiento/herramientas/lector_dr.py              # medidas PPAP con reglas deterministas
+$PY conocimiento/herramientas/cadena_correcciones.py    # después de perfil_correcciones y lector_dr
+$PY conocimiento/herramientas/rag.py construir          # índice RAG al final
 ```
 
 - `extraer.py` **lee los originales y descarga los que estén solo en la nube**. Nunca escribe en

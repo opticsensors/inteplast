@@ -289,11 +289,14 @@ Leer bajo demanda, no de entrada.
 fuera de Git): inventario y contenido extraído de los 4.530 ficheros, con búsqueda de texto y SQL.
 Uso en [conocimiento/README.md](conocimiento/README.md); estado en [conocimiento/AVANCE.md](conocimiento/AVANCE.md).
 🔎 **Búsqueda con citas** (semántica + literal + datos exactos) sobre fichas, hallazgos, biblioteca y `docs/`: `conocimiento/herramientas/rag.py` → [conocimiento/rag.md](conocimiento/rag.md).
+Amplía las consultas en castellano con un glosario multilingüe y se evalúa con `evaluar_rag.py` ([conocimiento/rag/](conocimiento/rag/README.md)).
 
 | Documento | Léelo cuando… |
 |---|---|
 | [conocimiento/comparativa.md](conocimiento/comparativa.md) | quieras saber **en qué se parecen y se diferencian** los 8 features y sus piezas (esqueleto, formatos, plantillas) |
 | [conocimiento/incongruencias.md](conocimiento/incongruencias.md) | busques **lo que no cuadra** o haya que pedir a INTEPLAST, con evidencia |
+| [conocimiento/identidad-piezas.md](conocimiento/identidad-piezas.md) | necesites **cliente, plano, nº de cliente o ITP** de una pieza (generado; el cliente de los informes es poco fiable, I-005) |
+| `rag.py exacto cadena --pieza P --cota N` | quieras saber **qué pasó con una cota tras su corrección** en cualquier pieza: muestreo de origen y de validación (secuencia, no causa) |
 | `conocimiento/<n>-<feature>/README.md` | trabajes con un feature concreto (`0-bolt-eye` … `7-planitudes`) |
 | [conocimiento/0-bolt-eye/3212/README.md](conocimiento/0-bolt-eye/3212/README.md) | trabajes con el **piloto 3212**: una ficha por carpeta; [6-metodo-medida.md](conocimiento/0-bolt-eye/3212/6-metodo-medida.md) primero (`GX`/`GN`/`LP(2)`), [historial-molde.md](conocimiento/0-bolt-eye/3212/historial-molde.md) para muestreo ↔ corrección, [revisión del 17/09/2026](conocimiento/0-bolt-eye/3212/revision-2026-09-17.md) para previsiones `DR(100%)`, `PUNTS_NOUS` y N170 |
 | [conocimiento/formatos-parsing.md](conocimiento/formatos-parsing.md) | vayas a **escribir un parser**: CSV CMM, XLS PPAP y PPTX del 3212, columna a columna |

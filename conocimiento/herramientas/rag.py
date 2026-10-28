@@ -9,8 +9,10 @@
     $PY conocimiento/herramientas/rag.py exacto medidas --pieza 3212 --cota N170 [--json]
     $PY conocimiento/herramientas/rag.py exacto celdas <documento> --hoja "DR(100%)" --filas 10-20 [--json]
     $PY conocimiento/herramientas/rag.py exacto hallazgo I-003 [--comprobar] [--json]
+    $PY conocimiento/herramientas/rag.py exacto cadena --pieza 3212 [--cota N170] [--json]
     $PY conocimiento/herramientas/rag.py exacto sql "SELECT ..." [--json]
     $PY conocimiento/herramientas/rag.py consultar <argumentos de consultar.py>
+    $PY conocimiento/herramientas/rag.py glosario [--contar] [--json]
 
 Nunca escribe en la biblioteca ni en Exemples. El indice vive en conocimiento/datos/rag/.
 Arquitectura, configuracion y limites: conocimiento/rag.md.
@@ -38,6 +40,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import glosario as gl  # noqa: E402
 import rag_fuentes as rf  # noqa: E402
 from comun import BD, CONOCIMIENTO, DATOS, ahora  # noqa: E402
 
@@ -49,7 +52,9 @@ LOTE = 16
 RRF_K = 60
 PESOS = {"semantica": 1.0, "lexica": 1.0, "menciones": 2.0, "propio": 3.0, "filas": 0.6, "filas_mencion": 2.0}
 FACTOR_VIGENCIA = {"vigente": 1.0, "no_aplica": 1.0, "revision_fechada": 0.8, "historial": 0.5}
-FACTOR_COLECCION = {"inventario": 0.5}
+# Las tarjetas de hoja repiten la misma cabecera en cav_1…cav_n y en cada copia del libro: sin bajar su peso
+# llenan el top-k al filtrar por pieza (7 de 8 resultados del 3167 el 27/10/2026). Siguen saliendo con --coleccion tablas.
+FACTOR_COLECCION = {"inventario": 0.5, "tablas": 0.5}
 COLECCIONES = ("conocimiento", "historial", "hallazgos", "docs", "biblioteca", "tablas", "cad", "inventario")
 GEOMETRIA = re.compile(r"geometr|\bcad\b|step|\bstp\b|\bstl\b|\bigs\b|\bdxf\b|catia|malla|superficie|volumen|caja|"
                        r"plano|dibujo|drawing|imagen|foto|visual|escaneo|forma 3d|3d", re.I)
@@ -60,6 +65,7 @@ STOP = set(
 EXCLUSIONES = [
     "conocimiento/.venv, conocimiento/datos/ (incluidos biblioteca.sqlite como texto, revision-*/ y los propios artefactos RAG)",
     "codigo del repositorio (herramientas/, backend/, frontend/, prototypes/, scripts/), CLAUDE.md, .env y credenciales",
+    "conocimiento/rag.md y conocimiento/rag/ (referencia del RAG, investigacion, glosario y preguntas de evaluacion)",
     "binarios originales de Exemples: solo se usa lo que la biblioteca ya extrajo",
     "filas de hoja, lineas de texto y cadenas de binarios: sin embeddings; busqueda literal delegada en elemento_fts",
     "documentos eliminados de Exemples; los pendientes de extraer o con error (y sus duplicados) quedan solo en "
@@ -133,6 +139,10 @@ class Rutas:
     @property
     def hallazgos(self) -> Path:
         return self.raiz / "conocimiento" / "hallazgos.jsonl"
+
+    @property
+    def glosario(self) -> Path:
+        return self.raiz / "conocimiento" / "rag" / "glosario.json"
 
 
 # --- Embeddings ---------------------------------------------------------------------------------
@@ -722,9 +732,10 @@ def terminos(consulta: str) -> list[str]:
     return [t for t in dict.fromkeys(re.findall(r"\w+", consulta.casefold())) if t not in STOP and (len(t) > 1 or t.isdigit())]
 
 
-def expresion_fts(consulta: str, operador: str = "OR") -> str | None:
-    t = terminos(consulta)
-    return f" {operador} ".join(f'"{x}"' for x in t) if t else None
+def expresion_fts(consulta: str, operador: str = "OR", extra: list[str] | tuple = ()) -> str | None:
+    """Terminos de la consulta en OR o AND; los del glosario (`extra`) solo amplian la expresion OR."""
+    t = [f'"{x}"' for x in terminos(consulta)] + ([gl.termino_fts(x) for x in extra] if operador == "OR" else [])
+    return f" {operador} ".join(dict.fromkeys(t)) if t else None
 
 
 def semantica_disponible(m: dict, embedder) -> tuple[bool, str | None]:
@@ -745,7 +756,7 @@ COLUMNAS_DOC = ("id", "ruta", "feature", "pieza", "codigo", "sha256")
 
 
 def filas_biblioteca(rutas: Rutas, consulta: str, filtros: Filtros, features: dict, fts_crudo: bool, limite: int = 30,
-                     tipos: tuple[str, ...] = rf.TIPOS_DELEGADOS) -> list[dict]:
+                     tipos: tuple[str, ...] = rf.TIPOS_DELEGADOS, extra: list[str] | tuple = ()) -> list[dict]:
     """Coincidencias literales en filas, lineas y cadenas de la biblioteca actual (no estan en el indice).
 
     Solo documentos con extraccion vigente. Los duplicados no tienen elementos: se busca en su original y el
@@ -763,7 +774,7 @@ def filas_biblioteca(rutas: Rutas, consulta: str, filtros: Filtros, features: di
                 and (filtros.documento is None or a["id"] == filtros.documento))
 
     salida: list[dict] = []
-    expresiones = [consulta] if fts_crudo else [e for e in (expresion_fts(consulta, "AND"), expresion_fts(consulta, "OR")) if e]
+    expresiones = [consulta] if fts_crudo else [e for e in (expresion_fts(consulta, "AND"), expresion_fts(consulta, "OR", extra)) if e]
     with closing(abrir_biblioteca(rutas.biblioteca)) as bib:
         for expresion in dict.fromkeys(expresiones):
             sql = ("SELECT e.id, e.tipo, e.localizador, snippet(elemento_fts, 0, '«', '»', '…', 20), e.texto, "
@@ -807,12 +818,12 @@ def aviso(codigo: str, mensaje: str) -> dict:
 
 
 def buscar(rutas: Rutas, consulta: str, modo: str = "hibrido", filtros: Filtros | None = None, n: int = 10,
-           por_fuente: int = 3, embedder=None, fts_crudo: bool = False) -> dict:
+           por_fuente: int = 3, embedder=None, fts_crudo: bool = False, glosario: bool = True) -> dict:
     minimo("--n", n, 1)
     minimo("--por-fuente", por_fuente, 1)
     filtros = filtros or Filtros()
     salida: dict = {"consulta": consulta, "modo_pedido": modo, "modo_efectivo": None, "filtros": filtros.activos(),
-                    "indice": None, "avisos": [], "resultados": [], "completo": False,
+                    "indice": None, "avisos": [], "expansion": [], "resultados": [], "completo": False,
                     "nota": "Resultados ordenados por relevancia (RRF), no por certeza. No es un inventario: "
                             "para recuentos o valores usar `rag.py exacto` y citar sus filtros."}
     with closing(abrir_indice(rutas)) as con:
@@ -824,6 +835,10 @@ def buscar(rutas: Rutas, consulta: str, modo: str = "hibrido", filtros: Filtros 
                                           + ". Ejecutar `rag.py construir`. Las filas literales vienen de la biblioteca actual."))
         features = m.get("features", {})
         where, params = sql_filtros(filtros, features)
+        # Glosario: la consulta en castellano tambien busca los terminos del ingles, catalan, aleman y checo.
+        expansion = gl.expandir(consulta, gl.cargar(rutas.glosario)) if glosario and not fts_crudo else []
+        extra = gl.anadidos(expansion)
+        salida["expansion"] = expansion
         lexico = modo in ("hibrido", "lexico")
         # Filas, lineas y cadenas no estan en el indice: un filtro de tipo que las nombra mantiene su busqueda.
         delegados = tuple(t for t in rf.TIPOS_DELEGADOS if f"elemento:{t}".startswith(filtros.tipo_fuente or ""))
@@ -840,8 +855,10 @@ def buscar(rutas: Rutas, consulta: str, modo: str = "hibrido", filtros: Filtros 
         if modo in ("hibrido", "semantico"):
             semantica, motivo = semantica_disponible(m, embedder)
             if semantica:
+                dimensiones = int(m["identidad_modelo"]["dimensiones"])
+                entradas = [consulta_modelo(consulta)] + ([consulta_modelo(f"{consulta} ({', '.join(extra)})")] if extra else [])
                 try:
-                    q = normalizar(embedder.embed([consulta_modelo(consulta)])[0], int(m["identidad_modelo"]["dimensiones"]))
+                    consultas = [normalizar(v, dimensiones) for v in embedder.embed(entradas)]
                 except RagError as error:
                     semantica, motivo = False, str(error)
             if semantica:
@@ -849,7 +866,8 @@ def buscar(rutas: Rutas, consulta: str, modo: str = "hibrido", filtros: Filtros 
                                     f"WHERE t.vector IS NOT NULL AND {where}", params).fetchall()
                 if filas:
                     matriz = np.frombuffer(b"".join(v for _, v in filas), dtype=np.float32).reshape(len(filas), -1)
-                    similitud = matriz @ q
+                    # Con glosario, la similitud es la mayor entre la consulta original y la ampliada.
+                    similitud = np.max(np.stack([matriz @ q for q in consultas]), axis=0)
                     orden = np.argsort(-similitud)[:max(60, n * 6)]
                     listas["semantica"] = [((filas[i][0], float(similitud[i])), r) for r, i in enumerate(orden, 1)]
                 if m.get("textos_sin_vector"):
@@ -862,7 +880,7 @@ def buscar(rutas: Rutas, consulta: str, modo: str = "hibrido", filtros: Filtros 
             salida["avisos"].append(aviso("sin_busqueda", "Modo semantico pedido y no disponible: usar --modo lexico."))
             return salida
         if lexico:
-            expresion = consulta if fts_crudo else expresion_fts(consulta)
+            expresion = consulta if fts_crudo else expresion_fts(consulta, "OR", extra)
             if expresion:
                 try:
                     filas = con.execute(f"SELECT a.texto_id, bm25(fts, 1.0, 0.5) FROM fts JOIN aparicion a ON a.id = fts.rowid "
@@ -887,7 +905,7 @@ def buscar(rutas: Rutas, consulta: str, modo: str = "hibrido", filtros: Filtros 
                     salida["avisos"].append(aviso("cota_local", "Los N-numbers son locales a cada plano y revision: "
                                                   "filtrar con --pieza antes de unir resultados."))
             if delegar:
-                filas = filas_biblioteca(rutas, consulta, filtros, features, fts_crudo, tipos=delegados)
+                filas = filas_biblioteca(rutas, consulta, filtros, features, fts_crudo, tipos=delegados, extra=extra)
                 listas["filas"] = [(x, r) for r, x in enumerate(filas, 1)]
                 # Una fila que contiene el identificador exacto pesa como una mencion.
                 exactos = {v for _, v in rf.menciones(consulta, set(), consulta=True)}
@@ -1297,6 +1315,68 @@ def exacto_medidas(rutas: Rutas, pieza: str | None = None, documento: str | None
                 "avisos": avisos, "hojas": list(hojas.values()), "medidas": medidas}
 
 
+def exacto_cadena(rutas: Rutas, pieza: str, cota: str | None = None, maximo: int = 200) -> dict:
+    """Correccion -> medicion de la tabla derivada cadena_correccion (herramientas/cadena_correcciones.py)."""
+    from perfil_correcciones import normalizar_cota
+    minimo("--max", maximo, 1)
+    with closing(abrir_biblioteca(rutas.biblioteca)) as bib:
+        if not bib.execute("SELECT 1 FROM sqlite_master WHERE name = 'cadena_correccion'").fetchone():
+            raise RagError("La biblioteca no tiene cadena_correccion: ejecutar herramientas/cadena_correcciones.py")
+        condiciones, parametros, filtros = ["c.pieza = ?"], [pieza], {"pieza": pieza}
+        if cota:
+            normal = normalizar_cota(re.sub(r"(?i)^n", "", cota.strip()))
+            condiciones.append("c.cota = ?")
+            parametros.append(normal)
+            filtros["cota"] = f"{cota} (normalizada: {normal})"
+        where = " AND ".join(condiciones)
+        total = bib.execute(f"SELECT count(*) FROM cadena_correccion c WHERE {where}", parametros).fetchone()[0]
+        if "fecha_orden" not in {c[1] for c in bib.execute("PRAGMA table_info(cadena_correccion)")}:
+            raise RagError("cadena_correccion es de una version anterior: ejecutar herramientas/cadena_correcciones.py")
+        cur = bib.execute(
+            "SELECT c.numero, c.cota, c.fecha_correccion, c.fuente_fecha, c.fecha_orden, c.fuente_fecha_orden, d.ruta, "
+            "c.diapositiva, c.serie, c.origen_muestreo, "
+            "c.fuente_origen, o.ruta, c.origen_fecha, c.origen_n, c.origen_evaluables, c.origen_min, c.origen_max, "
+            "c.origen_fuera, c.validacion_muestreo, v.ruta, c.validacion_fecha, c.validacion_n, c.validacion_evaluables, "
+            "c.validacion_min, c.validacion_max, c.validacion_fuera, c.validacion_estado, c.depende_copia, c.alternativas, "
+            "c.nominal, c.tol_sup, c.tol_inf, c.avisos FROM cadena_correccion c JOIN documento d ON d.id = c.documento_id "
+            "LEFT JOIN documento o ON o.id = c.origen_documento_id LEFT JOIN documento v ON v.id = c.validacion_documento_id "
+            f"WHERE {where} ORDER BY c.fecha_correccion, c.numero, c.cota LIMIT ?", [*parametros, maximo])
+        columnas = [x[0] for x in cur.description]
+        nombres = ["numero", "cota", "fecha_correccion", "fuente_fecha", "fecha_orden", "fuente_fecha_orden", "plan",
+                   "diapositiva", "serie", "origen_muestreo",
+                   "fuente_origen", "origen_documento", "origen_fecha", "origen_n", "origen_evaluables", "origen_min",
+                   "origen_max", "origen_fuera", "validacion_muestreo", "validacion_documento", "validacion_fecha",
+                   "validacion_n", "validacion_evaluables", "validacion_min", "validacion_max", "validacion_fuera",
+                   "validacion_estado", "depende_copia", "alternativas", "nominal", "tol_sup", "tol_inf", "avisos"]
+        assert len(columnas) == len(nombres)
+        filas = []
+        for fila in cur.fetchall():
+            x = dict(zip(nombres, fila))
+            x["avisos"] = json.loads(x["avisos"] or "[]")
+            x["alternativas"] = json.loads(x["alternativas"] or "[]")
+            for papel in ("origen", "validacion"):
+                evaluables = x[f"{papel}_evaluables"]
+                x[f"{papel}_proporcion_fuera"] = round(x[f"{papel}_fuera"] / evaluables, 3) if evaluables else None
+            for clave in ("plan", "origen_documento", "validacion_documento"):
+                if x[clave]:
+                    x[clave] = f"Exemples/{x[clave]}"
+            filas.append(x)
+    return {"alcance": {"filtros": filtros, "total": total, "devueltas": len(filas), "truncado": total > len(filas)},
+            "avisos": ["Secuencia, no causa: que la cota cambie no prueba que la accion se ejecutara (I-401, I-204).",
+                       "Solo informes XLS de metrologia con papel informe, sin celdas RAND(); no incluye los CSV de la CMM.",
+                       "fuente_origen 'fecha' es aproximada: la fecha del informe es de emision, no de medicion.",
+                       "*_fuera cuenta, entre los *_evaluables (con nominal y dos tolerancias), los valores fuera; comparar "
+                       "proporciones solo si origen y validacion miden los mismos elementos y cavidades.",
+                       "validacion_estado: nueva, parcial (repite parte de un muestreo anterior), herencia_indeterminada, "
+                       "indeterminada (contradiccion de orden) o sin_medidas_validas; depende_copia = 1: la conclusion "
+                       "cambia segun la copia (I-006).",
+                       "fecha_orden es la fecha usada para ordenar y filtrar; si fuente_fecha_orden es 'carpeta (estimada)', "
+                       "fecha_correccion no cuadra con su XLS de origen y la de la carpeta es una estimacion.",
+                       "alternativas[].admisible: true (comprobada), false (posterior a la correccion, no cuenta en "
+                       "depende_copia) o null (fecha del plan no fiable o ausente: validez temporal sin comprobar)."],
+            "filas": filas, "origen": "derivado: cadena_correccion (cadena_correcciones.py)"}
+
+
 def exacto_hallazgo(rutas: Rutas, ident: str, comprobar: bool = False) -> dict:
     for n, linea in enumerate(rutas.hallazgos.read_text(encoding="utf-8").splitlines(), 1):
         if linea.strip() and (r := json.loads(linea)).get("id", "").upper() == ident.upper():
@@ -1356,6 +1436,8 @@ def imprimir_busqueda(r: dict) -> None:
         print(f"Filtros: {r['filtros']}")
     for a in r["avisos"]:
         print(f"! {a['codigo']}: {a['mensaje']}")
+    for e in r.get("expansion", []):
+        print(f"Glosario: {', '.join(e['disparado_por'])} -> {', '.join(e['terminos'])} ({e['concepto']})")
     for i, x in enumerate(r["resultados"], 1):
         etiqueta = " · ".join(filter(None, (x["coleccion"], x.get("vigencia"), x.get("naturaleza"), x.get("estado_hallazgo"))))
         print(f"\n{i}. [{etiqueta}] {x.get('ruta') or ''} · {x.get('localizador') or ''}")
@@ -1369,6 +1451,32 @@ def imprimir_busqueda(r: dict) -> None:
         for av in x.get("avisos", []):
             print(f"   ⚠ {av}")
     print(f"\n{r['nota']}")
+
+
+def revisar_glosario(rutas: Rutas, contar: bool = False) -> dict:
+    """Conceptos del glosario; con `contar`, documentos de la biblioteca cuyo texto (sin filas) contiene cada termino."""
+    salida = {"ruta": str(rutas.glosario), "conceptos": []}
+    with closing(abrir_biblioteca(rutas.biblioteca)) as bib:
+        for c in gl.cargar(rutas.glosario):
+            fila = {"id": c["id"], "nota": c.get("nota"), "solo_destino": c.get("solo_destino", []), "terminos": {}}
+            for idioma in gl.IDIOMAS:
+                for t in c.get(idioma, []):
+                    fila["terminos"][f"{idioma}:{t}"] = bib.execute(
+                        "SELECT count(DISTINCT e.documento_id) FROM elemento_fts JOIN elemento e ON e.id = elemento_fts.rowid "
+                        "WHERE elemento_fts MATCH ? AND e.tipo != 'fila'", (gl.termino_fts(t),)).fetchone()[0] if contar else None
+            salida["conceptos"].append(fila)
+    if contar:
+        salida["nota"] = "Documentos con el termino en su texto (paginas, diapositivas, parrafos, tablas; sin filas de hoja)."
+    return salida
+
+
+def imprimir_glosario(r: dict) -> None:
+    print(f"Glosario {r['ruta']} · {len(r['conceptos'])} conceptos")
+    for c in r["conceptos"]:
+        lista = ", ".join(k + (f"={n}" if n is not None else "") for k, n in c["terminos"].items())
+        print(f"- {c['id']}: {lista}" + (f" · solo destino: {', '.join(c['solo_destino'])}" if c["solo_destino"] else ""))
+    if r.get("nota"):
+        print(r["nota"])
 
 
 def imprimir_estado(r: dict) -> None:
@@ -1440,6 +1548,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--n", type=positivo, default=10)
     p.add_argument("--por-fuente", type=positivo, default=3, help="maximo de resultados por fichero o documento")
     p.add_argument("--fts", action="store_true", help="la consulta es una expresion FTS5 literal")
+    p.add_argument("--sin-glosario", action="store_true", help="no ampliar la consulta con conocimiento/rag/glosario.json")
+    p.add_argument("--json", action="store_true")
+    p = sub.add_parser("glosario", help="conceptos del glosario y, con --contar, sus apariciones en la biblioteca")
+    p.add_argument("--contar", action="store_true")
     p.add_argument("--json", action="store_true")
     p = sub.add_parser("ver")
     p.add_argument("id")
@@ -1464,6 +1576,11 @@ def main(argv: list[str] | None = None) -> int:
     q = ex.add_parser("hallazgo")
     q.add_argument("id")
     q.add_argument("--comprobar", action="store_true")
+    q.add_argument("--json", action="store_true")
+    q = ex.add_parser("cadena", help="correccion -> medicion antes/despues (tabla cadena_correccion)")
+    q.add_argument("--pieza", required=True)
+    q.add_argument("--cota")
+    q.add_argument("--max", type=positivo, default=200)
     q.add_argument("--json", action="store_true")
     q = ex.add_parser("sql")
     q.add_argument("consulta")
@@ -1492,9 +1609,15 @@ def main(argv: list[str] | None = None) -> int:
         elif args.cmd == "buscar":
             filtros = Filtros(args.coleccion, args.pieza, args.feature, args.vigencia, args.tipo_fuente, args.documento,
                               args.estado_hallazgo)
-            r = buscar(rutas, args.consulta, args.modo, filtros, args.n, args.por_fuente, Ollama(), args.fts)
+            r = buscar(rutas, args.consulta, args.modo, filtros, args.n, args.por_fuente, Ollama(), args.fts,
+                       glosario=not args.sin_glosario)
             if not como_json:
                 imprimir_busqueda(r)
+                return 0
+        elif args.cmd == "glosario":
+            r = revisar_glosario(rutas, args.contar)
+            if not como_json:
+                imprimir_glosario(r)
                 return 0
         elif args.cmd == "ver":
             r = ver(rutas, args.id, args.contexto)
@@ -1502,6 +1625,8 @@ def main(argv: list[str] | None = None) -> int:
             r = exacto_medidas(rutas, args.pieza, args.documento, args.cota, args.hoja, args.cavidad, args.max)
         elif args.exacto == "celdas":
             r = exacto_celdas(rutas, args.documento, args.hoja, args.filas, args.max)
+        elif args.exacto == "cadena":
+            r = exacto_cadena(rutas, args.pieza, args.cota, args.max)
         elif args.exacto == "hallazgo":
             r = exacto_hallazgo(rutas, args.id, args.comprobar)
         else:

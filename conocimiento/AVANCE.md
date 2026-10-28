@@ -2,6 +2,95 @@
 
 Registro de trabajo para poder retomar entre sesiones. Actualizar al terminar cada paso.
 
+## RAG y correcciones · 27–28/10/2026
+
+- `perfil_correcciones.py`: el extractor de cotas exigía «N» tras DIM y solo leía la primera cita. Ahora
+  admite `DIM.3320`, `DIM#6`, `Dim Nº630`, listas escritas a mano y ceros a la izquierda (`cotas_texto`
+  guarda el literal). Auditoría contra los PPTX originales: 79/79 en 40 diapositivas al azar. Después,
+  al leer el 3195: subpuntos con coma (`4100,1`), abreviatura `3900.1.2.3…` y `dimension 3970` (38
+  diapositivas más revisadas una a una, ninguna cota perdida). Resultado: **1.142 diapositivas con cotas
+  (antes 945) y 2.110 códigos**.
+- Hallazgos nuevos I-005 (*Customer Name* poco fiable) e I-402 (plan del 3206 archivado como loop 5 del
+  3205); I-303 ampliada con `3206/…/DR_17.xls`. `verificar.py --hallazgos` sin problemas.
+- RAG: peso 0,5 para `tablas`, aviso de hoja sin valores, glosario multilingüe (47 conceptos, propuesta),
+  `exacto cadena` y evaluación de 55 preguntas ([rag/README.md](rag/README.md)): recall@5 en el conjunto
+  de control 0,80 → 0,933. Índice reconstruido (214 + 9 vectores nuevos).
+- `cadena_correcciones.py` → tabla `cadena_correccion`: 2.067 cotas citadas, 1.827 con muestreo de origen
+  (1.630 por el XLS de la carpeta, 197 por fecha) y 1.681 con validación. Reproduce el 3212
+  (corrección 1: `.01` → `.03`; 2: `.03` → `.05`, saltando `.02` y `.04`, que repiten valores, I-001) y
+  el 3197 (N230 3,770–3,787 → 4,068–4,073, como `0-bolt-eye/README.md`).
+- `identidad_piezas.py` → [identidad-piezas.md](identidad-piezas.md): cliente, plano, nº de cliente e ITP
+  de las 21 piezas con recuentos; 11/11 clientes comprobados en originales (`INTRO!C23`).
+- 37 pruebas correctas (11 de lectores, 26 del RAG). Investigación web en
+  [rag/investigacion-2026-10-27.md](rag/investigacion-2026-10-27.md) (Reddit no accesible).
+- 28/10: ficha nueva [1-clips/3195.md](1-clips/3195.md) (seis planes, decisiones de no corregir del
+  cliente, convergencia de la cota 2660 y la 2360 sin resolver). Hallazgos I-306 (plan 2 con fecha de
+  2020 en el nombre), I-307 (carpeta N6 con acciones 5.x) e I-308 (código 2360 en una fila de la 2500,
+  comprobado en el original). Pendiente: qué plano rige los informes del 3195 (`0130S1B006` frente a
+  `0130S0002K`).
+- 28/10: la cadena compara cada valor con su propio nominal (una cota puede mezclar elementos, I-308),
+  excluye ceros y atípicos además de `RAND()`, y no acepta como validación un informe anterior a la
+  corrección (3195: `int_02` del 16/10/2023 frente al plan del 31/10/2023). 3212 y 3197 siguen igual.
+
+- 28/10 (tarde): fichas [1-clips/3174.md](1-clips/3174.md), [1-clips/3186.md](1-clips/3186.md),
+  [1-clips/3309.md](1-clips/3309.md) y [6-pockets/3202.md](6-pockets/3202.md), cada una con «warnings
+  candidatos» marcados como borrador. Hallazgos I-309 (el plan 2 del 3174 lleva 30 diapositivas del plan 1
+  del 3186; comprobado en el XML) e I-006 (copias del mismo muestreo con valores distintos: 3309 `Int_03`,
+  3202 `intern.03`; comprobado en los originales); I-001 ampliada con 3202, 3309 y 3186.
+- 28/10 (tarde), cadena: los `INF.NN` ya no cuentan como muestreo (chocaban con `intern.NN` en 7 piezas);
+  XLS de una subcarpeta con el número del plan; un XLS de carpeta sin número no puede hacer retroceder el
+  origen (3309: el T3 ya no parte de `Int_01`); subpuntos para cotas sin medidas propias; avisos I-309 e
+  I-006. Extractor: `rozměru 210` y `dim.: 202` (checo, 3174). Resultado: 1.144 diapositivas con cotas,
+  2.070 filas de cadena, 1.821 con origen (1.622 por carpeta, 199 por fecha) y 1.673 con validación.
+  3212, 3197 y 3195 sin cambios; cambian cifras de 3167, 3168, 3174, 3214 y 3309. 38 pruebas correctas.
+
+- 28/10 (noche), **revisión externa de los cambios** (nueve hallazgos, todos confirmados). Arreglado:
+  - Cadena: muestreo = serie + número (3168-00/-10, 3056, 3237, 3238); repetición de bloques comparando filas por
+    elemento, cavidad y muestra en vez de conjuntos de valores (falsos positivos como 3218 cota 2402 y 3197 N430);
+    contradicciones de orden → `indeterminada` (3167 plan 3, 3309 T3); fecha del muestreo entero (el `int_02` del 3195
+    validaba 69 cotas del plan 1, del que es anterior); copias alternativas y `depende_copia`; valores evaluables.
+  - Extractor: `Dim 7,5+0,1` es un nominal (3051) y `DIM. Nr.45,1` se guarda como ambigua (3214); columna
+    `cotas_ambiguas`.
+  - Fichas: tablas con las mismas filas a los dos lados y en proporción (3174 loop 2: sube de 49 % a 61 %; 3195 plan 1:
+    33 cotas validadas, no 95), redacción sin conclusiones causales, traducción checa del 3174 marcada como dudosa.
+    Citas de la investigación corregidas (62,8 % Spider 2.0-Snow; fuente de EmbeddingGemma).
+  - Resultado: 1.141 diapositivas con cotas (2.101 códigos), 2.062 filas de cadena, 1.895 con origen (1.620 por
+    carpeta, 275 por fecha) y 1.453 con validación (1.195 nuevas, 258 parciales), 18 indeterminadas, 80 que dependen
+    de la copia. 3212 N170 y 3197 N230 sin cambios. 26 celdas de filas cambiadas contrastadas en los originales por
+    COM: todas iguales. 42 pruebas correctas.
+- 28/10 (noche), **segunda ronda de la revisión externa** (cuatro hallazgos, confirmados en los datos):
+  - Filas reordenadas (3186 cota 103: el `intern.04` del cliente intercambia las filas de `.03` y pierde LEFT/RIGHT):
+    emparejamiento por contenido con cavidades, muestras y etiqueta de elemento (columna entre código y nominal); sin
+    etiqueta, solo filas de 3 valores o más; si no, `herencia_indeterminada`.
+  - Valores excluidos fuera de la comparación (3218 cota 2800: `intern.26` = `intern.21` más dos filas de ceros) y
+    estado `sin_medidas_validas`.
+  - Copias agrupadas también por nominal y tolerancias; hallazgo I-007 (25 grupos con tolerancias distintas; en 3174 y
+    3168 la copia del cliente más amplia; comprobado en los originales).
+  - Fechas: cada copia con la suya (3205/3206 `intern.17`: copias de 2024 y 2025); aviso cuando la fecha del plan no
+    cuadra con su XLS y `fecha_orden` estimada con la de la carpeta (3186 loop 2, 3218 loop 1); orden sin comprobar si
+    no hay fecha de carpeta (3195 N2, 3205). `intern.121`/`.122` del 3206 son versiones de `intern.12`.
+  - Resultado: 2.062 filas, 1.453 con validación (1.195 nuevas, 257 parciales, 1 indeterminada por herencia), 18
+    indeterminadas por orden, 79 que dependen de la copia; 111 filas con `fecha_orden` estimada y 21 con el orden sin
+    comprobar. 3212 N170, 3197 N230, 3168 230 y 3218 2402 sin cambios; 18 filas distintas de la ronda anterior. 25
+    celdas contrastadas en los originales (valores, etiquetas, ceros y tolerancias): todas iguales. 47 pruebas correctas.
+- 28/10 (noche), **tercera ronda**: `depende_copia` usaba todas las copias de origen aunque la elección solo admite las
+  no posteriores a la corrección (3174 cota 210: la copia del cliente de `intern.26` es del 18/03/2025 y la corrección del
+  14/02/2025). Ahora el mismo conjunto sirve para las dos cosas; las descartadas quedan en `alternativas` con
+  `admisible: false` y el motivo. Si ninguna copia es anterior (3205, plan con fecha no fiable), se comparan todas sin
+  darlas por válidas y se mantienen los avisos. `depende_copia` pasa de 79 a 78 filas; medidas y vínculos sin cambios.
+  48 pruebas correctas.
+- 28/10 (noche), **cuarta ronda**: con fecha del plan no fiable o ausente, origen y validación ya no se filtran por esa
+  fecha ni se declara ninguna copia anterior o posterior; `admisible: null` con el motivo y aviso con las fechas
+  candidatas (3205: diapositiva 21/03/2024, nombre 11/04/2024, informes del 05/04/2024). Desaparecen las 19 menciones
+  «sin validez temporal» y las afirmaciones temporales categóricas en las 131 filas afectadas (21 con fecha no fiable,
+  110 sin fecha, que ahora llevan aviso). `depende_copia` sigue en 78; medidas y vínculos sin cambios. 48 pruebas.
+
+### Pendiente de esta tanda
+
+- Juntar los «warnings candidatos» de las fichas por feature y validarlos con INTEPLAST (la cadena da cota
+  y pieza, no feature: salvo en el Bolt Eye, no se sabe qué cotas forman cada feature).
+- Que Eduard revise `rag/glosario.json` y añada preguntas reales a `rag/preguntas.jsonl`.
+
 ## Seguimiento de las rectificaciones · 23–26/10/2026
 
 Eduard autorizó corregir `docs/` y el código dentro de `conocimiento/`. Se mantuvo intacto

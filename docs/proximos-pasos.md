@@ -38,7 +38,7 @@ Los acuerdos de IT constan en el [acta del 24/09](acta-reunion-2026-09-24.md).
 | Página antigua `/features/{id}/fichero/{assetId}` | Actualizar el mensaje del adjunto sin archivo o redirigir a la pieza; ya no recibe enlaces de la UI | [Aplicación](app-web.md) |
 | Política de finales de línea | Acordar una política LF en el repositorio; la incidencia de CRLF se registró el 20/10 | [Desarrollo](../development.md) |
 | Volcado OAuth señalado en `TODO.md` | Eduard revisará su retirada y el tratamiento del historial; tarea ajena a esta revisión documental | — |
-| Prueba de conocimiento en sesión sin contexto | El usuario la hará más adelante: preguntas de desarrollo, respuestas con fuentes y registro de lagunas, sin recorrer originales | [Entrada a conocimiento](../conocimiento/README.md#entrada-para-una-sesión-sin-contexto) |
+| Prueba de conocimiento en sesión sin contexto | El usuario la hará más adelante: preguntas de desarrollo, respuestas con fuentes y registro de lagunas, sin recorrer originales. Ya existe una evaluación de recuperación con 55 preguntas (27/10/2026); faltan preguntas reales de INTEPLAST | [Entrada a conocimiento](../conocimiento/README.md#entrada-para-una-sesión-sin-contexto), [evaluación](../conocimiento/rag/README.md) |
 
 ## Hecho el 20/10/2026
 

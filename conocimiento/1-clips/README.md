@@ -8,12 +8,12 @@
 
 | Grupo | Pieza | Qué es | Nº pieza cliente | Plano en la carpeta | Correcciones |
 |---|---|---|---|---|---|
-| Tipo A | **3174** | Bearing Plate STD | 649473000A | `6494730` rev 004 | 11 loops (03/2023 → 05/2026) |
-| Tipo A | **3186** | Bearing Plate | 654169100A | `6494730` rev 002 ⚠️ | 6 loops con PPTX hasta 02/2024; entregas XLS posteriores hasta loop 9 (06/2025) |
+| Tipo A | **3174** | Bearing Plate STD | 649473000A | `6494730` rev 004 | 11 loops (03/2023 → 05/2026): [3174.md](3174.md) |
+| Tipo A | **3186** | Bearing Plate LC2 | 654169100A | `6494730` rev 002 ⚠️ | 6 loops con PPTX hasta 02/2024; entregas XLS posteriores hasta loop 9 (06/2025): [3186.md](3186.md) |
 | Tipo A | **3218** | Bearing Plate R230 P2 SAMS | 654695200B | `6494730` rev 004 ⚠️ (copia exacta del de 3174) | Numeración hasta **loop 15** (01/2024 → 08/2026), con lagunas: [3218.md](3218.md) |
-| Tipo B | **3195** | Brush holder (Bosch) | 3134341864 | `0130S0002K` D 01 | N1–N6 (10/2023 → 12/2025) |
+| Tipo B | **3195** | Brush holder (Bosch) | 3134341864 | `0130S0002K` D 01; los informes citan `0130S1B006` ([ficha](3195.md)) | N1–N6 (10/2023 → 12/2025): [3195.md](3195.md) |
 | Tipo B | **3226** | Manifold (`DW-UMED-2-2`) | — | `DW-UMED-2-2` REV01 | Solo análisis de holguras con la pieza 3227 |
-| Tipo B | **3309** | Support stopper (`77217-12300`, *fuel tank filler pipe*) | — | `77217-02200-000A` (escaneo) | 3 entregas (04/2026 → 08/2026) |
+| Tipo B | **3309** | Support stopper (`77217-12300`, *fuel tank filler pipe*) | `GF991-53540` (PDF de los informes) | `77217-02200-000A` (escaneo) | Planes 1 y 2 y T3 (04/2026 → 08/2026), cuatro pruebas T1–T4: [3309.md](3309.md) |
 
 «Tipo A» agrupa placas de rodamiento (*bearing plates*) que se montan con clips; «Tipo B», piezas
 con clips de otro tipo (portaescobillas, soporte). Qué criterio usa INTEPLAST para A/B no consta.
@@ -65,4 +65,5 @@ un `README.txt`.
 
 Detalle en [incongruencias.md](../incongruencias.md): planos de 3186/3218 que son el del 3174 (I-301),
 plan del 3218 con nombre heredado P3174 (I-302), cabeceras PPAP de otros proyectos (I-303), fechas
-imposibles (I-304).
+imposibles (I-304), plan 2 del 3174 con 30 diapositivas del plan 1 del 3186 (I-309) y dos versiones del
+`Int_03` del 3309 (I-006).

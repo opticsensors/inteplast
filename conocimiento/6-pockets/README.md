@@ -9,7 +9,7 @@
 |---|---|---|---|---|
 | **3056** | INSULATING MASK E-SIDE | `0 131 S00 135` | 4–6 | 1 plan (02/2020) + anexos de medida de pockets (02/2020 y 03/2020) |
 | **3167** | IPB1.1 CARRYING PLATE | `0130S000338` | 4–8 (otras hojas 10–36) | 3 loops con varias versiones (07/2023 → 06/2024) |
-| **3202** | INSULATOR, MOTOR, WATER PUMP | `885253-11250` (rev. G) | 4–9 | 1 plan con comentarios del matricero (06/2023) |
+| **3202** | INSULATOR, MOTOR, WATER PUMP | `885253-11250` (rev. G) | 4–9 | 1 plan con comentarios del matricero (06/2023) y dos años de método de medida: [3202.md](3202.md) |
 
 ## Qué es el «pocket»
 
@@ -53,4 +53,5 @@ controlado. Ejemplos:
 
 ## Incongruencias
 
-[I-601 a I-603](../incongruencias.md) y la transversal I-003 (valores generados con `RAND()`).
+[I-601 a I-603](../incongruencias.md) y las transversales I-003 (valores generados con `RAND()`), I-001 (el
+`intern.02` del 3202 repite el `.01`) e I-006 (copias del `intern.03` del 3202 con valores distintos).

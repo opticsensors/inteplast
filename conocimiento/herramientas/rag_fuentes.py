@@ -276,12 +276,15 @@ def estados_docs(readme: str) -> tuple[dict[str, str], set[str]]:
 
 
 def ficheros_markdown(raiz: Path) -> list[tuple[Path, str]]:
-    """Markdown de conocimiento/ y docs/; nunca datos/, .venv/, codigo ni la referencia del propio RAG."""
+    """Markdown de conocimiento/ y docs/; nunca datos/, .venv/, codigo ni la referencia del propio RAG.
+
+    conocimiento/rag/ (investigacion, glosario y preguntas de evaluacion) tampoco: no describe Exemples y,
+    si se indexara, las preguntas de evaluacion se encontrarian a si mismas."""
     salida = []
     for carpeta in ("conocimiento", "docs"):
         for path in sorted((raiz / carpeta).rglob("*.md")):
             partes = path.relative_to(raiz).parts
-            if path.relative_to(raiz).as_posix() == "conocimiento/rag.md":
+            if path.relative_to(raiz).as_posix() == "conocimiento/rag.md" or partes[:2] == ("conocimiento", "rag"):
                 continue
             if not any(p in (".venv", "datos", "herramientas", "__pycache__", "node_modules") for p in partes):
                 salida.append((path, carpeta))
@@ -523,6 +526,10 @@ def _tablas(con, docs: dict[int, dict]) -> list[Fragmento]:
                     f"Lectura heuristica lector_dr: plantilla {l[2]}; papel {l[3]}; cavidades {', '.join(json.loads(l[5] or '[]'))}; "
                     f"{l[6]} filas de cota; {l[7]} valores numericos leidos; {l[8]} no numericos o sin nominal omitidos; "
                     f"aleatorias {l[10]}; ceros {l[11]}; atipicos {l[12]}; ajustes y rechazos {l[9]}.")
+                if not l[7]:
+                    # p. ej. las dos copias de PPAP-3167-00_Inf_03.xlsm en PPAP-3167-00_2/: cotas con nominal, sin valores
+                    lineas.append("Sin valores de medida: plantilla sin rellenar o solo cabecera"
+                                  + (f" (con {l[8]} valores no numericos)." if l[8] else "."))
             if p:
                 meta = json.loads(p[3]) if p[3] else {}
                 lineas.append(
