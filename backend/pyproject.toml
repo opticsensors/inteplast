@@ -33,6 +33,7 @@ dependencies = [
     "pgvector>=0.4,<0.5",
     "msal>=1.31,<2",
     "cryptography>=42,<51",
+    "scipy>=1.11,<2",
 ]
 
 [dependency-groups]

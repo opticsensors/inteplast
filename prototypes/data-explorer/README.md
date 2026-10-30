@@ -891,3 +891,20 @@ Para no sobreajustar, el detector y los lectores no se tocan más sobre estos mi
 evidencia nueva: la verificación del 3167 o planos nuevos apartados. El 1,2 % de errores se
 refiere a las lecturas evaluables. Siguen abiertas las 64 lecturas ofrecidas sin verificar y el
 3202 «G». La integración en la aplicación se puede preparar manteniendo esas limitaciones a la vista.
+
+### En la aplicación (30/10/2026)
+
+El lector se ha portado a `backend/app/ingestion/` (`drawing.py`, `balloon_reader.py` y
+`drawing_version.py`). La aplicación no importa ni ejecuta este prototipo. El lector propio va
+como ONNX en `backend/app/ingestion/models/lector_globos.onnx`, generado con:
+
+```powershell
+& $v "$s\entrenar_lector_globos.py" --perfil general --exportar-onnx "$s\out\lector-globos\general\lector_globos.onnx"
+```
+
+Antes de escribir los metadatos, la exportación comprueba que las probabilidades de ONNX coinciden
+con las de torch (diferencia máxima: 7·10⁻⁶). El backend reproduce exactamente las lecturas de este
+prototipo en el 3212, el 3205, el 3288 (página mixta), el 3202 «G» y el 3167: mismos globos,
+identificadores, lecturas y puntuaciones. Si se reentrena el modelo o cambian los umbrales, hay que
+copiar el ONNX nuevo y actualizar `drawing_version.THRESHOLDS`. La identidad del lector invalida
+sola los índices en caché.

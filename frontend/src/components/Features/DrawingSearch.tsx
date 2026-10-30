@@ -71,14 +71,28 @@ export default function DrawingSearch({
     const reviews = new Map(
       (index.data?.reviews ?? []).map((r) => [r.candidate_id, r]),
     )
+    const candidateIds = new Set(
+      [...data.balloons, ...data.words].map((candidate) => candidate.id),
+    )
     const needle = normalizeCota(query)
     return [
       ...data.balloons,
       ...data.words.filter(
         (word) =>
-          /^N?\d+(?:\.\d+)?$/.test((word.text ?? "").trim()) &&
-          (word.method === "pdf" || /^N\d/.test(word.text ?? "")),
+          reviews.has(word.id) ||
+          (/^N?\d+(?:\.\d+)?$/.test((word.text ?? "").trim()) &&
+            (word.method === "pdf" || /^N\d/.test(word.text ?? ""))),
       ),
+      // A detector update must not hide a human review without a unique match.
+      ...[...reviews.values()]
+        .filter((review) => !candidateIds.has(review.candidate_id))
+        .map(
+          (review): Candidate => ({
+            id: review.candidate_id,
+            page: review.page,
+            box: review.box,
+          }),
+        ),
     ]
       .flatMap((candidate) => {
         const review = reviews.get(candidate.id)

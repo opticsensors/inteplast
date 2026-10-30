@@ -271,6 +271,46 @@ def drawing_document(session: SessionDep, file_id: uuid.UUID) -> StoredFile:
     return document
 
 
+def attach_reviews(
+    payload: dict[str, Any], reviews: list[LocationPublic]
+) -> list[LocationPublic]:
+    """Associate reviews only when the geometry gives an unambiguous one-to-one match.
+
+    Exact IDs take priority. A newer review on that ID supersedes its unique predecessor;
+    ambiguous or unmatched reviews keep their saved position and remain searchable. This
+    changes only the response, never the stored reviews.
+    """
+    candidates = payload.get("balloons", []) + payload.get("words", [])
+    ids = {c["id"] for c in candidates}
+    exact = {r.candidate_id for r in reviews if r.candidate_id in ids}
+    centre = lambda box: ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)  # noqa: E731
+    matches: dict[uuid.UUID, list[str]] = {}
+    claims: dict[str, int] = {}
+    for review in reviews:
+        if review.candidate_id in ids:
+            continue
+        x, y = centre(review.box)
+        matches[review.id] = [
+            c["id"]
+            for c in payload.get("balloons", [])
+            if c["page"] == review.page
+            for cx, cy in [centre(c["box"])]
+            if abs(cx - x) <= (c["box"][2] - c["box"][0]) / 2
+            and abs(cy - y) <= (c["box"][3] - c["box"][1]) / 2
+        ]
+        for candidate_id in matches[review.id]:
+            claims[candidate_id] = claims.get(candidate_id, 0) + 1
+    attached = []
+    for review in reviews:
+        near = matches.get(review.id, [])
+        if len(near) == 1 and claims[near[0]] == 1:
+            if near[0] in exact:
+                continue  # explicitly reviewed again on the current index
+            review = review.model_copy(update={"candidate_id": near[0]})
+        attached.append(review)
+    return attached
+
+
 @router.get("/drawings/{file_id}", response_model=DrawingPublic)
 def read_drawing_index(
     session: SessionDep, _current_user: CurrentUser, file_id: uuid.UUID
@@ -279,7 +319,8 @@ def read_drawing_index(
     job = session.get(EvidenceJob, job_id("drawing", file_id))
     if job and job.cache_key != drawing_key(document):
         return DrawingPublic(
-            state="empty", message="Nueva versión: prepara la búsqueda de este plano."
+            state="empty",
+            message="El plano o su lector han cambiado: prepara de nuevo la búsqueda.",
         )
     public = public_job(job)
     sha = public.payload.get("signature", {}).get("sha256")
@@ -294,9 +335,10 @@ def read_drawing_index(
     )
     return DrawingPublic(
         **public.model_dump(),
-        reviews=[
-            LocationPublic.model_validate(r, from_attributes=True) for r in reviews
-        ],
+        reviews=attach_reviews(
+            public.payload,
+            [LocationPublic.model_validate(r, from_attributes=True) for r in reviews],
+        ),
     )
 
 

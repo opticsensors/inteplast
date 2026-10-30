@@ -287,8 +287,49 @@ class OwnRecognizer(bench.CTCRecognizer):
             return self.model(tensor(to_input(gray)[None])).softmax(2)[0].numpy()
 
 
+def export_onnx(profile: str, destination: Path) -> None:
+    """Exporta el modelo entrenado a ONNX (entrada lotes × 1 × 32 × 64, salida logits) con sus metadatos.
+
+    La aplicación lo ejecuta con onnxruntime, sin torch. Se comprueba que ONNX y torch dan las mismas
+    probabilidades en imágenes sintéticas antes de escribir los metadatos.
+    """
+    import onnxruntime as ort
+    import torch
+    source = model_path(profile)
+    saved = torch.load(source, map_location="cpu")
+    model = build_model()
+    model.load_state_dict(saved["state"])
+    model.eval()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    torch.onnx.export(model, torch.zeros(1, 1, *INPUT), str(destination), input_names=["imagen"],
+                      output_names=["logits"], dynamic_axes={"imagen": {0: "lote"}, "logits": {0: "lote"}},
+                      opset_version=17, dynamo=False)
+    images = np.stack([synth(seed, profile)[0] for seed in range(20_000_000, 20_000_064)])
+    with torch.no_grad():
+        expected = model(tensor(images)).softmax(2).numpy()
+    logits = ort.InferenceSession(str(destination), providers=["CPUExecutionProvider"]).run(
+        None, {"imagen": tensor(images).numpy()})[0]
+    exponent = np.exp(logits - logits.max(2, keepdims=True))
+    difference = float(np.abs(exponent / exponent.sum(2, keepdims=True) - expected).max())
+    if difference > 1e-4:
+        raise SystemExit(f"ONNX y torch no coinciden (diferencia máxima {difference})")
+    import hashlib
+    import json
+    destination.with_suffix(".json").write_text(json.dumps({
+        "perfil": profile, "caracteres": saved["characters"], "entrada": list(INPUT),
+        "normalizacion": "(gris / 255 - 0,5) / 0,5", "salida": "logits CTC; índice 0 = blanco",
+        "modelo_torch_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+        "onnx_sha256": hashlib.sha256(destination.read_bytes()).hexdigest(),
+        "diferencia_max_probabilidades": difference,
+        "entrenado_con": "solo imágenes sintéticas (entrenar_lector_globos.py); ningún dato del cliente",
+    }, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"{destination} · diferencia máxima ONNX/torch {difference:.2e}")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--exportar-onnx", type=Path, metavar="DESTINO",
+                        help="Exportar el modelo del perfil a ONNX (con metadatos .json) y salir")
     parser.add_argument("--muestras", type=int, default=80_000)
     parser.add_argument("--epocas", type=int, default=10)
     parser.add_argument("--lote", type=int, default=128)
@@ -298,6 +339,9 @@ def main():
     parser.add_argument("--salida", type=Path, default=OUTPUT, help="Carpeta de la hoja de muestra")
     parser.add_argument("--muestra-png", action="store_true", help="Guardar una hoja con 64 imágenes sintéticas")
     args = parser.parse_args()
+    if args.exportar_onnx:
+        export_onnx(args.perfil, args.exportar_onnx)
+        return
     if args.muestra_png:
         args.salida.mkdir(parents=True, exist_ok=True)
         tiles = [cv2.copyMakeBorder(cv2.resize(synth(i, args.perfil)[0], None, fx=3, fy=3,

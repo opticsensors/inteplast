@@ -1,0 +1,27 @@
+{
+ "perfil": "general",
+ "caracteres": [
+  "0",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  ".",
+  "T"
+ ],
+ "entrada": [
+  32,
+  64
+ ],
+ "normalizacion": "(gris / 255 - 0,5) / 0,5",
+ "salida": "logits CTC; índice 0 = blanco",
+ "modelo_torch_sha256": "c7736b6c5a1cdd59450ca6641e84806773cd9922b7a5c5220e97e1826388fe39",
+ "onnx_sha256": "38936e0f084a120fe00b37974d5f2e9190c42d4e750e5a4bb42673d61324cd32",
+ "diferencia_max_probabilidades": 6.899237632751465e-06,
+ "entrenado_con": "solo imágenes sintéticas (entrenar_lector_globos.py); ningún dato del cliente"
+}

@@ -1314,4 +1314,58 @@ for (const mobile of [false, true]) {
     ).toBeVisible()
     await expect(notice).toHaveCount(0)
   })
+
+  test(`reviews without a detected balloon remain searchable at their saved positions (${mobile ? "mobile" : "desktop"})`, async (t) => {
+    const page = await mount(t, "/parts/part-one?cota=N170", mobile)
+    await page.evaluate(() => {
+      window.evidenceDrawingWords = [
+        {
+          id: "misread-text",
+          page: 2,
+          box: [0.2, 0.3, 0.25, 0.35],
+          text: "?",
+          method: "pdf",
+        },
+      ]
+      window.evidenceDrawingReviews = [
+        {
+          candidate_id: "old-a",
+          label: "N170.11",
+          page: 3,
+          box: [0.1, 0.2, 0.15, 0.25],
+        },
+        {
+          candidate_id: "old-b",
+          label: "N170.12",
+          page: 4,
+          box: [0.6, 0.7, 0.65, 0.75],
+        },
+        {
+          candidate_id: "misread-text",
+          label: "N170.13",
+          page: 2,
+          box: [0.2, 0.3, 0.25, 0.35],
+        },
+      ]
+    })
+    await page.getByRole("button", { name: "Plano", exact: true }).click()
+    const search = page.getByRole("textbox", {
+      name: "Buscar cota en el plano",
+    })
+    for (const [label, id, number, box] of [
+      ["N170.11", "old-a", 3, [0.1, 0.2, 0.15, 0.25]],
+      ["N170.12", "old-b", 4, [0.6, 0.7, 0.65, 0.75]],
+      ["N170.13", "misread-text", 2, [0.2, 0.3, 0.25, 0.35]],
+    ]) {
+      await search.fill(label)
+      await expect(page.getByRole("status")).toHaveText("1 resultado")
+      await page
+        .getByRole("button", { name: `${label} · Revisada`, exact: true })
+        .click()
+      const focus = await page.evaluate(() => window.review.drawingFocus)
+      assert.equal(focus.id, id)
+      assert.equal(focus.page, number)
+      assert.deepEqual(focus.box, box)
+    }
+  })
 }

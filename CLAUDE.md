@@ -105,6 +105,15 @@ pieza/revisión, ficha de pieza y buscador PDF con revisiones compartidas. El mo
 normalizado de mediciones y ejecución de correcciones sigue pendiente. Ver
 [docs/cotas-y-evidencia-web.md](docs/cotas-y-evidencia-web.md).
 
+Desde el **2026-10-30** el índice del plano lee los globos con el lector del prototipo de
+búsqueda en planos:
+- fuente decidida globo a globo (capa vectorial o imagen);
+- lector propio en ONNX (`backend/app/ingestion/models/`), sin torch;
+- umbrales provisionales en `drawing_version.py`.
+
+El prototipo está **congelado**: no se ajusta más sobre los planos actuales sin evidencia nueva.
+Ver [Lector de globos](docs/cotas-y-evidencia-web.md#lector-de-globos-30102026).
+
 ```powershell
 docker compose up -d --build db prestart backend   # backend + BD (aplica migraciones)
 cd frontend; npm run dev                           # http://localhost:5173

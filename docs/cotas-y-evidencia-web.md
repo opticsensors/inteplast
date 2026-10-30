@@ -231,6 +231,56 @@ tienen lectura. La pantalla de consulta ya no ofrece ese formulario; sigue usand
 etiquetas revisadas que existan para la versión actual.
 No hay todavía herramienta para dibujar una ubicación nueva que el detector no haya encontrado.
 
+### Lector de globos (30/10/2026)
+
+El índice usa el lector del prototipo de búsqueda en planos, portado a `backend/app/ingestion/`
+(`drawing.py`, `balloon_reader.py` y `drawing_version.py`). Reproduce exactamente sus lecturas,
+comprobado en 5 planos reales. Cómo funciona:
+- **Dónde se buscan los globos:** en la capa vectorial cuando el PDF los trae como vectores sobre
+  el escaneo (infra-CONVERT); si no, en la imagen original. Se decide globo a globo, también en
+  páginas mixtas.
+- **Detector:** dos pasadas, con el tamaño típico de los globos de ese plano, y orientación
+  automática de la página.
+- **Lectura:** RapidOCR y el lector propio, una CRNN pequeña en ONNX entrenada solo con números
+  sintéticos, votan; después se asigna un número a cada globo, sin repetir números en el plano.
+- **Umbral provisional por fuente:** 0,434 en la capa vectorial y 0,6072 en la imagen. Por
+  debajo, el globo queda sin lectura y no aparece en la búsqueda. Cada lectura guarda su
+  procedencia (`Combinado`, `RapidOCR`, `Lector propio`) y cada globo su `fuente`.
+- **Lector no disponible:** si falta el modelo o sus metadatos, o no se pueden cargar/validar,
+  se localizan los globos sin ofrecer números automáticamente y se muestra un aviso.
+  La búsqueda en el texto del plano sigue funcionando. No se recurre a RapidOCR solo, cuyos
+  resultados no están validados con los umbrales del combinado.
+- **Caché:** la identidad del lector (versión, huellas del ONNX y del JSON, y umbrales) forma parte de la
+  clave del índice. Al cambiar el lector, la consulta devuelve `empty` con «El plano o su lector
+  han cambiado: prepara de nuevo la búsqueda». La versión del índice pasa a 4 con esta corrección.
+- **Revisiones:** los identificadores de candidato derivan de la caja detectada, así que mejorar
+  el detector los cambia. Se respetan primero las revisiones cuyo identificador sigue existiendo.
+  Una revisión antigua solo se reasocia si hay un único globo compatible en su página y ninguna
+  otra revisión antigua compite por él (el centro revisado debe caer dentro de su caja).
+  Si ese globo ya se ha revisado con su identificador actual, esa revisión prevalece y su
+  predecesora deja de mostrarse. Las revisiones ambiguas o sin correspondencia siguen apareciendo
+  como «Revisada» en su posición guardada, sin depender de las detecciones del índice.
+  La consulta no modifica ni borra las filas guardadas.
+
+Comprobación de estas correcciones (30/10/2026): **336 tests del backend en Docker aislado**,
+**30 pruebas de la consulta de pieza/plano** (incluidas las revisiones sin correspondencia en
+escritorio y móvil), compilación del frontend, Ruff y lint sin errores. Cliente TypeScript
+regenerado sin cambios de contrato. Imagen de desarrollo `backend:latest` reconstruida.
+
+Medición en el prototipo, con los umbrales actuales:
+- Grupo B (3202, 3288 y 3167): **84,8 % de cobertura y 1,2 % de errores** entre las lecturas
+  evaluables ofrecidas.
+- 3212, escaneo de baja resolución: ofrece 114 de 253 globos (111 correctos).
+
+**Limitaciones:**
+- Hay lecturas ofrecidas sin verificar: 64 en ese banco, sin referencia.
+- El 3202 «G», con negritas muy gruesas, falla más.
+- Solo se detectan globos verdes o azules.
+- No se ha demostrado que generalice a planos nuevos: los planos actuales sirvieron para diseñarlo.
+- Un número por plano y un tamaño de globo dominante por página son supuestos.
+
+Detalle en `prototypes/data-explorer/README.md` y `conocimiento/planos-globos.md`.
+
 ## Ejecución y mantenimiento
 
 - Los lectores de producción viven en `backend/app/ingestion/`: plano/OCR, CSV, perfiles

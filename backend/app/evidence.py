@@ -30,6 +30,7 @@ from app.file_sources import (
     local_path,
     stamp,
 )
+from app.ingestion.drawing_version import reader_id
 from app.knowledge_models import EvidenceJob, PartCharacteristic, PartDocument
 from app.models import Part, StoredFile, get_datetime_utc
 from app.previews import preview_lifespan
@@ -48,8 +49,16 @@ def digest(value: Any) -> str:
 
 
 def drawing_key(document: StoredFile) -> str:
+    # The reader identity (index version, own model and thresholds) is part of the key: improving
+    # the reader invalidates cached drawing indexes without touching the study imports.
     return digest(
-        [RECIPE, str(document.id), str(document.version), linked_version(document)]
+        [
+            RECIPE,
+            str(document.id),
+            str(document.version),
+            linked_version(document),
+            reader_id(),
+        ]
     )
 
 

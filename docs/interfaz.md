@@ -210,6 +210,9 @@ recuerda comprobar el número en el plano.
 No añadir columna lateral, descarga del original, filtro «Sin lectura», autor o fecha de la
 revisión ni formulario «Número de esta ubicación / Guardar revisión» en esta consulta. Las
 revisiones ya guardadas siguen siendo utilizadas al buscar.
+Si una revisión no tiene una correspondencia inequívoca con el detector actual, conservarla
+como resultado «Revisada» en su posición guardada. No trasladarla a otra ubicación por cercanía
+ni ocultarla por no aparecer en el índice nuevo.
 
 ## Gráficas y detalle
 
