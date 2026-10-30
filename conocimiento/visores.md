@@ -201,6 +201,14 @@ La página lo dice arriba del todo y trae **el texto listo para enviar**. Se pid
 PDF vectorial / SVG / DWG / CATDrawing nativo; si no, **el mismo plano a 600 DPI o más**; y la
 **rev. 06**, que es la de los informes. → [preguntas-abiertas.md](../docs/preguntas-abiertas.md) (A4)
 
+> **Actualización del 28/10/2026.** Se pidió e INTEPLAST indicó que probablemente no dispone de él,
+> y que en muchos casos tampoco existe una versión vectorial o SVG (comunicado por Eduard).
+> **Hay que seguir trabajando con escaneos**. Para los planos que lo tengan, el `.icp`/`.prf`
+> proporciona el número y la posición de cada globo sin OCR. Medición y cambios del buscador:
+> [Data Explorer](../prototypes/data-explorer/README.md#búsqueda-bajo-demanda-28102026).
+> **29/10/2026:** tampoco hay opción de pedir un escaneo mejor; la mejora tiene que salir del lector
+> ([comparativa de lectores](../prototypes/data-explorer/README.md#comparativa-de-lectores-de-globos-29102026)).
+
 ## Prototipo independiente de correcciones (17/09/2026)
 
 `ver_correcciones.py` genera `out/correcciones-3212/index.html`, sin modificar `ver_todo.py`
@@ -273,6 +281,21 @@ y confusiones de dígitos/sufijos; **no se ha validado una precisión global**. 
 OCR se presentan como propuestas hasta su revisión explícita. El resultado no resuelve
 automáticamente las limitaciones del PDF ni la discrepancia de revisiones del plano.
 
-La petición de un plano mejor sigue vigente. Este buscador ofrece una consulta asistida
+La petición de un plano mejor no prosperó: no hay vectorial ni escaneo mejor (28–29/10/2026). Este buscador ofrece una consulta asistida
 y una vía de revisión persistente; no sustituye la validación metrológica. Los detalles y
 opciones están en [Data Explorer](../prototypes/data-explorer/README.md).
+
+**28/10/2026.** El buscador solo actúa al pulsar Enter y separa la lectura principal de las
+alternativas. Contra una lectura visual de los 263 círculos (40 de 40 correctas en una muestra
+verificada), el OCR acierta la lectura principal en 115 de 253 globos, y la detección solo admite
+**círculos verdes o azules**: otros planos pueden no tenerlos.
+[Detalle](../prototypes/data-explorer/README.md#búsqueda-bajo-demanda-28102026).
+
+**29/10/2026.** Se retiraron las propuestas de globos cercanos a N±1…N±3 que se añadieron el 28/10.
+Eran una heurística para tapar el OCR, y el primer resultado era erróneo en 65 de 180 búsquedas.
+La mejora se busca en el lector, sin LLM y en local: `comparar_ocr_globos.py` mide 25 lectores en
+el 3212, y `probar_lector_planos.py` mide los mejores en todos los planos con globos de `Exemples`,
+usando los `.icp` como referencia automática.
+[Comparativa de lectores](../prototypes/data-explorer/README.md#comparativa-de-lectores-de-globos-29102026).
+La propuesta para la app distingue tres casos: `.icp`, número escrito o solo el valor.
+Se resume en la [ingesta](../docs/ingesta-automatica.md#24-localizar-cotas-en-el-plano-2d-28102026).

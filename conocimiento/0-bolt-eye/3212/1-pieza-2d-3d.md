@@ -105,6 +105,18 @@ no los delata. → [visores.md](../../visores.md)
 N-numbers inventados con pinta de buenos. Hoy la única vía es **leerlos a ojo con el zoom** (a 8×
 se leen bien) y, sobre todo, **pedir el plano en condiciones**.
 
+> **28/10/2026.** No habrá plano vectorial: INTEPLAST indicó que probablemente no lo tiene (A4).
+> `buscar_en_plano.py` detecta 263 círculos: 253 globos reales y 10 detecciones que no
+> corresponden a un único globo, según la lectura visual de Claude (Eduard verificó 40 al azar:
+> 40 correctas). Las cifras miden unos 5 px de alto en la imagen del PDF. El OCR principal
+> acierta 115, falla 66 y deja 72 sin lectura. El buscador presenta las lecturas como
+> propuestas. Las propuestas de globos cercanos se retiraron el 29/10/2026.
+> [Medición](../../../prototypes/data-explorer/README.md#búsqueda-bajo-demanda-28102026).
+>
+> **29/10/2026.** No hay opción de pedir un escaneo mejor. Un lector propio y ligero, entrenado solo
+> con números sintéticos, acierta 227 de 253 globos en este plano, sin LLM y en local.
+> [Comparativa de lectores](../../../prototypes/data-explorer/README.md#comparativa-de-lectores-de-globos-29102026).
+
 ### ⚠️ Este plano no es el de los informes
 
 Es la **revisión 07**. El contraste visual del cajetín en la segunda revisión del

@@ -48,7 +48,7 @@ individuales CMM y 12 comparativas; Pockets contiene 1 CMM y 4 `#P#`. Los `#P#` 
 | Título del plan | `Tool correction 1.33 (DIM. Nr.170)`; `Correcció nr. 1.1 (DIM. Nr. 54, 57 and 60)`; `Tool correction DIM#5: …` (3309); `1 / . Dim 210Ø21,5-0,2` (3051: flecha U+F0E0 entre cota y nominal, perdida en algunas extracciones); solo imágenes (3056); presentaciones de análisis sin numerar (3168, 3226) |
 | Planes por pieza | 1–2 (3212, 3214) hasta **numeración 15** (3218, con huecos), en carpetas `YYYYMMDD_Nth loop…` con varias versiones; numeración que se reinicia (shroud tras postizos) o no coincide con el nombre del fichero |
 | Método de medida | DOCX del cliente (Bolt Eye); **XLS `MM_revNN.xls` con hoja `DIMENSIONS`** (Clips, 3309); fichas PDF de INTEPLAST (3288); ensayos del cliente (TES) |
-| Plano | escaneo sin texto (3212); vectorial con texto pero **sin globos** (3197, 3051); **con globos + `.icp`/`.prf`** que dan su posición (3205, 3206, 3288, 3202; 19 planos) |
+| Plano | escaneo sin texto (3212); vectorial con texto pero **sin globos** (3197, 3051); **con globos + `.icp`/`.prf`** que dan su posición (3205, 3206, 3288, 3202; 19 planos). Los globos los pone INTEPLAST: azules de infra-CONVERT en 25 PDF, verdes solo en el 3212 → [planos con globos](planos-globos.md) |
 | Condición de medida | pieza montada (*clipped*, Clips) o libre; condiciones de proceso en la ruta (3197: `135ºC/500bar`, boquilla); fuerza de cierre (3168) |
 | Moldflow | `.mfr` (10 piezas); `README.txt` *«No Moldflow information available»*; un vídeo `.avi` de llenado (3206) |
 

@@ -454,7 +454,7 @@ tenemos (el `.igs` es el *escaneado*, no el nominal).
 | 8 | **`2- Moldflow` vacía** | Los estudios están en `7- Moldflow`. |
 | 9 | **Duplicados y comprimidos** | Deduplicar solo tras comparar contenido. El nombre, la revisión o la presencia de un comprimido no prueban redundancia; el contenido de los archivos comprimidos sigue pendiente de contraste completo. |
 | 10 | **Multilingüismo** | Catalán, castellano, inglés y alemán, a veces en el mismo fichero. El frontend debe asumirlo. |
-| 11 | **Planos 2D sin texto extraíble** | El plano 3212 es un escaneo confirmado. OCR solo como ayuda visual; números de globo manuales hasta recibir mejor fuente. No confundir el fallo de extracción de un PDF PA/PB con una medición OK. |
+| 11 | **Planos 2D sin texto extraíble** | El plano 3212 es un escaneo confirmado y no habrá fuente mejor (29/10/2026). Con `.icp`, número y posición del globo salen del fichero; sin él, lectura OCR medida en el prototipo ([planos con globos](planos-globos.md)). No confundir el fallo de extracción de un PDF PA/PB con una medición OK. |
 | 12 | **`.mfr` ilegible** | Binario propietario. Requiere Moldflow Communicator + exportación manual de imágenes. |
 | 13 | **STEP de molde de 645 MB** | No servible al navegador. Derivado ligero o solo enlace de descarga. |
 | 14 | **XLS con datos caducados** | `intern.05.xls` copia el bloque N117/N118 de `intern.03`; **`intern.09.xls` lo copia de `intern.01` (15 meses antes) y sus N275/N276 de `intern.08`**. El CSV manda. |

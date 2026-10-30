@@ -299,7 +299,9 @@ fuera de `conocimiento/`.
 - [ ] Revisar con INTEPLAST el uso del «Cpk generator» y qué versión del Inf_04 del 3167 se entregó
       (I-003, I-603). Lo decide Eduard.
 
-- [ ] Ajustar la transformación `.icp` → PDF en los otros 18 planos (validado solo BSG-296-02).
+- [x] Ajustar la transformación `.icp` → PDF en los demás planos: automática en 19 de 20 PDF el
+      29/10/2026; falta el 3206 `213137-01028-10`, cuyos globos no ve el detector
+      ([planos con globos](planos-globos.md#calibración-icp--pdf)).
 - [ ] Profundizar: rebabas en nervios tras postizos (shroud), loops del 3174, `#P#` ↔ cotas en otras piezas.
 - [ ] Contenido de los comprimidos (zip, rar, cab): de momento solo se lista.
 - [ ] Macros de los `.xlsm` (olevba): leída `Generate_Sheets` del «Cpk generator»; quedan las demás.

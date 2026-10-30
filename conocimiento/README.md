@@ -48,6 +48,7 @@ segunda explicación en prosa.
 |---|---|---|
 | [AVANCE.md](AVANCE.md) | Estado de la lectura de Exemples y qué queda pendiente | ✅ |
 | [comparativa.md](comparativa.md) | Diferencias entre features y piezas: esqueleto, formatos, plantillas | ✅ |
+| [planos-globos.md](planos-globos.md) | Qué planos llevan globos, de qué color y estilo, y cuáles traen `.icp` con su calibración | ✅ |
 | [identidad-piezas.md](identidad-piezas.md) | Nombre, plano, nº de cliente, ITP, cliente y columnas de cavidad por pieza, con recuentos y valores anómalos. **Generado** por `identidad_piezas.py` | ✅ |
 | [rag/](rag/README.md) | Investigación de arquitectura (27/10/2026), glosario multilingüe y preguntas de evaluación del RAG. No se indexa | ✅ |
 | [incongruencias.md](incongruencias.md) | Lo que no cuadra o habría que pedir a INTEPLAST, con evidencia | ✅ |

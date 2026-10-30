@@ -119,6 +119,9 @@ en la [ficha del plano](../conocimiento/0-bolt-eye/3212/1-pieza-2d-3d.md).
 1. **¿Nos podéis pasar un PDF con texto, SVG, DWG o CATDrawing del plano, incluidos sus globos?**
    Si solo existe escaneo, pedir una digitalización de mayor resolución, no una ampliación
    de la imagen actual. Habrá que validar las lecturas igualmente.
+   *Respuesta parcial (28/10/2026, comunicada por Eduard): ya se pidió; probablemente no lo
+   tienen y, en muchos casos, no disponen de versión vectorial o SVG. Se trabaja con escaneos.
+   Sigue abierta la digitalización a mayor resolución.*
 2. **¿Nos podéis pasar la rev.06 citada en los informes y aclarar sus cambios frente a la rev.07?**
 
 <details><summary>Contexto interno (no enviar)</summary>

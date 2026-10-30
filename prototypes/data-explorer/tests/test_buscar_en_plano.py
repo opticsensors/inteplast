@@ -1,8 +1,12 @@
 """Search boundaries, page geometry and PDF cache isolation. No customer files."""
 
+import json
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -25,6 +29,50 @@ class IdentifierTests(unittest.TestCase):
         self.assertIsNone(finder.ocr_number("I70"))
         self.assertIsNone(finder.ocr_number("170 173"))
         self.assertIsNone(finder.normalize_number("170 mm"))
+
+
+@unittest.skipUnless(shutil.which("node"), "Node.js no disponible")
+class SearchCoreTests(unittest.TestCase):
+    """The page's number search, run in Node with synthetic balloons."""
+
+    def find(self, query):
+        core = finder.PAGE[finder.PAGE.index("const normalize="):finder.PAGE.index("const kinds=")]
+        balloon = lambda id_, x, labels: {"id": id_, "page": 1, "box": [x, .1, x + .02, .12], "circle": [0, 0, 1],
+                                          "kind": "ocr" if labels else "unread", "labels": labels,
+                                          "label": labels[0] if labels else "Globo"}
+        records = [balloon("b176", .10, ["N176"]), balloon("near", .13, []), balloon("far", .80, []),
+                   balloon("b133", .40, ["N133", "N132"]), balloon("alt", .50, ["N135", "N133"]),
+                   balloon("partial", .16, ["N17"])]
+        script = (core + f"\nconsole.log(JSON.stringify(findNumber({json.dumps(query)}, {json.dumps(records)})"
+                  ".map(r => [r.id, r.kind])))")
+        out = subprocess.run(["node", "-e", script], capture_output=True, text=True, encoding="utf-8", check=True)
+        return [tuple(r) for r in json.loads(out.stdout)]
+
+    def test_principal_reading_before_alternatives(self):
+        self.assertEqual(self.find("133"), [("b133", "ocr"), ("alt", "alt")])
+
+    def test_exact_reading_has_no_proposals(self):
+        self.assertEqual(self.find("N176"), [("b176", "ocr")])
+
+    def test_unread_or_partial_balloons_are_not_proposed(self):
+        self.assertEqual(self.find("177"), [])
+        self.assertEqual(self.find("177.1"), [])
+
+
+class CombinedThresholdTests(unittest.TestCase):
+    def test_mixed_page_uses_the_threshold_of_each_balloon_source(self):
+        thresholds = {"capa vectorial": .4, "imagen": .6}
+        balloons = [{"fuente": "capa vectorial"}, {"fuente": "imagen"}, {"fuente": "imagen"}]
+        choices = [[("N12", .5)], [("N13", .5)], [("N14", .7)]]
+        finder.offer_readings(balloons, choices, [[], [], []], [[], [], []], thresholds)
+        offered = [b["candidates"][0]["label"] if b["candidates"] else None for b in balloons]
+        self.assertEqual(offered, ["N12", None, "N14"])  # el 0,5 vale en la capa, no en la imagen
+
+    def test_cache_signature_includes_both_thresholds(self):
+        signature = finder.index_signature("abc", True, "modelo")
+        self.assertEqual(signature["lector"]["umbrales"], finder.COMBINED_THRESHOLDS)
+        with mock.patch.dict(finder.COMBINED_THRESHOLDS, {"imagen": .7}):
+            self.assertNotEqual(finder.index_signature("abc", True, "modelo"), signature)
 
 
 class PDFIndexTests(unittest.TestCase):

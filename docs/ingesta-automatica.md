@@ -212,6 +212,43 @@ Este flujo todavía no está implementado:
 - **Correos, presentaciones de análisis (8D informal), fotos y vídeos:** resumen opcional; el
   valor está en enlazarlos como evidencia, no en estructurarlos.
 
+### 2.4 Localizar cotas en el plano 2D (28/10/2026)
+
+La pregunta es: dado `N177`, ¿dónde está en el plano? La respuesta depende de lo que el plano
+lleve escrito. Los globos de color son solo una de las formas posibles.
+
+| Caso | Qué hay | Vía propuesta | Evidencia |
+|---|---|---|---|
+| A. Existe `.icp`/`.prf` | Número y posición de cada globo en un fichero aparte | Leerlo directamente, sin OCR, calibrando cada plano | §1.3: 19 planos, 2.118 sellos |
+| B. El número está escrito en la imagen, dentro de un globo o no | El texto del número | Con círculos, OpenCV da la posición y un lector local y ligero, sin LLM, lee cada recorte; sin círculos, hay que leer la página troceada y ampliada | 3212: el OCR actual acierta 115 de 253 globos (cifras de unos 5 px); un lector propio entrenado con números sintéticos, 216–227. En 19 planos con `.icp` como referencia, el OCR actual acierta el 88,9 % y combinado con el propio el 95,5 % (29/10/2026) |
+| C. El número no está escrito | Solo el valor de la cota | Traducir el número a su valor con los informes de medición (nominal y tolerancias) y buscar ese texto en el plano. Puede dar varias coincidencias | 3051: el texto del plano contiene `21.5 -0.2` tres veces (la Dim 210 Ø21,5 −0,2 de su plan de corrección) y ningún `210` suelto. 3197: ningún número de cota en el texto |
+
+- **Se calcula una vez por plano**, al vincularlo, como el índice de un libro. La búsqueda
+  consulta lo que ya está guardado: el usuario no espera al modelo y la consulta no cuesta nada.
+- **Coste estimado del caso B en el 3212.** Siete hojas de recortes de 1200×860 px. Cada imagen
+  ronda ancho×alto/750 ≈ 1.400 tokens, unos 10.000 de entrada en total, más unos miles de salida.
+  Del orden de 0,1–0,3 $ por plano con Opus 5.5 (4/20 $ por millón) y la mitad con Sonnet 5.5.
+  No está medido: comprobar con `count_tokens` antes de lanzar. Leer la página entera, en un plano
+  sin círculos, costaría varias veces más (sin medir).
+- **Sin revisión manual por plano.** Los usuarios no la harán: si la búsqueda exige trabajo,
+  buscarán la cota ellos mismos (Eduard, 28/10/2026). Cada lectura se muestra con su recorte y su
+  procedencia, como lectura automática.
+- **Búsqueda por vecindad retirada (29/10/2026).** Proponía globos cercanos a N±1…N±3 para tapar
+  el OCR; era una heurística y no sustituye a leer bien.
+- **Lectura local y ligera, sin LLM (29/10/2026).** No hay opción de pedir un escaneo mejor, y un
+  LLM con visión solo entraría vía Copilot si INTEPLAST deja salir los planos (§5). Se midieron
+  25 lectores en el 3212 y los mejores en todos los planos con globos de `Exemples`. Los `.icp`
+  sirven de referencia automática: 19 planos, 1.992 globos. En 20 de los 27 PDF con globos
+  estos son vectores sobre el escaneo, y se leen sobre la capa vectorial, limpia. En una ronda
+  con planos de examen apartados (3202 y 3288), el lector propio `general` acierta el 90,3 % y
+  combinado con el OCR actual el 96,3 %. Con un umbral de confianza fijado en desarrollo, ofrece
+  el 93,9 % bien y se equivoca en el 2,2 % de lo que ofrece. Detalle en la
+  [ronda con examen](../prototypes/data-explorer/README.md#ronda-con-examen-apartado-29102026).
+  Lectura de referencia del 3212, fuera de Git:
+  `prototypes/data-explorer/out/buscar-en-plano/chuleta-2026-10-28.json`.
+- El caso C requiere que los informes de la pieza incluyan la cota y que el formato del valor
+  coincida con el del plano (coma o punto decimal, signos de la tolerancia).
+
 ## 3. Lo que no está en los datos
 
 Ni reglas ni LLM pueden decidir:
@@ -237,7 +274,7 @@ se consulta a INTEPLAST en [preguntas abiertas](preguntas-abiertas.md).
 | 2 | Correcciones de todas las piezas: título, cotas, magnitudes, fecha, tablas; previsiones por etiqueta; enlace con las mediciones de la misma pieza por cota | Conjunto de referencia por plantilla |
 | 3 | LLM en lote para el significado de las acciones, con validación y revisión (§2.2) | Tasa de aceptación por campo |
 | 4 | Lecciones, warnings y feature ↔ cotas propuestos por LLM | Revisión de INTEPLAST |
-| — | Zonas en imagen y escaneos | Solo si una prueba con visión lo justifica |
+| — | Zonas en imagen y escaneos | Solo si una prueba con visión lo justifica. Lectura de globos del 3212: muestra visual de 40/40 (§2.4) |
 
 Las fases 0–2 plantean reglas sin LLM para ampliar cobertura. Las 21 piezas con datos
 son un ámbito de evaluación, no una cobertura garantizada: quedan formatos sin
@@ -248,7 +285,7 @@ estado y la prioridad de este trabajo se mantienen en la
 ## 5. Decisiones pendientes (Eduard)
 
 - Modelo y lugar del LLM de extracción (local o Copilot) y si los datos del cliente pueden salir
-  del servidor.
+  del servidor. Incluye los planos 2D para leer las cotas con visión (§2.4).
 - Política para valores cuya generación esté demostrada, indicios aún sin confirmar
   y versiones de informe. La propuesta es conservar su procedencia y evitar
   presentar un valor generado como medición.
