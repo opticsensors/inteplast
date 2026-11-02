@@ -198,11 +198,21 @@ def document_version(document: StoredFile) -> str:
     return stamp(document_path(document))
 
 
-def linked_version(document: StoredFile) -> str | None:
-    """The version recorded when linking; through SharePoint, always the latest."""
-    if sharepoint_reference(document):
-        return document_version(document)
-    return document.source_version
+def document_cache_key(document: StoredFile) -> str:
+    """Identity of the active source and current bytes, without downloading remote content."""
+    source = "sharepoint" if sharepoint_reference(document) else document.source
+    return hashlib.sha256(
+        json.dumps(
+            [
+                source,
+                str(document.id),
+                str(document.version),
+                document.source_key,
+                document.source_path,
+                document_version(document),
+            ]
+        ).encode()
+    ).hexdigest()
 
 
 def source_item(relative: str, *, directory: bool = False) -> SourceItem:

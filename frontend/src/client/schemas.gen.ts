@@ -2462,6 +2462,17 @@ export const PartCardPublicSchema = {
                 }
             ]
         },
+        cad_cache_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cad Cache Key'
+        },
         image: {
             anyOf: [
                 {
@@ -2579,6 +2590,17 @@ export const PartCoverRequestSchema = {
                 }
             ],
             title: 'File Version'
+        },
+        cad_cache_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cad Cache Key'
         },
         source_sha256: {
             type: 'string',

@@ -1,5 +1,6 @@
 """SharePoint source and Microsoft sign-in, with Graph and MSAL simulated (no network)."""
 
+import hashlib
 import uuid
 from pathlib import Path
 from typing import Any
@@ -13,12 +14,15 @@ from sqlmodel import Session, select
 from app import microsoft_auth, sharepoint
 from app.core.config import settings
 from app.core.db import engine
+from app.evidence import drawing_key, job_id
 from app.file_sources import reference_key
+from app.knowledge_models import EvidenceJob
 from app.measurement_models import MeasurementImport
 from app.models import Part, StoredFile
 from app.pilot import is_pilot
 from app.rebase_source import RebaseError, rebase
 from app.source_types import SourceError
+from tests.api.routes.test_cad_covers import cover_example
 
 API = settings.API_V1_STR
 PIECE = "0- Bolt Eye/3212 Pump Housing"
@@ -206,6 +210,215 @@ def test_links_made_through_sharepoint_stay_readable_locally(
     )
     # A local link keeps its change detection.
     assert client.get(f"{API}/files/{rows[1].id}", headers=headers).status_code == 409
+
+
+def test_drawing_index_follows_the_active_source_and_local_changes(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+    graph: FakeGraph,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    headers = superuser_token_headers
+    relative = f"{PIECE}/plan #1.pdf"
+    response = client.post(
+        f"{API}/files/reference", headers=headers, json={"path": relative}
+    )
+    assert response.status_code == 200
+    document = db.get(StoredFile, uuid.UUID(response.json()["id"]))
+    assert document is not None
+    with sharepoint.acting_as(uuid.uuid4()):
+        remote_key = drawing_key(document)
+    job = EvidenceJob(
+        id=job_id("drawing", document.id),
+        kind="drawing",
+        file_id=document.id,
+        cache_key=remote_key,
+        state="ready",
+        payload={},
+    )
+    db.add(job)
+    db.commit()
+    url = f"{API}/evidence/drawings/{document.id}"
+    assert client.get(url, headers=headers).json()["state"] == "ready"
+    assert graph.downloads == 0  # Index validity only needs remote metadata.
+
+    local = tmp_path / relative
+    local.parent.mkdir(parents=True)
+    local.write_bytes(b"%PDF local copy")
+    monkeypatch.setattr(settings, "ASSETS_ROOT", str(tmp_path))
+    monkeypatch.setattr(settings, "SHAREPOINT_ENABLED", False)
+    assert client.get(url, headers=headers).json()["state"] == "empty"
+    job.cache_key = drawing_key(document)
+    db.add(job)
+    db.commit()
+    assert job.cache_key != remote_key
+    assert client.get(url, headers=headers).json()["state"] == "ready"
+    local.write_bytes(b"%PDF another local revision")
+    assert client.get(url, headers=headers).json()["state"] == "empty"
+    monkeypatch.setattr(settings, "SHAREPOINT_ENABLED", True)
+    assert client.get(url, headers=headers).json()["state"] == "empty"
+
+
+@pytest.fixture
+def remote_cover(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+    graph: FakeGraph,
+) -> dict[str, Any]:
+    _, example = cover_example(client, superuser_token_headers, db)
+    source = example["cover_3d"]
+    document = db.get(StoredFile, uuid.UUID(source["file_id"]))
+    assert document is not None
+    path = f"{PIECE}/piece.stp"
+    graph.files[path] = (settings.uploads_path / str(document.id)).read_bytes()
+    graph.versions[path] = 1
+    document.source, document.source_key = "local", settings.ASSETS_SOURCE_ID
+    document.source_path, document.source_version = path, "sp:initial"
+    db.add(document)
+    db.commit()
+    return {
+        "part_id": source["part_id"],
+        "path": path,
+        "body": {
+            **{
+                key: source[key] for key in ("file_id", "file_version", "source_sha256")
+            },
+            "image_id": example["image_id"],
+        },
+    }
+
+
+def test_remote_cover_invalidates_without_downloading_the_cad(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    graph: FakeGraph,
+    remote_cover: dict[str, Any],
+) -> None:
+    headers = superuser_token_headers
+    detail = f"{API}/parts/{remote_cover['part_id']}/detail"
+    url = f"{API}/parts/{remote_cover['part_id']}/cover"
+    first = client.get(detail, headers=headers).json()["part"]
+    body = {**remote_cover["body"], "cad_cache_key": first["cad_cache_key"]}
+    assert client.put(url, headers=headers, json=body).status_code == 200
+    assert (
+        client.get(detail, headers=headers).json()["part"]["image"]["id"]
+        == body["image_id"]
+    )
+    downloads = graph.downloads
+    graph.files[remote_cover["path"]] = (
+        b"ISO-10303-21; new remote CAD; END-ISO-10303-21;"
+    )
+    graph.versions[remote_cover["path"]] += 1
+    changed = client.get(detail, headers=headers).json()["part"]
+    assert changed["cad"]["id"] == first["cad"]["id"]
+    assert changed["cad"]["version"] == first["cad"]["version"]
+    assert changed["cad_cache_key"] != first["cad_cache_key"]
+    assert changed["image"] is None
+    card = client.get(
+        f"{API}/catalog", headers=headers, params={"part_id": remote_cover["part_id"]}
+    ).json()["parts"][0]
+    assert card["image"] is None and card["cad_cache_key"] == changed["cad_cache_key"]
+    assert graph.downloads == downloads
+    assert client.put(url, headers=headers, json=body).status_code == 409
+    # Even a caller without the optional cache key cannot save the old geometry.
+    assert (
+        client.put(url, headers=headers, json=remote_cover["body"]).status_code == 409
+    )
+    current = {
+        **body,
+        "cad_cache_key": changed["cad_cache_key"],
+        "source_sha256": hashlib.sha256(graph.files[remote_cover["path"]]).hexdigest(),
+    }
+    assert client.put(url, headers=headers, json=current).status_code == 200
+    assert client.get(detail, headers=headers).json()["part"]["image"] is not None
+
+
+def test_cover_rejects_a_change_during_validation(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+    graph: FakeGraph,
+    remote_cover: dict[str, Any],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app.api.routes import catalog
+
+    validate = catalog.validate_document
+
+    def change_after_validation(*args: Any) -> None:
+        validate(*args)
+        graph.versions[remote_cover["path"]] += 1
+
+    monkeypatch.setattr(catalog, "validate_document", change_after_validation)
+    response = client.put(
+        f"{API}/parts/{remote_cover['part_id']}/cover",
+        headers=superuser_token_headers,
+        json=remote_cover["body"],
+    )
+    assert response.status_code == 409
+    assert (
+        db.get(EvidenceJob, job_id("part-cover", uuid.UUID(remote_cover["part_id"])))
+        is None
+    )
+
+
+@pytest.mark.parametrize("status", [403, 404, 503, 401])
+def test_unavailable_cad_never_returns_a_stale_cover(
+    status: int,
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    graph: FakeGraph,
+    remote_cover: dict[str, Any],
+) -> None:
+    headers = superuser_token_headers
+    assert (
+        client.put(
+            f"{API}/parts/{remote_cover['part_id']}/cover",
+            headers=headers,
+            json=remote_cover["body"],
+        ).status_code
+        == 200
+    )
+    graph.fail = [status] * sharepoint.ATTEMPTS
+    response = client.get(
+        f"{API}/parts/{remote_cover['part_id']}/detail", headers=headers
+    )
+    if status == 401:
+        assert response.status_code == 401
+    else:
+        assert response.status_code == 200
+        assert response.json()["part"]["image"] is None
+        assert response.json()["part"]["cad_cache_key"] is None
+
+
+def test_cover_is_not_reused_when_switching_from_sharepoint_to_local(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    remote_cover: dict[str, Any],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    headers = superuser_token_headers
+    url = f"{API}/parts/{remote_cover['part_id']}"
+    assert (
+        client.put(
+            f"{url}/cover", headers=headers, json=remote_cover["body"]
+        ).status_code
+        == 200
+    )
+    first = client.get(f"{url}/detail", headers=headers).json()["part"]
+    local = tmp_path / remote_cover["path"]
+    local.parent.mkdir(parents=True)
+    local.write_bytes(b"ISO-10303-21; local CAD; END-ISO-10303-21;")
+    monkeypatch.setattr(settings, "ASSETS_ROOT", str(tmp_path))
+    monkeypatch.setattr(settings, "SHAREPOINT_ENABLED", False)
+    changed = client.get(f"{url}/detail", headers=headers).json()["part"]
+    assert (
+        changed["image"] is None and changed["cad_cache_key"] != first["cad_cache_key"]
+    )
 
 
 class FakeMsal:

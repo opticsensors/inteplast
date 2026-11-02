@@ -29,8 +29,19 @@ function usePartImage(part: PartCardPublic) {
   const client = useQueryClient()
   const cad = part.cad
   const generated = useQuery({
-    queryKey: ["part-cover", part.id, cad?.id, cad?.version],
-    enabled: Boolean(!part.image && cad && /\.(step|stp)$/i.test(cad.filename)),
+    queryKey: [
+      "part-cover",
+      part.id,
+      cad?.id,
+      cad?.version,
+      part.cad_cache_key,
+    ],
+    enabled: Boolean(
+      !part.image &&
+        part.cad_cache_key &&
+        cad &&
+        /\.(step|stp)$/i.test(cad.filename),
+    ),
     staleTime: Infinity,
     retry: false,
     refetchOnWindowFocus: false,
@@ -52,6 +63,7 @@ function usePartImage(part: PartCardPublic) {
             requestBody: {
               file_id: cad!.id,
               file_version: cad!.version,
+              cad_cache_key: part.cad_cache_key,
               source_sha256: sourceHash,
               image_id: uploaded.id,
             },
@@ -67,7 +79,7 @@ function usePartImage(part: PartCardPublic) {
     },
   })
   return {
-    image: part.image ?? generated.data,
+    image: part.image ?? (part.cad_cache_key ? generated.data : undefined),
     loading: generated.isFetching,
     error: generated.error,
   }

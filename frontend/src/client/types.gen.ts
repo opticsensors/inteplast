@@ -500,6 +500,7 @@ export type PartCardPublic = {
     feature_count?: number;
     characteristic_count?: number;
     cad?: (FilePublic | null);
+    cad_cache_key?: (string | null);
     image?: (FilePublic | null);
 };
 
@@ -517,6 +518,7 @@ export type PartCatalogPublic = {
 export type PartCoverRequest = {
     file_id: string;
     file_version?: (string | null);
+    cad_cache_key?: (string | null);
     source_sha256: string;
     image_id: string;
 };

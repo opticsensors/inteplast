@@ -138,24 +138,35 @@ actuales, pero tiene dos efectos que no se recuperan al volver a vincular:
   seleccionadas y cámara; `unlink_feature_part` en `api/routes/features.py`). La imagen
   estática de la portada se conserva, pero la selección hay que rehacerla.
 
-La portada de la pieza se selecciona a partir de su CAD principal actual. Esto no garantiza
-que el PNG se regenere si cambian únicamente los bytes remotos, como se explica debajo.
+La portada de la pieza se selecciona a partir de su CAD principal actual. Su caché incluye
+también el origen activo y la versión del contenido, como se explica debajo.
 
 ## Cambios remotos y miniatura de pieza
 
-**Pendiente detectado al leer el código el 26/10/2026:** `part_card` en
-[`catalog.py`](../backend/app/api/routes/catalog.py) y `usePartImage` en
-[`PartCover.tsx`](../frontend/src/components/Parts/PartCover.tsx) reutilizan la imagen por
-`cad.id` y `StoredFile.version`. No comparan el `cTag` de Graph ni vuelven a calcular el
-SHA-256 al servir una miniatura existente. En modo SharePoint, cambiar el contenido en la
-misma ruta puede dejar un PNG anterior, porque la lectura remota no cambia esos UUID.
+**Corregido el 30/10/2026:** `part_card` en
+[`catalog.py`](../backend/app/api/routes/catalog.py) devuelve `cad_cache_key`, una identidad
+que incluye el origen activo y la versión real del CAD. En SharePoint se consulta el
+`cTag` (o su alternativa); en local, el sello actual del archivo. Listar piezas no descarga
+el STEP ni calcula su SHA-256. Una revisión remota o un cambio de modo invalida la portada
+aunque `cad.id` y `StoredFile.version` no cambien.
 
-La validación SHA-256 sí se hace **al guardar** la portada. En features, además,
-`StepCoverCanvas` comprueba los bytes antes de aplicar las caras guardadas y bloquea una
-selección incompatible. Las vistas GLB usan otra caché que sí incluye la versión actual
-del origen ([vistas 3D](vistas-3d.md#cola-recursos-y-seguridad)). Falta invalidar también la
-miniatura de pieza ante cambios remotos; no hay una acción específica de regeneración
-en la interfaz. Este caso se ha identificado en código, no mediante una prueba real de Graph.
+[`PartCover.tsx`](../frontend/src/components/Parts/PartCover.tsx) usa esa identidad en su
+caché y vuelve a generar la captura cuando falta una portada válida. Si el CAD no está
+disponible, no se muestra la portada anterior ni se intenta regenerarla; la pieza sigue
+visible. La caducidad de la sesión Microsoft se comunica al navegador para iniciar sesión.
+Las portadas guardadas con la clave antigua se regeneran una vez al consultarlas.
+
+Al guardar se valida SHA-256 y se comprueba la identidad antes y después de leer los bytes.
+Si el archivo cambia durante la captura/validación, se rechaza el guardado. No hay vigilancia
+en segundo plano: el cambio se detecta al volver a consultar el catálogo o la ficha.
+En features, `StepCoverCanvas` sigue comprobando los bytes antes de aplicar caras guardadas;
+esta corrección afecta a la portada automática de la pieza, no remapea superficies.
+
+Validación del 30/10: 344 tests del backend en Docker aislado y 14 pruebas de interfaz del
+catálogo/portadas pasan. Incluyen cambios remotos con UUID estable, cambio a local, versiones
+distintas durante el guardado y errores de acceso; Graph está simulado. Cliente TypeScript
+regenerado con `cad_cache_key` en la tarjeta y en la petición de guardado (opcional para
+clientes anteriores, que siguen sujetos a la comprobación SHA-256).
 
 ## Comprobaciones
 

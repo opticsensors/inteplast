@@ -250,8 +250,13 @@ externos; su conservación corresponde al almacenamiento que los contiene.
 
 ## SharePoint (Microsoft Graph)
 
-Implementado el **2026-10-22** y probado con Graph y MSAL simulados. **Falta la primera prueba
-real** con la cuenta de Eurecat (ver [cómo activarlo](#activarlo-y-volver-a-local)).
+Implementado el **2026-10-22** y probado con Graph y MSAL simulados. El **30/10/2026** Eduard
+confirmó el primer login real correcto con su cuenta de Eurecat, tras darla de alta como
+usuario activo de la app, sin rol de administrador. La instalación está en modo SharePoint
+y aún usa el retorno de Postman. **Lo siguiente es eliminar el copiar y pegar**:
+[pasos y responsables para la próxima sesión](proximos-pasos.md#próxima-sesión-quitar-el-copiar-y-pegar-del-login-de-microsoft).
+La lectura de archivos reales mediante Graph sigue sin comprobarse; con `SHAREPOINT_DRIVE_ID`
+vacío, la prueba usa el OneDrive de Eduard, no una biblioteca de INTEPLAST.
 
 El mismo conjunto de datos se puede leer desde la carpeta local o desde OneDrive/SharePoint.
 Se elige con **una sola variable**, `SHAREPOINT_ENABLED` (`false` por defecto). Las dos
@@ -279,6 +284,12 @@ cambia de comportamiento.
   con el mismo correo (`preferred_username`), y de la organización configurada
   (`MICROSOFT_TENANT_ID`). La cuenta queda ligada por su `oid`. En este modo el login con
   contraseña está desactivado; cerrar sesión borra también los tokens de Microsoft.
+- **Administradores**: también entran con Microsoft; el acceso a Admin depende del rol
+  `is_superuser` de la app. Hay que configurar una vez al primer administrador corporativo;
+  después puede dar de alta a otros desde la interfaz. El alta no concede permisos en
+  SharePoint. Pendiente adaptar el formulario, que todavía exige una contraseña aunque no
+  se utiliza en modo Microsoft. Vincular el modo de archivos al método de login es una
+  decisión actual de esta app, no un requisito de SharePoint.
 - **Lectura** (`app/sharepoint.py`): direcciones por ruta desde `SHAREPOINT_ROOT_PATH`, con cada
   segmento codificado según las [reglas de Graph](https://learn.microsoft.com/en-us/graph/onedrive-addressing-driveitems).
   Los errores 429 y 500/502/503/504 se reintentan respetando `Retry-After`
@@ -290,7 +301,8 @@ cambia de comportamiento.
   documento por ruta (`StoredFile` se reutiliza). Las vistas 3D, el índice del plano y el
   estudio del piloto usan la versión actual como clave y se regeneran al solicitarse de nuevo.
   No hay vigilancia de cambios: las mediciones importadas requieren **Actualizar datos**.
-  La miniatura de pieza tiene una [limitación distinta de invalidación](portadas-cad.md#cambios-remotos-y-miniatura-de-pieza).
+  La miniatura de pieza también se invalida al consultar la versión actual del CAD
+  ([portadas](portadas-cad.md#cambios-remotos-y-miniatura-de-pieza)).
 - **Trabajos en segundo plano** (vistas 3D, índice del plano, estudio del 3212): leen
   SharePoint con la cuenta de quien los pidió (`FilePreview.requested_by` y `_source_user` en
   `EvidenceJob`). El estudio copia a una carpeta temporal solo los CSV/XLS/PPTX/PDF/TXT de
@@ -302,6 +314,10 @@ cambia de comportamiento.
 - **Vínculos entre modos**: un vínculo creado con SharePoint guarda una versión `sp:…`. En modo
   local se lee sin comprobar versión, porque no hay sello local con el que compararla; los
   vínculos creados en local conservan su detección de cambios.
+  Desde el 30/10/2026, el índice del plano y la portada de pieza usan una identidad que incluye
+  el origen activo y la versión del archivo servido, no solo la guardada al vincularlo.
+  Volver a local invalida los derivados de SharePoint aunque el vínculo siga llevando `sp:…`;
+  modificar después esa copia local vuelve a invalidarlos.
 
 ### Configuración
 

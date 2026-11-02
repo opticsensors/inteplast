@@ -152,7 +152,10 @@ docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bo
 - **SharePoint (2026-10-22):** `SHAREPOINT_ENABLED=true` en `.env` lee el mismo `Exemples` por
   Microsoft Graph en vez de la carpeta local, con las mismas rutas y la misma BD; cada usuario
   entra con su cuenta de Microsoft (MSAL, login delegado). `false` deja todo como en local.
-  Implementado y probado con Graph simulado; **falta la primera prueba real**. Detalle y
+  Login real de Eduard confirmado el **30/10/2026**; sigue pendiente probar archivos con Graph real.
+  **Lo próximo es quitar el copiar y pegar del login**, registrando el retorno Web en Entra
+  y después cambiando `MICROSOFT_REDIRECT_URI`: [pasos y responsables](docs/proximos-pasos.md#próxima-sesión-quitar-el-copiar-y-pegar-del-login-de-microsoft).
+  Su cuenta sigue siendo usuario normal; configurar el primer administrador corporativo está pendiente. Detalle y
   activación en [docs/ficheros-externos.md](docs/ficheros-externos.md#sharepoint-microsoft-graph).
 - **Portadas CAD:** pulsar la cabecera abre la ampliación de imagen/3D; en edición abre una
   modal para pegar/arrastrar/elegir imágenes o crear una portada desde el STEP vinculado de

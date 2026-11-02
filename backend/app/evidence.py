@@ -25,8 +25,8 @@ from app.core.db import engine
 from app.evidence_converter import STUDY_FOLDERS, STUDY_SUFFIXES
 from app.file_sources import (
     content_type,
+    document_cache_key,
     document_path,
-    linked_version,
     local_path,
     stamp,
 )
@@ -54,9 +54,7 @@ def drawing_key(document: StoredFile) -> str:
     return digest(
         [
             RECIPE,
-            str(document.id),
-            str(document.version),
-            linked_version(document),
+            document_cache_key(document),
             reader_id(),
         ]
     )

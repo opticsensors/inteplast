@@ -15,7 +15,7 @@ from app.api.routes.parts import get_part_or_404
 from app.cad_covers import validate_document
 from app.evidence import job_id
 from app.feature_links import feature_membership
-from app.file_sources import SourceError
+from app.file_sources import SourceError, document_cache_key
 from app.knowledge_models import (
     EvidenceJob,
     FeatureCharacteristicLink,
@@ -41,6 +41,7 @@ class PartCardPublic(PartPublic):
     feature_count: int = 0
     characteristic_count: int = 0
     cad: FilePublic | None = None
+    cad_cache_key: str | None = None
     image: FilePublic | None = None
 
 
@@ -76,6 +77,7 @@ class CatalogPublic(BaseModel):
 class PartCoverRequest(BaseModel):
     file_id: uuid.UUID
     file_version: uuid.UUID | None = None
+    cad_cache_key: str | None = None
     source_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     image_id: uuid.UUID
 
@@ -87,11 +89,21 @@ def part_references(session: SessionDep, part_id: uuid.UUID) -> dict[str, Stored
 def part_card(session: SessionDep, part: Part, count: int) -> PartCardPublic:
     cad = part_references(session, part.id).get("part")
     cover = session.get(EvidenceJob, job_id("part-cover", part.id))
+    cad_key = None
+    if cad:
+        try:
+            cad_key = document_cache_key(cad)
+        except HTTPException as error:
+            # Keep the catalogue usable when a CAD is missing/changed/inaccessible, but do not
+            # present an old thumbnail as current. An expired login must still reach the browser.
+            if error.status_code not in {404, 409, 503}:
+                raise
     image = None
     if (
         cad
         and cover
-        and cover.cache_key == str(cad.version)
+        and cad_key is not None
+        and cover.cache_key == cad_key
         and cover.file_id == cad.id
     ):
         image = session.get(StoredFile, uuid.UUID(cover.payload["image_id"]))
@@ -106,6 +118,7 @@ def part_card(session: SessionDep, part: Part, count: int) -> PartCardPublic:
             "feature_count": count,
             "characteristic_count": characteristic_count,
             "cad": FilePublic.model_validate(cad) if cad else None,
+            "cad_cache_key": cad_key,
             "image": FilePublic.model_validate(image) if image else None,
         },
     )
@@ -310,10 +323,15 @@ def save_part_cover(
     cad = part_references(session, part_id).get("part")
     if cad is None or cad.id != body.file_id:
         raise HTTPException(409, "El CAD de la pieza ha cambiado.")
+    cad_key = document_cache_key(cad)
+    if body.cad_cache_key is not None and body.cad_cache_key != cad_key:
+        raise HTTPException(409, "El CAD ha cambiado. Vuelve a preparar su portada.")
     try:
         validate_document(cad, body.file_version, body.source_sha256)
     except SourceError as error:
         raise HTTPException(error.status_code, error.message)
+    if document_cache_key(cad) != cad_key:
+        raise HTTPException(409, "El CAD ha cambiado mientras se preparaba su portada.")
     image = session.get(StoredFile, body.image_id)
     if not image or image.content_type != "image/png" or image.source != "upload":
         raise HTTPException(422, "La portada debe ser una imagen PNG.")
@@ -323,10 +341,10 @@ def save_part_cover(
             id=job_id("part-cover", part_id),
             kind="part-cover",
             part_id=part_id,
-            cache_key=str(cad.version),
+            cache_key=cad_key,
         )
     cover.file_id = cad.id
-    cover.cache_key = str(cad.version)
+    cover.cache_key = cad_key
     cover.state = "ready"
     cover.payload = {"image_id": str(image.id), "source_sha256": body.source_sha256}
     session.add(cover)
