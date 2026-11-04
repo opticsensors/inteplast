@@ -66,10 +66,7 @@ def filters(session: Session) -> MetrologyFilters:
     return MetrologyFilters(
         parts=[
             PartPublic.model_validate(part)
-            for part in session.exec(
-                select(Part)
-                .order_by(Part.code)
-            ).all()
+            for part in session.exec(select(Part).order_by(Part.code)).all()
         ],
         features=[
             MetrologyFeatureChoice.model_validate(

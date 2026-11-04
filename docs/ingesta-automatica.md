@@ -208,10 +208,14 @@ Este flujo todavía no está implementado:
 5. **Validación determinista.** La cita existe en la diapositiva; la cota está en el título; la
    magnitud está entre las candidatas; las cavidades existen en la pieza. Si algo falla, la
    propuesta va a revisión, no a la base.
-6. **Revisión humana en la web, pendiente de construir.** Todo quedaría `propuesto`
-   hasta su aceptación, midiendo la tasa por campo y plantilla. El endpoint de
-   revisión de globos existente no implementa este flujo de correcciones y la
-   pantalla actual tampoco ofrece aquel formulario.
+6. **Validación antes de publicar, pendiente de decidir.** Lo que no supere la validación
+   determinista quedaría `propuesto` y no se publicaría; se mediría la tasa por campo y
+   plantilla. Hay que separar tres cosas: usar la app no debe obligar a los usuarios a
+   revisar cada extracción (Eduard rechazó el 28/10/2026 la revisión globo a globo de los
+   planos); la validación técnica se hace con los casos de referencia del punto 7; y la
+   aprobación del conocimiento corresponde a INTEPLAST. Este plan no autoriza publicar
+   automáticamente correcciones ambiguas. No existe pantalla ni endpoint para este flujo;
+   el de revisión de globos no lo implementa.
 7. **Conjunto de referencia antes de elegir modelo.** Partir de los casos revisados del 3212
    (`pilot_3212`) y anotar 40–60 diapositivas de otras 4–5 piezas, con al menos una por plantilla
    de título. Escribir los resultados esperados **antes** de programar
@@ -306,9 +310,11 @@ estado y la prioridad de este trabajo se mantienen en la
 
 - Modelo y lugar del LLM de extracción (local o Copilot) y si los datos del cliente pueden salir
   del servidor. Incluye los planos 2D para leer las cotas con visión (§2.4).
-- Política para valores cuya generación esté demostrada, indicios aún sin confirmar
-  y versiones de informe. La propuesta es conservar su procedencia y evitar
-  presentar un valor generado como medición.
+- ~~Política para valores generados, indicios sin confirmar y versiones de informe.~~
+  **Acordada el 02/11/2026:** tres estados (`medicion`, `generado`, `sin_confirmar`) y solo
+  `medicion` sin marca `copia` entra en cálculos; implementada en el lector productivo
+  ([plan de ingesta](plan-ingesta-2026-11-02.md#política-de-procedencia-acordada-con-eduard)).
+- Quién valida las correcciones extraídas antes de publicarlas (§2.2, punto 6).
 - Si las observaciones cualitativas entran como cotas. Antes hay que confirmar el
   significado del tercer campo de `#P#` y de las marcas OK/NOK visuales.
 

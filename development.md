@@ -117,6 +117,52 @@ uv run ruff format --check app tests
 uv run mypy app
 ```
 
+### Finales de línea (propuesta del 04/11/2026, sin aplicar)
+
+**Problema.** Biome formatea con LF (su valor por defecto; `frontend/biome.json` no lo cambia)
+y el Git de Windows tiene `core.autocrlf=true` en su configuración de sistema. El índice está
+en LF (0 ficheros CRLF), pero la copia de trabajo no: el 04/11/2026 `git ls-files --eol`
+daba 215 ficheros `w/crlf` y 10 `w/mixed`. Cualquier fichero TS/JS que salga con CRLF suspende
+`npm run lint` sin haber cambiado su contenido. `.gitattributes` solo fija `*.sh`.
+
+**Propuesta.** Fijar LF para todo el texto, independientemente de la configuración de cada PC:
+
+```gitattributes
+* text=auto eol=lf
+*.sh text eol=lf
+```
+
+Los `.ps1` también quedarían en LF, como ya están en el índice; PowerShell 5.1 los lee igual
+porque son ASCII. Los binarios (`.onnx`, `.png`) los sigue detectando `text=auto`.
+
+**Procedimiento** (solo documentado; lo ejecuta Eduard, que gestiona Git). Exige una copia de
+trabajo **limpia**: sin cambios sin confirmar ni ficheros sin seguimiento que importen.
+
+```bash
+# 0. Partir de una copia limpia. Si sale algo, confirmarlo o apartarlo antes de seguir.
+git status --short
+# 1. Editar .gitattributes como arriba y preparar la renormalización.
+git add .gitattributes
+git add --renormalize .
+# 2. Revisar lo preparado antes de confirmar. Se espera .gitattributes; el índice ya estaba
+#    en LF el 04/11/2026, pero no se garantiza: cualquier otro fichero listado se revisa uno
+#    a uno (que el cambio sea solo de finales de línea) antes de seguir.
+git diff --cached --stat
+git diff --cached --ignore-cr-at-eol --stat   # lo que cambie aquí no es solo fin de línea
+git commit -m "Fijar finales de línea LF"
+# 3. Reescribir en LF los ficheros de la copia de trabajo que siguen en CRLF o mezclados.
+git ls-files --eol | grep -E 'w/(crlf|mixed)' | cut -f2 |
+  while IFS= read -r f; do rm -- "$f" && git checkout -- "$f"; done
+# 4. Comprobar el resultado.
+git ls-files --eol | grep -cE 'w/(crlf|mixed)'   # se espera 0
+git status --short                 # se espera vacío; si no, revisar antes de seguir
+npm.cmd run lint                   # sin errores de formato por finales de línea
+```
+
+El paso 3 borra y vuelve a extraer ficheros ya confirmados; con cambios sin confirmar se
+perderían, por eso exige la copia limpia. El repo está en OneDrive: la reescritura se
+sincroniza como una modificación de esos ficheros.
+
 No hay `.pre-commit-config.yaml` ni workflows de GitHub Actions configurados en este repositorio.
 Los comandos de comprobación se ejecutan explícitamente; instalar `prek` no crea esa configuración.
 

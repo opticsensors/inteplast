@@ -71,9 +71,7 @@ export function MeasurementPlot({
   const excluded = sourceLines.flatMap((line) =>
     visible.includes(line.name)
       ? line.points.flatMap((point, index) =>
-          point &&
-          !point.connectorOnly &&
-          !usableMeasurement(point)
+          point && !point.connectorOnly && !usableMeasurement(point)
             ? [{ point, cavity: line.name, sample: labels[index] }]
             : [],
         )
@@ -264,9 +262,10 @@ export function MeasurementPlot({
                 {point.flags?.includes("copia")
                   ? "Copia"
                   : point.provenance_state === "generado"
-                  ? "Generado"
-                  : "Procedencia sin confirmar"}
-                {point.duplicate_of && ` de ${point.duplicate_of.sheet}!${point.duplicate_of.cell}`}
+                    ? "Generado"
+                    : "Procedencia sin confirmar"}
+                {point.duplicate_of &&
+                  ` de ${point.duplicate_of.sheet}!${point.duplicate_of.cell}`}
                 {point.flags?.length
                   ? ` (${point.flags.map((flag) => provenanceLabels[flag] ?? flag.replace(/_/g, " ")).join(", ")})`
                   : ""}

@@ -5,6 +5,7 @@ const os = require("node:os")
 const path = require("node:path")
 const { before, after, test } = require("node:test")
 const { chromium, expect } = require("@playwright/test")
+const { warmUp } = require("./vite-warm-up.cjs")
 const THREE = require("three")
 
 const frontend = path.resolve(__dirname, "../..")
@@ -122,6 +123,7 @@ before(async () => {
   await server.listen()
   origin = `http://127.0.0.1:${server.httpServer.address().port}`
   browser = await chromium.launch({ headless: true })
+  await warmUp(browser, `${origin}/cover-test`)
 })
 
 after(async () => {

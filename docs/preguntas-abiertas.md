@@ -3,8 +3,9 @@
 > **Antes de preguntar algo a INTEPLAST, mirar aquí.** Varias de las preguntas originales se
 > han resuelto leyendo los datos, sin necesidad de consultar.
 >
-> Última revisión documental: **2026-10-26**. Los análisis y localizadores viven en
-> las fichas enlazadas; aquí se mantiene la pregunta o la resolución.
+> Última revisión documental: **2026-10-26**. El **2026-11-04** se añadieron las preguntas de la
+> entrega ampliada (A17–A23), pendientes de validar por Eduard. Los análisis y localizadores
+> viven en las fichas enlazadas; aquí se mantiene la pregunta o la resolución.
 
 ---
 
@@ -383,6 +384,219 @@ aprobada. Si interesan las anteriores, confirmar cuáles se conservan y dónde e
 la vista y descarga del CAD y su relación con la metrología y las correcciones. Complementa
 la gestión técnica de originales de A10. No asumir que un CAD recibido es final ni que las
 revisiones de pieza y molde coinciden. La política de la GUI queda pendiente de su respuesta.
+
+---
+
+## Preguntas de la entrega ampliada (añadidas el 04/11/2026)
+
+> **Borrador pendiente de validar por Eduard antes de enviarlo.** Salen de las 31 incongruencias
+> abiertas de [incongruencias.md](../conocimiento/incongruencias.md); cada pregunta cita en su
+> contexto interno los identificadores, y la [tabla de correspondencia](#correspondencia-con-las-incongruencias-abiertas)
+> indica dónde queda cada una. Las cifras proceden de esa ficha, comprobadas allí en los originales.
+> Prioridad propuesta, después de A10: A17, A20 y A22; luego A19 y A23; A21 al final.
+> A18 solo se envía si Eduard lo decide.
+
+<a id="a17-versiones-informes"></a>
+### A17 · Copias del mismo informe con valores o tolerancias distintos: ¿cuál es la válida?
+
+**Recordatorio.** En varias piezas hay dos o más copias del mismo muestreo (interna, de cliente,
+«Desviacions aplicades»), todas con la fecha de la copia a OneDrive.
+
+**Qué no nos cuadra.**
+
+| Pieza · informe | Diferencia entre copias |
+|---|---|
+| 3309 `Int_03` | Cota 14: 0,749–0,781 en `3309-00 Int_03.xls` y 0,84–0,90 en `P3309-00 Int_03.xls`. Solo la segunda cuadra con *«#14 and #16 are now in tolerance»* |
+| 3202 `intern.03` | Cota 312 (2 ±0,09): la copia interna da 12 de 12 fuera y la de cliente 0 de 12, con los valores de `PPAP-3202-00_INF.01` de 01/2024 |
+| 3174 `intern.26` | Cota 504: mismos valores, ±0,15 en la copia de cliente frente a ±0,07 (0/24 y 6/24 fuera) |
+| 3168 `intern.12` | Cota 1540: mismos valores, −0,1 frente a −0,05/−0,07 (0/96 y 71/96 fuera) |
+| 3167 `Inf_04` | La versión «Desviacions aplicades» amplía tolerancias (p. ej. 2580: −0,05 → −0,1) y cambia 8 valores medidos; la copia de `Uploaded to IQS` conserva los originales |
+| 3197 N230 | +0,13 en `intern.09/.10` y `correction04`, +0,10 en `intern.11` y en el plano |
+
+**Preguntas:**
+
+1. **Cuando hay varias copias de un mismo muestreo, ¿cuál es la que se entregó al cliente y
+   cuál debemos tomar como medida?**
+2. **¿Las tolerancias más amplias corresponden a desviaciones aprobadas por el cliente?** Si
+   existe el documento de aprobación (por ejemplo, para 2730/2740 del 3167), nos interesa.
+
+<details><summary>Contexto interno (no enviar)</summary>
+
+I-006, I-007, I-603 e I-206; también I-203 (hoja `DR(4CAV_CMM) (2)` del 3051 repetida de
+01/2021 a 02/2023). Una tolerancia distinta no demuestra por sí sola una modificación indebida.
+La cadena de corrección ya conserva las copias como alternativas; la respuesta decide cuál se
+muestra por defecto, no si se borra alguna.
+</details>
+
+<a id="a18-cpk-generator"></a>
+### A18 · ¿Para qué se usa el libro «Cpk generator»? *(solo si Eduard decide enviarla)*
+
+**Recordatorio.** En los ejemplos hay 114 libros con la hoja `INTRO` del «Cpk generator»
+(3167, 3174, 3195, 3233, 3237) y varios informes PPAP cuyas muestras 2–5 se calculan con
+fórmulas a partir de la muestra 1 (3233, 3237, 3238, 3218, 3174, 3206).
+
+**Qué no nos cuadra.** Esos valores salen de fórmulas aleatorias, no de la CMM, y no sabemos
+para qué se usaron. Nuestra aplicación no los cuenta como medidas.
+
+**Pregunta: ¿para qué usáis el «Cpk generator» y las muestras calculadas, y qué ficheros se
+envían al cliente?** Nos basta con saber cómo distinguir lo medido de lo calculado.
+
+<details><summary>Contexto interno (no enviar)</summary>
+
+I-003. Pregunta delicada: afecta a informes PPAP; queda por confirmar qué versiones se
+entregaron y para qué se utilizaron. La redacción evita juicios.
+Seguimiento pendiente en [AVANCE.md](../conocimiento/AVANCE.md) («lo decide Eduard»). La app
+ya excluye esos valores sin necesidad de respuesta.
+</details>
+
+<a id="a19-planos"></a>
+### A19 · Planos que faltan o no corresponden a la pieza
+
+**Recordatorio.** Cada pieza trae su plano en `1- 2D y 3D pieza`.
+
+**Qué no nos cuadra.**
+
+- **3186:** el plano es `6494730` rev 002 (`20230123_6494730_002.pdf`) y el STEP de la pieza,
+  `20220929_6541691.stp`.
+- **3218:** el plano es una copia exacta del plano del 3174 (`6494730` rev 004,
+  `20250219_6494730_004.pdf`) y el STEP de la pieza, `20230503_6546952.stp`.
+- El único plano del **3051** se llama `…0140S00275-DRW_pendent acceptació.pdf`.
+- En el **3288**, el método `MM732880000_rev00.pdf` (p. 6) identifica la **DIM. Nº 80** del
+  **conjunto** BSG-296-00, nivel 2; la versión anterior lo describe como item 8 sin número de
+  cota. No tenemos el plano de ese conjunto.
+
+**Preguntas:**
+
+1. **¿Nos podéis pasar los planos propios del 3186 (pieza 6541691) y del 3218 (pieza 6546952)?**
+2. **¿El plano del 3051 es el vigente o hay una versión aceptada posterior?**
+3. **¿Nos podéis pasar el plano del conjunto BSG-296-00 del 3288, donde está la DIM. 80, y
+   decirnos cómo se corresponden sus cotas con las de los planos de componente y los informes?**
+
+<details><summary>Contexto interno (no enviar)</summary>
+
+I-301, I-205 e I-106. Complementa A4 (plano del 3212). No equiparar la DIM. 80 con la cota de
+BASE rev1 de nominal 14,45.
+</details>
+
+<a id="a20-planes-correccion"></a>
+### A20 · Planes de corrección: cuáles faltan y cuál se ejecutó
+
+**Recordatorio.** Los planes de corrección (PPTX) son la «lesson learned» de cada pieza; los
+leemos por carpeta y fecha.
+
+**Qué no nos cuadra.**
+
+| Pieza | Situación |
+|---|---|
+| 3197 | Hay `3197-00_intern.09_correction04.xls`, pero solo PPTX de los planes 1–3 |
+| 3218 | No encontramos los planes de los loops 2–5 |
+| 3206 | Tres versiones de la diapositiva 2 tras los postizos: +0,15/+0,3 (23/07), +0,05/+0,25 (29/07) y otra `_customer` con valores por zona |
+| 3205 | El PPTX base del loop 5 lleva la cabecera *«Pla de correccions nº1 – P3206»* y el mismo texto que planes del 3206 |
+| 3174 | El plan del loop 2 (34 diapositivas) contiene 30 diapositivas iguales al plan 1 del 3186 |
+| 3167 | `2n loop of corrections/20240214_Mold correction_1_P3167.pptx` se llama plan 1, pero sus correcciones se numeran 2.1 y 2.5–2.11 (con 2.10 repetida); la versión PDF del plan 2 fecha sus diapositivas el 14/02/2023, dentro de una carpeta y un fichero de 2024 |
+| 3168 | En `20230823_Modification/` hay un `20260612_3167_modification proposal.xlsx`: el nombre cita el 3167, pero su contenido (comparación de radios *ITP vs COMPETITOR*) no identifica ninguna pieza |
+
+**Preguntas:**
+
+1. **¿Existen el PPTX del plan 4 del 3197 y los planes de los loops 2–5 del 3218?**
+2. **En el 3206, ¿qué versión del plan se ejecutó?**
+3. **¿Las diapositivas del 3206 dentro del 3205, y las del 3186 dentro del 3174, se
+   aplicaron también a esas piezas o están ahí como referencia?**
+4. **En el 3167, ¿el fichero `20240214_Mold correction_1_P3167.pptx` es el plan 1 o el plan 2,
+   y en qué fecha se hizo ese plan?**
+5. **El `20260612_3167_modification proposal.xlsx` guardado en la carpeta del 3168, ¿corresponde
+   al 3167 o al 3168?**
+
+<details><summary>Contexto interno (no enviar)</summary>
+
+I-202, I-305, I-401, I-402, I-309, I-601 e I-702. La cadena de corrección ya avisa de estos
+casos; la respuesta decide a qué pieza se atribuyen las acciones. Relacionada con A1/A16: un
+`OK` no confirma ejecución. I-702: atribución pendiente; comprobado el 04/11/2026 que el
+contenido extraído (`Hoja1`, filas 2–41) no cita ninguna pieza, así que no se atribuye al
+3167 por su nombre ni se mezcla con el historial del 3168.
+</details>
+
+<a id="a21-plantillas"></a>
+### A21 · Cabeceras heredadas de otra pieza en los informes
+
+**Recordatorio.** Varios informes reutilizan la plantilla PPAP de otra pieza.
+
+**Qué no nos cuadra.** Informes del 3218, 3186 y 3206 (y `3288-00_intern.01-base_1_stadistics.xls`)
+llevan la cabecera del 3247 (*ITP* 732470000, *PPAP* `3247-00_int.01`); en los del 3218, 3186
+y 3206 el cliente figura además como `B-Braun`.
+En el 3218, 184 hojas de 62 libros indican *PPAP Ref.* **3281** con el ITP y el número de pieza
+del 3218. En el 3288, el número de cliente 509131 sale de hojas heredadas del 3247, mientras el
+método indica 508008.
+
+**Preguntas:**
+
+1. **¿El 3281 es otra pieza o una errata en los informes del 3218?**
+2. **¿Cuál es el número de cliente correcto del 3288?**
+
+<details><summary>Contexto interno (no enviar)</summary>
+
+I-303, I-105, I-108, I-310 e I-104. La app ya marca estas cabeceras y no atribuye identidad
+por ellas; las respuestas solo afinan los avisos. Prioridad baja.
+</details>
+
+<a id="a22-3288"></a>
+### A22 · 3288: número de cavidades y columnas de los informes
+
+**Recordatorio.** El método del 3288 dice *«Nº cavidades molde: 16+16 (de 1 a 16)»* y Foboha
+*«16 fach»*.
+
+**Qué no nos cuadra.** Los informes tienen **20 columnas de cavidad** con valores en todas y las
+diapositivas citan las cavidades 17–20. Además, la columna 29 (comentarios) de los `DR` lleva un
+número (15, 16, 17…) en cada fila, y en `intern.03` la hoja `DR(tapa)` está fechada el
+22/05/2026 y el resto del libro el 23/06/2026.
+
+**Preguntas:**
+
+1. **¿El molde del 3288 tiene 16 o 20 cavidades por componente?**
+2. **¿Qué significa el número de la columna 29?**
+3. **¿Qué fecha es la correcta en `intern.03`?**
+
+<details><summary>Contexto interno (no enviar)</summary>
+
+I-101, I-107 e I-103. La cavidad afecta a cómo se agrupan las medidas; es la más importante.
+</details>
+
+<a id="a23-anclajes"></a>
+### A23 · El feature Anclajes no trae datos
+
+**Recordatorio.** La carpeta `5- Anclajes` solo contiene un `Readme.txt`.
+
+**Qué no nos cuadra.** El texto dice que la información *«ya fue entregada anteriormente»*,
+pero no indica en qué pieza ni carpeta.
+
+**Pregunta: ¿en qué pieza o carpeta de la entrega están los datos de Anclajes?**
+
+<details><summary>Contexto interno (no enviar)</summary>
+
+I-501. Puede estar repartido en carpetas de otros features; no se ha encontrado por nombre.
+</details>
+
+### Correspondencia con las incongruencias abiertas
+
+Las 31 entradas `abierta` de [incongruencias.md](../conocimiento/incongruencias.md) a
+04/11/2026. Las `explicable`, `resuelta` y `corregida` no se preguntan.
+
+| Incongruencia | Dónde queda |
+|---|---|
+| I-001 bloques repetidos entre informes | [A14](#a14--cómo-se-elaboran-los-xls-de-metrología-y-de-retoques) (cómo se elaboran los XLS) |
+| I-003 valores generados con RAND | [A18](#a18-cpk-generator), solo si Eduard lo decide |
+| I-005 *Customer Name* poco fiable | No se pregunta: se resuelve con reglas en [identidad-piezas.md](../conocimiento/identidad-piezas.md) |
+| I-006, I-007, I-603, I-206, I-203 copias, versiones y tolerancias | [A17](#a17-versiones-informes) |
+| I-101, I-103, I-107 (3288) | [A22](#a22-3288) |
+| I-104, I-105, I-108, I-303, I-310 cabeceras heredadas | [A21](#a21-plantillas) |
+| I-106, I-205, I-301 planos | [A19](#a19-planos) |
+| I-202, I-305, I-309, I-401, I-402, I-601 planes de corrección | [A20](#a20-planes-correccion); I-601 en la pregunta 4 |
+| I-702 fichero rotulado 3167 en la carpeta del 3168 | [A20](#a20-planes-correccion), pregunta 5; atribución pendiente hasta la respuesta |
+| I-204 variantes de la corrección 2 del 3212 | [A16](#a11--uso-exacto-de-punts_nous-y-trazabilidad-de-ejecución) y [A1](#a1--se-cerró-el-molde-con-3-cotas-fuera-de-tolerancia--por-qué) |
+| I-207 velocidad de inserción del 3212 | [A3](#a3--cuánto-mide-el-pin-del-ensayo-de-inserción) |
+| I-501 Anclajes sin datos | [A23](#a23-anclajes) |
+| I-602 planes del 3056 solo en imagen | No se pregunta: es un límite de nuestra lectura (OCR o lectura visual); pedir texto solo si se prioriza el 3056 |
+| I-701 carpeta del 3168 fechada en 2027 | No se pregunta: la fecha de carpeta no se usa como fecha de ejecución; no cambia la lectura |
 
 ---
 

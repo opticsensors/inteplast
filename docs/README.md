@@ -1,7 +1,9 @@
 # Documentación de la aplicación
 
-Entrada para desarrollar sin contexto previo. **Revisado contra el código el 26/10/2026**;
-la revisión documental no sustituye una prueba de ejecución. Los resultados de pruebas
+Entrada para desarrollar sin contexto previo. **Revisión completa contra el código el
+26/10/2026**; las entradas posteriores llevan su fecha y la
+[revisión del 04/11/2026](revision-2026-11-04.md) corrige los documentos que habían quedado
+desfasados. La revisión documental no sustituye una prueba de ejecución. Los resultados de pruebas
 anteriores conservan su fecha. Los datos y su evidencia pertenecen a
 [conocimiento/](../conocimiento/README.md), que tiene herramientas y una SQLite propias:
 su cobertura no implica que el importador de la aplicación soporte los mismos formatos.
@@ -34,6 +36,8 @@ y el estado del backlog; los resúmenes deben enlazarla, no reproducir sus tabla
 - [Acta del 24/09/2026](acta-reunion-2026-09-24.md): acuerdos y peticiones de la reunión.
 - [Revisión documental del 26/10/2026](revision-2026-10-26.md): alcance, fuentes y límites
   de la revisión completa de `docs/` y la consolidación documental.
+- [Revisión del 04/11/2026](revision-2026-11-04.md): documentos corregidos, formato,
+  estabilidad de tests y resultado de las comprobaciones ejecutadas.
 
 Un acuerdo del acta o una idea del modelo no equivale a una función implementada. Para una
 cifra o interpretación de los originales, seguir la [referencia temática de conocimiento](../conocimiento/README.md#referencias-por-tema).

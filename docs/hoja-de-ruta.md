@@ -65,11 +65,15 @@ La solución deberá conservar la procedencia de cada dato, señalar las asociac
 y validar las extracciones contra esos resultados esperados antes de dar por resuelta la
 generalización.
 
-También falta llevar al importador productivo las protecciones verificadas en las
-herramientas de conocimiento: comprobar fórmulas y procedencia antes de tratar números
-como medidas, reconocer archivos por su firma y admitir las variantes PPAP detectadas.
-La lectura genérica actual de CSV/XLS/XLSX no equivale a cobertura completa de `Exemples`.
-El contrato implementado se mantiene en [Cotas y evidencia](cotas-y-evidencia-web.md).
+Desde el 02/11/2026 el importador productivo incorpora las protecciones verificadas en las
+herramientas de conocimiento: comprueba fórmulas y procedencia antes de tratar números
+como medidas (`formula_flags.py`, `formula_dependencies.py`, `measurement_provenance.py`),
+reconoce archivos por su firma y admite las variantes PPAP detectadas. Las importaciones
+guardadas no se reclasifican solas: una fila de un Excel (`.xls`, `.xlsx`, `.xlsm`) sin estado
+de procedencia se muestra sin confirmar hasta un refresco explícito, y una fila CSV sin estado
+se sigue tratando como medición (`measurement_imports.py`). La lectura genérica de CSV/XLS/XLSX no equivale a cobertura completa
+de `Exemples`. El contrato implementado se mantiene en
+[Cotas y evidencia](cotas-y-evidencia-web.md#alta-y-actualización-de-piezas-22092026).
 
 ## 2. Features reutilizables y adaptables dentro de SolidWorks
 

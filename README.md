@@ -2,8 +2,11 @@
 
 Base colaborativa de conocimiento para el diseño de piezas inyectadas: features, warnings,
 lessons learned y ficheros agrupados por pieza. Piloto actual: **3212 Pump Housing**.
-Existe una importación piloto de mediciones y correcciones del 3212; el modelo completo
-normalizado y la conexión con Microsoft Graph siguen pendientes.
+Las mediciones CMM y PPAP se leen en cualquier pieza; las correcciones de molde solo se
+interpretan en el piloto 3212. El modelo completo normalizado sigue pendiente. La lectura
+desde SharePoint con Microsoft Graph está implementada (22/10/2026) y el login real se
+confirmó el 30/10/2026; falta probar con Graph real la lectura de archivos
+([estado](docs/ficheros-externos.md#sharepoint-microsoft-graph)).
 
 El proyecto se desarrolla en **tres etapas**: (1) transferir y consultar el conocimiento
 de la empresa mediante la GUI actual; (2) extraer, crear, insertar y adaptar features
@@ -19,7 +22,7 @@ Las etapas 2 y 3 son futuras. Ver la [hoja de ruta](docs/hoja-de-ruta.md).
 - [CLAUDE.md](CLAUDE.md): contexto, rutas y reglas del proyecto.
 - [Aplicación](docs/app-web.md): modelo, API, permisos y comportamiento.
 - [Archivos externos y visores](docs/ficheros-externos.md): vincular originales sin copiarlos,
-  configuración local y futura integración con OneDrive.
+  configuración local y lectura desde SharePoint/OneDrive con Microsoft Graph.
 - [Vistas 3D ligeras](docs/vistas-3d.md): GLB automáticos del escaneo y el molde, con caché.
 - [Portadas CAD](docs/portadas-cad.md): superficies en rojo, captura y portada 3D interactiva.
 - [Datos del 3212](conocimiento/0-bolt-eye/3212/README.md) y [visores](prototypes/data-explorer/README.md).

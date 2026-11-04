@@ -3,7 +3,9 @@
 La implementación de protecciones y criterios de aceptación para todas las piezas se sigue en
 [Plan de ingesta del 02/11/2026](plan-ingesta-2026-11-02.md), con verificaciones y contratos técnicos cerrados para las 21 piezas.
 
-> Estado documental al **26/10/2026**, contrastado con el código. Este es el índice de
+> Revisión completa contra el código el **26/10/2026**; las entradas posteriores llevan su
+> fecha. El **04/11/2026** se contrastaron de nuevo los pendientes y se corrigieron los
+> documentos desfasados ([revisión](revision-2026-11-04.md)). Este es el índice de
 > pendientes; el contrato y las limitaciones de cada tema viven en el documento enlazado.
 > Las pruebas de una fecha anterior no se presentan como validaciones de esta revisión.
 
@@ -106,8 +108,9 @@ Los acuerdos de IT constan en el [acta del 24/09](acta-reunion-2026-09-24.md).
 | Adjuntos del feature que no siguen a la pieza | Definir cómo actualizar el vínculo sin perder cotas ni configuración de portada | [Origen del CAD](portadas-cad.md#origen-del-cad-de-la-portada) |
 | Captura de pieza tras cambios en Graph | **Corregida el 30/10:** la versión del origen invalida la captura en backend y navegador; probada con Graph simulado. Pendiente comprobar la conexión real | [Cambios remotos y miniatura](portadas-cad.md#cambios-remotos-y-miniatura-de-pieza) |
 | Página antigua `/features/{id}/fichero/{assetId}` | Actualizar el mensaje del adjunto sin archivo o redirigir a la pieza; ya no recibe enlaces de la UI | [Aplicación](app-web.md) |
-| Política de finales de línea | Acordar una política LF en el repositorio; la incidencia de CRLF se registró el 20/10 | [Desarrollo](../development.md) |
-| Volcado OAuth señalado en `TODO.md` | Eduard revisará su retirada y el tratamiento del historial; tarea ajena a esta revisión documental | — |
+| Política de finales de línea | Propuesta LF y procedimiento escritos el 04/11; los aplica Eduard con la copia limpia | [Desarrollo](../development.md#finales-de-línea-propuesta-del-04112026-sin-aplicar) |
+| Errores de tipos (mypy) | 7 errores en `balloon_reader`, `drawing` y `routes/evidence`, identificados con su arreglo el 04/11; dos tocan el lector congelado | [Revisión del 04/11](revision-2026-11-04.md#5-comprobaciones-ejecutadas) |
+| Volcado OAuth en el historial de Git | Retirado de `TODO.md` el 04/11 (el código era de un solo uso y ya caducado). Sigue en el historial desde `a6f3b44`; reescribirlo o no lo decide Eduard | — |
 
 ## Hecho el 20/10/2026
 

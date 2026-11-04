@@ -251,6 +251,9 @@ fuera de `conocimiento/`.
   muestra, comprobando que el resto no aporta nada distinto.
 - Lo que no cuadre o haya que pedir a INTEPLAST: a `conocimiento/incongruencias.md`.
   `docs/preguntas-abiertas.md` queda en `docs/` y está pendiente de revisión (ver `TODO.md`).
+  *(Nota del 04/11/2026: texto del encargo original. La revisión se hizo el 26/10 y la
+  incorporación de las incongruencias de todos los features, el 04/11; ver la lista de
+  pendientes al final.)*
 - `docs/` queda para la aplicación. Respuestas breves y directas.
 
 ## Hecho
@@ -314,7 +317,7 @@ fuera de `conocimiento/`.
 
 - [ ] Ampliar el campo `comprobacion` a más hallazgos numéricos (H-001, H-305, I-203…; I-204 ya comprobado).
 - [ ] Revisar con INTEPLAST el uso del «Cpk generator» y qué versión del Inf_04 del 3167 se entregó
-      (I-003, I-603). Lo decide Eduard.
+      (I-003, I-603). Lo decide Eduard. Borradores: A18 y A17 de `docs/preguntas-abiertas.md` (04/11/2026).
 
 - [x] Ajustar la transformación `.icp` → PDF en los demás planos: automática en 19 de 20 PDF el
       29/10/2026; falta el 3206 `213137-01028-10`, cuyos globos no ve el detector
@@ -324,3 +327,5 @@ fuera de `conocimiento/`.
 - [ ] Macros de los `.xlsm` (olevba): leída `Generate_Sheets` del «Cpk generator»; quedan las demás.
 - [ ] Muestreo visual de fotos, PDF sin texto (247), 3 libros que solo tienen imágenes y vídeos; diapositivas cuyo texto está en imágenes (3056).
 - [x] `docs/preguntas-abiertas.md` revisada el 26/10/2026: entrega ampliada, preguntas vigentes y resoluciones enlazadas a fichas canónicas. [Revisión documental](../docs/revision-2026-10-26.md).
+- [x] 04/11/2026: añadidas A17–A23 con las 31 incongruencias abiertas de todos los features y su
+      tabla de correspondencia. Redacción pendiente de validar por Eduard.

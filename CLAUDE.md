@@ -145,8 +145,9 @@ docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bo
   adaptador local lee originales sin copiarlos, con montaje Docker de solo lectura.
   `.env` contiene toda la configuración personal y queda fuera de Git; `.env.example` es la
   plantilla versionada. `docker compose` carga el origen directamente, sin lanzadores ni
-  variables manuales en la terminal. No sobrescribir el `.env` de una instalación. Graph, revisiones
-  históricas de originales e ingesta para otras piezas siguen pendientes. Escaneo y molde grandes usan GLB automáticos en
+  variables manuales en la terminal. No sobrescribir el `.env` de una instalación. Siguen pendientes
+  las revisiones históricas de originales y la interpretación de correcciones de otras piezas
+  (sus mediciones ya se leen); Graph está implementado y su estado se describe abajo. Escaneo y molde grandes usan GLB automáticos en
   caché; ver [docs/vistas-3d.md](docs/vistas-3d.md) y [docs/ficheros-externos.md](docs/ficheros-externos.md).
   **La pregunta A10 sobre acceso a originales es prioridad 1 de la reunión con INTEPLAST.**
 - **SharePoint (2026-10-22):** `SHAREPOINT_ENABLED=true` en `.env` lee el mismo `Exemples` por
@@ -326,7 +327,7 @@ Amplía las consultas en castellano con un glosario multilingüe y se evalúa co
 | [docs/ficheros-externos.md](docs/ficheros-externos.md) | vayas a vincular originales, configurar la carpeta local o preparar Graph |
 | [docs/modelo-datos.md](docs/modelo-datos.md) | trabajes en el **esquema de la BD** o en la ingesta |
 | [docs/ingesta-automatica.md](docs/ingesta-automatica.md) | vayas a **generalizar la ingesta** a otras piezas: qué se lee con reglas (medido), qué necesita LLM y qué no está en los datos |
-| [docs/preguntas-abiertas.md](docs/preguntas-abiertas.md) | vayas a **preguntar algo a INTEPLAST** (⚠️ pendiente de revisar: bastante obsoleta) |
+| [docs/preguntas-abiertas.md](docs/preguntas-abiertas.md) | vayas a **preguntar algo a INTEPLAST**. Desde el 04/11/2026 incluye A17–A23, de la entrega ampliada (borrador pendiente de validar por Eduard) |
 
 ---
 

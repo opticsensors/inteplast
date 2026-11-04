@@ -7,7 +7,7 @@ no describe Exemples y las preguntas de evaluación se encontrarían a sí misma
 |---|---|
 | [investigacion-2026-10-27.md](investigacion-2026-10-27.md) | Bedrock, Dust, Lookio, pgvector/Qdrant, Docling/Azure DI, RAG agéntico, GraphRAG, SQL, Copilot, evaluación |
 | `glosario.json` | 47 conceptos ES/CA/EN/DE/CS que amplían la consulta. **Propuesta pendiente de validar por Eduard**. `rag.py glosario --contar` muestra cuántos documentos contienen cada término |
-| `preguntas.jsonl` | 55 preguntas con fuente esperada: 40 de `ajuste` (R-…) y 15 de `control` (C-…) |
+| `preguntas.jsonl` | 58 preguntas con fuente esperada: 40 de `ajuste` (R-…), 15 de `control` (C-…) y 3 negativas de `seguridad` (N-001 RAND, N-002 fórmula sin caché, N-003 misma cota en dos piezas; 02/11/2026) |
 
 ```bash
 PY=conocimiento/.venv/Scripts/python.exe
@@ -53,5 +53,11 @@ Las tres configuraciones sobre el mismo índice (con `identidad-piezas.md`); reg
 
 - Revisar `glosario.json` (Eduard) y medir de nuevo con `evaluar_rag.py`.
 - Probar un reranker local (bge-reranker-v2-m3 o Qwen3-Reranker-0.6B) con esta evaluación y su latencia.
-- Añadir preguntas de la capa exacta (cifras con respuesta conocida, incluidas las que deben negarse:
-  `RAND()`, dato ausente, N-number de otra pieza). Hoy la cubren las comprobaciones SQL de los hallazgos.
+- **Recuperación:** las tres preguntas negativas ya existen (conjunto `seguridad`, 02/11/2026;
+  resultado en [rag.md](../rag.md#evaluación-del-02112026)). Comprueban que se recupera la
+  evidencia que obliga a negar, no lo que se responde.
+- **Generación, pendiente:** evaluar respuestas completas del asistente con Ollama y datos reales:
+  que cite la fuente correcta, no use valores `RAND()`, diga que no consta cuando falta el dato y no
+  mezcle cotas de piezas distintas. Ni `evaluar_rag.py` ni los tests automáticos lo demuestran.
+- Añadir preguntas de la capa exacta con cifras de respuesta conocida. Hoy la cubren las
+  comprobaciones SQL de los hallazgos.
