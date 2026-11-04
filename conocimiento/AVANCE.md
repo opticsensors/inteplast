@@ -317,7 +317,7 @@ fuera de `conocimiento/`.
 
 - [ ] Ampliar el campo `comprobacion` a más hallazgos numéricos (H-001, H-305, I-203…; I-204 ya comprobado).
 - [ ] Revisar con INTEPLAST el uso del «Cpk generator» y qué versión del Inf_04 del 3167 se entregó
-      (I-003, I-603). Lo decide Eduard. Borradores: A18 y A17 de `docs/preguntas-abiertas.md` (04/11/2026).
+      (I-003, I-603). Lo decide Eduard. Preguntas redactadas: A18 y A17 de `docs/preguntas-abiertas.md` (04/11/2026).
 
 - [x] Ajustar la transformación `.icp` → PDF en los demás planos: automática en 19 de 20 PDF el
       29/10/2026; falta el 3206 `213137-01028-10`, cuyos globos no ve el detector
@@ -328,4 +328,4 @@ fuera de `conocimiento/`.
 - [ ] Muestreo visual de fotos, PDF sin texto (247), 3 libros que solo tienen imágenes y vídeos; diapositivas cuyo texto está en imágenes (3056).
 - [x] `docs/preguntas-abiertas.md` revisada el 26/10/2026: entrega ampliada, preguntas vigentes y resoluciones enlazadas a fichas canónicas. [Revisión documental](../docs/revision-2026-10-26.md).
 - [x] 04/11/2026: añadidas A17–A23 con las 31 incongruencias abiertas de todos los features y su
-      tabla de correspondencia. Redacción pendiente de validar por Eduard.
+      tabla de correspondencia. Redacción cerrada el mismo día, lista para enviar después de A10.

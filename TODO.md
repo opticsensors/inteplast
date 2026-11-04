@@ -22,11 +22,11 @@ titulo oficial: gestor de conocimiento de modificaciones de molde
 - [ ] añadir la foto de la pieza de verdad en ficheros vinculados a una pieza.
   *(04/11/2026: los tipos de archivo de pieza no incluyen foto; hoy se puede subir como «document».)*
 
-- [ ] revisar `docs/preguntas-abiertas.md`: está bastante obsoleta. Contrastarla con lo que salga de
+- [x] revisar `docs/preguntas-abiertas.md`: está bastante obsoleta. Contrastarla con lo que salga de
   `conocimiento/` (en especial `conocimiento/incongruencias.md`) tras leer todos los features de Exemples.
-  *(04/11/2026: añadidas A17–A23 y una tabla que asigna cada una de las 31 incongruencias
-  abiertas a una pregunta o explica por qué no se pregunta. **Pendiente: que Eduard valide la
-  redacción** antes de enviarla; A18 solo si decide enviarla.)*
+  *(04/11/2026: añadidas y cerradas A17–A23, con una tabla que asigna cada una de las 31
+  incongruencias abiertas a una pregunta o explica por qué no se pregunta. Listas para enviar
+  después de A10; A18 solo si Eduard decide enviarla.)*
 
 - [x] prueba de acceso a Exemples por Graph con Postman (Angel)
   *(Hecha antes de la reorganización de Exemples del 21/10: listó las cuatro piezas del Bolt Eye.

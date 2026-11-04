@@ -101,5 +101,5 @@ sort = "-Cover"
 show_contexts = true
 
 [[tool.mypy.overrides]]
-module = ["fitz", "pandas", "xlrd", "pytesseract", "rapidocr_onnxruntime", "msal", "requests"]
+module = ["fitz", "pandas", "xlrd", "pytesseract", "rapidocr_onnxruntime", "msal", "requests", "onnxruntime", "scipy.*"]
 ignore_missing_imports = true

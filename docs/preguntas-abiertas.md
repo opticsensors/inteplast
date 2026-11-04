@@ -4,7 +4,7 @@
 > han resuelto leyendo los datos, sin necesidad de consultar.
 >
 > Última revisión documental: **2026-10-26**. El **2026-11-04** se añadieron las preguntas de la
-> entrega ampliada (A17–A23), pendientes de validar por Eduard. Los análisis y localizadores
+> entrega ampliada (A17–A23), cerradas el mismo día. Los análisis y localizadores
 > viven en las fichas enlazadas; aquí se mantiene la pregunta o la resolución.
 
 ---
@@ -389,7 +389,9 @@ revisiones de pieza y molde coinciden. La política de la GUI queda pendiente de
 
 ## Preguntas de la entrega ampliada (añadidas el 04/11/2026)
 
-> **Borrador pendiente de validar por Eduard antes de enviarlo.** Salen de las 31 incongruencias
+> **Revisadas y cerradas el 04/11/2026** (dos pasadas con el revisor y relectura final contra
+> las fuentes; Eduard pidió darlas por terminadas). Listas para enviar después de A10.
+> Salen de las 31 incongruencias
 > abiertas de [incongruencias.md](../conocimiento/incongruencias.md); cada pregunta cita en su
 > contexto interno los identificadores, y la [tabla de correspondencia](#correspondencia-con-las-incongruencias-abiertas)
 > indica dónde queda cada una. Las cifras proceden de esa ficha, comprobadas allí en los originales.
@@ -400,7 +402,8 @@ revisiones de pieza y molde coinciden. La política de la GUI queda pendiente de
 ### A17 · Copias del mismo informe con valores o tolerancias distintos: ¿cuál es la válida?
 
 **Recordatorio.** En varias piezas hay dos o más copias del mismo muestreo (interna, de cliente,
-«Desviacions aplicades»), todas con la fecha de la copia a OneDrive.
+«Desviacions aplicades») sin nada que indique cuál vale, y en una cota la tolerancia cambia
+entre informes sucesivos.
 
 **Qué no nos cuadra.**
 
@@ -411,7 +414,7 @@ revisiones de pieza y molde coinciden. La política de la GUI queda pendiente de
 | 3174 `intern.26` | Cota 504: mismos valores, ±0,15 en la copia de cliente frente a ±0,07 (0/24 y 6/24 fuera) |
 | 3168 `intern.12` | Cota 1540: mismos valores, −0,1 frente a −0,05/−0,07 (0/96 y 71/96 fuera) |
 | 3167 `Inf_04` | La versión «Desviacions aplicades» amplía tolerancias (p. ej. 2580: −0,05 → −0,1) y cambia 8 valores medidos; la copia de `Uploaded to IQS` conserva los originales |
-| 3197 N230 | +0,13 en `intern.09/.10` y `correction04`, +0,10 en `intern.11` y en el plano |
+| 3197 N230 (informes sucesivos) | +0,13 en `intern.09/.10` y `correction04`, +0,10 en `intern.11` y en el plano |
 
 **Preguntas:**
 
@@ -432,8 +435,9 @@ muestra por defecto, no si se borra alguna.
 ### A18 · ¿Para qué se usa el libro «Cpk generator»? *(solo si Eduard decide enviarla)*
 
 **Recordatorio.** En los ejemplos hay 114 libros con la hoja `INTRO` del «Cpk generator»
-(3167, 3174, 3195, 3233, 3237) y varios informes PPAP cuyas muestras 2–5 se calculan con
-fórmulas a partir de la muestra 1 (3233, 3237, 3238, 3218, 3174, 3206).
+(3167, 3174, 3195, 3233, 3237) y varios informes PPAP con muestras calculadas por fórmulas
+aleatorias, a partir de otra muestra o entre límites escritos en la fórmula
+(3233, 3237, 3238, 3218, 3174, 3206).
 
 **Qué no nos cuadra.** Esos valores salen de fórmulas aleatorias, no de la CMM, y no sabemos
 para qué se usaron. Nuestra aplicación no los cuenta como medidas.
@@ -467,7 +471,7 @@ ya excluye esos valores sin necesidad de respuesta.
 
 **Preguntas:**
 
-1. **¿Nos podéis pasar los planos propios del 3186 (pieza 6541691) y del 3218 (pieza 6546952)?**
+1. **¿Nos podéis pasar los planos propios del 3186 (STEP 6541691) y del 3218 (STEP 6546952)?**
 2. **¿El plano del 3051 es el vigente o hay una versión aceptada posterior?**
 3. **¿Nos podéis pasar el plano del conjunto BSG-296-00 del 3288, donde está la DIM. 80, y
    decirnos cómo se corresponden sus cotas con las de los planos de componente y los informes?**
@@ -492,7 +496,7 @@ leemos por carpeta y fecha.
 | 3218 | No encontramos los planes de los loops 2–5 |
 | 3206 | Tres versiones de la diapositiva 2 tras los postizos: +0,15/+0,3 (23/07), +0,05/+0,25 (29/07) y otra `_customer` con valores por zona |
 | 3205 | El PPTX base del loop 5 lleva la cabecera *«Pla de correccions nº1 – P3206»* y el mismo texto que planes del 3206 |
-| 3174 | El plan del loop 2 (34 diapositivas) contiene 30 diapositivas iguales al plan 1 del 3186 |
+| 3174 | El plan del loop 2 (34 diapositivas) contiene 30 diapositivas con el mismo texto que el plan 1 del 3186 |
 | 3167 | `2n loop of corrections/20240214_Mold correction_1_P3167.pptx` se llama plan 1, pero sus correcciones se numeran 2.1 y 2.5–2.11 (con 2.10 repetida); la versión PDF del plan 2 fecha sus diapositivas el 14/02/2023, dentro de una carpeta y un fichero de 2024 |
 | 3168 | En `20230823_Modification/` hay un `20260612_3167_modification proposal.xlsx`: el nombre cita el 3167, pero su contenido (comparación de radios *ITP vs COMPETITOR*) no identifica ninguna pieza |
 

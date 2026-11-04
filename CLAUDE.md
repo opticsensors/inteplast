@@ -327,7 +327,7 @@ Amplía las consultas en castellano con un glosario multilingüe y se evalúa co
 | [docs/ficheros-externos.md](docs/ficheros-externos.md) | vayas a vincular originales, configurar la carpeta local o preparar Graph |
 | [docs/modelo-datos.md](docs/modelo-datos.md) | trabajes en el **esquema de la BD** o en la ingesta |
 | [docs/ingesta-automatica.md](docs/ingesta-automatica.md) | vayas a **generalizar la ingesta** a otras piezas: qué se lee con reglas (medido), qué necesita LLM y qué no está en los datos |
-| [docs/preguntas-abiertas.md](docs/preguntas-abiertas.md) | vayas a **preguntar algo a INTEPLAST**. Desde el 04/11/2026 incluye A17–A23, de la entrega ampliada (borrador pendiente de validar por Eduard) |
+| [docs/preguntas-abiertas.md](docs/preguntas-abiertas.md) | vayas a **preguntar algo a INTEPLAST**. Desde el 04/11/2026 incluye A17–A23, de la entrega ampliada, cerradas y listas para enviar después de A10 (A18 solo si Eduard lo decide) |
 
 ---
 

@@ -283,7 +283,10 @@ def attach_reviews(
     candidates = payload.get("balloons", []) + payload.get("words", [])
     ids = {c["id"] for c in candidates}
     exact = {r.candidate_id for r in reviews if r.candidate_id in ids}
-    centre = lambda box: ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)  # noqa: E731
+
+    def centre(box: list[float]) -> tuple[float, float]:
+        return ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
+
     matches: dict[uuid.UUID, list[str]] = {}
     claims: dict[str, int] = {}
     for review in reviews:

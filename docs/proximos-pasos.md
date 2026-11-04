@@ -109,7 +109,6 @@ Los acuerdos de IT constan en el [acta del 24/09](acta-reunion-2026-09-24.md).
 | Captura de pieza tras cambios en Graph | **Corregida el 30/10:** la versión del origen invalida la captura en backend y navegador; probada con Graph simulado. Pendiente comprobar la conexión real | [Cambios remotos y miniatura](portadas-cad.md#cambios-remotos-y-miniatura-de-pieza) |
 | Página antigua `/features/{id}/fichero/{assetId}` | Actualizar el mensaje del adjunto sin archivo o redirigir a la pieza; ya no recibe enlaces de la UI | [Aplicación](app-web.md) |
 | Política de finales de línea | Propuesta LF y procedimiento escritos el 04/11; los aplica Eduard con la copia limpia | [Desarrollo](../development.md#finales-de-línea-propuesta-del-04112026-sin-aplicar) |
-| Errores de tipos (mypy) | 7 errores en `balloon_reader`, `drawing` y `routes/evidence`, identificados con su arreglo el 04/11; dos tocan el lector congelado | [Revisión del 04/11](revision-2026-11-04.md#5-comprobaciones-ejecutadas) |
 | Volcado OAuth en el historial de Git | Retirado de `TODO.md` el 04/11 (el código era de un solo uso y ya caducado). Sigue en el historial desde `a6f3b44`; reescribirlo o no lo decide Eduard | — |
 
 ## Hecho el 20/10/2026

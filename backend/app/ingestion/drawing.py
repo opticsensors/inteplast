@@ -356,7 +356,7 @@ def balloon_source(
     for group, factor, value in ((in_layer, 1.6, 1), (image_only, 1.1, 0)):
         for b in group:
             x, y, r = b["circle"]
-            cv2.circle(use_layer, (round(x), round(y)), round(factor * r), value, -1)
+            cv2.circle(use_layer, (round(x), round(y)), round(factor * r), (value,), -1)
     work = np.where(use_layer[:, :, None] > 0, layer, full)
     balloons = [dict(b, fuente="capa vectorial") for b in in_layer] + [
         dict(b, fuente="imagen") for b in image_only
@@ -427,13 +427,13 @@ def detect_balloons(rgb: NDArray[Any]) -> list[dict[str, Any]]:
     size = min(mask.shape)
     accepted = ring_circles(max(5, size * 0.003), max(12, size * 0.03), 12)
     if len(accepted) >= 5:
-        x, y, r = (np.array([c[i] for c in accepted]) for i in (1, 2, 3))
-        distance = np.hypot(x[:, None] - x[None, :], y[:, None] - y[None, :])
+        xs, ys, rs = (np.array([c[i] for c in accepted]) for i in (1, 2, 3))
+        distance = np.hypot(xs[:, None] - xs[None, :], ys[:, None] - ys[None, :])
         inside = (
-            (r[None, :] > 1.25 * r[:, None])
-            & (distance + r[:, None] <= 1.05 * r[None, :])
+            (rs[None, :] > 1.25 * rs[:, None])
+            & (distance + rs[:, None] <= 1.05 * rs[None, :])
         ).any(axis=1)
-        median = float(np.median(r[~inside]))
+        median = float(np.median(rs[~inside]))
         accepted = ring_circles(max(5, 0.6 * median), 1.6 * median, max(8, median))
     scaled = [(s, x / factor, y / factor, r / factor) for s, x, y, r in accepted]
     deduped: list[tuple[float, float, float, float]] = []
