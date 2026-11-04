@@ -706,6 +706,8 @@ class KnowledgeTools:
                 "lower",
                 "upper",
                 "count",
+                "numeric_count",
+                "excluded_count",
                 "min",
                 "max",
                 "mean",

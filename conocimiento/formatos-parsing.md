@@ -485,3 +485,21 @@ for d in */; do find "$d" -type f -printf "%s\n" \
 # Solo las cabeceras de sección (N-numbers) de un CSV
 iconv -f cp1252 -t utf-8 "…/3212_c13.csv" | grep -v "^[0-9]*;" | grep -v "^\*\*\*\*"
 ```
+
+## Derivadas consultables del 3212 · 02/11/2026
+
+`herramientas/medidas_cmm.py` es independiente del backend y publica 3.376 evaluaciones
+CSV (16 archivos) y 144 perfiles PA/PB. Guarda coordenada y SHA; en CMM conserva valor,
+desviación y exceso originales además de los corregidos. Para posición Z de ID 32/34,
+si nominal y valor tienen signo opuesto y módulos compatibles, invertir el valor al
+signo del nominal, que también puede ser negativo. No aplicar `abs` indiscriminadamente.
+
+`rag.py exacto medidas --pieza 3212 --cota N170 --max 1200` incluye los CSV y los DR,
+sin confundir GX con LP máximo. Los perfiles se consultan sin filtro de N-number,
+pues no está confirmado su vínculo con un globo de plano. `exacto cadena` sigue usando
+las cadenas PPAP; esta fase no ha reconstruido cadenas que mezclen CMM y XLS.
+
+Comparación: el lector CMM completo del backend cubre las mismas 211 evaluaciones por
+archivo. El lector genérico `measurement_csv.parse(pilot=True)` incorpora 195 (3.120 en
+16 archivos): las 16 restantes por archivo son diagnósticos sin N-number, no medidas
+perdidas por truncado. Se preservan en `medida_cmm` con cota nula.

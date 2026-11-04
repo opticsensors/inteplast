@@ -9,14 +9,34 @@
 
 ## La respuesta corta
 
-**Implementado:** alta/actualización de piezas, CSV CMM individuales y comparativos,
-un subconjunto de informes XLS/XLSX y el adaptador de correcciones del piloto 3212.
-Los contratos, versiones y límites están centralizados en
-[cotas y evidencia](cotas-y-evidencia-web.md#alta-y-actualización-de-piezas-22092026).
-`measurement_tables.py` exige hojas `DR…` sin `100%`, cabeceras y códigos reconocidos;
-lee cachés numéricas, usa `xlrd` para XLS y no detecta fórmulas aleatorias. Tampoco
-reconoce como PDF un archivo con extensión XLS. Los lectores alternativos y las
-marcas de calidad descritos abajo son trabajo pendiente de la app.
+**Actualización del 02/11/2026:** el lector productivo audita firmas OLE/ZIP/PDF y
+fórmulas BIFF8/OOXML antes de leer cachés. Admite tablas reconocidas DR (incluidas
+100%), CAV_n y 100% de XLS/XLSX/XLSM. Usa Calamine si xlrd no abre el XLS y
+mantiene la auditoría BIFF independiente. No ejecuta macros ni recalcula.
+
+Cada observación conserva valor y procedencia: `medicion`, `generado` o `sin_confirmar`.
+Solo medicion sin marca copia entra en estadísticas y gráficas; las demás permanecen visibles con
+motivos/recuentos de exclusión. Se marca la celda, no toda la fila. En libros con RAND,
+se siguen referencias estáticas BIFF/OOXML y se excluyen las fórmulas que alcanzan RAND, referencias no resueltas o ciclos. Una fórmula que solo referencia una medida independiente conserva su estado. Caché ausente/error no es cero; el resultado BIFF vacío se etiqueta resultado_vacio.
+Las cabeceras Nominal/Tol repetidas de comparativas no sustituyen las principales.
+Los bloques secundarios sin condición identificada, incluidos los contiguos que repiten
+las cavidades, se conservan sin confirmar y se excluyen de cálculos.
+Los ceros con nominal no cero se conservan sin confirmar. Las cabeceras desplazadas o
+con identidad ajena quedan marcadas; PPAP 3281 con ITP propio 3218 lleva aviso.
+
+Las constantes se marcan como posible_copia_de_generador solo si coinciden la fila y fuente del generador, las columnas de muestra replicadas y el intervalo/redondeo. No se llaman generadas.
+Las hojas X (2)/X - copia se emparejan por estructura: cada celda idéntica en coordenada y contexto conserva duplicate_of y queda fuera de recuentos numéricos. Una diferencia conserva su estado y comparison_origin; no sustituye al original. Más datos o estructura ambigua impiden deduplicar. IMPOSED se conserva como valor impuesto, no medición.
+
+Un PDF con extensión XLS u otro formato explícitamente no soportado (UnsupportedWorkbook) se identifica y se comunica como pendiente de lectura tabular,
+sin fingir una importación Excel. Las tablas no reconocidas se indican en el resultado.
+La ausencia de RAND no demuestra que una constante no sea una copia. #P#/SPC, identidades
+ambiguas y otras plantillas requieren contratos específicos; no se ha generalizado toda
+la ingesta ni cargado datos del cliente en la app durante esta implementación.
+
+Contratos por pieza y verificaciones: [plan del 02/11](plan-ingesta-2026-11-02.md) y
+[21 contratos cerrados técnicamente](../conocimiento/ingesta/README.md), con balance
+de los 4.530 archivos y validación específica del 3167. Las cifras fechadas debajo
+permanecen como historial, no como cobertura productiva actual.
 
 **Ampliación propuesta:** evaluar las reglas experimentales sobre fuentes de
 referencia antes de trasladarlas a `backend/app/ingestion/`. El chat actual consulta

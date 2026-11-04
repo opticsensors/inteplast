@@ -1,0 +1,258 @@
+{
+  "fecha": "2026-11-02",
+  "documentos": 4530,
+  "libros_auditados": 978,
+  "rand": {
+    "backend": 649977,
+    "referencia": 649977,
+    "solo_backend": 0,
+    "solo_referencia": 0
+  },
+  "estados": {
+    "3051": {
+      "medicion": 14188,
+      "copias": 0,
+      "utilizables": 14188,
+      "posible_copia_de_generador": 0,
+      "sin_confirmar": 3536
+    },
+    "3056": {
+      "medicion": 21430,
+      "copias": 0,
+      "utilizables": 21430,
+      "posible_copia_de_generador": 0,
+      "sin_confirmar": 6441
+    },
+    "3167": {
+      "medicion": 120680,
+      "copias": 0,
+      "utilizables": 120680,
+      "posible_copia_de_generador": 0,
+      "sin_confirmar": 2585
+    },
+    "3168": {
+      "medicion": 28538,
+      "copias": 0,
+      "utilizables": 28538,
+      "posible_copia_de_generador": 0,
+      "sin_confirmar": 1805
+    },
+    "3174": {
+      "generado": 57164,
+      "medicion": 199235,
+      "sin_confirmar": 57266,
+      "copias": 7136,
+      "utilizables": 192425,
+      "posible_copia_de_generador": 0
+    },
+    "3186": {
+      "medicion": 41073,
+      "sin_confirmar": 11307,
+      "copias": 0,
+      "utilizables": 41073,
+      "posible_copia_de_generador": 0
+    },
+    "3195": {
+      "medicion": 110635,
+      "copias": 0,
+      "utilizables": 110635,
+      "posible_copia_de_generador": 0,
+      "sin_confirmar": 9292
+    },
+    "3197": {
+      "medicion": 12752,
+      "sin_confirmar": 1918,
+      "copias": 0,
+      "utilizables": 12752,
+      "posible_copia_de_generador": 0
+    },
+    "3202": {
+      "medicion": 12913,
+      "sin_confirmar": 671,
+      "copias": 0,
+      "utilizables": 12913,
+      "posible_copia_de_generador": 0
+    },
+    "3205": {
+      "medicion": 57906,
+      "sin_confirmar": 15459,
+      "copias": 502,
+      "utilizables": 57756,
+      "posible_copia_de_generador": 0
+    },
+    "3206": {
+      "medicion": 28031,
+      "sin_confirmar": 4991,
+      "copias": 209,
+      "utilizables": 27998,
+      "posible_copia_de_generador": 0,
+      "generado": 984
+    },
+    "3212": {
+      "medicion": 10396,
+      "sin_confirmar": 2831,
+      "copias": 0,
+      "utilizables": 10396,
+      "posible_copia_de_generador": 0
+    },
+    "3214": {
+      "medicion": 2676,
+      "copias": 0,
+      "utilizables": 2676,
+      "posible_copia_de_generador": 0,
+      "sin_confirmar": 80
+    },
+    "3218": {
+      "medicion": 665893,
+      "sin_confirmar": 79490,
+      "copias": 56,
+      "utilizables": 665837,
+      "posible_copia_de_generador": 0,
+      "generado": 262392
+    },
+    "3233": {
+      "copias": 0,
+      "utilizables": 70729,
+      "posible_copia_de_generador": 0,
+      "medicion": 70729,
+      "sin_confirmar": 13,
+      "generado": 1112
+    },
+    "3237": {
+      "medicion": 24517,
+      "sin_confirmar": 7031,
+      "copias": 0,
+      "utilizables": 24517,
+      "posible_copia_de_generador": 3586
+    },
+    "3238": {
+      "medicion": 14297,
+      "sin_confirmar": 8141,
+      "copias": 0,
+      "utilizables": 14297,
+      "posible_copia_de_generador": 4669
+    },
+    "3288": {
+      "copias": 0,
+      "utilizables": 19366,
+      "posible_copia_de_generador": 0,
+      "medicion": 19366,
+      "sin_confirmar": 11385
+    },
+    "3309": {
+      "medicion": 6632,
+      "copias": 0,
+      "utilizables": 6632,
+      "posible_copia_de_generador": 0,
+      "sin_confirmar": 4724
+    }
+  },
+  "huella_lectores": "947e798f70a32a04c3bec78355936ca073e772a0892367214de363bab4446f5a",
+  "huellas_antes_solo_anotaciones": [
+    "25497a3cf680521322580eb2a2b8aaf137d494f86cc990c63ccd8a83e2916124",
+    "3ea2397c570ee7b3f952dcc4c71781238ceb9ee19fc6537a3d5ea5ac8c613522"
+  ],
+  "comprobacion_no_funcional": "AST id?ntico tras eliminar ?nicamente anotaciones y imports typing/collections.abc; no se modifican condiciones ni resultados.",
+  "casos_backend": 53,
+  "tests_backend": 371,
+  "tests_conocimiento": 61,
+  "tests_interfaz": 7,
+  "INTEPLAST_validado": false,
+  "verificacion_aceptacion": {
+    "casos": {
+      "casos": 53,
+      "contrastes_backend_correctos": 53,
+      "errores": []
+    },
+    "lecciones": {
+      "registros": 16,
+      "comprobaciones": 51,
+      "errores": []
+    },
+    "balances": {
+      "documentos": 4530,
+      "errores": []
+    },
+    "piloto": {
+      "spc": 328,
+      "valores_spc": 16400,
+      "celdas_inf04": 11808,
+      "cambios_valor": 8,
+      "errores": []
+    }
+  },
+  "rag_frescura_verificada": "2026-11-03: ok, 0 textos pendientes de vector, 10091 vectores, 15877 apariciones",
+  "evaluacion_rag": {
+    "total": {
+      "recall@1": 0.569,
+      "recall@3": 0.862,
+      "recall@5": 0.948,
+      "mrr": 0.725,
+      "n": 58
+    },
+    "conjunto:ajuste": {
+      "recall@1": 0.575,
+      "recall@3": 0.875,
+      "recall@5": 0.975,
+      "mrr": 0.736,
+      "n": 40
+    },
+    "conjunto:control": {
+      "recall@1": 0.667,
+      "recall@3": 0.8,
+      "recall@5": 0.867,
+      "mrr": 0.739,
+      "n": 15
+    },
+    "conjunto:seguridad": {
+      "recall@1": 0.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 0.5,
+      "n": 3
+    },
+    "crudo": {
+      "recall@1": 0.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 0.389,
+      "n": 3
+    },
+    "curado": {
+      "recall@1": 0.654,
+      "recall@3": 0.885,
+      "recall@5": 0.923,
+      "mrr": 0.779,
+      "n": 26
+    },
+    "filtro": {
+      "recall@1": 0.75,
+      "recall@3": 0.875,
+      "recall@5": 1.0,
+      "mrr": 0.823,
+      "n": 8
+    },
+    "metadato": {
+      "recall@1": 0.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 0.5,
+      "n": 1
+    },
+    "multilingue": {
+      "recall@1": 0.588,
+      "recall@3": 0.765,
+      "recall@5": 0.941,
+      "mrr": 0.708,
+      "n": 17
+    },
+    "negativa": {
+      "recall@1": 0.0,
+      "recall@3": 1.0,
+      "recall@5": 1.0,
+      "mrr": 0.5,
+      "n": 3
+    }
+  },
+  "fecha_verificacion_final": "2026-11-03"
+}

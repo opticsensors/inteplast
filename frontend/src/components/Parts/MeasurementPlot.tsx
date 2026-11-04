@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { fmt } from "./EvidenceElements"
-import type { Measurement } from "./types"
+import { type Measurement, usableMeasurement } from "./types"
 
 export type PlotPoint = Partial<Measurement> & {
   value: number | null
@@ -28,13 +28,26 @@ type Hit = {
   color: string
 }
 const colors = ["#2563eb", "#8b5cf6", "#d97706", "#0891b2"]
+const provenanceLabels: Record<string, string> = {
+  aleatoria: "fórmula aleatoria",
+  copia: "copia de otra hoja del mismo libro",
+  posible_copia_de_generador: "posible copia de un generador",
+  difiere_de_hoja_origen: "difiere de la hoja de origen",
+  resultado_vacio: "resultado guardado vacío",
+  valor_impuesto: "valor impuesto en el informe",
+  formula_sin_valor: "fórmula sin valor guardado",
+  formula_error: "error de fórmula",
+  dependencia_aleatoria_no_resuelta: "posible cálculo dependiente de RAND",
+  importacion_sin_auditoria:
+    "importación anterior a la comprobación de fórmulas",
+}
 const finite = (value: number | null | undefined): value is number =>
   value != null && Number.isFinite(value)
 
 /** Hit-test the visible points, never the empty area of a sample column. */
 export function MeasurementPlot({
   labels,
-  lines,
+  lines: sourceLines,
   visible,
   onVisible,
   unit = "mm",
@@ -55,6 +68,34 @@ export function MeasurementPlot({
   empty?: boolean
   onSource?: (point: PlotPoint, cavity: string) => void
 }) {
+  const excluded = sourceLines.flatMap((line) =>
+    visible.includes(line.name)
+      ? line.points.flatMap((point, index) =>
+          point &&
+          !point.connectorOnly &&
+          !usableMeasurement(point)
+            ? [{ point, cavity: line.name, sample: labels[index] }]
+            : [],
+        )
+      : [],
+  )
+  const warnings = [
+    ...new Set(
+      sourceLines.flatMap((line) =>
+        visible.includes(line.name)
+          ? line.points.flatMap((point) => point?.warnings ?? [])
+          : [],
+      ),
+    ),
+  ]
+  const lines = sourceLines.map((line) => ({
+    ...line,
+    points: line.points.map((point) =>
+      point && !usableMeasurement(point)
+        ? { ...point, value: null, lower: null, upper: null }
+        : point,
+    ),
+  }))
   const tooltipId = useId()
   const [active, setActive] = useState<Hit | null>(null)
   const [pinned, setPinned] = useState(false)
@@ -201,6 +242,48 @@ export function MeasurementPlot({
   }
   return (
     <div className="min-w-0 space-y-3">
+      {warnings.map((warning) => (
+        <p key={warning} className="text-sm text-muted-foreground">
+          {warning}
+        </p>
+      ))}
+      {excluded.length > 0 && (
+        <details className="rounded-md border p-3 text-sm">
+          <summary>
+            {excluded.length} valores excluidos de la gráfica y los cálculos por
+            su procedencia
+          </summary>
+          <ul className="mt-2 max-h-60 space-y-2 overflow-auto">
+            {excluded.map(({ point, cavity, sample }, index) => (
+              <li key={`${cavity}-${sample}-${index}`}>
+                {cavity} · {sample}:{" "}
+                {point.value == null
+                  ? (point.original_error ?? "sin valor guardado")
+                  : fmt(point.value)}{" "}
+                ·{" "}
+                {point.flags?.includes("copia")
+                  ? "Copia"
+                  : point.provenance_state === "generado"
+                  ? "Generado"
+                  : "Procedencia sin confirmar"}
+                {point.duplicate_of && ` de ${point.duplicate_of.sheet}!${point.duplicate_of.cell}`}
+                {point.flags?.length
+                  ? ` (${point.flags.map((flag) => provenanceLabels[flag] ?? flag.replace(/_/g, " ")).join(", ")})`
+                  : ""}
+                {onSource && point.source && (
+                  <Button
+                    variant="link"
+                    size="sm"
+                    onClick={() => onSource(point, cavity)}
+                  >
+                    Ver informe
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       <div
         ref={plot}
         className="relative"

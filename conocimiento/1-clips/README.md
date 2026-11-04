@@ -22,7 +22,8 @@ con clips de otro tipo (portaescobillas, soporte). Qué criterio usa INTEPLAST p
 
 - 3174 y 3218: el método (`6- Método de medición/3174_00_MM_revNN.xls` y `3218_00_MM_revNN.xls`,
   hoja `DIMENSIONS`) tiene filas *«MEASURE THE POSITION OF THE CLIP»* (`N712` en 3174; `N2612`,
-  `N2905` en 3218). En el 3174 el equipo pasa de `CT - SCAN` (rev03–05) a `CMM` (rev06–07).
+  `N2705` y `N2905` en 3218). N2705 está en `DIMENSIONS!A42/E42` (rev01–02) y `A43/E43` (rev03–04).
+  En el 3174 el equipo pasa de `CT - SCAN` (rev03–05) a `CMM` (rev06–07).
 - 3186: el ensayo del cliente (`E507287_TES.docx`, `TES_E04021504.docx`, inglés/alemán) exige montar
   la placa *«clip by clip»* y numera los clips según el plano 617 2994.
 - 3309: *«CHECK THE DISTANCE BETWEEN CLIPS (UP & DOWN). PART MUST BE CLIPPED AND MEASURED ON CMM»* (`N15`).
@@ -67,3 +68,7 @@ Detalle en [incongruencias.md](../incongruencias.md): planos de 3186/3218 que so
 plan del 3218 con nombre heredado P3174 (I-302), cabeceras PPAP de otros proyectos (I-303), fechas
 imposibles (I-304), plan 2 del 3174 con 30 diapositivas del plan 1 del 3186 (I-309) y dos versiones del
 `Int_03` del 3309 (I-006).
+
+## Fichas de ingesta
+
+Contratos cerrados técnicamente, con balances y exclusiones por archivo: [3174](../ingesta/3174.md), [3186](../ingesta/3186.md), [3195](../ingesta/3195.md), [3218](../ingesta/3218.md), [3309](../ingesta/3309.md), [3226](../ingesta/3226.md).

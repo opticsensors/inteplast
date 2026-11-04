@@ -30,7 +30,7 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from comun import ahora, cerrar_registro, conectar, original, registrar  # noqa: E402
+from comun import BD, ahora, cerrar_registro, conectar, original, registrar  # noqa: E402
 
 ESQUEMA = """
 CREATE TABLE IF NOT EXISTS auditoria (
@@ -263,6 +263,8 @@ def comprobar_hallazgos(con: sqlite3.Connection) -> list[str]:
             problemas.append(f"linea {n}: JSON invalido ({error})")
             continue
         ids.append(registro["id"])
+        from conocimiento_feature import validar
+        problemas.extend(validar(registro))
         # Cifra clave del hallazgo recalculada desde la biblioteca (campo opcional).
         if "comprobacion" in registro:
             obtenido = list(con.execute(registro["comprobacion"]["sql"]).fetchone() or [])
@@ -295,7 +297,7 @@ def main() -> None:
     parser.add_argument("--hallazgos", action="store_true", help="solo comprobar hallazgos.jsonl")
     args = parser.parse_args()
     rnd = random.Random(args.semilla)
-    con = conectar()
+    con = sqlite3.connect(BD.resolve().as_uri() + "?mode=ro", uri=True) if args.hallazgos else conectar()
     if args.hallazgos:
         problemas = comprobar_hallazgos(con)
         print("\n".join(problemas) or "hallazgos.jsonl: sin problemas")

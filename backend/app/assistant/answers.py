@@ -166,10 +166,22 @@ def measurement_answer(question: str, result: dict[str, Any]) -> str | None:
     lines = [
         scope + ".",
         "",
-        f"**{summary['total']} mediciones** en {summary['series_total']} series.",
+        (
+            f"**{summary['total']} registros** en {summary['series_total']} series."
+            if summary.get("excluded_count")
+            else f"**{summary['total']} mediciones** en {summary['series_total']} series."
+        ),
         f"- Cavidades: {', '.join(summary['cavities'])}.",
         f"- Muestreos: {', '.join(summary['samples'])}.",
     ]
+    if summary.get("excluded_count"):
+        reasons = ", ".join(
+            f"{k.replace('_', ' ')}: {v}"
+            for k, v in summary.get("exclusion_reasons", {}).items()
+        )
+        lines.append(
+            f"- **{summary['excluded_count']} valores excluidos** de estadísticas: generados, de procedencia sin confirmar o copias. {reasons}."
+        )
     for tolerance in summary["tolerances"]:
         lower, upper, unit = (
             tolerance["lower"],
@@ -191,7 +203,9 @@ def measurement_answer(question: str, result: dict[str, Any]) -> str | None:
             f"- Resultado: **{counts.get('inside', 0)} dentro** y **{counts.get('outside', 0)} fuera** de los límites."
         )
     other = sum(
-        count for status, count in counts.items() if status not in {"inside", "outside"}
+        count
+        for status, count in counts.items()
+        if status not in {"inside", "outside", "excluded"}
     )
     if other:
         lines.append(f"- Otras mediciones sin clasificación dentro/fuera: {other}.")
@@ -200,7 +214,7 @@ def measurement_answer(question: str, result: dict[str, Any]) -> str | None:
         for values in result["series_summaries"]:
             row = dict(zip(result["series_columns"], values, strict=True))
             lines.append(
-                f"- {row['characteristic']} · {row['series']} ({row['unit']}): mínimo {number(row['min'])}, máximo {number(row['max'])}, media {number(row['mean'])}; {row['count']} mediciones."
+                f"- {row['characteristic']} · {row['series']} ({row['unit']}): mínimo {number(row['min'])}, máximo {number(row['max'])}, media {number(row['mean'])}; {row.get('numeric_count', row['count'])} mediciones."
             )
     if summary["documents"]:
         lines.extend(["", "Fuentes: " + ", ".join(summary["documents"]) + "."])

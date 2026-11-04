@@ -1,6 +1,21 @@
 # Avance de la lectura de Exemples
 
+> Revisión P1–P9: correcciones contrastadas con 53 casos contra el backend y auditoría de los 4.530 originales. Resultados y alcance en `conocimiento/ingesta/revision-P1-P9.json`.
+
 Registro de trabajo para poder retomar entre sesiones. Actualizar al terminar cada paso.
+
+## Implementación de la revisión · 02/11/2026
+
+[Estado por fase y verificaciones](../docs/plan-ingesta-2026-11-02.md).
+Identidad corregida y fuentes complementarias; 53 casos originales, 21 contratos de ingesta
+**cerrados técnicamente**, conocimiento editable único y consultas CMM/contorno independientes.
+Protecciones trasladadas al backend con política por celda y exclusiones visibles.
+No se ha importado Exemples en la app ni validado lecciones en nombre de INTEPLAST.
+Balances completos de los 4.530 archivos y contraste específico del piloto 3167;
+10 notas y 6 grupos de vínculos revisados documentalmente mediante 51 comprobaciones.
+La aceptación técnica no atribuye aprobación corporativa. Detalle y reproducción en
+[ingesta/README.md](ingesta/README.md). La auditoría corrigió cabeceras repetidas y bloques
+secundarios en producción, y el código de cota desplazado I-311 en la biblioteca.
 
 ## RAG y correcciones · 27–28/10/2026
 
@@ -88,7 +103,9 @@ Registro de trabajo para poder retomar entre sesiones. Actualizar al terminar ca
 ### Pendiente de esta tanda
 
 - Juntar los «warnings candidatos» de las fichas por feature y validarlos con INTEPLAST (la cadena da cota
-  y pieza, no feature: salvo en el Bolt Eye, no se sabe qué cotas forman cada feature).
+  y pieza, no feature). Hay relaciones explícitas en los métodos de Clips (3174 N712;
+  3218 N2612/N2705/N2905) y Tetones (3288 DIM.80, conjunto BSG-296-00 nivel 2).
+  Falta consolidar el mapa completo con evidencia, revisión y estado de validación.
 - Que Eduard revise `rag/glosario.json` y añada preguntas reales a `rag/preguntas.jsonl`.
 
 ## Seguimiento de las rectificaciones · 23–26/10/2026

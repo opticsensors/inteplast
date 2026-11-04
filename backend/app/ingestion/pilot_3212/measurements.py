@@ -90,6 +90,15 @@ def cell_value(sheet: Any, row: int, col: int) -> float | None:
     if row > sheet.nrows or col > sheet.ncols:
         return None
     cell = sheet.cell(row - 1, col - 1)
+    audit = getattr(sheet, "formula_audit", None)
+    if (
+        audit
+        and audit.cells.get((sheet.name, row, col), {}).get(
+            "provenance_state", "medicion"
+        )
+        != "medicion"
+    ):
+        return None
     return number(cell.value) if cell.ctype == xlrd.XL_CELL_NUMBER else None
 
 
@@ -150,6 +159,11 @@ def compare(
     cavity_index = CAVITIES.index(cavity)
     original_col, prediction_col = 8 + cavity_index, 16 + cavity_index
     items, warnings = [], []
+    audit = getattr(sheet, "formula_audit", None)
+    if audit and audit.random_sheets:
+        warnings.append(
+            "El libro contiene RAND. Los valores generados y los cálculos de procedencia sin confirmar se conservan en el informe original y se excluyen de esta comparación."
+        )
     for idx, (label, original_row, predicted_row, steps) in enumerate(
         mappings(feature, variant), 1
     ):

@@ -84,7 +84,7 @@ validación con el entorno de INTEPLAST se siguen en
    `PartDocument`, y prepara las mediciones. Si la carpeta ya existe, se ofrece abrir
    su ficha. Cancelar descarta todo el borrador.
 3. `automatic_measurements.py` incorpora CSV individuales/comparativos y tablas DR de
-   informes PPAP XLS/XLSX, sin revisión manual por archivo. Busca la revisión en la ruta
+   informes PPAP XLS/XLSX/XLSM reconocidos, con auditoría estática de fórmulas por celda. Busca la revisión en la ruta
    y en cabeceras `Drawing…Level`; la ruta tiene prioridad. Si falta, reutiliza la única
    revisión encontrada para ese muestreo o, si este no tiene ninguna, para el conjunto.
    Es una regla de agrupación, no una confirmación documental de cada archivo.
@@ -102,7 +102,7 @@ validación con el entorno de INTEPLAST se siguen en
 5. Las correcciones del 3212 se preparan con su adaptador cuando están los originales.
    Los documentos de retoques de otras piezas se detectan internamente; su interpretación
    sigue pendiente y se indica en el resultado de lectura. No se inventan correspondencias
-   ni previsiones. DR(100%) y carpetas de retoques se excluyen de mediciones. Estado y
+   ni previsiones. Las carpetas de retoques se excluyen de mediciones; las hojas DR(100%) reconocidas ya se leen. Estado y
    requisitos para otras piezas en la
    [hoja de ruta](hoja-de-ruta.md#pendiente-generalizar-la-importación-de-correcciones-pptx).
 6. Añadir pieza en Features ofrece solo registros existentes e incorpora sus referencias
@@ -118,13 +118,20 @@ septiembre de la 3197 obtuvo 60 coincidencias en 60 valores muestreados (30 CSV 
 30 XLS). Ejemplos: `Support_intern.02/
 135ºC/500bar/3197 C1.csv`, línea 2, y cabeceras/celdas de `3197-00_intern.02.xls!DR_PAR`.
 
-`measurement_tables.py` lee resultados guardados, sin recalcular fórmulas. Usa
-`xlrd` para XLS y XML para XLSX; no incorpora el lector alternativo, la detección de
-fórmulas aleatorias ni el reconocimiento del PDF con extensión XLS de
-`conocimiento/`. Solo lee tablas con el nombre de hoja y las cabeceras reconocidos;
-la exclusión de `100%` es una regla del lector, no una prueba de que toda hoja así
-nombrada sea una previsión. Estas limitaciones y su ampliación están en
-[ingesta automática](ingesta-automatica.md).
+Desde el 02/11/2026, `measurement_tables.py` lee cachés con auditoría BIFF8/OOXML,
+reconoce firmas incompatibles y usa Calamine como alternativa a xlrd. Incluye hojas
+DR(100%) y CAV_n con cabeceras reconocidas, conservando muestra y unidad explícita.
+`MeasurementImport.rows` guarda procedencia, flags, fórmula cuando está disponible,
+valor original y fuente. Solo `medicion` sin marca `copia` entra en estadísticas y gráficas. Los valores
+`generado`/`sin_confirmar` se muestran en un listado con el motivo de exclusión y acceso
+al informe. El asistente comunica los excluidos sin usarlos para calcular.
+Los snapshots Excel anteriores a esta auditoría se muestran sin confirmar hasta un
+refresco explícito; no se reescriben. Las fórmulas potencialmente dependientes de RAND
+llevan aviso. Se siguen referencias estáticas; nombres, referencias dinámicas o externas no resueltas siguen sin confirmar. La detección de constantes copiadas exige la estructura del generador, intervalo y redondeo; no es una detección general. Las copias de hojas se conservan con coordenada de origen y las diferencias aparte; ninguna cuenta dos veces. Los futuros SPC #P# deberán respetar los tres estados.
+
+Los readers siguen siendo independientes de `conocimiento/`; sus contrastes y límites
+están en [ingesta automática](ingesta-automatica.md) y los [21 contratos por pieza](../conocimiento/ingesta/README.md), con balance de cada archivo/hoja. Las cabeceras repetidas no sustituyen el contexto principal y los bloques secundarios sin condición quedan sin confirmar. Esta entrega no importa datos
+nuevos ni cambia los vínculos feature–cota de la BD de la app.
 
 El refresco explícito del estudio piloto avanza la base actual y conserva snapshots
 anteriores. Las comparaciones nuevas esperan la revisión de mediciones pendientes.

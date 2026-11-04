@@ -65,3 +65,7 @@ propuesta del 22/04 de 0,14 a **0,07 mm por nervio**; conservar la versión y fe
 - ~~Errores de lectura~~: resueltos (los `.doc` bloqueados se leen con texto aproximado; 0 errores).
 - ~~Relacionar los id `1-xxx` de SupplyOn con los números de cota de los PPAP~~ hecho en el 3237 (H-503);
   falta con los planes de corrección.
+
+## Fichas de ingesta
+
+Contratos cerrados técnicamente, con balances y exclusiones por archivo: [3233](../ingesta/3233.md), [3237](../ingesta/3237.md), [3238](../ingesta/3238.md).

@@ -4,6 +4,8 @@ import math
 from collections import Counter
 from typing import Any
 
+from app.ingestion.measurement_provenance import usable_measurement
+
 
 def page(total: int, offset: int, returned: int) -> dict[str, Any]:
     return {
@@ -50,7 +52,14 @@ def measurements(
                             )
                         },
                         "source": provenance(record.get("source")),
+                        "provenance_state": record.get("provenance_state", "medicion"),
+                        "exclusion_reasons": record.get("flags", []),
+                        "warnings": record.get("warnings", []),
+                        "duplicate_of": record.get("duplicate_of"),
                     }
+                    if not usable_measurement(row):
+                        # Keep the existence/provenance, not a number the model might reuse.
+                        row.update(value=None, deviation=None, status="excluded")
                     rows.append(row)
                     # Never aggregate different series, units or tolerance regimes.
                     key = (
@@ -69,7 +78,8 @@ def measurements(
         values = [
             r["value"]
             for r in group
-            if isinstance(r["value"], (int, float))
+            if usable_measurement(r)
+            and isinstance(r["value"], (int, float))
             and not isinstance(r["value"], bool)
             and math.isfinite(r["value"])
         ]
@@ -89,6 +99,7 @@ def measurements(
                 },
                 "count": len(group),
                 "numeric_count": len(values),
+                "excluded_count": sum(not usable_measurement(r) for r in group),
                 "min": min(values) if values else None,
                 "max": max(values) if values else None,
                 "mean": round(math.fsum(values) / len(values), 10) if values else None,
@@ -98,6 +109,18 @@ def measurements(
     summary = {
         "scope": "all_filtered_records",
         "total": len(rows),
+        "excluded_count": sum(not usable_measurement(r) for r in rows),
+        "measurement_count": sum(usable_measurement(r) for r in rows),
+        "duplicate_count": sum("copia" in r["exclusion_reasons"] for r in rows),
+        "provenance_counts": dict(Counter(r["provenance_state"] for r in rows)),
+        "exclusion_reasons": dict(
+            Counter(
+                reason
+                for r in rows
+                if not usable_measurement(r)
+                for reason in r["exclusion_reasons"]
+            )
+        ),
         "cavities": sorted({r["cavity"] for r in rows}),
         "samples": sorted({r["sample"] for r in rows}),
         "status_counts": dict(Counter(r["status"] or "unknown" for r in rows)),

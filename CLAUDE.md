@@ -239,7 +239,9 @@ docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bo
   referencia al estudiar los formatos**. Los lectores de producción pertenecen al backend;
   no se importan ni se ejecutan los scripts de exploración desde la web.
 - **Los CSV de la CMM son cp1252**, no UTF-8. Sin `iconv -f cp1252` salen `C�lculo de f�rmula`.
-- 🔴 **OneDrive Files On-Demand**: hay ficheros que son *placeholders*. Leer un solo byte dispara
+- **OneDrive, comprobado el 02/11/2026:** 0 de los 4.530 originales con atributos de recuperación
+  (`0x400000`, `0x40000`, `0x1000`). Comprobarlos antes de cada lectura: el estado es volátil.
+  **Historia de Files On-Demand:** hay ficheros que pueden ser *placeholders*. Leer un solo byte dispara
   la descarga completa y en los grandes **da timeout**. **El estado cambia solo**: el 2026-08-13
   había **195 de los 239 ficheros de `4- Metrologia` en la nube** (el 2026-08-11 estaban todos
   locales). Se salvan los 9 `.xls` y los 16 CSV de cavidad — o sea, **toda la ingesta tabular se

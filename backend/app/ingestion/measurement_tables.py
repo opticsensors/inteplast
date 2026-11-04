@@ -14,7 +14,12 @@ from zipfile import ZipFile
 
 import xlrd
 
+from app.ingestion.formula_flags import FormulaAudit, inspect_formulas
 from app.ingestion.measurement_csv import parse
+from app.ingestion.measurement_provenance import (
+    mark_copied_cells,
+    possible_generator_copies,
+)
 
 CAVITY = re.compile(r"c(?:av(?:ity)?\.?)?[\s_]*(\d+)(.*)", re.I)
 
@@ -104,26 +109,55 @@ def csv_rows(data: bytes, *, pilot: bool = False) -> list[dict[str, Any]]:
     return output
 
 
+class Workbook(list):  # type: ignore[type-arg]
+    """Value grid plus a separate audit keyed by physical cell, without recalculation."""
+
+    def __init__(self, sheets: list[Any], audit: FormulaAudit) -> None:
+        super().__init__(sheets)
+        self.audit = audit
+
+
 def workbook(path: Path) -> list[tuple[str, list[list[Any]]]]:
+    sheets: Any
+    sheet: Any
+    audit = inspect_formulas(path)
     if path.suffix.lower() == ".xls":
-        book = xlrd.open_workbook(path, on_demand=True)
         try:
-            return [
-                (
-                    sheet.name,
-                    [
-                        [
-                            None
-                            if sheet.cell_type(r, c)
-                            in {xlrd.XL_CELL_ERROR, xlrd.XL_CELL_BOOLEAN}
-                            else sheet.cell_value(r, c)
-                            for c in range(sheet.ncols)
-                        ]
-                        for r in range(sheet.nrows)
-                    ],
+            book = xlrd.open_workbook(path, on_demand=True)
+        except (xlrd.XLRDError, AssertionError, IndexError):
+            from python_calamine import CalamineWorkbook
+
+            with CalamineWorkbook.from_path(str(path)) as alternative:
+                sheets = []
+                for name in alternative.sheet_names:
+                    sheet = alternative.get_sheet_by_name(name)
+                    # Calamine trims empty leading rows/columns by default.
+                    rows = sheet.to_python(skip_empty_area=False)
+                    sheets.append((name, rows))
+                audit.warnings.append(
+                    "Valores leídos con Calamine; fórmulas verificadas en BIFF."
                 )
-                for sheet in book.sheets()
-            ]
+                return Workbook(sheets, audit)
+        try:
+            return Workbook(
+                [
+                    (
+                        sheet.name,
+                        [
+                            [
+                                None
+                                if sheet.cell_type(r, c)
+                                in {xlrd.XL_CELL_ERROR, xlrd.XL_CELL_BOOLEAN}
+                                else sheet.cell_value(r, c)
+                                for c in range(sheet.ncols)
+                            ]
+                            for r in range(sheet.nrows)
+                        ],
+                    )
+                    for sheet in book.sheets()
+                ],
+                audit,
+            )
         finally:
             book.release_resources()
     # Read cached numeric values, never evaluate formulas or follow external links.
@@ -187,15 +221,88 @@ def workbook(path: Path) -> list[tuple[str, list[list[Any]]]]:
                         value = None
                     grid[row_index][column - 1] = value
             result.append((sheet.attrib["name"], grid))
-        return result
+        return Workbook(result, audit)
+
+
+def header_label(value: Any) -> str:
+    text = (
+        unicodedata.normalize("NFKD", str(value))
+        .encode("ascii", "ignore")
+        .decode()
+        .lower()
+    )
+    text = re.sub(r"\s+", "", text)
+    return {
+        "target": "nominal",
+        "tol+": "tol +",
+        "tol-": "tol-",
+        "equipo": "equipment",
+        "measuringdevice": "equipment",
+        "tipo": "type",
+    }.get(text, text)
+
+
+def identity_flags(
+    grid: list[list[Any]], part_code: str
+) -> tuple[list[str], list[str]]:
+    """Use explicit header signals. A conflicting PPAP alone does not erase own ITP."""
+    fields = {}
+    for row in grid[:12]:
+        for col, value in enumerate(row):
+            label = re.sub(r"[^a-z0-9]", "", token(str(value)).lower())
+            key = (
+                "itp"
+                if label in {"itpref", "partrefitp"}
+                else "ppap"
+                if label in {"ppapref", "ppapno"}
+                else "part"
+                if label in {"partno", "partn", "partnumber"}
+                else None
+            )
+            if key:
+                fields[key] = next(
+                    (
+                        str(v).strip()
+                        for v in row[col + 1 :]
+                        if v is not None and str(v).strip()
+                    ),
+                    "",
+                )
+    flags, warnings = [], []
+    if re.fullmatch(r"\d{1,2}[/.-]\d{1,2}[/.-]\d{4}", fields.get("part", "")):
+        flags.append("cabecera_desplazada")
+    if part_code:
+        # Excel numeric cells arrive as floats (xlrd) or decimal text (OOXML).
+        # Removing the decimal separator would turn 732180000.0 into 7321800000.
+        itp = fields.get("itp", "")
+        integer = re.fullmatch(r"(\d+)\.0+", itp)
+        if integer:
+            itp = integer[1]
+        itp = re.sub(r"[.\s]", "", itp)
+        itp_code = itp[1:5] if re.fullmatch(r"7\d{8}", itp) else ""
+        ppap = re.search(r"(\d{4})-\d{2}[_-]in[tf]", fields.get("ppap", ""), re.I)
+        if itp_code and itp_code != part_code:
+            flags.append("identidad_otra_pieza")
+        elif ppap and ppap[1] != part_code:
+            if itp_code == part_code:
+                warnings.append(
+                    f"PPAP identifica {ppap[1]}, pero ITP identifica la pieza {part_code}. Revisar cabecera."
+                )
+            else:
+                flags.append("identidad_sin_confirmar")
+    return flags, warnings
 
 
 def report_rows(
     sheets: list[tuple[str, list[list[Any]]]],
+    *,
+    part_code: str = "",
 ) -> tuple[str, list[dict[str, Any]]]:
     revisions = set()
     output = []
+    structures = {}
     for sheet, grid in sheets:
+        identity, identity_warnings = identity_flags(grid, part_code)
         for row in grid[:12]:
             for c, value in enumerate(row):
                 if "drawing" in str(value).lower() and "level" in str(value).lower():
@@ -215,33 +322,107 @@ def report_rows(
                         level = re.fullmatch(r"(\d{2})/\w+", following)
                         if level:
                             following = level[1]
-                        revisions.add(following)
-        if not re.match(r"DR\b|DR[_(-]", sheet, re.I) or "100%" in sheet:
+                        if not identity:
+                            revisions.add(following)
+        if not re.match(r"DR\b|DR[_(-]|CAV[._ ]*\d|100%", sheet, re.I):
             continue
         header = next(
             (
                 r
                 for r, row in enumerate(grid[:30])
-                if any(str(v).strip().lower() == "nominal" for v in row)
-                and any(cavity_label(str(v))[0] for v in row)
+                if any(header_label(v) == "nominal" for v in row)
+                and (
+                    any(cavity_label(str(v))[0] for v in row)
+                    or re.match(r"CAV[._ ]*\d", sheet, re.I)
+                )
             ),
             None,
         )
         if header is None:
             continue
-        labels = [str(v).strip().lower() for v in grid[header]]
-        columns = {label: i for i, label in enumerate(labels)}
+        labels = [header_label(v) for v in grid[header]]
+        # Later blocks can repeat Nominal/Tol headers for forecasts or customer
+        # limits. They must not replace the context of the first measurement block.
+        columns: dict[str, int] = {}
+        for i, label in enumerate(labels):
+            if label:
+                columns.setdefault(label, i)
         cavities = [
             (i, cavity_label(str(v)))
             for i, v in enumerate(grid[header])
             if cavity_label(str(v))[0]
         ]
+        if not cavities:
+            sheet_cavity = re.match(r"CAV[._ ]*(\d+)", sheet, re.I)
+            end = columns.get("nok", len(labels))
+            if sheet_cavity:
+                cavities = [
+                    (i, (f"c{int(sheet_cavity[1])}", f"muestra{int(m[1])}"))
+                    for i, value in enumerate(grid[header][:end])
+                    if (
+                        m := re.fullmatch(
+                            r"(?:Nr\.?)?\s*(\d+)(?:\.0)?", str(value).strip(), re.I
+                        )
+                    )
+                ]
+        if not cavities:
+            continue
+        audit = getattr(sheets, "audit", FormulaAudit())
+        code_column = columns.get("number", 0)
+
+        def normalized_code(row: list[Any], code_column: int = code_column) -> str:
+            value = str(row[code_column]).strip() if code_column < len(row) else ""
+            return value.removesuffix(".0")
+
+        structures[sheet] = (
+            header,
+            tuple(normalized_code(row) for row in grid[header + 1 :]),
+        )
+        possible_copies = possible_generator_copies(
+            sheet, grid, header, [c for c, _ in cavities], audit
+        )
         groups = {}
         group = ""
-        for c, _ in cavities:
-            text = str(grid[header - 1][c]) if c < len(grid[header - 1]) else ""
+        secondary_columns = set()
+        previous_column = None
+        secondary = False
+        first_cavity = cavities[0][1][0]
+        for c, (cavity, variant) in cavities:
+            if previous_column is not None and (
+                c != previous_column + 1 or (cavity == first_cavity and not variant)
+            ):
+                secondary = True
+                group = ""
+            text = (
+                str(grid[header - 1][c])
+                if header > 0 and c < len(grid[header - 1])
+                else ""
+            )
             group = conditions(text) or group
             groups[c] = group
+            if secondary and not group:
+                secondary_columns.add(c)
+            previous_column = c
+        # Conditions already distinguish repeated cavities. Add a column discriminator
+        # only for repetitions that would otherwise overwrite the same observation.
+        counts_by_context: dict[tuple[str, str], int] = defaultdict(int)
+        for col, (cavity, _) in cavities:
+            counts_by_context[cavity, groups[col]] += 1
+        cavities = [
+            (
+                col,
+                (
+                    cavity,
+                    variant
+                    or (
+                        f"col{excel_column(col)}"
+                        if counts_by_context[cavity, groups[col]] > 1
+                        else ""
+                    ),
+                ),
+            )
+            for col, (cavity, variant) in cavities
+        ]
         counts: dict[str, int] = defaultdict(int)
         ncode, shot = "", ""
         for r in range(header + 1, len(grid)):
@@ -256,16 +437,13 @@ def report_rows(
             marker = re.search(r"SHOT\s*(\d+)", " ".join(map(str, row)), re.I)
             if marker:
                 shot = "shot" + marker[1]
-            raw_code = str(row[0]).strip() if row else ""
+            code_column = columns.get("number", 0)
+            raw_code = str(row[code_column]).strip() if len(row) > code_column else ""
             if raw_code:
-                match = re.fullmatch(r"N?(\d+(?:\.\d+)?)", raw_code, re.I)
+                match = re.fullmatch(r"N?(\d+(?:[.-]\d+)*)", raw_code, re.I)
                 ncode = "N" + match[1].removesuffix(".0") if match else ""
             nominal = number(cell("nominal"))
-            if (
-                not ncode
-                or nominal is None
-                or str(cell("equipment")).strip().upper() == "IMPOSED"
-            ):
+            if not ncode or nominal is None:
                 continue
             high, low = number(cell("tol +")), number(cell("tol-"))
             if low is not None and high is not None and low > high:
@@ -281,10 +459,44 @@ def report_rows(
                 if "°" in evaluation
                 else "mm"
             )
+            declared_unit = str(cell("units") or cell("unit") or "").strip()
+            if declared_unit:
+                unit = declared_unit
             for column, (cavity, variant) in cavities:
                 value = number(row[column]) if column < len(row) else None
-                if value is None:
+                info = audit.cells.get((sheet, r + 1, column + 1), {})
+                if value is None and not info:
                     continue
+                flags = list(info.get("flags", []))
+                state = info.get("provenance_state", "medicion")
+                if str(cell("equipment")).strip().upper() == "IMPOSED":
+                    flags.append("valor_impuesto")
+                    if state != "generado":
+                        state = "sin_confirmar"
+                copy_evidence = possible_copies.get((r + 1, column + 1))
+                if copy_evidence and state != "generado":
+                    flags.append("posible_copia_de_generador")
+                    state = "sin_confirmar"
+                flags.extend(identity)
+                if column in secondary_columns:
+                    flags.append("bloque_secundario_sin_contexto")
+                    if state != "generado":
+                        state = "sin_confirmar"
+                if identity and state != "generado":
+                    state = "sin_confirmar"
+                if value is None and state == "medicion":
+                    state = "sin_confirmar"
+                    flags.append("valor_no_numerico")
+                if value == 0:
+                    flags.append("cero")
+                    if nominal != 0 and state == "medicion":
+                        state = "sin_confirmar"
+                        flags.append("cero_sin_confirmar")
+                warnings = list(audit.warnings) + identity_warnings
+                if audit.random_sheets:
+                    warnings.append(
+                        "El libro contiene RAND. Se excluyen sus fórmulas y dependencias posibles; las copias como valores solo se señalan cuando coinciden estructura, intervalo y redondeo del generador."
+                    )
                 output.append(
                     {
                         "numbers": [ncode],
@@ -300,7 +512,18 @@ def report_rows(
                         "tol_inf": low,
                         "tol_sup": high,
                         "value": value,
-                        "deviation": value - nominal,
+                        "deviation": value - nominal if value is not None else None,
+                        "provenance_state": state,
+                        "flags": flags,
+                        "warnings": warnings,
+                        "formula": info.get("formula"),
+                        **(
+                            {"generator_evidence": copy_evidence}
+                            if copy_evidence
+                            else {}
+                        ),
+                        "original_value": info.get("cached_error")
+                        or (row[column] if column < len(row) else None),
                         "lower": nominal + low if low is not None else None,
                         "upper": nominal + high if high is not None else None,
                         "_cavity": cavity,
@@ -311,6 +534,7 @@ def report_rows(
                         "_report": True,
                     }
                 )
+    mark_copied_cells(output, structures)
     return (next(iter(revisions)) if len(revisions) == 1 else ""), output
 
 

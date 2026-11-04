@@ -578,9 +578,28 @@ def study(
                 }
                 entry["series"].append(series)
             lower, upper, value = row["lower"], row["upper"], row["value"]
-            status = result(value, lower, upper)
+            state = row.get("provenance_state")
+            if not state:
+                # Old Excel snapshots predate formula auditing. Refresh is explicit.
+                state = (
+                    "sin_confirmar"
+                    if Path(row.get("source", {}).get("path", "")).suffix.lower()
+                    in {".xls", ".xlsx", ".xlsm"}
+                    else "medicion"
+                )
+            flags = row.get("flags", []) or (
+                ["importacion_sin_auditoria"] if state == "sin_confirmar" else []
+            )
+            status = (
+                result(value, lower, upper)
+                if state == "medicion" and "copia" not in flags and value is not None
+                else "unknown"
+            )
             series["records"].setdefault(cavity, {})[sample] = {
                 "value": value,
+                "original_error": row.get("original_value")
+                if "formula_error" in flags
+                else None,
                 "lower": lower,
                 "upper": upper,
                 "status": status,
@@ -589,6 +608,14 @@ def study(
                 "tol_inf": row["tol_inf"],
                 "tol_sup": row["tol_sup"],
                 "deviation": row["deviation"],
+                "provenance_state": state,
+                "flags": flags,
+                "warnings": row.get("warnings", []),
+                **{
+                    k: row[k]
+                    for k in ("duplicate_of", "comparison_origin", "generator_evidence")
+                    if k in row
+                },
             }
     base["catalog"]["entries"] = list(entries.values())
     base["samples"] = sorted(set(base["samples"]) | {s for s, _ in active}, key=natural)

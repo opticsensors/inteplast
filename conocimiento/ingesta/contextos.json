@@ -1,0 +1,347 @@
+{
+  "2820": {
+    "cavidades": "No hay una declaración propia y completa de molde/cavidades en INTRO!C40 entre los libros inventariados. Las columnas de informe no resuelven por sí solas el número físico.",
+    "evidencia_cavidades": [],
+    "condiciones": "Solo plano de referencia: no hay contrato de medición dimensional por inferencia del dibujo. No asignar equipo, acondicionamiento o cavidades a partir de la geometría.",
+    "rutas_sensibles": []
+  },
+  "3051": {
+    "cavidades": "No hay una declaración propia y completa de molde/cavidades en INTRO!C40 entre los libros inventariados. Las columnas de informe no resuelven por sí solas el número físico.",
+    "evidencia_cavidades": [],
+    "condiciones": "Separar CMM, vídeo CNC y temperatura por Equipment. Las nubes de puntos de 3051_Cloud_of_Points.xlsm no son una nueva serie de cotas; conservar MMC de N880/N890 según el método.",
+    "rutas_sensibles": [
+      "0- Bolt Eye/3051 Pump Housing/1-2D y 3D Pieza/20190718_3130516996-Pumphousing_VDA12mm.stp",
+      "0- Bolt Eye/3051 Pump Housing/4- Metrologia/3051-00_intern.01.xls",
+      "0- Bolt Eye/3051 Pump Housing/4- Metrologia/3051-00_intern.02.xls",
+      "0- Bolt Eye/3051 Pump Housing/4- Metrologia/3051-00_intern.03.xls",
+      "0- Bolt Eye/3051 Pump Housing/4- Metrologia/3051-00_intern.04.xls",
+      "0- Bolt Eye/3051 Pump Housing/4- Metrologia/3051-00_intern.05.xls"
+    ]
+  },
+  "3197": {
+    "cavidades": "Declaraciones comprobadas en originales: `3197 / 8 / Injection` en `0- Bolt Eye/3197 Pot/4- Metrologia/3197-00_intern.01.xls!INTRO!C40`. Son declaraciones del informe; las discordancias se conservan y no se resuelven por mayoría.",
+    "evidencia_cavidades": [
+      {
+        "ruta": "0- Bolt Eye/3197 Pot/4- Metrologia/3197-00_intern.01.xls",
+        "localizador": "INTRO!C40",
+        "valor": "3197 / 8 / Injection"
+      }
+    ],
+    "condiciones": "DOE: mantener 135/140/145 ºC y 500/600 bar de las rutas; son condiciones, no revisiones. Separar Nozzle 55/65/90 ºC de intern.08 y repeticiones C4.1/c5bis/c1-24. No confundir boquilla con diámetro.",
+    "rutas_sensibles": [
+      "0- Bolt Eye/3197 Pot/1-2D y 3D Pieza/20230404_0140S00363_SPT_001.stp",
+      "0- Bolt Eye/3197 Pot/1-2D y 3D Pieza/20240222_0140S00363 D 02.pdf",
+      "0- Bolt Eye/3197 Pot/4- Metrologia/Support_intern.02/135ºC/500bar/3197 C1.csv",
+      "0- Bolt Eye/3197 Pot/4- Metrologia/Support_intern.02/135ºC/500bar/3197 C2.csv",
+      "0- Bolt Eye/3197 Pot/4- Metrologia/Support_intern.02/135ºC/500bar/3197_PROFILE_C1.txt",
+      "0- Bolt Eye/3197 Pot/4- Metrologia/Support_intern.02/135ºC/500bar/3197_PROFILE_C2.txt"
+    ]
+  },
+  "3212": {
+    "cavidades": "Declaraciones comprobadas en originales: `3212 /4 / Injection` en `0- Bolt Eye/3212 Pump Housing/4- Metrologia/3212-00_intern.01.xls!INTRO!C40`. Son declaraciones del informe; las discordancias se conservan y no se resuelven por mayoría.",
+    "evidencia_cavidades": [
+      {
+        "ruta": "0- Bolt Eye/3212 Pump Housing/4- Metrologia/3212-00_intern.01.xls",
+        "localizador": "INTRO!C40",
+        "valor": "3212 /4 / Injection"
+      }
+    ],
+    "condiciones": "Identidad del resultado CMM: ID de elemento, Bolt, altura y evaluación GX/LP. B2/B4 requieren la regla de signo de Posición Z, conservando el valor original. La tolerancia de contorno PA/PB es otro resultado, no una medida de diámetro.",
+    "rutas_sensibles": [
+      "0- Bolt Eye/3212 Pump Housing/4- Metrologia/3212-00_intern.01.xls",
+      "0- Bolt Eye/3212 Pump Housing/4- Metrologia/3212-00_intern.02.xls",
+      "0- Bolt Eye/3212 Pump Housing/4- Metrologia/3212-00_intern.03.xls",
+      "0- Bolt Eye/3212 Pump Housing/4- Metrologia/3212-00_intern.04.xls",
+      "0- Bolt Eye/3212 Pump Housing/4- Metrologia/3212-00_intern.05.xls",
+      "0- Bolt Eye/3212 Pump Housing/4- Metrologia/3212-00_intern.06.xls"
+    ]
+  },
+  "3174": {
+    "cavidades": "No hay una declaración propia y completa de molde/cavidades en INTRO!C40 entre los libros inventariados. Las columnas de informe no resuelven por sí solas el número físico.",
+    "evidencia_cavidades": [],
+    "condiciones": "Separar Ball, Peça_clipada y los informes 600/700/800/DADES. Las CAV.n (2) son copias con diferencias locales: conservar coordenada original, diferencias e IMPOSED, sin contarlas de nuevo.",
+    "rutas_sensibles": [
+      "1- Clips en Piezas/Tipo A/3174/4- Metrologia/Version 00/Customer/3174-00_intern.18_Ball corr..xls",
+      "1- Clips en Piezas/Tipo A/3174/4- Metrologia/Version 00/Customer/3174-00_intern.19_Ball.xls",
+      "1- Clips en Piezas/Tipo A/3174/4- Metrologia/Version 00/Customer/3174-00_intern.31_Ball measurement after correction.pdf",
+      "1- Clips en Piezas/Tipo A/3174/4- Metrologia/Version 00/Customer/3174-00_intern.31_Ball measurement after correction.xls",
+      "1- Clips en Piezas/Tipo A/3174/4- Metrologia/Version 00/Customer/3174-00_intern18_Ball.pdf",
+      "1- Clips en Piezas/Tipo A/3174/4- Metrologia/Version 00/Customer/3174-00_intern19_Ball.pdf"
+    ]
+  },
+  "3186": {
+    "cavidades": "Declaraciones comprobadas en originales: `3186 / 4 / Injection` en `1- Clips en Piezas/Tipo A/3186/4- Metrologia/Customer/3186-00_intern.03.xls!INTRO!C40`. Son declaraciones del informe; las discordancias se conservan y no se resuelven por mayoría.",
+    "evidencia_cavidades": [
+      {
+        "ruta": "1- Clips en Piezas/Tipo A/3186/4- Metrologia/Customer/3186-00_intern.03.xls",
+        "localizador": "INTRO!C40",
+        "valor": "3186 / 4 / Injection"
+      }
+    ],
+    "condiciones": "Distinguir 3186-CMM.xlsx de 3186-CMM-NOTCLIPPED.xlsx y Peça_clipada; no comparar clipada y libre como misma condición. Mantener CMM +ball y 550b separados del estándar.",
+    "rutas_sensibles": [
+      "1- Clips en Piezas/Tipo A/3186/4- Metrologia/Interns/3186-00_Peça_clipada (2).xls",
+      "1- Clips en Piezas/Tipo A/3186/4- Metrologia/Interns/3186-00_Peça_clipada.xls",
+      "1- Clips en Piezas/Tipo A/3186/4- Metrologia/Interns/3186-CMM-NOTCLIPPED.xlsx",
+      "1- Clips en Piezas/Tipo A/3186/4- Metrologia/Interns/3186-CMM.xlsx"
+    ]
+  },
+  "3218": {
+    "cavidades": "Declaraciones comprobadas en originales: `3281 / 8 / Injection` en `1- Clips en Piezas/Tipo A/3218/4- Metrologia/Customer/Version 00/3218-00_intern.03.xls!INTRO!C40`; `3218 / 8 / Injection` en `1- Clips en Piezas/Tipo A/3218/4- Metrologia/Customer/3218-00_intern.33 – kopie.xls!INTRO!C40`. Son declaraciones del informe; las discordancias se conservan y no se resuelven por mayoría.",
+    "evidencia_cavidades": [
+      {
+        "ruta": "1- Clips en Piezas/Tipo A/3218/4- Metrologia/Customer/Version 00/3218-00_intern.03.xls",
+        "localizador": "INTRO!C40",
+        "valor": "3281 / 8 / Injection"
+      },
+      {
+        "ruta": "1- Clips en Piezas/Tipo A/3218/4- Metrologia/Customer/3218-00_intern.33 – kopie.xls",
+        "localizador": "INTRO!C40",
+        "valor": "3218 / 8 / Injection"
+      }
+    ],
+    "condiciones": "ITP 732180000 prevalece frente a la errata PPAP 3281 con aviso. Mantener muestra de origen separada de RAND, GG/GN/GX y movimiento X/Z. No fusionar versiones draft/V1/V2/Updated por número de loop.",
+    "rutas_sensibles": [
+      "1- Clips en Piezas/Tipo A/3218/4- Metrologia/Customer/3218-00_intern.33 – kopie.xls",
+      "1- Clips en Piezas/Tipo A/3218/4- Metrologia/Customer/Version 00/3218-00_intern.23.xls",
+      "1- Clips en Piezas/Tipo A/3218/4- Metrologia/Customer/Version 00/3218-00_intern.23_After 168h_CMM_ICLs.pdf",
+      "1- Clips en Piezas/Tipo A/3218/4- Metrologia/Customer/Version 00/3218-00_intern.23_PPAP_customer.xls",
+      "1- Clips en Piezas/Tipo A/3218/4- Metrologia/Interns/3218-00_intern.23_PPAP.xls",
+      "1- Clips en Piezas/Tipo A/3218/5- Retoques molde/20240925 5th correction with all deformations/3218-00_intern.07 – kopie.xls"
+    ]
+  },
+  "3195": {
+    "cavidades": "Declaraciones comprobadas en originales: `3195 / 8 / Injection` en `1- Clips en Piezas/Tipo B/3195/4- Metrologia/Interns/3195-00_int_06.xls!INTRO!C40`. Son declaraciones del informe; las discordancias se conservan y no se resuelven por mayoría.",
+    "evidencia_cavidades": [
+      {
+        "ruta": "1- Clips en Piezas/Tipo B/3195/4- Metrologia/Interns/3195-00_int_06.xls",
+        "localizador": "INTRO!C40",
+        "valor": "3195 / 8 / Injection"
+      }
+    ],
+    "condiciones": "Conservar humedad/acondicionamiento: REPORT HUMIDITY, int_08_comparison humid sec y hojas DR_HR%. No tratar húmedo y seco como repeticiones equivalentes. Los N*.xlsm Cpk generator no acreditan mediciones.",
+    "rutas_sensibles": [
+      "1- Clips en Piezas/Tipo B/3195/4- Metrologia/Customer/20240705_3195-00_int_04_HUMIDITY_REPORT.pdf",
+      "1- Clips en Piezas/Tipo B/3195/4- Metrologia/Customer/REPORT HUMIDITY - 3195-00_int_04.xls",
+      "1- Clips en Piezas/Tipo B/3195/4- Metrologia/Interns/3195 Humid.xlsx",
+      "1- Clips en Piezas/Tipo B/3195/4- Metrologia/Interns/3195-00_int_08_comparison humid sec.xls",
+      "1- Clips en Piezas/Tipo B/3195/4- Metrologia/Interns/3195_N2410 Humid.xlsx"
+    ]
+  },
+  "3226": {
+    "cavidades": "No hay una declaración propia y completa de molde/cavidades en INTRO!C40 entre los libros inventariados. Las columnas de informe no resuelven por sí solas el número físico.",
+    "evidencia_cavidades": [],
+    "condiciones": "Alcance mínimo: plano y dos internos. No hay evidencia en el contrato para asignar condiciones ambientales o un número físico de cavidades; conservar el equipo y contexto de cada fila, sin completar por analogía con Clips.",
+    "rutas_sensibles": [
+      "1- Clips en Piezas/Tipo B/3226/2- Moldflow/README.txt",
+      "1- Clips en Piezas/Tipo B/3226/4- Metrologia/Interns/3226 color maping.pdf",
+      "1- Clips en Piezas/Tipo B/3226/4- Metrologia/Interns/3226-00_intern.01.xls",
+      "1- Clips en Piezas/Tipo B/3226/5- Retoques molde/1st loop of corrections/3226-00_intern.01.xls",
+      "1- Clips en Piezas/Tipo B/3226/5- Retoques molde/2nd loop of correction_interferencia 3227/20240424_Interferencia_ITP3226+3227.pptx",
+      "1- Clips en Piezas/Tipo B/3226/5- Retoques molde/2nd loop of correction_interferencia 3227/20240425_Interferencia_ITP3226+3227.pdf"
+    ]
+  },
+  "3309": {
+    "cavidades": "No hay una declaración propia y completa de molde/cavidades en INTRO!C40 entre los libros inventariados. Las columnas de informe no resuelven por sí solas el número físico.",
+    "evidencia_cavidades": [],
+    "condiciones": "N15 se mide con pieza clipada en CMM y útil (3309_00_V0_MM/3309_00_V1_MM). No deducir 12 cavidades de DR (2): repite columnas. Mantener las dos copias de Int_03 y sus valores distintos.",
+    "rutas_sensibles": [
+      "1- Clips en Piezas/Tipo B/3309/4- Metrologia/Customer/3309-00 Int_03.xls",
+      "1- Clips en Piezas/Tipo B/3309/4- Metrologia/Customer/P3309-00 Int_03.xls",
+      "1- Clips en Piezas/Tipo B/3309/4- Metrologia/Interns/3309-00 Int_03.xls",
+      "1- Clips en Piezas/Tipo B/3309/6- Método de medición/3309_00_V0_MM.pdf",
+      "1- Clips en Piezas/Tipo B/3309/6- Método de medición/3309_00_V0_MM.xls",
+      "1- Clips en Piezas/Tipo B/3309/6- Método de medición/3309_00_V1_MM.xls"
+    ]
+  },
+  "3205": {
+    "cavidades": "Declaraciones comprobadas en originales: `3205 / 8 / Injection` en `2- Nervios de Soldadura/3205/4- Metrologia/Customer/3205-00_intern.03.xls!INTRO!C40`. Son declaraciones del informe; las discordancias se conservan y no se resuelven por mayoría.",
+    "evidencia_cavidades": [
+      {
+        "ruta": "2- Nervios de Soldadura/3205/4- Metrologia/Customer/3205-00_intern.03.xls",
+        "localizador": "INTRO!C40",
+        "valor": "3205 / 8 / Injection"
+      }
+    ],
+    "condiciones": "Los útiles 3205-C/3205-D aparecen también bajo 3206: no acreditan una medición de esta pieza por estar en la carpeta. Registrar nervio y cavidad en las acciones de rebaba y venteo.",
+    "rutas_sensibles": [
+      "2- Nervios de Soldadura/3205/4- Metrologia/Customer/3205-00_intern.01.xls",
+      "2- Nervios de Soldadura/3205/4- Metrologia/Customer/3205-00_intern.02.xls",
+      "2- Nervios de Soldadura/3205/4- Metrologia/Customer/3205-00_intern.03.xls",
+      "2- Nervios de Soldadura/3205/4- Metrologia/Customer/3205-00_intern.04.pdf",
+      "2- Nervios de Soldadura/3205/4- Metrologia/Customer/3205-00_intern.05.pdf",
+      "2- Nervios de Soldadura/3205/4- Metrologia/Customer/3205-00_intern.09.pdf"
+    ]
+  },
+  "3206": {
+    "cavidades": "No hay una declaración propia y completa de molde/cavidades en INTRO!C40 entre los libros inventariados. Las columnas de informe no resuelven por sí solas el número físico.",
+    "evidencia_cavidades": [],
+    "condiciones": "Comparar informes propios y útiles compartidos con 3205 conservando identidad. DR_(customer) (2) de intern.121 contiene valores RAND; no certificar la copia como otro muestreo.",
+    "rutas_sensibles": [
+      "2- Nervios de Soldadura/3206/4- Metrologia/Customer/3206-00_intern.01.pdf",
+      "2- Nervios de Soldadura/3206/4- Metrologia/Customer/3206-00_intern.02.pdf",
+      "2- Nervios de Soldadura/3206/4- Metrologia/Customer/3206-00_intern.02_update N9.pdf",
+      "2- Nervios de Soldadura/3206/4- Metrologia/Customer/3206-00_intern.03.pdf",
+      "2- Nervios de Soldadura/3206/4- Metrologia/Customer/3206-00_intern.04.pdf",
+      "2- Nervios de Soldadura/3206/4- Metrologia/Customer/3206-00_intern.05.pdf"
+    ]
+  },
+  "3214": {
+    "cavidades": "Declaraciones comprobadas en originales: `3214 / 4 / Injection` en `2- Nervios de Soldadura/3214/4- Metrologia/Customer/3214-00_int.02_customer.xls!INTRO!C40`. Son declaraciones del informe; las discordancias se conservan y no se resuelven por mayoría.",
+    "evidencia_cavidades": [
+      {
+        "ruta": "2- Nervios de Soldadura/3214/4- Metrologia/Customer/3214-00_int.02_customer.xls",
+        "localizador": "INTRO!C40",
+        "valor": "3214 / 4 / Injection"
+      }
+    ],
+    "condiciones": "Separar referencias R-2971/R-2718 y revisiones de plano; el número de columnas no cambia la declaración de cuatro cavidades de INTRO. No hay evidencia suficiente para imponer humedad o temperatura común a todos los informes.",
+    "rutas_sensibles": [
+      "2- Nervios de Soldadura/3214/2- Moldflow/README.txt",
+      "2- Nervios de Soldadura/3214/4- Metrologia/Interns/3214-00_MSA.xlsm",
+      "2- Nervios de Soldadura/3214/4- Metrologia/Interns/3214-00_int.01.xls",
+      "2- Nervios de Soldadura/3214/4- Metrologia/Interns/3214-00_int.02.xls",
+      "2- Nervios de Soldadura/3214/4- Metrologia/Interns/3214-00_int.03.xls",
+      "2- Nervios de Soldadura/3214/4- Metrologia/Interns/3214-00_int.04.xls"
+    ]
+  },
+  "3233": {
+    "cavidades": "No hay una declaración propia y completa de molde/cavidades en INTRO!C40 entre los libros inventariados. Las columnas de informe no resuelven por sí solas el número físico.",
+    "evidencia_cavidades": [],
+    "condiciones": "Conservar códigos alfanuméricos A/B como soporte fuera del lector numérico actual; no convertir B3 en N3. Distinguir 100%, 100% (CUSTOMER) y 100% BOSCH PORTAL. Exports SupplyOn pueden usar mm o grados.",
+    "rutas_sensibles": [
+      "3- Paredes muy Delgadas/3233/4- Metrologia/Customer/3233-00_intern.01.pdf",
+      "3- Paredes muy Delgadas/3233/4- Metrologia/Customer/3233-00_intern.01.xls",
+      "3- Paredes muy Delgadas/3233/4- Metrologia/Customer/3233-00_intern.02_customer.pdf",
+      "3- Paredes muy Delgadas/3233/4- Metrologia/Customer/3233-00_intern.07_NEW CMM PROGRAM_81A.pdf",
+      "3- Paredes muy Delgadas/3233/4- Metrologia/Customer/3233-00_intern.07_NEW CMM PROGRAM_81A.xls",
+      "3- Paredes muy Delgadas/3233/4- Metrologia/Customer/3233-00_intern.10_customer.pdf"
+    ]
+  },
+  "3237": {
+    "cavidades": "Declaraciones comprobadas en originales: `3238 / 4 / Injection` en `3- Paredes muy Delgadas/3237/6- Método de medición/3237-00_JIG.01.xls!INTRO!C40`. Son declaraciones del informe; las discordancias se conservan y no se resuelven por mayoría.",
+    "evidencia_cavidades": [
+      {
+        "ruta": "3- Paredes muy Delgadas/3237/6- Método de medición/3237-00_JIG.01.xls",
+        "localizador": "INTRO!C40",
+        "valor": "3238 / 4 / Injection"
+      }
+    ],
+    "condiciones": "Separar pieza 3237 y variante 3237-20. En PPAP_3237_INF_02 la muestra J es entrada y K:N pueden replicar el generador Y:AB; la regla exige estructura, intervalo y redondeo, no solo ausencia de fórmulas.",
+    "rutas_sensibles": [
+      "3- Paredes muy Delgadas/3237/4- Metrologia/Customer/3237-20_intern.01 including CPK.xls",
+      "3- Paredes muy Delgadas/3237/4- Metrologia/Customer/3237-20_intern01_Akromid - N78 cpk.pdf",
+      "3- Paredes muy Delgadas/3237/4- Metrologia/Customer/3237-20_intern01_Akromid.pdf",
+      "3- Paredes muy Delgadas/3237/4- Metrologia/Customer/PPAP_3237-20_INF_03.xlsm",
+      "3- Paredes muy Delgadas/3237/4- Metrologia/Customer/PPAP_3237_INF_02.xlsm",
+      "3- Paredes muy Delgadas/3237/4- Metrologia/Customer/Support Int_02/PPAP_3237_INF_02_SPC.xlsm"
+    ]
+  },
+  "3238": {
+    "cavidades": "Declaraciones comprobadas en originales: `3238 / 4 / Injection` en `3- Paredes muy Delgadas/3238/4- Metrologia/Customers/V00/3238-00_intern.03-a.xls!INTRO!C40`. Son declaraciones del informe; las discordancias se conservan y no se resuelven por mayoría.",
+    "evidencia_cavidades": [
+      {
+        "ruta": "3- Paredes muy Delgadas/3238/4- Metrologia/Customers/V00/3238-00_intern.03-a.xls",
+        "localizador": "INTRO!C40",
+        "valor": "3238 / 4 / Injection"
+      }
+    ],
+    "condiciones": "No fusionar resultados CMM/CT o antes/después de humidificar. El plan del 26/04/2024 distingue programa CMM y deformación de N169 por humedad (diapositivas 1 y 4). Conservar la versión respecto al plan del 22/04.",
+    "rutas_sensibles": [
+      "3- Paredes muy Delgadas/3238/4- Metrologia/Customers/V00/PPAP_3238_INF_02.xlsm",
+      "3- Paredes muy Delgadas/3238/4- Metrologia/Customers/V20/PPAP_3238-20_INF_02.xlsm",
+      "3- Paredes muy Delgadas/3238/5- Retoques molde/20240410_2nd loop of corrections/20240426-Mold correction_2_P3238.pdf",
+      "3- Paredes muy Delgadas/3238/5- Retoques molde/20240410_2nd loop of corrections/20240426-Mold correction_2_P3238.pptx",
+      "3- Paredes muy Delgadas/3238/5- Retoques molde/20240410_2nd loop of corrections/20240426-Mold correction_2_P3238_commented.pdf",
+      "3- Paredes muy Delgadas/3238/5- Retoques molde/20240410_2nd loop of corrections/20240426-Mold correction_2_P3238_commented20240430.pdf"
+    ]
+  },
+  "3167": {
+    "cavidades": "No hay una declaración propia y completa de molde/cavidades en INTRO!C40 entre los libros inventariados. Las columnas de informe no resuelven por sí solas el número físico.",
+    "evidencia_cavidades": [],
+    "condiciones": "Distinguir los cinco resultados J:N de cada hoja cav_n de las cavidades físicas. Los SPC de Estudis Estadístics reproducen salidas del generador; no son nuevas medidas. Conservar ambas versiones Inf_04 y sus límites.",
+    "rutas_sensibles": [
+      "6- Pockets/3167/4- Metrologia/Customer/PPAP-3167-00_4/Estudis Estadístics/3167-00_SPC_N1220.10_Cav_1.txt",
+      "6- Pockets/3167/4- Metrologia/Customer/PPAP-3167-00_4/Estudis Estadístics/3167-00_SPC_N1220.10_Cav_2.txt",
+      "6- Pockets/3167/4- Metrologia/Customer/PPAP-3167-00_4/Estudis Estadístics/3167-00_SPC_N1220.10_Cav_3.txt",
+      "6- Pockets/3167/4- Metrologia/Customer/PPAP-3167-00_4/Estudis Estadístics/3167-00_SPC_N1220.10_Cav_4.txt",
+      "6- Pockets/3167/4- Metrologia/Customer/PPAP-3167-00_4/Estudis Estadístics/3167-00_SPC_N1220.11_Cav_1.txt",
+      "6- Pockets/3167/4- Metrologia/Customer/PPAP-3167-00_4/Estudis Estadístics/3167-00_SPC_N1220.11_Cav_2.txt"
+    ]
+  },
+  "3288": {
+    "cavidades": "El método MM732880000.pdf, p. 1, declara 16+16; el molde anterior 3247 es 8+8. Véase identidad y evidencias de [3288](../4-tetones/3288.md). No heredar el molde 3247 de las plantillas.",
+    "evidencia_cavidades": [],
+    "condiciones": "Separar base/tapa y molde 3288 de plantillas 3247. El método declara 16+16 cavidades; no interpretar columnas heredadas como molde propio. Los ceros con nominal distinto de cero no son automáticamente mediciones.",
+    "rutas_sensibles": [
+      "4- Tetones/3288/5- Retoques molde/20260429_1 loop of correction/3247-00_intern.01.xls",
+      "4- Tetones/3288/5- Retoques molde/20260429_1 loop of correction/3247-00_intern.02.xls",
+      "4- Tetones/3288/5- Retoques molde/20260429_1 loop of correction/DR_3247_intern1_BASE.pdf",
+      "4- Tetones/3288/5- Retoques molde/20260429_1 loop of correction/DR_3247_intern1_TAPA.pdf",
+      "4- Tetones/3288/5- Retoques molde/20260429_1 loop of correction/DR_3247_intern2_BASE.pdf",
+      "4- Tetones/3288/5- Retoques molde/20260429_1 loop of correction/DR_3247_intern2_TAPA.pdf"
+    ]
+  },
+  "3056": {
+    "cavidades": "Declaraciones comprobadas en originales: `3056 / 5 / Injection` en `6- Pockets/3056/4- Metrologia/Interns/V00/3056-00_intern.1_100%.xls!INTRO!C40`; `3056 / 4 / Injection` en `6- Pockets/3056/4- Metrologia/Interns/V00/3056-00_intern6.xls!INTRO!C40`. Son declaraciones del informe; las discordancias se conservan y no se resuelven por mayoría.",
+    "evidencia_cavidades": [
+      {
+        "ruta": "6- Pockets/3056/4- Metrologia/Interns/V00/3056-00_intern.1_100%.xls",
+        "localizador": "INTRO!C40",
+        "valor": "3056 / 5 / Injection"
+      },
+      {
+        "ruta": "6- Pockets/3056/4- Metrologia/Interns/V00/3056-00_intern6.xls",
+        "localizador": "INTRO!C40",
+        "valor": "3056 / 4 / Injection"
+      }
+    ],
+    "condiciones": "Las cotas de corrección pueden estar únicamente en imágenes. No deducirlas del título. Conservar las versiones V00/V01 y resolver la declaración contradictoria de cavidades antes de mezclar poblaciones.",
+    "rutas_sensibles": [
+      "6- Pockets/3056/2- Moldflow/README.txt",
+      "6- Pockets/3056/4- Metrologia/Interns/V00/3056-00_intern.1_100%.pdf",
+      "6- Pockets/3056/4- Metrologia/Interns/V00/3056-00_intern.1_100%.xls",
+      "6- Pockets/3056/4- Metrologia/Interns/V00/3056-00_intern10.xls",
+      "6- Pockets/3056/4- Metrologia/Interns/V00/3056-00_intern11.xls",
+      "6- Pockets/3056/4- Metrologia/Interns/V00/3056-00_intern2.xls"
+    ]
+  },
+  "3202": {
+    "cavidades": "Declaraciones comprobadas en originales: `3202 / 4 / Injection` en `6- Pockets/3202/4- Metrologia/Customers/PPAP-3202-00_INF.01.xls!INTRO!C40`. Son declaraciones del informe; las discordancias se conservan y no se resuelven por mayoría.",
+    "evidencia_cavidades": [
+      {
+        "ruta": "6- Pockets/3202/4- Metrologia/Customers/PPAP-3202-00_INF.01.xls",
+        "localizador": "INTRO!C40",
+        "valor": "3202 / 4 / Injection"
+      }
+    ],
+    "condiciones": "Mantener método GG/GN, altura y útil; la cota 8 y las no funcionales tienen comentarios del matricero. Distinguir límites de cliente y bloques de previsión. Las copias de intern.03 no son intercambiables.",
+    "rutas_sensibles": [
+      "6- Pockets/3202/4- Metrologia/Customers/3202-00_intern.01_COSTUMER.xls",
+      "6- Pockets/3202/4- Metrologia/Customers/3202-00_intern.03_COSTUMER.xls",
+      "6- Pockets/3202/4- Metrologia/Customers/885253_11250_Summary_20230928_ITP3202.pptx",
+      "6- Pockets/3202/4- Metrologia/Customers/DR 100% 3202-00_intern.01_CO.pdf",
+      "6- Pockets/3202/4- Metrologia/Customers/DR 100% 3202-00_intern.03_CO.pdf",
+      "6- Pockets/3202/4- Metrologia/Customers/DR 3202-00_intern.04.pdf"
+    ]
+  },
+  "3168": {
+    "cavidades": "Declaraciones comprobadas en originales: `3168 / 8 / Injection` en `7- Planitudes/3168/4- Metrologia/Customer/3168-00_6inj vs 12inj.xls!INTRO!C40`. Son declaraciones del informe; las discordancias se conservan y no se resuelven por mayoría.",
+    "evidencia_cavidades": [
+      {
+        "ruta": "7- Planitudes/3168/4- Metrologia/Customer/3168-00_6inj vs 12inj.xls",
+        "localizador": "INTRO!C40",
+        "valor": "3168 / 8 / Injection"
+      }
+    ],
+    "condiciones": "Separar estudios 6inj/12inj: describen puntos de inyección, no número de cavidades. Los SPC de procedencia no demostrada permanecen sin confirmar; el PDF con extensión XLS conserva incidencia explícita.",
+    "rutas_sensibles": [
+      "7- Planitudes/3168/2- Moldflow/README.txt",
+      "7- Planitudes/3168/4- Metrologia/Customer/3168-00_intern.12_customer_6injecton points.xls",
+      "7- Planitudes/3168/4- Metrologia/Customer/3168-00_intern.13.pdf",
+      "7- Planitudes/3168/4- Metrologia/Customer/3168-00_intern.13_6injecton points.xls",
+      "7- Planitudes/3168/4- Metrologia/Customer/3168-00_intern.15_4parts x cavity.pdf",
+      "7- Planitudes/3168/4- Metrologia/Customer/3168-00_intern.15_customer.xls"
+    ]
+  }
+}

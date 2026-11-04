@@ -125,6 +125,9 @@ al regenerar**, conservando el original intacto.
 | I-309 | **El plan del loop 2 del 3174 lleva el plan 1 del 3186 dentro**: `20230512-Mold correction_2_P3174.pptx` (34 diapositivas) solo tiene propias la 1, 2, 3 y 5 (acciones 2.1–2.4); las otras 30 (numeradas 1.3–1.32) tienen el mismo texto que `3186/…/20230421-Mold correction_1_P3186.pptx`, en las mismas posiciones de la 7 a la 34, y citan cotas que solo se miden en 3186/3218 (1300, 1411, 1502…1910). No son acciones del 3174. Como la familia comparte numeración (I-301), las cotas 300–511 existen en ambas y no sirven para atribuirlas. La cadena lo avisa en cada fila. | `perfil_correccion` (texto idéntico) y XML de los dos PPTX | abierta |
 | I-304 | **Fechas de informe imposibles o no fechas**: `1899-12-31` (fecha cero de Excel) y `xx` en informes de 3186, 3195 y 3218; también texto `29.08.2024` en lugar de fecha. | `perfil_ppap.metadatos.report_date` | explicable |
 
+| I-310 | **PPAP Ref. 3281 en informes del 3218:** 184 hojas de 62 libros; ITP 732180000 y número 654695200B coherentes con 3218. Conservar como propia con aviso, no excluir por PPAP solo. | `3218-00_intern.04.xls!DR_100%!C5:C6`, comprobación SQL en hallazgos.jsonl | abierta |
+| I-311 | **El lector de biblioteca tomaba un Nr de otro bloque del 3174:** en el documento 800, `DR_100%!AO12` desplazaba a `A13`; la fila 48 acababa asignada a 206 aunque `A48=215`. Se prioriza la cabecera principal y se limita el contexto a las columnas anteriores a las medidas. Regeneradas `medida_dr` y `cadena_correccion`. | Original `DR_100%!A13, AO12, A48, I48`; 32 valores de la fila 48 ahora bajo cota 215; SQL en hallazgos.jsonl | corregida |
+
 ## 2- Nervios de Soldadura
 
 | Id | Qué | Evidencia | Estado |
@@ -165,3 +168,5 @@ al regenerar**, conservando el original intacto.
 | I-105 | **Fichero de estadística con nombre del 3288 y contenido del 3247**: `3288-00_intern.01-base_1_stadistics.xls` declara *ITP Ref.* 732470000 y *PPAP Ref.* `3247-00_int.01`. | cabecera del libro | abierta |
 | I-106 | **Correspondencia de los tetones entre revisiones**. El método `MM732880000_rev00.pdf`, p.6, sí identifica **DIM. Nº 80** del conjunto BSG-296-00 nivel 2 (26/08/2026): remachado sin sobresalir y sin GAP entre pin y agujero, lupa DG0266. La versión anterior lo describe como item 8 sin número de cota. Falta reconciliarlo con todos los planos de componentes; no equiparar ese 80 con BASE rev1, nominal 14,45. | Ambos métodos y `DR(base)` | abierta |
 | I-107 | **Significado de la columna 29 (comentarios) de los `DR`**: lleva un número (15, 16, 17…) en cada fila. | `3288-00_intern.01.xls!DR(tapa)` | abierta |
+
+| I-108 | **Identidad agregada del 3288 contaminada:** 509131 sale de cinco hojas heredadas del 3247; las propias indican 0. El método p.1 identifica cliente 508008. Se excluyen también campos desplazados. | `MM732880000.pdf` p.1; `3247-00_intern.01.xls!DR(base)/DR(tapa)`; SQL en hallazgos.jsonl | abierta |

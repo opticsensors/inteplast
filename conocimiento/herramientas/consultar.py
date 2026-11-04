@@ -79,10 +79,15 @@ def cmd_buscar(con, args) -> None:
     if args.feature:
         sql += "AND d.feature = ? "
         parametros.append(args.feature)
+    total = con.execute("SELECT count(*) FROM (" + sql + ")", parametros).fetchone()[0]
     sql += "ORDER BY rank LIMIT ?"
     parametros.append(args.n)
     for doc_id, ruta, loc, trozo in con.execute(sql, parametros):
         print(f"[{doc_id}] {ruta} · {loc}\n    {trozo.replace(chr(10), ' / ')}")
+    mostrados = min(total, args.n) if args.n >= 0 else total
+    print(f"{mostrados} de {total} ubicaciones (elementos, no ficheros distintos).")
+    if mostrados < total:
+        print(f"Resultados truncados. Usa --n {total} para mostrar todas las ubicaciones.")
 
 
 def cmd_ver(con, args) -> None:

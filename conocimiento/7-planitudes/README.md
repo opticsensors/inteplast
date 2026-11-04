@@ -52,3 +52,7 @@ exigencia funcional del montaje sobre el paquete de chapas.
 ## Incongruencias
 
 [I-701 a I-703](../incongruencias.md).
+
+## Fichas de ingesta
+
+Contratos cerrados técnicamente, con balances y exclusiones por archivo: [3168](../ingesta/3168.md).

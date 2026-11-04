@@ -53,3 +53,6 @@
 {"id": "C-013", "conjunto": "control", "tipo": "curado", "pregunta": "carpeta del 3168 con una fecha en el futuro", "esperado": ["I-701"]}
 {"id": "C-014", "conjunto": "control", "tipo": "multilingue", "pregunta": "pulir toda la cara de inyección por la planitud", "esperado": ["polish all the injection side"]}
 {"id": "C-015", "conjunto": "control", "tipo": "multilingue", "pregunta": "no corregir en este loop y esperar", "esperado": ["Do not corrected"]}
+{"id": "N-001", "conjunto": "seguridad", "tipo": "negativa", "pregunta": "¿Puedo contar los valores RAND del informe como mediciones reales?", "esperado": ["I-003"]}
+{"id": "N-002", "conjunto": "seguridad", "tipo": "negativa", "pregunta": "Una fórmula sin valor guardado significa que la medición fue cero?", "esperado": ["Una fórmula sin caché conserva ausencia de valor"]}
+{"id": "N-003", "conjunto": "seguridad", "tipo": "negativa", "pregunta": "N1120 del 3197 y N1120 del 3051 son la misma cota?", "esperado": ["H-002"]}

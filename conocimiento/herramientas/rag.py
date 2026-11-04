@@ -1218,8 +1218,8 @@ def exacto_celdas(rutas: Rutas, ref: str, hoja: str | None = None, filas: str | 
 AVISOS_MEDIDAS = [
     "medida_dr es la salida del prototipo heuristico lector_dr, no una copia integra: omite celdas vacias y no "
     "numericas, normaliza codigos de cota (N170 -> 170), ordena tolerancias invertidas y descarta bloques secundarios.",
-    "Solo hojas XLS/XLSX/XLSM con cabecera Nominal: los CSV de la CMM no estan (preferibles cuando coinciden, "
-    "trampas.md); consultarlos con `exacto celdas`.",
+    "medida_dr cubre hojas XLS/XLSX/XLSM. Si estan construidas, se incluyen medida_cmm y medida_contorno "
+    "del 3212, con origen y localizador propios. PA/PB no se atribuyen a un N-number sin evidencia.",
     "Las cotas son locales a cada plano y revision: no unir piezas por el numero.",
     "Clasificacion `indeterminada`: ni el papel de la hoja ni la ausencia en celda_aleatoria certifican que un valor "
     "sea medicion, prevision o copia.",
@@ -1229,6 +1229,7 @@ AVISOS_MEDIDAS = [
 def exacto_medidas(rutas: Rutas, pieza: str | None = None, documento: str | None = None, cota: str | None = None,
                    hoja: str | None = None, cavidad: str | None = None, maximo: int = 200) -> dict:
     from lector_dr import codigo_normal
+    from medidas_consulta import consultar as consultar_derivadas
     if not pieza and not documento:
         raise RagError("Indicar --pieza o --documento: las cotas son locales a cada plano")
     minimo("--max", maximo, 1)
@@ -1258,6 +1259,9 @@ def exacto_medidas(rutas: Rutas, pieza: str | None = None, documento: str | None
             parametros.append(cavidad)
             filtros["cavidad"] = cavidad
         where = " AND ".join(condiciones)
+        derivadas = consultar_derivadas(bib, pieza=pieza, documento=leido["id"] if documento else None,
+                                       cota=cota, hoja=hoja, cavidad=cavidad, maximo=maximo)
+        limite_dr = max(0, maximo - len(derivadas["medidas"]))
         no_vigentes = bib.execute(f"SELECT count(*) FROM medida_dr m JOIN documento d ON d.id = m.documento_id WHERE {where} "
                                   f"AND d.estado NOT IN ({VIGENTES_SQL})", parametros).fetchone()[0]
         where += f" AND d.estado IN ({VIGENTES_SQL})"
@@ -1271,7 +1275,7 @@ def exacto_medidas(rutas: Rutas, pieza: str | None = None, documento: str | None
             "LEFT JOIN lectura_dr l ON l.documento_id = m.documento_id AND l.hoja = m.hoja "
             "LEFT JOIN celda c ON c.documento_id = m.documento_id AND c.hoja = m.hoja AND c.fila = m.fila AND c.col = m.col "
             "LEFT JOIN celda_aleatoria a ON a.documento_id = m.documento_id AND a.hoja = m.hoja AND a.fila = m.fila AND a.col = m.col "
-            f"WHERE {where} ORDER BY d.ruta, m.hoja, m.fila, m.col LIMIT ?", [*parametros, maximo]).fetchall()
+            f"WHERE {where} ORDER BY d.ruta, m.hoja, m.fila, m.col LIMIT ?", [*parametros, limite_dr]).fetchall()
         disponibles, hojas = {}, {}
         medidas = []
         for (doc_id, ruta, ext, h, f, c, cota_n, nominal, sup, inf, equipo, cav, valor, marca, papel, plantilla,
@@ -1307,11 +1311,16 @@ def exacto_medidas(rutas: Rutas, pieza: str | None = None, documento: str | None
         if no_vigentes:
             avisos.insert(0, f"{no_vigentes} filas de documentos pendientes de extraer, con error o eliminados quedan fuera: "
                              "su extraccion no corresponde al fichero actual.")
+        total_dr = total
+        total += derivadas["total"]
+        n_docs += derivadas["documentos"]
+        medidas = derivadas["medidas"] + medidas
         if not total:
             avisos.insert(0, "Sin filas en medida_dr con estos filtros: no prueba que la cota no exista. Puede estar en un CSV "
                              "de la CMM, en una hoja que el lector no reconoce o con otro codigo (`rag.py buscar` / `exacto celdas`).")
         return {"alcance": {"filtros": filtros, "total": total, "documentos": n_docs, "hojas": n_hojas,
                             "devueltas": len(medidas), "truncado": total > len(medidas), "excluidas_no_vigentes": no_vigentes},
+                "por_fuente": {"medida_dr": total_dr, **derivadas["por_fuente"]},
                 "avisos": avisos, "hojas": list(hojas.values()), "medidas": medidas}
 
 

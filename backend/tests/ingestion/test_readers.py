@@ -216,6 +216,8 @@ def test_study_releases_open_workbooks_on_failure(
     from unittest.mock import Mock
 
     book = Mock()
+    book.sheets.return_value = []
+    monkeypatch.setattr(study, "inspect_formulas", lambda _path: None)
     monkeypatch.setattr(study, "load_csv", lambda _root: ({}, []))
     monkeypatch.setattr(
         study.xlrd,

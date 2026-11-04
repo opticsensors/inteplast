@@ -1,5 +1,5 @@
 import { correctionFor, type Evaluation } from "./measurementSelection"
-import type { Action, Entry, Study } from "./types"
+import { type Action, type Entry, type Study, usableMeasurement } from "./types"
 
 export type CorrectionInterval = {
   id: string
@@ -95,7 +95,10 @@ export function intervalValues(
     after,
     comparison,
     measuredChange:
-      numeric(before?.value) && numeric(after?.value)
+      usableMeasurement(before) &&
+      usableMeasurement(after) &&
+      numeric(before?.value) &&
+      numeric(after?.value)
         ? after.value - before.value
         : null,
     // Use the saved XLS baseline, which may differ from the CSV measurement.

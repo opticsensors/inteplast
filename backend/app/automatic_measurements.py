@@ -23,6 +23,8 @@ from app.file_sources import (
     source_item,
     with_metadata,
 )
+from app.ingestion.formula_flags import UnsupportedWorkbook
+from app.ingestion.measurement_provenance import usable_measurement
 from app.ingestion.measurement_tables import (
     cavity_label,
     conditions,
@@ -35,7 +37,7 @@ from app.measurement_models import MeasurementImport
 from app.models import Part
 from app.pilot import is_pilot
 
-READER = "automatic-tables-v1"
+READER = "automatic-tables-v4"
 logger = logging.getLogger(__name__)
 Context = tuple[str, str, str]
 
@@ -71,7 +73,11 @@ def path_context(path: str, part_code: str = "") -> dict[str, str]:
 
 
 def collect(
-    folder: str, items: list[SourceItem], *, pilot: bool = False
+    folder: str,
+    items: list[SourceItem],
+    *,
+    pilot: bool = False,
+    file_issues: dict[str, str] | None = None,
 ) -> dict[Context, list[dict[str, Any]]]:
     sources = []
     revisions: dict[str, set[str]] = defaultdict(set)
@@ -79,7 +85,7 @@ def collect(
     part_code = re.match(r"\d+", PurePosixPath(folder).name)
     for item in sorted(items, key=lambda item: PurePosixPath(item.path)):
         relative = item.relative_to(folder)
-        if item.suffix not in {".csv", ".xls", ".xlsx"} or re.search(
+        if item.suffix not in {".csv", ".xls", ".xlsx", ".xlsm"} or re.search(
             r"retoqu|correction", relative, re.I
         ):
             continue
@@ -98,20 +104,37 @@ def collect(
                 rows = csv_rows(path.read_bytes(), pilot=pilot)
                 revision = context["revision"]
             else:
-                revision, rows = report_rows(workbook(path))
+                revision, rows = report_rows(
+                    workbook(path), part_code=part_code[0] if part_code else ""
+                )
                 revision = context["revision"] or revision
                 if pilot:
                     # The pilot adapter already supplies XLS evaluations and forecasts.
                     rows = []
+        except UnsupportedWorkbook as error:
+            if file_issues is not None:
+                file_issues[relative] = (
+                    f"Pendiente: {error}; conservado como documento, sin medidas tabulares"
+                )
+                continue
+            raise HTTPException(
+                422, f"No se ha podido leer {item.name}: {error}"
+            ) from error
         except ValueError as error:
             if item.suffix == ".csv" and "No se reconoce un CSV CMM" in str(error):
                 # Point clouds have coordinates, not measured drawing characteristics.
                 logger.info("No dimensional table in %s", relative)
                 continue
-            raise HTTPException(422, f"No se ha podido leer {item.name}.") from error
+            raise HTTPException(
+                422, f"No se ha podido leer {item.name}: {error}"
+            ) from error
         if item_changed(item):
             raise HTTPException(
                 409, f"{item.name} ha cambiado durante la lectura. Vuelve a actualizar."
+            )
+        if not rows and not pilot and file_issues is not None:
+            file_issues[relative] = (
+                "Pendiente: no se ha reconocido una tabla dimensional; requiere revisión"
             )
         if revision:
             revisions[context["sample"]].add(revision)
@@ -126,6 +149,7 @@ def collect(
         base_sample = context["sample"] or "archivo-" + digest(relative)[:8]
         for original in rows:
             row = copy.deepcopy(original)
+            row.setdefault("provenance_state", "medicion")
             cavity = row.get("_cavity") or context["cavity"] or "sin-cavidad"
             condition = row.get("_condition") or context["condition"]
             variant = row.get("_variant") or context["variant"]
@@ -147,6 +171,7 @@ def collect(
         for row in rows:
             if (
                 row.get("_report")
+                and usable_measurement(row)
                 and row["tol_inf"] is not None
                 and row["tol_sup"] is not None
             ):
@@ -177,15 +202,26 @@ def collect(
         }
         seen: dict[str, dict[str, Any]] = {}
         for row in rows:
-            if row.get("_report") and set(row["numbers"]) <= csv_numbers:
+            if (
+                row.get("_report")
+                and usable_measurement(row)
+                and set(row["numbers"]) <= csv_numbers
+            ):
                 continue
             if row.get("_wide") and set(row["numbers"]) <= individual_numbers:
                 continue
             previous = seen.get(row["series_id"])
             if previous:
                 if all(
-                    previous[k] == row[k]
-                    for k in ("value", "nominal", "tol_inf", "tol_sup")
+                    previous.get(k) == row.get(k)
+                    for k in (
+                        "value",
+                        "nominal",
+                        "tol_inf",
+                        "tol_sup",
+                        "provenance_state",
+                        "flags",
+                    )
                 ):
                     continue
                 # Retain conflicting/repeated exports as separate series, with provenance.
@@ -208,12 +244,12 @@ def refresh(
     session.exec(select(Part).where(Part.id == part.id).with_for_update()).one()
     folder = part.folder_path or ""
     source_item(folder, directory=True)
-    groups = collect(folder, paths, pilot=is_pilot(part))
+    groups = collect(folder, paths, pilot=is_pilot(part), file_issues=used_files)
     history = measurement_imports.imported(session, part.id)
     active = {(b.revision, b.sample, b.cavity): b for b in history if not b.baseline}
     # Empty snapshots retire observations removed from the current source files.
     for key, batch in active.items():
-        if batch.reader == READER:
+        if batch.reader.startswith("automatic-tables-"):
             groups.setdefault(key, [])
     documents = {}
     known = {

@@ -7,7 +7,15 @@ export type Measurement = {
   source: EvidenceSource
   corrected?: boolean
   original_value?: number
+  original_error?: string | null
+  provenance_state?: "medicion" | "generado" | "sin_confirmar"
+  flags?: string[]
+  warnings?: string[]
+  duplicate_of?: { sheet: string; cell: string }
+  comparison_origin?: { sheet: string; cell: string }
 }
+export const usableMeasurement = (record: Partial<Measurement> | null | undefined) =>
+  Boolean(record && (!record.provenance_state || record.provenance_state === "medicion") && !record.flags?.includes("copia"))
 export type Comparison = {
   label: string
   before: Measurement | null

@@ -122,9 +122,12 @@ def leer_hoja(hoja: str, celdas: dict[tuple[int, int], str | None], aleatorias: 
     f0, etiquetas, cavs, numeros = cabecera
     descartadas = collections.Counter()
     col = {}
-    for fila in (f0 - 1, f0):  # «Nr» y «NOK» a veces estan en la fila de encima
-        for c, v in filas.get(fila, {}).items():
+    inicio_valores = min(cavs or numeros)
+    for fila in (f0, f0 - 1):  # preferir la cabecera principal; arriba puede haber otro bloque
+        for c, v in sorted(filas.get(fila, {}).items()):
             e = etiqueta(v)
+            if e in {"codigo", "nominal", "tol_sup", "tol_inf", "tipo", "unidad", "equipo"} and c >= inicio_valores:
+                continue
             if e and e not in col:
                 col[e] = c
     cliente = bool(re.fullmatch(r"cav_\d+", hoja, re.I)) and not cavs

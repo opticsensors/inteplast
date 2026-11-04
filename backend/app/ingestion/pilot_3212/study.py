@@ -12,6 +12,7 @@ import xlrd
 
 from app.ingestion import cmm, profile_pdf
 from app.ingestion.common import source
+from app.ingestion.formula_flags import inspect_formulas
 from app.ingestion.pilot_3212.actions import extract_action_index, extract_actions
 from app.ingestion.pilot_3212.catalog import load_catalog
 from app.ingestion.pilot_3212.config import CASES, CAVITIES, CORRECTIONS, SAMPLES
@@ -26,8 +27,11 @@ def build_data(root: Path, assets: Path) -> dict[str, Any]:
     with ExitStack() as resources:
         books = {}
         for key, correction in CORRECTIONS.items():
+            audit = inspect_formulas(root / correction["xls"])
             book = xlrd.open_workbook(root / correction["xls"])
             resources.callback(book.release_resources)
+            for sheet in book.sheets():
+                sheet.formula_audit = audit
             books[key] = book
         cases = {}
         for feature, definition in CASES.items():

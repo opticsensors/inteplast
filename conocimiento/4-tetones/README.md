@@ -38,3 +38,7 @@ explícitamente el remachado. Ver [3288.md](3288.md#correcciones).
 | Planos | PDF escaneado sin globos legibles | PDF con globos **y** ficheros `.icp`/`.prf` de infra-CONVERT |
 | Correcciones | 2 planes (2024) | 3 *loops* (2026), misma plantilla PPTX con títulos en catalán |
 | Moldflow | Estudio `.mfr` | `README.txt`: *«No Moldflow information available for this part.»* |
+
+## Fichas de ingesta
+
+Contratos cerrados técnicamente, con balances y exclusiones por archivo: [3288](../ingesta/3288.md), [3167](../ingesta/3167.md).

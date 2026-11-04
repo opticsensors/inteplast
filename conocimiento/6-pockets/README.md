@@ -55,3 +55,7 @@ controlado. Ejemplos:
 
 [I-601 a I-603](../incongruencias.md) y las transversales I-003 (valores generados con `RAND()`), I-001 (el
 `intern.02` del 3202 repite el `.01`) e I-006 (copias del `intern.03` del 3202 con valores distintos).
+
+## Fichas de ingesta
+
+Contratos cerrados técnicamente, con balances y exclusiones por archivo: [3056](../ingesta/3056.md), [3167](../ingesta/3167.md), [3202](../ingesta/3202.md).

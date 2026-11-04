@@ -19,6 +19,15 @@ new Function("module", "exports", result.outputFiles[0].text)(
 )
 const { correctionTimeline, intervalValues } = compiled.exports
 
+test("generated observations cannot become a measured correction delta", () => {
+  const { study, entry, evaluation } = fixture()
+  evaluation.series.records.c13["03"].provenance_state = "generado"
+  const interval = correctionTimeline(study, entry, evaluation)[0]
+  const values = intervalValues(interval, evaluation, "c13")
+  assert.equal(values.measuredChange, null)
+  assert.equal(values.after.value, 10.6)
+})
+
 function fixture() {
   const item = { xls_before: 10, prediction: 10.5, steps: [{ delta: 0.5 }] }
   const study = {

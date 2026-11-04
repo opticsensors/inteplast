@@ -346,6 +346,10 @@ def fuentes_hallazgos(path: Path) -> tuple[list[Fragmento], list[str]]:
                   + (f" · revisado {r['fecha_revision']}" if r.get("fecha_revision") else ""),
                   str(r.get("afirmacion", ""))]
         lineas += [f"Evidencia: {e.get('ruta')} · {e.get('localizador')}" for e in evidencia]
+        if r.get("validacion"):
+            lineas.append(f"Validación: {r['validacion']}; fuente: {r.get('fuente_validacion') or 'pendiente'}")
+            lineas.append("Ámbito: " + json.dumps(r.get("aplica_a"), ensure_ascii=False))
+            lineas.append("Vínculos de cotas y revisión: " + json.dumps(r.get("cotas", []), ensure_ascii=False))
         if r.get("comprobacion"):
             lineas.append(f"Comprobacion SQL registrada: rag.py exacto hallazgo {r['id']} --comprobar")
         contenido = "\n".join(lineas)

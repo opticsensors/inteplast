@@ -60,6 +60,11 @@ cronología muestreo ↔ corrección y la evaluación de la mejora parcial del B
 
 ## Estado de hidratación en OneDrive
 
+**Comprobación del 02/11/2026:** los 4.530 ficheros de Exemples estaban locales
+(0 con atributos de recuperación `0x400000`, `0x40000` o `0x1000`). El STEP se hidrató
+el 15/09/2026. La tabla siguiente conserva la fotografía histórica del 13/08;
+no describe el estado actual. Comprobar atributos antes de abrir cada original.
+
 > 🔴 **Es volátil: cambió entre el 2026-08-11 y el 2026-08-13.** OneDrive libera espacio por su
 > cuenta, así que **esta tabla es una foto, no una garantía**. Comprobar el atributo siempre.
 
@@ -75,7 +80,7 @@ Re-comprobado el **2026-08-13** con `FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS` (`0x4
 | `7- Moldflow` | 1 | 0 | 1 (el `.mfr` de 184 MB) |
 | `8- STL peça real` | 1 | 0 | 1 (el `.stl` de 236 MB) |
 
-En `4- Metrologia` lo que queda local es **justo lo tabular** —los 9 `.xls`, los 16 CSV de
+En esa fotografía histórica, en `4- Metrologia` lo que quedaba local era **justo lo tabular** —los 9 `.xls`, los 16 CSV de
 cavidad, el `totes.csv` de `intern.01`— más `support intern.01/c13/` entera. Todos los `.igs`,
 casi todos los `.dxf` y `.txt` y 142 de los 144 PDF son placeholders.
 → [4-metrologia.md](4-metrologia.md)

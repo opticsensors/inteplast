@@ -1,0 +1,1261 @@
+{
+  "formato": "inteplast-revision-1",
+  "carga_automatica": false,
+  "resolver_ids_y_revision": true,
+  "incluye_borradores": false,
+  "incluye_revision_documental": true,
+  "FeatureNote": [
+    {
+      "id_origen": "H-001",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Bolt Eye",
+        "piezas": [
+          "3212",
+          "3197"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "0- Bolt Eye/3197 Pot/4- Metrologia/Support_intern.02/140ºC/600bar/3197 C1.csv",
+          "localizador": "linea 19",
+          "sha256": "6f610d6bdadecaa211dae13222690cb27162a87e96bf38e25ec892b0cb58c57a"
+        },
+        {
+          "ruta": "0- Bolt Eye/3197 Pot/4- Metrologia/Support_intern.03/c1-3197.csv",
+          "localizador": "linea 19",
+          "sha256": "53e8a023f176b855146ae6f240e8e02d28600e031f2a2356b96ff27d458b0a69"
+        },
+        {
+          "ruta": "0- Bolt Eye/3197 Pot/5- Retoques de molde/3197-00_intern.02_MOLD_CORRECTION.xls",
+          "localizador": "Contexto complementario: DR_8cav.!48",
+          "sha256": "9bd2b67ba92d6dcfb8343f982bb5b609c9036e56f83a4d819558eaeaa95908d7"
+        },
+        {
+          "ruta": "0- Bolt Eye/3197 Pot/5- Retoques de molde/20231031-Mold correction_1_P3197.pptx",
+          "localizador": "Contexto complementario: diapositiva 14",
+          "sha256": "1d66754ca999c4a7c2e83177279084719f2f6da84885e464c9d520c79e4f6bf7"
+        },
+        {
+          "ruta": "0- Bolt Eye/3212 Pump Housing/4- Metrologia/support intern.01/c13/3212_c13.csv",
+          "localizador": "linea 194",
+          "sha256": "350ebe569d26e1662fea2cf6a1806d3b8e232ecf4ff84dafa132a7dafdc6168c"
+        },
+        {
+          "ruta": "0- Bolt Eye/3212 Pump Housing/4- Metrologia/support intern.03/3212c13.csv",
+          "localizador": "linea 194",
+          "sha256": "831ff6ea12ec679151921c53a49db5af1de77948c61c375c926f9a8323a8a27e"
+        }
+      ],
+      "cotas": [
+        {
+          "pieza": "3212",
+          "cota": "N170",
+          "revision": null,
+          "estado": "contexto_documental"
+        },
+        {
+          "pieza": "3197",
+          "cota": "N230",
+          "revision": null,
+          "estado": "contexto_documental"
+        }
+      ],
+      "note": {
+        "kind": "lesson",
+        "title": "Diámetro inicial y evolución del Bolt Eye",
+        "body": "Los originales comparados muestran diámetros de Bolt Eye inicialmente inferiores al objetivo: 3212 N170 GX B1/H1,5/c13 pasa de 3,429 a 3,974 entre .01 y .03; 3197 N230 Hole 1/c1 pasa de 3,784 a 4,073 entre .02 y .03 (objetivo 4,000 +0,100/0). No basta comprobar el GX: en el 3212 .08 hay 26 de 32 LP máximos fuera de tolerancia. La secuencia documental no prueba ejecución ni causalidad exclusiva del retoque."
+      }
+    },
+    {
+      "id_origen": "H-401",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Nervios de Soldadura",
+        "piezas": [
+          "3205",
+          "3206"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "2- Nervios de Soldadura/3205/5- Retoques molde/6th loop of correction (possible-rib inserts)/Archiv/Insert explanation.pptx",
+          "localizador": "diapositiva 2",
+          "sha256": "40cbec30270e63d81ae2a5cf83976d565ef7c31078d8a89a8142d3e825fb36e6"
+        },
+        {
+          "ruta": "2- Nervios de Soldadura/3205/5- Retoques molde/10th loop of correction/20260409_Pla de correció_10.pdf",
+          "localizador": "pagina 1",
+          "sha256": "24ab3d8f1dc3de04036fed8ad6322418c3eb4872afbc29c269a479b32d112d42"
+        }
+      ],
+      "cotas": [],
+      "note": {
+        "kind": "lesson",
+        "title": "Rebabas y rediseño de nervios",
+        "body": "El documento Insert explanation contrapone el nervio actual y un rediseño propuesto. El plan 10 del 3205 todavía pide corregir rebabas fuera de especificación (>0,20 mm) o al límite (>0,17 mm), e identifica nervios corregidos en el loop anterior. Revisar las rebabas por nervio y cavidad después de cada intervención; la propuesta de rediseño no acredita por sí sola su ejecución."
+      }
+    },
+    {
+      "id_origen": "H-404",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Nervios de Soldadura",
+        "piezas": [
+          "3206"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "2- Nervios de Soldadura/3206/5- Retoques molde/20231128_local moldmaker evaluation/Presentation Schroud 4cavs.pptx",
+          "localizador": "diapositiva 1; diapositiva 2",
+          "sha256": "c18daab92f179ff708584180f4bf240dc2ea202fd741669a96640d6ae45eeaee"
+        }
+      ],
+      "cotas": [],
+      "note": {
+        "kind": "lesson",
+        "title": "Evaluación del molde del 3206",
+        "body": "El matricero local atribuye defectos del 3206 al molde: 0,1 mm de descentramiento en el nucleo de expulsion, agujero central 0,03 mm mayor que el pin del lado de inyeccion y electroerosion mal programada (acabado superficial)."
+      }
+    },
+    {
+      "id_origen": "H-702",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Planitudes",
+        "piezas": [
+          "3168"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "7- Planitudes/3168/5- Retoques molde/20230823_Modification/3168_End lamination NOK.pptx",
+          "localizador": "diapositiva 3; diapositiva 4; diapositiva 5; diapositiva 6",
+          "sha256": "7531e72daa7257949f343b971b4b223add5cdb3428d98fe936e1ff40fc7c95f0"
+        }
+      ],
+      "cotas": [],
+      "note": {
+        "kind": "lesson",
+        "title": "Montaje funcional del 3168",
+        "body": "End lamination 3168: Bosch no pudo montar las piezas en el paquete del estator por colision en el frente del diente; tras cortar el frente el montaje era posible; INTEPLAST no ve gran diferencia dimensional y propone comparar por CT y modificar el molde (anadir/quitar acero segun flechas)."
+      }
+    },
+    {
+      "id_origen": "H-305",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Clips",
+        "piezas": [
+          "3218"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "1- Clips en Piezas/Tipo A/3218/5- Retoques molde/20250905 8th correction/20250905-Mold correction_8_P3218.pptx",
+          "localizador": "diapositiva 6",
+          "sha256": "0d2129b33e857f56754166b3cf77abe9737d5b436becdefe37138a70c9286b37"
+        },
+        {
+          "ruta": "1- Clips en Piezas/Tipo A/3218/5- Retoques molde/20260304 12th correction/20260409-Mold correction_12_P3218_v1.pptx",
+          "localizador": "diapositiva 12; diapositiva 13",
+          "sha256": "c3dc406f2f28da0cb12c2fc4d3be4e34638f59840b875bd75d412f0d15858b34"
+        },
+        {
+          "ruta": "1- Clips en Piezas/Tipo A/3218/5- Retoques molde/20260512 13th correction/20260526-Mold correction_13_P3218_rev1.pptx",
+          "localizador": "diapositiva 1; diapositiva 3",
+          "sha256": "3883fb2aa20f1581223005cd5c9c4e63ad19ee1958ddd3fc6715fcf34bd76139"
+        }
+      ],
+      "cotas": [
+        {
+          "pieza": "3218",
+          "cota": "N2210",
+          "revision": null,
+          "estado": "contexto_documental"
+        }
+      ],
+      "note": {
+        "kind": "lesson",
+        "title": "Evolución por cota y versiones del 3218",
+        "body": "El plan 8 del 3218 describe sobrecorrección de la cota 2210 (8.6). El 12.12 propone pines 0,20 mm mayores para reducirlos y desplazar el centro después. Los 12.13/12.14 distinguen movimientos X/Z por cavidad; el 13.1/13.2 vuelve a señalar correcciones equivocadas. Conservar la evaluación (GG/GN/GX), cavidad y acción concreta: una etiqueta de plan no demuestra que todo se haya ejecutado correctamente. Seguir la evolución por cota entre loops, conservar versiones draft/V1/V2/Updated y no elegir por numeración sola: hay 1.1 repetido y el loop 14 utiliza 13.x."
+      }
+    },
+    {
+      "id_origen": "W-3174",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Clips",
+        "piezas": [
+          "3174"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "1- Clips en Piezas/Tipo A/3174/5- Retoques molde/20230314_1ST LOOP OF CORRECTION/20230314-Mold correction_1_P3174.pptx",
+          "sha256": "ed885938ab52725edf473a7c49b6676539c5d4765701289ea52363d4d27d986b",
+          "localizador": "diapositiva 17; diapositiva 5"
+        },
+        {
+          "ruta": "1- Clips en Piezas/Tipo A/3174/5- Retoques molde/20230512_ 2nd LOOP OF CORRECTION/20230512-Mold correction_2_P3174.pptx",
+          "sha256": "d1b1d098adde2161693a9bd001e03f125fd51e8256ccfd3ebd88f3e415e318e5",
+          "localizador": "diapositiva 5"
+        },
+        {
+          "ruta": "1- Clips en Piezas/Tipo A/3174/5- Retoques molde/20240617_6th/3174 korekční plán.pptx",
+          "sha256": "6f1eabeb2607799281d2b1f89cfccc0c092173b90a4e52f1a7c894c06658908f",
+          "localizador": "diapositiva 2"
+        },
+        {
+          "ruta": "1- Clips en Piezas/Tipo A/3174/5- Retoques molde/20250213_8th/20250214-Mold correction_8_3174.pptx",
+          "sha256": "d406edca4da680684f7e0c0593b9acf076397bf17c2cf6cc8f31dfd827c687fc",
+          "localizador": "diapositiva 1; diapositiva 2"
+        },
+        {
+          "ruta": "1- Clips en Piezas/Tipo A/3174/5- Retoques molde/20250409_9th/20250409_mold correction_9_P3174.pptx",
+          "sha256": "79d3069adfdc1db2c46ecf21be7158afd84d5c0fa0571732ad96417ddfd938e6",
+          "localizador": "diapositiva 1"
+        },
+        {
+          "ruta": "1- Clips en Piezas/Tipo A/3174/5- Retoques molde/20260409_10th/20260409_mold correction_10_P3174.pptx",
+          "sha256": "f974f9712ab3450021e64aa564649086c3b7dc26f93b5a186c6d4af56c160ba2",
+          "localizador": "diapositiva 2"
+        }
+      ],
+      "cotas": [
+        {
+          "pieza": "3174",
+          "cota": "N202",
+          "revision": null,
+          "estado": "contexto_documental"
+        },
+        {
+          "pieza": "3174",
+          "cota": "N209",
+          "revision": null,
+          "estado": "contexto_documental"
+        },
+        {
+          "pieza": "3174",
+          "cota": "N210",
+          "revision": null,
+          "estado": "contexto_documental"
+        }
+      ],
+      "note": {
+        "kind": "warning",
+        "title": "Warnings de 3174",
+        "body": "El primer plan del 3174 aplaza correcciones hasta resolver la deformación, incluidas las dimensiones del pin/clip (1.17). Para la ventana, 1.5 propone +0,21 mm y el plan siguiente añade +0,10 mm en la 209. El plan 10 propone venteo de 0,01–0,015 mm bajo la ventana para mejorar el final de llenado evitando rebabas. Son acciones documentadas para esta pieza; las magnitudes no son una regla universal de diseño. Los planes 8 y 9 distinguen cavidad y pin: el 8 propone 0,04–0,14 mm para 202/210; no sustituirlo por una corrección media. El plan 6 cita acero de seguridad; la frase checa del plan 8 sobre la superficie cónica sigue pendiente de traducción competente, por lo que no justifica una regla universal. Antes de validar resultados, comprobar bloques heredados y diapositivas de otra pieza (I-001 e I-309)."
+      }
+    },
+    {
+      "id_origen": "W-3186",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Clips",
+        "piezas": [
+          "3186"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "1- Clips en Piezas/Tipo A/3186/5- Retoques molde/20230421_1st loop of correction/20230421-Mold correction_1_P3186.pptx",
+          "sha256": "dec17beef1026efd3c48e6a239b92d07ef00ceb4c32b0b68880bb1d48fb1a8dd",
+          "localizador": "Contexto complementario: diapositivas 1–34; contexto de la secuencia descrita"
+        },
+        {
+          "ruta": "1- Clips en Piezas/Tipo A/3186/5- Retoques molde/20230621_2nd loop of correction/20230421-Mold correction_1_P3186.pptx",
+          "sha256": "2179f48be5a49cc942af90733b4fc9e6551ddf8512ea07c14120f3f067011b0d",
+          "localizador": "diapositiva 3"
+        },
+        {
+          "ruta": "1- Clips en Piezas/Tipo A/3186/5- Retoques molde/20230915_3rd loop of correction/2023915-Mold correction_3_P3186.pptx",
+          "sha256": "5ecc85877105c019a8b625dc901fdddcad8f652d723129c668196084ca39f7f9",
+          "localizador": "diapositiva 3"
+        },
+        {
+          "ruta": "1- Clips en Piezas/Tipo A/3186/5- Retoques molde/20231020_ 4th loop of correction/20231020_Mold correction_4_P3186.pptx",
+          "sha256": "821bf5cabd9543deb96d3d8c0f8c4363d38e48d8037f867b16309974a6c970db",
+          "localizador": "diapositiva 1"
+        },
+        {
+          "ruta": "1- Clips en Piezas/Tipo A/3186/5- Retoques molde/20240228_6th loop of correction/20240228-Mold correction_6_ITP3186.pptx",
+          "sha256": "3869d3ee058d26920e2b5ee1e1c1a7722c1270a616f9b953d4d960169c5a297c",
+          "localizador": "diapositiva 1"
+        }
+      ],
+      "cotas": [
+        {
+          "pieza": "3186",
+          "cota": "N102",
+          "revision": null,
+          "estado": "contexto_documental"
+        },
+        {
+          "pieza": "3186",
+          "cota": "N103",
+          "revision": null,
+          "estado": "contexto_documental"
+        },
+        {
+          "pieza": "3186",
+          "cota": "N108",
+          "revision": null,
+          "estado": "contexto_documental"
+        },
+        {
+          "pieza": "3186",
+          "cota": "N200",
+          "revision": null,
+          "estado": "contexto_documental"
+        },
+        {
+          "pieza": "3186",
+          "cota": "N202",
+          "revision": null,
+          "estado": "contexto_documental"
+        }
+      ],
+      "note": {
+        "kind": "warning",
+        "title": "Warnings de 3186",
+        "body": "El 3186 toma del 3174 la rugosidad de superficies 102/103 y 108. El plan 4 diferencia la corrección de la 202 por cavidad (0,10 mm en 1–3; 0,15 mm en 4). El plan 6 pide aumentar 0,10 mm la superficie de la 200 por el pushing test, aunque cita una medida actual de 1,95 mm frente a 2±0,1. Comprobar función, método y cavidad, además de la tolerancia dimensional; el plan no acredita la ejecución. Las acciones repetidas de los planes 1 y 2 no prueban que el primer retoque se ejecutara antes de la medición. Conservar fecha de ejecución desconocida y distinguir pieza clipada y sin clipar; no atribuir un cambio dimensional a una intervención sin ese contexto."
+      }
+    },
+    {
+      "id_origen": "L-3195",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Clips",
+        "piezas": [
+          "3195"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "1- Clips en Piezas/Tipo B/3195/5- Retoques molde/N1/20231031-Mold correction_1_P3195_Toolmaker_comments_rev3.pptx",
+          "sha256": "a8c53cdaca2b1ea902533bc1404b8f089782fded84025d6035a5e8e29c6aff03",
+          "localizador": "Contexto complementario: diapositivas 1–41; contexto de la secuencia descrita; diapositiva 16"
+        },
+        {
+          "ruta": "1- Clips en Piezas/Tipo B/3195/5- Retoques molde/N3/20240906-Mold correction_3_P3195_rev1.pptx",
+          "sha256": "c82385ba67c820cb8a03bc5b2262eb14e5c2bfd7327efed68935eb7c36c6708d",
+          "localizador": "diapositiva 1"
+        },
+        {
+          "ruta": "1- Clips en Piezas/Tipo B/3195/5- Retoques molde/N4/20250304-Mold correction_4_P3195.pptx",
+          "sha256": "5904c98d462740a992790bb5e4f4679d85ec8ec26945de745694981fd5dc1956",
+          "localizador": "diapositiva 1"
+        },
+        {
+          "ruta": "1- Clips en Piezas/Tipo B/3195/5- Retoques molde/N5/20251008-Mold correction_5_P3195_rev1.pptx",
+          "sha256": "bda9b7c38992492f41c70450b9de3cfe40682cbef65ee3cf7e56b8b097ae0b97",
+          "localizador": "diapositiva 5"
+        },
+        {
+          "ruta": "1- Clips en Piezas/Tipo B/3195/5- Retoques molde/N6/20251205-Mold correction_6_P3195.pptx",
+          "sha256": "b7af19b9e29c6ca70f255bf8eb298efd7589cfb724f29b66423b27d127892008",
+          "localizador": "diapositiva 3"
+        }
+      ],
+      "cotas": [
+        {
+          "pieza": "3195",
+          "cota": "N2360",
+          "revision": null,
+          "estado": "contexto_documental"
+        },
+        {
+          "pieza": "3195",
+          "cota": "N2660",
+          "revision": null,
+          "estado": "contexto_documental"
+        }
+      ],
+      "note": {
+        "kind": "lesson",
+        "title": "Lección de 3195",
+        "body": "Los planes del 3195 cambian de estrategia: para 2360, el plan 3 pide +0,030 mm por lado y el 4 propone un ángulo de 0,51° y desplazar el centro 0,25 mm. Para 2660, el plan 5 pide reducir 0,025 mm por lado y el siguiente documento aumentar 0,015 mm. Conservar la secuencia, la geometría afectada y los resultados de origen/validación antes de reutilizar una corrección. Estas propuestas no prueban por sí solas ejecución ni causa del resultado. Conservar la rev3 del plan 1 y sus comentarios del cliente: las acciones descartadas no se convierten en trabajo ejecutado. Las correcciones posteriores de la 2360 actúan sobre geometría y zona concreta; no extrapolar un desplazamiento único a toda la pieza."
+      }
+    },
+    {
+      "id_origen": "W-3309",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Clips",
+        "piezas": [
+          "3309"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "1- Clips en Piezas/Tipo B/3309/5- Retoques molde/20260420-Mold correction_1_P3309.pptx",
+          "sha256": "350a1f09d8b90946c34213b4b731a58d13b2d9fc7b169dc53815f9c78b567e99",
+          "localizador": "diapositiva 7; diapositiva 10"
+        },
+        {
+          "ruta": "1- Clips en Piezas/Tipo B/3309/5- Retoques molde/20260420-Mold correction_1_P3309_to TDP_rev02.pptx",
+          "sha256": "c6485ed3c764fa7f12e530ccecd6c8114272717a0b894f8d6711631f4f1a9661",
+          "localizador": "Contexto complementario: diapositivas 1–13; contexto de la secuencia descrita"
+        },
+        {
+          "ruta": "1- Clips en Piezas/Tipo B/3309/5- Retoques molde/20260611-3309-Stopper_mold report.pptx",
+          "sha256": "b85e8a763523bac6068430f5b60c56198d7102183f080071e7307c7cf3ba33a8",
+          "localizador": "Contexto complementario: diapositivas 1–5; contexto de la secuencia descrita"
+        },
+        {
+          "ruta": "1- Clips en Piezas/Tipo B/3309/5- Retoques molde/20260619-Mold correction_2_P3309_to TDP.pptx",
+          "sha256": "6998f0b700b52c8534afcc46c5cd2d36857814b6465c79adebd79cee5f442d8c",
+          "localizador": "diapositiva 3"
+        },
+        {
+          "ruta": "1- Clips en Piezas/Tipo B/3309/5- Retoques molde/20260821-P3309-T3_mold correction.pptx",
+          "sha256": "40a0d987dfe1371303dd49a62d605a0590c57fa320605195a7795a8755f9bd52",
+          "localizador": "diapositiva 1"
+        }
+      ],
+      "cotas": [
+        {
+          "pieza": "3309",
+          "cota": "N5",
+          "revision": null,
+          "estado": "contexto_documental"
+        },
+        {
+          "pieza": "3309",
+          "cota": "N9",
+          "revision": null,
+          "estado": "contexto_documental"
+        },
+        {
+          "pieza": "3309",
+          "cota": "N10",
+          "revision": null,
+          "estado": "contexto_documental"
+        },
+        {
+          "pieza": "3309",
+          "cota": "N11",
+          "revision": null,
+          "estado": "contexto_documental"
+        },
+        {
+          "pieza": "3309",
+          "cota": "N12",
+          "revision": null,
+          "estado": "contexto_documental"
+        },
+        {
+          "pieza": "3309",
+          "cota": "N14",
+          "revision": null,
+          "estado": "contexto_documental"
+        },
+        {
+          "pieza": "3309",
+          "cota": "N15",
+          "revision": null,
+          "estado": "contexto_documental"
+        },
+        {
+          "pieza": "3309",
+          "cota": "N16",
+          "revision": null,
+          "estado": "contexto_documental"
+        },
+        {
+          "pieza": "3309",
+          "cota": "N24",
+          "revision": null,
+          "estado": "contexto_documental"
+        },
+        {
+          "pieza": "3309",
+          "cota": "N26",
+          "revision": null,
+          "estado": "contexto_documental"
+        },
+        {
+          "pieza": "3309",
+          "cota": "N27",
+          "revision": null,
+          "estado": "contexto_documental"
+        }
+      ],
+      "note": {
+        "kind": "warning",
+        "title": "Warnings de 3309",
+        "body": "En el 3309, corregir #9–#12 afecta a #24/#26/#27; #14/#16 afectan a la funcional #15. El plan 1 recomienda esperar a medir #15 con útil antes de modificar. El plan 2 contiene aprobación ITP de pasar de 5° a 10° por lado y aplicar VDI30 para el pegado. El documento T3 registra que mejorar #14/#16 dejó #5 fuera de tolerancia. Revisar cotas acopladas y función; la aprobación histórica de una acción no valida automáticamente su reutilización en otra pieza. Antes de validar una corrección, comprobar bloques repetidos entre informes (I-001) y las dos copias discordantes de Int_03 (I-006); conservar ambos originales."
+      }
+    },
+    {
+      "id_origen": "W-3202",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Pockets",
+        "piezas": [
+          "3202"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "6- Pockets/3202/5- Retoques molde/20230605-Mold correction_1_P3202_FM_comments.pptx",
+          "sha256": "6278ed2ed8e66848065cbffdfa83c86205fc6a0587b796c91986d5295685ce16",
+          "localizador": "diapositiva 6; diapositiva 8; diapositiva 11; diapositiva 1"
+        },
+        {
+          "ruta": "6- Pockets/3202/5- Retoques molde/20230605-Mold correction_1_P3202_rold.pptx",
+          "sha256": "f123544113de78c75269412669d85dfc6d39a355d16e71a256cedbf3e632121c",
+          "localizador": "Contexto complementario: diapositivas 1–13; contexto de la secuencia descrita"
+        },
+        {
+          "ruta": "6- Pockets/3202/5- Retoques molde/20230605-Mold correction_1_P3202_rold_rev1.pptx",
+          "sha256": "6d85b36870bbcc2d35a199125de52251f031b296608d190cd82f82004d63fa21",
+          "localizador": "Contexto complementario: diapositivas 1–13; contexto de la secuencia descrita"
+        }
+      ],
+      "cotas": [
+        {
+          "pieza": "3202",
+          "cota": "N8",
+          "revision": null,
+          "estado": "contexto_documental"
+        },
+        {
+          "pieza": "3202",
+          "cota": "N33",
+          "revision": null,
+          "estado": "contexto_documental"
+        },
+        {
+          "pieza": "3202",
+          "cota": "N44",
+          "revision": null,
+          "estado": "contexto_documental"
+        },
+        {
+          "pieza": "3202",
+          "cota": "N312",
+          "revision": null,
+          "estado": "contexto_documental"
+        }
+      ],
+      "note": {
+        "kind": "warning",
+        "title": "Warnings de 3202",
+        "body": "Los comentarios del plan 1 del 3202 descartan tocar algunas cotas no funcionales (33 y 44) y proponen pedir desviación. Para la cota 8 señalan que la dispersión entre mínimo y máximo impide quedar dentro de tolerancia y que aumentar el tamaño puede impedir el montaje. Acordar función, tolerancia y método antes de trasladar una corrección dimensional; una propuesta anotada no prueba su ejecución. El comentario del matricero propone volver a medir cotas como 312 antes de corregir. El plan también discute el aumento de espesor de pared y su efecto sobre otra cota: no trasladar esa intervención sin acordar tolerancia. Mantener método GG/GN, altura y útil acordados; comprobar I-001 (bloques repetidos) e I-006 (copias distintas) antes de considerar validado el retoque."
+      }
+    }
+  ],
+  "FeatureCharacteristicLink": [
+    {
+      "id_origen": "V-3212",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Bolt Eye",
+        "piezas": [
+          "3212"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "0- Bolt Eye/3212 Pump Housing/1-2D y 3D Pieza/20250523_DRW 0140S00237_07.pdf",
+          "sha256": "9922b3c434257f2dba8726821862036e87610cf2490afb72757f5cdf617b77d1",
+          "localizador": "visual 1"
+        }
+      ],
+      "cotas": [
+        {
+          "pieza": "3212",
+          "cota": "N170",
+          "revision": "07",
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        },
+        {
+          "pieza": "3212",
+          "cota": "N117",
+          "revision": "07",
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        },
+        {
+          "pieza": "3212",
+          "cota": "N178",
+          "revision": "07",
+          "estado": "confirmada_documentalmente",
+          "role": "support"
+        }
+      ],
+      "characteristic_ref": {
+        "pieza": "3212",
+        "cota": "N170",
+        "revision": "07",
+        "estado": "confirmada_documentalmente",
+        "role": "primary"
+      },
+      "link": {
+        "role": "primary"
+      }
+    },
+    {
+      "id_origen": "V-3212",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Bolt Eye",
+        "piezas": [
+          "3212"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "0- Bolt Eye/3212 Pump Housing/1-2D y 3D Pieza/20250523_DRW 0140S00237_07.pdf",
+          "sha256": "9922b3c434257f2dba8726821862036e87610cf2490afb72757f5cdf617b77d1",
+          "localizador": "visual 1"
+        }
+      ],
+      "cotas": [
+        {
+          "pieza": "3212",
+          "cota": "N170",
+          "revision": "07",
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        },
+        {
+          "pieza": "3212",
+          "cota": "N117",
+          "revision": "07",
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        },
+        {
+          "pieza": "3212",
+          "cota": "N178",
+          "revision": "07",
+          "estado": "confirmada_documentalmente",
+          "role": "support"
+        }
+      ],
+      "characteristic_ref": {
+        "pieza": "3212",
+        "cota": "N117",
+        "revision": "07",
+        "estado": "confirmada_documentalmente",
+        "role": "primary"
+      },
+      "link": {
+        "role": "primary"
+      }
+    },
+    {
+      "id_origen": "V-3212",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Bolt Eye",
+        "piezas": [
+          "3212"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "0- Bolt Eye/3212 Pump Housing/1-2D y 3D Pieza/20250523_DRW 0140S00237_07.pdf",
+          "sha256": "9922b3c434257f2dba8726821862036e87610cf2490afb72757f5cdf617b77d1",
+          "localizador": "visual 1"
+        }
+      ],
+      "cotas": [
+        {
+          "pieza": "3212",
+          "cota": "N170",
+          "revision": "07",
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        },
+        {
+          "pieza": "3212",
+          "cota": "N117",
+          "revision": "07",
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        },
+        {
+          "pieza": "3212",
+          "cota": "N178",
+          "revision": "07",
+          "estado": "confirmada_documentalmente",
+          "role": "support"
+        }
+      ],
+      "characteristic_ref": {
+        "pieza": "3212",
+        "cota": "N178",
+        "revision": "07",
+        "estado": "confirmada_documentalmente",
+        "role": "support"
+      },
+      "link": {
+        "role": "support"
+      }
+    },
+    {
+      "id_origen": "V-3197",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Bolt Eye",
+        "piezas": [
+          "3197"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "0- Bolt Eye/3197 Pot/6- Métode de mesura/3 130 516 01B_01_measurement_description_pot.docx",
+          "sha256": "1121e9a155602c55976025b411ab1dbf404e2e070fe07a6075cbd2f0c1f9074b",
+          "localizador": "documento_word texto completo"
+        },
+        {
+          "ruta": "0- Bolt Eye/3197 Pot/4- Metrologia/Support_intern.02/140ºC/600bar/3197 C1.csv",
+          "localizador": "linea 20",
+          "sha256": "6f610d6bdadecaa211dae13222690cb27162a87e96bf38e25ec892b0cb58c57a"
+        }
+      ],
+      "cotas": [
+        {
+          "pieza": "3197",
+          "cota": "N230",
+          "revision": null,
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        },
+        {
+          "pieza": "3197",
+          "cota": "N220",
+          "revision": null,
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        }
+      ],
+      "characteristic_ref": {
+        "pieza": "3197",
+        "cota": "N230",
+        "revision": null,
+        "estado": "confirmada_documentalmente",
+        "role": "primary"
+      },
+      "link": {
+        "role": "primary"
+      }
+    },
+    {
+      "id_origen": "V-3197",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Bolt Eye",
+        "piezas": [
+          "3197"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "0- Bolt Eye/3197 Pot/6- Métode de mesura/3 130 516 01B_01_measurement_description_pot.docx",
+          "sha256": "1121e9a155602c55976025b411ab1dbf404e2e070fe07a6075cbd2f0c1f9074b",
+          "localizador": "documento_word texto completo"
+        },
+        {
+          "ruta": "0- Bolt Eye/3197 Pot/4- Metrologia/Support_intern.02/140ºC/600bar/3197 C1.csv",
+          "localizador": "linea 20",
+          "sha256": "6f610d6bdadecaa211dae13222690cb27162a87e96bf38e25ec892b0cb58c57a"
+        }
+      ],
+      "cotas": [
+        {
+          "pieza": "3197",
+          "cota": "N230",
+          "revision": null,
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        },
+        {
+          "pieza": "3197",
+          "cota": "N220",
+          "revision": null,
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        }
+      ],
+      "characteristic_ref": {
+        "pieza": "3197",
+        "cota": "N220",
+        "revision": null,
+        "estado": "confirmada_documentalmente",
+        "role": "primary"
+      },
+      "link": {
+        "role": "primary"
+      }
+    },
+    {
+      "id_origen": "V-3051",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Bolt Eye",
+        "piezas": [
+          "3051"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "0- Bolt Eye/3051 Pump Housing/6- Métode de mesura/0140Y0038S_01_measuring description.docx",
+          "sha256": "66556d36709fb5f4cfa2c1a6e2ecd50a459f81d3f24ac737e6c0c178602a9cd2",
+          "localizador": "documento_word texto completo"
+        }
+      ],
+      "cotas": [
+        {
+          "pieza": "3051",
+          "cota": "N880",
+          "revision": null,
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        },
+        {
+          "pieza": "3051",
+          "cota": "N890",
+          "revision": null,
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        }
+      ],
+      "characteristic_ref": {
+        "pieza": "3051",
+        "cota": "N880",
+        "revision": null,
+        "estado": "confirmada_documentalmente",
+        "role": "primary"
+      },
+      "link": {
+        "role": "primary"
+      }
+    },
+    {
+      "id_origen": "V-3051",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Bolt Eye",
+        "piezas": [
+          "3051"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "0- Bolt Eye/3051 Pump Housing/6- Métode de mesura/0140Y0038S_01_measuring description.docx",
+          "sha256": "66556d36709fb5f4cfa2c1a6e2ecd50a459f81d3f24ac737e6c0c178602a9cd2",
+          "localizador": "documento_word texto completo"
+        }
+      ],
+      "cotas": [
+        {
+          "pieza": "3051",
+          "cota": "N880",
+          "revision": null,
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        },
+        {
+          "pieza": "3051",
+          "cota": "N890",
+          "revision": null,
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        }
+      ],
+      "characteristic_ref": {
+        "pieza": "3051",
+        "cota": "N890",
+        "revision": null,
+        "estado": "confirmada_documentalmente",
+        "role": "primary"
+      },
+      "link": {
+        "role": "primary"
+      }
+    },
+    {
+      "id_origen": "V-3174",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Clips",
+        "piezas": [
+          "3174"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "1- Clips en Piezas/Tipo A/3174/6- Método de medición/3174_00_MM_rev06.xls",
+          "sha256": "35d678ed04620937270be30cc0c006e7d8f1ffe7e61b7702392a9b92ad90bb31",
+          "localizador": "DIMENSIONS!fila 50"
+        }
+      ],
+      "cotas": [
+        {
+          "pieza": "3174",
+          "cota": "N712",
+          "revision": "método rev06",
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        }
+      ],
+      "characteristic_ref": {
+        "pieza": "3174",
+        "cota": "N712",
+        "revision": "método rev06",
+        "estado": "confirmada_documentalmente",
+        "role": "primary"
+      },
+      "link": {
+        "role": "primary"
+      }
+    },
+    {
+      "id_origen": "V-3218",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Clips",
+        "piezas": [
+          "3218"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "1- Clips en Piezas/Tipo A/3218/6- Método de medición/3218_00_MM_rev01.xls",
+          "sha256": "aa85fdaa390313b12f9b505206af4a2978af0ed0d454bc63fe61ff2095053059",
+          "localizador": "DIMENSIONS!fila 40; DIMENSIONS!fila 42; DIMENSIONS!fila 46"
+        }
+      ],
+      "cotas": [
+        {
+          "pieza": "3218",
+          "cota": "N2612",
+          "revision": "método rev01–04",
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        },
+        {
+          "pieza": "3218",
+          "cota": "N2705",
+          "revision": "método rev01–04",
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        },
+        {
+          "pieza": "3218",
+          "cota": "N2905",
+          "revision": "método rev01–04",
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        }
+      ],
+      "characteristic_ref": {
+        "pieza": "3218",
+        "cota": "N2612",
+        "revision": "método rev01–04",
+        "estado": "confirmada_documentalmente",
+        "role": "primary"
+      },
+      "link": {
+        "role": "primary"
+      }
+    },
+    {
+      "id_origen": "V-3218",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Clips",
+        "piezas": [
+          "3218"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "1- Clips en Piezas/Tipo A/3218/6- Método de medición/3218_00_MM_rev01.xls",
+          "sha256": "aa85fdaa390313b12f9b505206af4a2978af0ed0d454bc63fe61ff2095053059",
+          "localizador": "DIMENSIONS!fila 40; DIMENSIONS!fila 42; DIMENSIONS!fila 46"
+        }
+      ],
+      "cotas": [
+        {
+          "pieza": "3218",
+          "cota": "N2612",
+          "revision": "método rev01–04",
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        },
+        {
+          "pieza": "3218",
+          "cota": "N2705",
+          "revision": "método rev01–04",
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        },
+        {
+          "pieza": "3218",
+          "cota": "N2905",
+          "revision": "método rev01–04",
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        }
+      ],
+      "characteristic_ref": {
+        "pieza": "3218",
+        "cota": "N2705",
+        "revision": "método rev01–04",
+        "estado": "confirmada_documentalmente",
+        "role": "primary"
+      },
+      "link": {
+        "role": "primary"
+      }
+    },
+    {
+      "id_origen": "V-3218",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Clips",
+        "piezas": [
+          "3218"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "1- Clips en Piezas/Tipo A/3218/6- Método de medición/3218_00_MM_rev01.xls",
+          "sha256": "aa85fdaa390313b12f9b505206af4a2978af0ed0d454bc63fe61ff2095053059",
+          "localizador": "DIMENSIONS!fila 40; DIMENSIONS!fila 42; DIMENSIONS!fila 46"
+        }
+      ],
+      "cotas": [
+        {
+          "pieza": "3218",
+          "cota": "N2612",
+          "revision": "método rev01–04",
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        },
+        {
+          "pieza": "3218",
+          "cota": "N2705",
+          "revision": "método rev01–04",
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        },
+        {
+          "pieza": "3218",
+          "cota": "N2905",
+          "revision": "método rev01–04",
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        }
+      ],
+      "characteristic_ref": {
+        "pieza": "3218",
+        "cota": "N2905",
+        "revision": "método rev01–04",
+        "estado": "confirmada_documentalmente",
+        "role": "primary"
+      },
+      "link": {
+        "role": "primary"
+      }
+    },
+    {
+      "id_origen": "V-3288",
+      "aplica_a": {
+        "ambito": "pieza",
+        "feature": "Tetones",
+        "piezas": [
+          "3288"
+        ]
+      },
+      "validacion": "revisado_documentalmente",
+      "fuente_validacion": {
+        "tipo": "contraste_tecnico_documental",
+        "responsable": "Codex",
+        "fecha": "2026-11-02",
+        "herramienta": "verificar_aceptacion.py --lecciones"
+      },
+      "evidencia": [
+        {
+          "ruta": "4- Tetones/3288/6- Método de medición/MM732880000_rev00.pdf",
+          "sha256": "5739ba30789502d3a9c62e0de414681799bd4e48d42733415c806f6d581df6f2",
+          "localizador": "pagina 6"
+        }
+      ],
+      "cotas": [
+        {
+          "pieza": "3288",
+          "cota": "80",
+          "revision": "BSG-296-00 nivel 2",
+          "estado": "confirmada_documentalmente",
+          "role": "primary"
+        }
+      ],
+      "characteristic_ref": {
+        "pieza": "3288",
+        "cota": "80",
+        "revision": "BSG-296-00 nivel 2",
+        "estado": "confirmada_documentalmente",
+        "role": "primary"
+      },
+      "link": {
+        "role": "primary"
+      }
+    }
+  ]
+}

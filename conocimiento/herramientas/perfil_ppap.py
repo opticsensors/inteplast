@@ -21,11 +21,11 @@ from comun import conectar  # noqa: E402
 
 ETIQUETAS = {  # la plantilla existe en ingles y en castellano
     "part_name": r"^(part name|nombre pieza)",
-    "itp_ref": r"^itp ref",
-    "part_no": r"^part n[ºo°]\s*:",
+    "itp_ref": r"^(itp ref|part ref\.? itp)",
+    "part_no": r"^part (?:n[ºo°]\.?|number)\s*:",
     "part_level": r"^part n[ºo°] level",
-    "ppap_ref": r"^ppap ref",
-    "drawing_no": r"^(drawing n[ºo°]|n[ºo°] plano)\s*:",
+    "ppap_ref": r"^ppap(?: ref|[- ]no\.?)",
+    "drawing_no": r"^(drawing (?:n[ºo°]\.?|number)|n[ºo°] plano)\s*:",
     "drawing_level": r"^drawing n[ºo°] level",
     "report_date": r"^(report date|fecha)",
     "batch": r"^(parts? batch|lote)",

@@ -45,6 +45,11 @@ si el resumen responde la pregunta. include_rows solo sirve para detalles de reg
 Expresa los límites como intervalo inferior–superior con su unidad; NO los conviertas a ±
 ni inventes un nominal. series_columns indica el orden de las columnas de series_summaries.
 Conserva separadas las series, unidades y tolerancias. Incluye el total de mediciones.
+Solo provenance_state=medicion sin marca copia admite estadísticas. Las copias no son
+nuevas medidas: informa de duplicate_count y su origen duplicate_of. generado y sin_confirmar conservan
+evidencia, pero no son medidas utilizables: indica siempre excluded_count y sus motivos,
+sin reconstruir sus valores a partir de otros textos. Los cálculos dependientes de RAND
+son sospechosos mientras no se resuelva su procedencia. Advierte cuando haya warnings.
 include_statistics añade mínimos/máximos/medias cuando se pidan; no uses una sola serie
 como si representase todo el estudio. Evita comentarios sobre tus instrucciones internas.
 coverage indica qué listas están incompletas y next_offset permite continuar su lectura.

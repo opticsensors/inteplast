@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sqlite3
 import sys
 from collections import Counter, defaultdict
@@ -20,6 +21,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from comun import BD, CONOCIMIENTO  # noqa: E402
+from perfil_ppap import ETIQUETAS
 
 SALIDA = CONOCIMIENTO / "identidad-piezas.md"
 CAMPOS = (("part_name", "Nombre (cabecera DR)"), ("drawing_no", "Plano"), ("part_no", "Nº pieza cliente"),
@@ -29,14 +31,56 @@ CLIENTES = {"robert bosch": "Robert Bosch", "bosch": "Robert Bosch", "rb": "Robe
             "autoliv": "Autoliv", "toyoda gosei": "Toyoda Gosei", "lina medical": "Lina Medical", "aisin": "Aisin"}
 
 
-def valido(v) -> bool:
-    return v is not None and str(v).strip().casefold() not in INVALIDOS
+def valido(v, campo: str = "") -> bool:
+    texto = str(v or "").strip()
+    if not texto or texto.casefold() in INVALIDOS or texto.startswith("#") or texto.endswith(":"):
+        return False
+    if campo in {"part_no", "itp_ref", "drawing_no"} and re.fullmatch(
+            r"(?:\d{1,2}[/.-]\d{1,2}[/.-]\d{4}|\d{4}-\d{2}-\d{2})(?:T.*)?", texto):
+        return False
+    return True
+
+
+def referencias(meta: dict) -> list[str]:
+    """Codigos explicitos, sin confundir numeros de plano/cliente con proyectos."""
+    refs = []
+    itp = re.sub(r"[.\s]", "", str(meta.get("itp_ref", "")))
+    if re.fullmatch(r"7\d{8}", itp):
+        refs.append(itp[1:5])
+    ppap = re.search(r"(?<!\d)(\d{4})[-_]\d{2}[_-]in[tf]", str(meta.get("ppap_ref", "")), re.I)
+    if ppap:
+        refs.append(ppap[1])
+    return refs
+
+
+def clasificar(codigo: str, meta: dict, firmas: dict[str, set[str]]) -> tuple[str, list[str]]:
+    """Clasificacion conservadora: contradicciones se conservan junto a la procedencia."""
+    avisos = []
+    for campo in ("part_no", "itp_ref", "drawing_no"):
+        value = str(meta.get(campo, "")).strip()
+        if value and not valido(value, campo) and value.casefold() not in INVALIDOS and not value.startswith("#"):
+            return "desplazada", [f"{campo} incompatible: {value}"]
+    refs = referencias(meta)
+    propias = refs.count(codigo)
+    ajenas = [v for v in refs if v != codigo]
+    coinciden = sum(str(meta.get(k, "")).strip() in firmas.get(k, set())
+                   for k in ("part_name", "part_no", "drawing_no"))
+    if len(ajenas) >= 2 and len(set(ajenas)) == 1 and not propias:
+        return "heredada", [f"ITP y PPAP identifican {ajenas[0]}"]
+    if ajenas:
+        avisos.append("referencia de otro codigo: " + ", ".join(ajenas))
+        if propias and coinciden >= 2:
+            return "propia", avisos
+        return "conflicto", avisos
+    if propias or coinciden >= 2:
+        return "propia", avisos
+    return "conflicto", ["identidad insuficiente; requiere comprobacion del original"]
 
 
 def resumen(c: Counter) -> tuple[str, str]:
     """Valor mayoritario (con recuento) y minoritarios."""
     if not c:
-        return "—", ""
+        return "no consta", ""
     (top, n), *resto = c.most_common()
     return f"`{top}` ({n})", "; ".join(f"`{v}` ({k})" for v, k in resto)
 
@@ -44,19 +88,53 @@ def resumen(c: Counter) -> tuple[str, str]:
 def recoger(con: sqlite3.Connection) -> dict:
     piezas: dict = defaultdict(lambda: {"features": set(), "docs": 0, "hojas": 0, "campos": defaultdict(Counter),
                                          "invalidos": Counter(), "cav": Counter(), "clientes": Counter(),
-                                         "clientes_raw": Counter(), "xxx": 0})
+                                         "clientes_raw": Counter(), "xxx": 0, "revision": [], "propias": 0})
     for codigo, feature, n in con.execute("SELECT codigo, feature, count(*) FROM documento WHERE codigo IS NOT NULL "
                                           "AND estado != 'duplicado' GROUP BY 1, 2"):
         piezas[codigo]["features"].add(feature)
         piezas[codigo]["docs"] += n
-    for codigo, meta, cav in con.execute("SELECT d.codigo, p.metadatos, p.cavidades FROM perfil_ppap p "
-                                         "JOIN documento d ON d.id = p.documento_id WHERE d.codigo IS NOT NULL"):
+    hojas = []
+    for codigo, meta, cav, ruta, hoja, doc in con.execute(
+        "SELECT d.codigo, p.metadatos, p.cavidades, d.ruta, p.hoja, d.id FROM perfil_ppap p "
+        "JOIN documento d ON d.id=p.documento_id WHERE d.codigo IS NOT NULL ORDER BY d.ruta,p.hoja"):
+        m = json.loads(meta or "{}")
+        filas = defaultdict(list)
+        for fila, col, valor in con.execute(
+                "SELECT fila,col,valor FROM celda WHERE documento_id=? AND hoja=? AND fila<12 AND valor IS NOT NULL ORDER BY fila,col",
+                (doc, hoja)):
+            filas[fila].append((col, str(valor)))
+        # Re-read only missing header fields with the documented label variants.
+        for items in filas.values():
+            for idx, (_, value) in enumerate(items):
+                for campo, patron in ETIQUETAS.items():
+                    if campo not in m and re.search(patron, value.strip(), re.I):
+                        m[campo] = next((v.strip() for _, v in items[idx + 1:] if v.strip()), "")
+        hojas.append((codigo, m, cav, ruta, hoja))
+    candidatas = defaultdict(lambda: defaultdict(Counter))
+    for codigo, meta, _, _, _ in hojas:
+        refs = referencias(meta)
+        if refs and codigo not in refs:
+            continue
+        if any(not valido(meta[k], k) for k in ("part_name", "drawing_no") if meta.get(k)):
+            continue
+        for campo in ("part_name", "part_no", "drawing_no"):
+            if valido(meta.get(campo), campo):
+                candidatas[codigo][campo][str(meta[campo]).strip()] += 1
+    firmas = {codigo: {campo: {v for v, n in valores.items() if n > sum(valores.values()) / 2}
+                       for campo, valores in campos.items()} for codigo, campos in candidatas.items()}
+    for codigo, m, cav, ruta, hoja in hojas:
         p = piezas[codigo]
         p["hojas"] += 1
-        m = json.loads(meta or "{}")
+        estado, avisos = clasificar(codigo, m, firmas.get(codigo, {}))
+        if estado != "propia" or avisos:
+            p["revision"].append({"ruta": ruta, "hoja": hoja, "estado": estado,
+                                  "avisos": avisos, "metadatos": m})
+        if estado != "propia":
+            continue
+        p["propias"] += 1
         for campo, _ in CAMPOS:
             if campo in m:
-                (p["campos"][campo] if valido(m[campo]) else p["invalidos"])[str(m[campo]).strip()] += 1
+                (p["campos"][campo] if valido(m[campo], campo) else p["invalidos"])[str(m[campo]).strip()] += 1
         p["cav"][len(json.loads(cav or "[]"))] += 1
     for codigo, valor in con.execute(
             "SELECT d.codigo, v.valor FROM celda c JOIN celda v ON v.documento_id = c.documento_id AND v.hoja = c.hoja "
@@ -77,6 +155,8 @@ def markdown(piezas: dict) -> str:
         "# Identidad de las piezas",
         "",
         "> **Generado** por `herramientas/identidad_piezas.py` desde la biblioteca; no editar a mano, regenerar.",
+        "> Valores principales solo de hojas clasificadas como propias por referencias y campos coherentes.",
+        "> Es una clasificacion heuristica revisable: los conflictos y exclusiones conservan su procedencia debajo.",
         "> Recuentos: hojas DR de `perfil_ppap` (cabeceras) y libros con `INTRO!C23` (*Customer Name*). Entre",
         "> paréntesis, cuántas hojas o libros dan ese valor. Los minoritarios suelen ser plantillas heredadas",
         "> ([I-303](incongruencias.md)) o errores de celda; el cliente de INTRO es poco fiable ([I-005](incongruencias.md)):",
@@ -123,7 +203,20 @@ def markdown(piezas: dict) -> str:
                "Revisar antes de usar un campo para identificar la pieza. Un valor de otra pieza en una hoja",
                "(p. ej. `BSG-296-00` o `732470000`, del 3247/3288) indica una plantilla reutilizada sin actualizar.", "",
                *rarezas, ""]
-    return "\n".join(lineas)
+    lineas += ["## Fuentes complementarias revisadas", "",
+               "- **3288 · Nº pieza cliente: 508008**, `4- Tetones/3288/6- Método de medición/MM732880000.pdf`, p. 1.",
+               "  Las cabeceras propias DR contienen 0; esta referencia procede del método, no del agregado DR.", "",
+               "## Conflictos y hojas excluidas", "",
+               "Las hojas propias con aviso participan en el agregado. Heredadas, desplazadas y conflictos sin resolver no.", ""]
+    for codigo in sorted(piezas):
+        p = piezas[codigo]
+        lineas.append(f"### {codigo}: {p['propias']} propias de {p['hojas']} hojas")
+        lineas.append("")
+        for r in p["revision"]:
+            campos = "; ".join(f"{k}={v}" for k, v in r["metadatos"].items() if k in {"itp_ref", "ppap_ref", "part_no"})
+            lineas.append(f"- `{r['ruta']}!{r['hoja']}`: **{r['estado']}**. {'; '.join(r['avisos'])}. {campos}")
+        lineas.append("")
+    return "\n".join(linea.rstrip() for linea in lineas).rstrip() + "\n"
 
 
 def main() -> None:

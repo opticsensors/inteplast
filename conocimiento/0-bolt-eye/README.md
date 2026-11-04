@@ -24,13 +24,7 @@ Contexto anterior (inventario del 2026-08-07): [otros-proyectos.md](otros-proyec
 | Previsión XLS | +0,5 → 3,929 / 3,977 | +0,28 → 4,050–4,064 | — |
 | Después | GX 3,97–3,98 dentro, LP máx. fuera | 4,068–4,073 dentro (`intern.03`) | — |
 
-🔑 **Lección del feature con dos casos**: en las dos piezas el agujero Ø4 del bolt eye salió
-**pequeño en los primeros registros comparados** y aumentó tras el plan de corrección. En el
-3197, para Hole 1 de C1–C8, el resultado superó la previsión entre +0,007 y +0,018 mm; en el
-3212 la evaluación LP siguió fuera. La secuencia no acredita por sí sola la ejecución de cada acción. Fuentes:
-`3197 Pot/4- Metrologia/Support_intern.02/…/3197 C*.csv` (línea 18-19),
-`Support_intern.03/c*-3197.csv`, `5- Retoques de molde/3197-00_intern.02_MOLD_CORRECTION.xls!DR_8cav.` fila 48,
-`20231031-Mold correction_1_P3197.pptx` diapositiva 14.
+Lección candidata: **H-001** en [hallazgos.jsonl](../hallazgos.jsonl), fuente editable única.
 
 ⚠️ **Los N-numbers solo valen dentro de su plano**: `N1120` es *Profilform 0,2 at Hole 1* en el
 3197 y *ø19,6 ± 0,1* en el 3051 (`3051_Cloud_of_Points.xlsm!D19_6_N1120`). Nunca unir cotas de
@@ -51,3 +45,7 @@ piezas distintas por compartir número.
 | Método de medida | DOCX (identifica a X. Arcos en el bloque de aceptación; firma no acreditada) | DOCX `3 130 516 01B_01_measurement_description_pot.docx` | DOCX `0140Y0038S_01_measuring description.docx` | — |
 | Moldflow | `.mfr` | `.mfr` | `.mfr` | — |
 | STL de pieza real | ✅ | ❌ | ✅ | — |
+
+## Fichas de ingesta
+
+Contratos cerrados técnicamente, con balances y exclusiones por archivo: [2820](../ingesta/2820.md), [3051](../ingesta/3051.md), [3197](../ingesta/3197.md), [3212](../ingesta/3212.md).

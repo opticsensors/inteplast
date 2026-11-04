@@ -1,5 +1,8 @@
 # Próximos pasos
 
+La implementación de protecciones y criterios de aceptación para todas las piezas se sigue en
+[Plan de ingesta del 02/11/2026](plan-ingesta-2026-11-02.md), con verificaciones y contratos técnicos cerrados para las 21 piezas.
+
 > Estado documental al **26/10/2026**, contrastado con el código. Este es el índice de
 > pendientes; el contrato y las limitaciones de cada tema viven en el documento enlazado.
 > Las pruebas de una fecha anterior no se presentan como validaciones de esta revisión.
@@ -79,13 +82,9 @@ Eduard fija estos tres frentes como los siguientes:
 <a id="1-correcciones-de-otras-piezas-en-espera-de-ejemplos"></a>
 ## 1. Ingesta de otras piezas: validar casos y resultados
 
-**Ejemplos recibidos e inventariados.** Seleccionar una segunda pieza y preparar resultados
-esperados revisados antes de ampliar el lector de correcciones. Ya hay lectura genérica
-de mediciones; las correcciones XLS/PPTX siguen limitadas al piloto.
+**Ejemplos recibidos y contrastados.** Las 21 piezas tienen [balance por fichero y hoja](../conocimiento/ingesta/README.md), y el piloto de ficha 3167 está validado técnicamente. Usar estos contratos al ampliar el lector; las correcciones XLS/PPTX de la aplicación siguen limitadas al piloto 3212.
 
-También falta trasladar a producción las protecciones de la biblioteca de conocimiento:
-fórmulas aleatorias y sin caché, archivos cuyo contenido no coincide con su extensión y
-variantes de las hojas PPAP. La biblioteca y la aplicación tienen lectores independientes.
+Las protecciones de fórmulas aleatorias/sin caché, firma de contenido, variantes PPAP y bloques secundarios ya están en producción local, con exclusión por celda y procedencia visible. La biblioteca y la aplicación mantienen lectores independientes. Las lecciones están contrastadas documentalmente y preparadas para revisión corporativa; no se han cargado en la app.
 
 Detalle y criterios para avanzar: [hoja de ruta](hoja-de-ruta.md#pendiente-generalizar-la-importación-de-correcciones-pptx),
 [contrato actual](cotas-y-evidencia-web.md) y [propuesta de ingesta](ingesta-automatica.md).

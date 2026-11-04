@@ -1,5 +1,7 @@
 # Conocimiento de los datos de Exemples
 
+> Revisión P1–P9: correcciones contrastadas con 53 casos contra el backend y auditoría de los 4.530 originales. Resultados y alcance en `conocimiento/ingesta/revision-P1-P9.json`.
+
 Todo lo que sabemos de los datos que entrega INTEPLAST (`Exemples`): qué contienen, cómo se
 organizan, qué significan, qué diferencias hay entre features y piezas, y qué no cuadra.
 **No es parte de la aplicación**: es el contexto para entender los datos y mejorar la app.
@@ -19,6 +21,14 @@ La documentación de la app sigue en `docs/`.
 
 Las fichas temáticas recogen el conocimiento vigente. `AVANCE.md` y las revisiones fechadas
 son historial de trabajo: no usar una cifra antigua de cobertura como si fuera el estado actual.
+
+## Contratos y conocimiento estructurado (02/11/2026)
+
+- [Contratos de ingesta de las 21 piezas](ingesta/README.md), [plantilla](plantilla-ficha-ingesta.md) y [casos de referencia](casos-referencia.jsonl). Cierre técnico con balance de los 4.530 archivos, exclusiones explícitas y piloto 3167 contrastado en originales.
+- Warnings/lecciones/mapa de cotas: fuente única `hallazgos.jsonl`. `python conocimiento/herramientas/conocimiento_feature.py --feature Clips` devuelve candidatos con evidencia y validación.
+- [Exportación preparada](ingesta/lecciones-para-app.json): `conocimiento_feature.py --exportar --revisados`. Las 10 notas y 6 grupos de vínculos están revisados documentalmente con 49 comprobaciones. Sin ese flag solo exporta validaciones corporativas de INTEPLAST con fuente. No carga la app ni resuelve UUID/revisiones automáticamente.
+- Reproducir el cierre: `auditar_ingesta.py` → `cerrar_fichas.py` → `verificar_aceptacion.py`; `validar_piloto.py` contrasta los SPC y las copias Inf_04 del 3167. `fichas_ingesta.py --crear` solo prepara fichas nuevas, no sobrescribe contratos revisados.
+- Derivadas independientes: `medidas_cmm.py` publica CMM y PA/PB del 3212; `--comprobar` lee originales sin escribir. `exacto medidas` incluye estas fuentes y muestra sus totales y truncado.
 
 ## Referencias por tema
 
@@ -62,6 +72,26 @@ segunda explicación en prosa.
 | `.venv/` | Entorno de las herramientas (`--system-site-packages`) | ❌ |
 
 ## Cómo se consulta (lo primero antes de abrir originales)
+
+| Pregunta | Herramienta |
+|---|---|
+| Hecho ya documentado | Ficha y búsqueda con `rg` |
+| «¿Dónde aparece X?» | `consultar.py buscar`, FTS con variantes controladas y total de resultados |
+| Contexto de «qué pasó» o «por qué» | RAG con evidencia; una secuencia no demuestra causalidad |
+| Cifras concretas | `rag.py exacto`, verificando procedencia, revisión y alcance |
+| Recuentos | SQL con unidad explícita: ficheros, hojas, elementos o valores |
+
+`consultar.py buscar` devuelve 30 ubicaciones por defecto e indica el total y el
+truncado. Usar `--n TOTAL` para verlas todas; `--feature` limita el ámbito. El glosario
+se aplica en `rag.py buscar`, no en `consultar.py`: en este último escribir, por ejemplo,
+`venting* OR vent OR vents OR ventilaci*`. El RAG devuelve un top-k, no un inventario.
+
+`fts5vocab.doc` cuenta elementos del índice, no ficheros de `documento`.
+Para ficheros distintos contar `DISTINCT documento_id`. Las copias con estado
+`duplicado` remiten a `duplicado_de` y no tienen elementos propios: si se necesitan
+todas las rutas, expandir esa relación. El RAG agrupa textos idénticos y los muestra
+en `otras_apariciones`; revisar también ese campo. Agrupar consultas reduce arranques;
+no atribuir diferencias de tiempo al shell sin una comparación controlada.
 
 ```bash
 PY=conocimiento/.venv/Scripts/python.exe
@@ -129,6 +159,7 @@ $PY conocimiento/herramientas/formulas_aleatorias.py   # abre con Excel los xls 
 $PY conocimiento/herramientas/verificar.py --n 10       # muestra al azar contra los originales
 $PY conocimiento/herramientas/lector_dr.py              # medidas PPAP con reglas deterministas
 $PY conocimiento/herramientas/cadena_correcciones.py    # después de perfil_correcciones y lector_dr
+$PY conocimiento/herramientas/medidas_cmm.py             # derivadas CMM/PA-PB del 3212
 $PY conocimiento/herramientas/rag.py construir          # índice RAG al final
 ```
 

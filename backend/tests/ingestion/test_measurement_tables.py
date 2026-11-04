@@ -15,6 +15,36 @@ def walked(root: Path, paths: list[Path]) -> tuple[str, list[SourceItem]]:
     ]
 
 
+@pytest.mark.parametrize("unsupported", [True, False])
+def test_unsupported_book_is_a_file_issue_but_programming_errors_are_not(
+    tmp_path, monkeypatch, unsupported
+):
+    from fastapi import HTTPException
+
+    from app.ingestion.formula_flags import UnsupportedWorkbook
+
+    path = tmp_path / "example.xls"
+    path.write_bytes(b"synthetic")
+
+    def fail(_):
+        raise (
+            UnsupportedWorkbook("BIFF5 no soportado")
+            if unsupported
+            else ValueError("unexpected defect")
+        )
+
+    monkeypatch.setattr("app.automatic_measurements.workbook", fail)
+    folder, items = walked(tmp_path, [path])
+    issues = {}
+    if unsupported:
+        assert collect(folder, items, file_issues=issues) == {}
+        assert "BIFF5" in issues["example.xls"]
+    else:
+        with pytest.raises(HTTPException, match="unexpected defect"):
+            collect(folder, items, file_issues=issues)
+        assert not issues
+
+
 @pytest.mark.parametrize("prefix", [";;;;;", ";;;;;;"])
 def test_comparative_csv_reads_each_cavity_without_using_a_measurement_as_tolerance(
     prefix,
@@ -90,7 +120,17 @@ def report():
 def test_ppap_uses_header_columns_and_measured_cells_only():
     revision, rows = report_rows([("DR_PAR", report()), ("DR(100%)", report())])
     assert revision == "REV-ABC"
-    assert [r["value"] for r in rows] == [29.033, 29.04, 29.08, 0, 8.2]
+    imposed = [r for r in rows if "valor_impuesto" in r["flags"]]
+    assert len(imposed) == 8
+    assert all(r["provenance_state"] == "sin_confirmar" for r in imposed)
+    assert [r["value"] for r in rows if r not in imposed] == [
+        29.033,
+        29.04,
+        29.08,
+        0,
+        8.2,
+    ] * 2
+    assert {r["_sheet"] for r in rows} == {"DR_PAR", "DR(100%)"}
     assert rows[2]["_condition"] == "140c.600bar"
     assert rows[0]["_cell"] == "H4"
     assert rows[3]["numbers"] == ["N740.3"]

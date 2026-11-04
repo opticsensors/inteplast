@@ -48,7 +48,7 @@ Flujo recomendado para un agente: `buscar --json` → citar `ruta` + `localizado
 | `datos/rag/registro.jsonl` | Una línea por construcción: parámetros, resultado, error, duración |
 
 Sin dependencias nuevas: `sqlite3`, `urllib` y `numpy` (del Python del sistema, visible desde
-`conocimiento/.venv` por `--system-site-packages`). El volumen (≈9.300 vectores de 768 dimensiones,
+`conocimiento/.venv` por `--system-site-packages`). El volumen (del orden de 10.000 vectores de 768 dimensiones; consultar `estado` para el recuento actual,
 unos 29 MB en float32) no justifica una base vectorial: el coseno se calcula con NumPy sobre los
 vectores normalizados que pasan los filtros.
 
@@ -240,7 +240,7 @@ cuenta en `alcance.excluidas_no_vigentes`.
   marca (`aleatoria`, `cero`, `atipico`) y una clasificación: `generada_rand` si la celda tiene RAND,
   si no `indeterminada` con su motivo (papel de la hoja, cero, atípico). Ni `con_correccion` ni la
   ausencia en `celda_aleatoria` certifican medición, previsión o copia. Exige `--pieza` o `--documento`.
-  No incluye los CSV de la CMM: para ellos, `exacto celdas`. `alcance` da filtros, total, documentos,
+  Desde el 02/11 incluye `medida_cmm` (3.376 evaluaciones) y `medida_contorno` (144 perfiles) del 3212 si están construidas; `por_fuente` distingue los totales. PA/PB no se asignan a un N-number sin evidencia. `alcance` da filtros, total, documentos,
   hojas y si se truncó; sin filas, avisa de que eso no prueba que la cota no exista.
 - `exacto celdas` distingue `sin_valor_guardado` (fórmula sin caché), `cero` y celda no listada
   (vacía o no extraída); marca las RAND y si el texto de las fórmulas está disponible (no en XLS BIFF).
@@ -335,7 +335,7 @@ resultado a `datos/rag/evaluacion.jsonl`.
 conocimiento/.venv/Scripts/python.exe -B -m unittest discover -s conocimiento/herramientas -p "test_*.py"
 ```
 
-`test_rag.py` (23 pruebas) crea en un directorio temporal fichas, hallazgos, `docs/` y una biblioteca
+`test_rag.py` (26 pruebas; además 22 de lectores y 12 de revisión, 60 en total al 02/11/2026) crea en un directorio temporal fichas, hallazgos, `docs/` y una biblioteca
 con `esquema.sql`, y usa embeddings simulados (bolsa de palabras con hash estable). Comprueba:
 segmentación y localizadores, cabeceras de tabla repetidas, `#` en código, tachados, vigencia y estado
 de `docs/`; procedencia de la biblioteca, duplicados, tarjetas CAD/hoja/libro, revisión e inventario;
@@ -366,6 +366,68 @@ subpuntos, aviso de copia de otra pieza y de dos versiones del mismo muestreo, `
 externa del 28/10/2026: series distintas, filas desplazadas, valores contenidos en el bloque anterior pero distintos
 celda a celda (3218 cota 2402), copia que repite el muestreo anterior, valores sin tolerancia, contradicción de orden con
 fechas desconocidas (3167), citas ambiguas resueltas con las medidas (3214 `45,1`) y nominales sin cota (`Dim 7,5+0,1`).
+
+## Evaluación del 02/11/2026
+
+### Cierre de contratos y revisión documental (13:46 UTC)
+
+Índice final: **15.836 apariciones, 14.541 textos y 10.050 textos con vector**,
+sin vectores pendientes. Reconstrucción de 210,1 s, con 196 vectores nuevos.
+`estado --verificar` devuelve frescura `ok`, comprobación completa y cero errores.
+Evaluación registrada el `2026-11-02T13:46:47+00:00`, mismas preguntas, modelo y k=5:
+
+| Conjunto | Preguntas | Recall@1 | Recall@3 | Recall@5 | MRR |
+|---|---:|---:|---:|---:|---:|
+| Control | 15 | 0,667 | 0,867 | 0,867 | 0,756 |
+| Ajuste | 40 | 0,575 | 0,900 | 0,975 | 0,742 |
+| Seguridad | 3 | 0 | 1 | 1 | 0,500 |
+| Total | 58 | 0,569 | 0,897 | 0,948 | 0,733 |
+
+El control recupera 13/15, igual que el 28/10 y uno menos que la primera entrega
+de hoy (14/15). C-015 queda fuera del top 5: la fuente correcta del 3218 aparece
+en el puesto 6, desplazada por fichas e I-305 al combinar las listas léxica y
+semántica; es la primera de la lista semántica. La evidencia sigue en la biblioteca.
+C-001 conserva el falso negativo literal descrito debajo y R-035 sigue fuera.
+Las tres preguntas de seguridad recuperan la fuente en el segundo puesto. No se
+retocaron las preguntas históricas ni el ranking para mejorar esta puntuación.
+
+### Primera entrega (12:32 UTC; registro histórico)
+
+Índice reconstruido tras las correcciones: 15.811 apariciones, 14.516 textos y 10.025
+textos con vector; ningún texto pendiente de vector. `estado --verificar` informa
+frescura completa `ok`. `planos-globos.md` aparece en la búsqueda de planos y globos.
+La primera reconstrucción tardó 350,7 s (448 vectores nuevos); el ajuste final del
+plan, 19,7 s (5 nuevos). Son tiempos observados, no una garantía de latencia.
+
+Evaluación registrada el `2026-11-02T12:32:12+00:00` en
+`datos/rag/evaluacion.jsonl`, mismo modelo y k=5:
+
+| Conjunto | Preguntas | Recall@1 | Recall@3 | Recall@5 | MRR |
+|---|---:|---:|---:|---:|---:|
+| Control histórico, 28/10 | 15 | 0,733 | 0,867 | 0,867 | 0,789 |
+| Control histórico, 02/11 | 15 | 0,667 | 0,867 | 0,933 | 0,783 |
+| Ajuste, 02/11 | 40 | 0,525 | 0,875 | 0,975 | 0,715 |
+| Seguridad, nuevo | 3 | 0 | 1 | 1 | 0,500 |
+| Total actual | 58 | 0,534 | 0,879 | 0,966 | 0,722 |
+
+El control recupera 14/15 fuentes dentro de los cinco primeros resultados frente
+a 13/15 antes; no mejora toda la ordenación: Recall@1 y MRR bajan ligeramente.
+La coincidencia literal declara fallo en C-001 porque espera `runout difference`,
+aunque H-404 aparece primero y contiene la atribución al matricero del
+descentramiento del núcleo. Se mantiene la expectativa histórica para no alterar
+la comparación. C-012 y C-015 entran ahora; C-013 baja del primer al segundo puesto.
+R-035 sigue sin recuperar la fuente esperada dentro de cinco resultados.
+
+Las tres preguntas nuevas de seguridad recuperan la evidencia en el segundo puesto.
+En la primera ejecución, N-002 y N-003 dieron falsos negativos por expectativas
+literales mal escritas: la evidencia sí estaba presente. Se corrigieron para citar
+la frase real sobre la ausencia de caché y el hallazgo H-002. No se cambió la
+búsqueda ni el conjunto histórico de control. El registro conserva ambas ejecuciones.
+
+Estas preguntas las escribió Codex a partir de las fuentes, no INTEPLAST. El
+evaluador comprueba recuperación por subcadenas; no demuestra que una respuesta
+generada trate correctamente una ausencia, descarte RAND o se abstenga de inventar.
+La política numérica se verifica por separado en los tests de ingesta y asistente.
 
 ## Resultados medidos (2026-10-26)
 
@@ -429,3 +491,11 @@ Casos reales de la revisión, comprobados tras las correcciones:
 
 `biblioteca.sqlite` quedó intacta tras construir y consultar: mismo tamaño (1.243.066.368 B), fecha y
 SHA-256 (`11775936c427…`) que antes de empezar.
+
+## Verificación tras P1–P9 · 03/11/2026
+
+Índice verificado con `estado --verificar`: frescura completa **ok**, **10.091 vectores**, **15.877 apariciones**, cero textos pendientes de vector. Reconstrucción con 185 vectores nuevos y 9.906 reutilizados. La interrupción dejó 464 bytes NUL al final de `registro.jsonl`; se preservó copia y se retiró únicamente esa cola inválida. `quick_check` del índice y caché: ok. La construcción reanudada confirma fuentes/modelo sin cambios.
+
+Evaluación registrada, sin cambiar las preguntas: **55/58** recuperadas en top 5 (0,948); control **13/15 = 0,867**, igual al umbral histórico; seguridad **3/3** en top 3. Fuera de top 5: R-035, C-001 y C-012. No son una prueba de exhaustividad de inventario ni de calidad de una respuesta generada. Para inventarios siguen aplicándose filtros, total y búsqueda literal.
+
+Cierre reproducible: [resultado P1–P9](ingesta/revision-P1-P9.json). Las 53 referencias contrastan también la salida del backend; 4.530 archivos conciliados y piloto 3167 sin errores. Lecciones revisadas documentalmente, pendientes de aprobación de INTEPLAST.

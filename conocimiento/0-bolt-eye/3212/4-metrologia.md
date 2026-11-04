@@ -6,7 +6,10 @@
 Es la carpeta con más valor del proyecto. Contiene **el histórico de medición compartido**:
 9 muestreos entre enero de 2024 y abril de 2025.
 
-> ⚠️ **Hidratación re-verificada el 2026-08-13: 195 de los 239 están EN LA NUBE.**
+> **Estado comprobado el 02/11/2026:** 0 de los 4.530 originales de Exemples con atributos
+> de recuperación de OneDrive. Comprobarlos antes de abrir; el estado sigue siendo volátil.
+>
+> **Historia del 13/08/2026:** 195 de los 239 ficheros estaban en la nube.
 > El *"todos LOCAL"* de la primera inspección **ya no vale** — OneDrive ha liberado espacio.
 > Lo que queda local es justo lo tabular: **los 9 `.xls`**, **los 16 CSV de cavidad**, el
 > `3212_totes.csv` de `intern.01` y la carpeta `support intern.01/c13/` entera. Todos los
@@ -17,9 +20,7 @@ Es la carpeta con más valor del proyecto. Contiene **el histórico de medición
 > los 12 `PUNTS_NOUS.txt` con solo hashearlos (de 33 locales pasó a 44). **Comprobar siempre el
 > atributo `0x400000` antes de abrir algo; no fiarse de ninguna tabla.**
 >
-> 👉 Práctico: **toda la ingesta tabular (XLS + CSV) se puede hacer hoy sin riesgo.** Lo
-> geométrico hay que hidratarlo a propósito — son 1–3 MB por fichero, nada que ver con el STEP
-> de 247 MB de `3- 3D Molde`.
+> Estas observaciones de agosto son históricas; no permiten deducir la disponibilidad de hoy.
 
 Los esquemas exactos de cada formato están en [formatos-parsing.md](../../formatos-parsing.md).
 Aquí se explica **qué hay, cómo está organizado y cómo leerlo**.

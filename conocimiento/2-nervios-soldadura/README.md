@@ -8,7 +8,7 @@
 
 | Pieza | Qué es | Plano / nº pieza | Cavidades / columnas documentadas | Correcciones |
 |---|---|---|---|---|
-| **3205** | SHROUD, WATER PUMP | `213137-10300` (y variante `-B`) | 8 (algunas hojas 2–38 columnas) | 10 loops (09/2023 → 04/2026) |
+| **3205** | SHROUD, WATER PUMP | `213137-10300` (y variante `-B`) | 8 (algunas hojas 2–38 columnas) | Carpetas numeradas hasta el loop 11 (09/2023 → 09/2026); no acredita 11 ejecuciones |
 | **3206** | SHROUD, WATER PUMP | `213137-10280-A` y `-B` | 4 | unas 9 entregas (09/2023 → 07/2025) |
 | **3214** | Bottom pencil part | plano `11206` / `C 11692`; refs. `R-2971`, `R-2718` | 4–8 | 2 planes (10/2023, 11/2023) |
 
@@ -29,17 +29,14 @@ Los informes PPAP lo citan como *«Draft angle of blade groove, and welding ribs
 |---|---|---|
 | 1 | `1st loop of correction/20230915-Mold correction_1_P3205.pptx` | Primer plan (plantilla `Tool correction`) |
 | 2–3 | `2on loop … burrs and diameter 20231012`, `3rd loop of correction burrs` | Rebabas y diámetros; incluye fotos de WhatsApp |
+| 4 | `4rd loop of correction GPF/3205-00_intern.09_Comparation.xls` | Comparativa XLS; cabecera del informe 09/02/2024 |
 | 5 | `5th loop of correction GPF` | Correderas nuevas (`new sliders update GPF`). ⚠️ El PPTX base es el plan **del 3206** (cabecera P3206, mismo texto que el de `3206/20240320_After new sliders correction/`); las versiones `_v1`/`_v2` no nombran pieza ([I-402](../incongruencias.md)) |
 | 6 | `6th loop of correction (possible-rib inserts)` | Mover el director de energía; propuesta de **rediseño del nervio** (`Insert explanation`: *CURRENT / PROPOSED SHROUD RIB DESIGN*) |
 | 7–8 | `7th / 8th loop … (after new inserts on the ribs)` | Tras poner **postizos en los nervios**: altura de nervios y ranuras, diámetros +0,1…+0,3, rebabas en nervios por cavidad |
 | 9–10 | `9th`, `10th loop of correction` | *«Correcció 10.1 Burrs on the ribs / CAVITY 2: NERVI 1, 7, 9»*… |
+| 11 | `11th venting inserts correction/260918 3205-00_intern.27 (003) venting inserts.xls` | El nombre contiene `260918`; `SKETCH!Q8` fecha 07/09/2026 y `C6` identifica int.26. Conservar las referencias sin deducir fecha de ejecución |
 
-🔑 **Lección del feature**: las rebabas en los nervios de soldadura se corrigieron loop tras loop
-hasta **cambiar el diseño a nervios postizos** (loops 6–7), y aun así siguieron rebabas en los
-loops 8–10. En el 3206, el matricero local (`20231128_local moldmaker evaluation/Presentation Schroud 4cavs.pptx`)
-atribuye defectos a causas del molde, no del proceso: *«0,1mm runout difference in the ejection core»*,
-*«central hole is around 0,03mm bigger than injection side pin»*, y un acabado peor porque
-*«sparkerosion was not correctly done … mistake in spare erosion program»*.
+Lecciones candidatas: **H-401** y **H-404** en [hallazgos.jsonl](../hallazgos.jsonl), fuente editable única.
 
 ## Formatos y diferencias con el 3212
 
@@ -72,3 +69,7 @@ atribuye defectos a causas del molde, no del proceso: *«0,1mm runout difference
 
 - ~~Errores de lectura en 8 ficheros de retoques~~: resueltos (0 errores en la biblioteca).
 - Cuantificar, cavidad a cavidad, si las rebabas en nervios bajan tras los postizos (fotos y `Rebaves.pptx`).
+
+## Fichas de ingesta
+
+Contratos cerrados técnicamente, con balances y exclusiones por archivo: [3205](../ingesta/3205.md), [3206](../ingesta/3206.md), [3214](../ingesta/3214.md).
