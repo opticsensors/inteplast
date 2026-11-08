@@ -66,3 +66,11 @@ No confundir el orden físico de diapositivas con el número de acción impreso.
 17. **La extensión puede mentir.** La biblioteca reconoce la firma de un PDF con extensión
     XLS. Eso no significa que el importador de la app lo haga.
     [Lectores de conocimiento](README.md#cómo-se-actualiza) y [alcance de la app](../docs/cotas-y-evidencia-web.md#datos-y-alcance).
+18. **Una cota en un muestreo y una cavidad puede tener varios valores, y casi nunca son duplicados.**
+    Pasa en el 35 % de los puntos: otro elemento, otra condición, otra pieza (3288). Ninguna regla general dice
+    cuál vale; si hay que dibujar uno, que se vea cuál y qué otro valor había. [Causas, censo y convenciones](valores-por-punto.md) (I-008).
+19. **El título de una diapositiva no basta como tolerancia, y no todo lo que va en la columna de cota es una cota.** En la
+    tapa del 3288, cinco títulos dicen ±0,03 / ±0,01 donde el plano, los informes y la tabla pegada debajo dicen ±0,3 / ±0,1.
+    En su `intern.03`, los puntos de rebaba 1.1–5 ocupan la columna de cota y «2» y «5» coinciden con cotas reales. Contrastar
+    con el plano y mirar nominal, equipo y título del bloque antes de juntar filas por número.
+    [3288](4-tetones/3288.md#tolerancias-y-rebabas-de-la-tapa) (I-109, I-110).

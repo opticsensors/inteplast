@@ -32,6 +32,8 @@ individuales CMM y 12 comparativas; Pockets contiene 1 CMM y 4 `#P#`. Los `#P#` 
 - **Plan de corrección PPTX** con la estructura del 3212 (título con nº de plan y fecha, `Longitud 70mm`,
   *situación actual* → *plan* con zona en rojo) en casi todas las piezas.
 - **Informes que heredan bloques de informes anteriores** (I-001): 3212, 3288, 3051.
+- **Varios valores para una misma cota, muestreo y cavidad** en las 19 piezas con medidas leídas (I-008):
+  [causas y censo por pieza](valores-por-punto.md).
 - Nombres inconsistentes, copias (`Copia de …`, `- copia`, `_rev1_`), versiones múltiples y ficheros de otras piezas.
 - Multilingüe: castellano, catalán, inglés, alemán y checo.
 

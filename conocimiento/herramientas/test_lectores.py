@@ -290,6 +290,129 @@ class LectoresTest(unittest.TestCase):
         self.assertTrue(any("intern.02 = intern.01" in a for a in avisos), avisos)
         self.assertTrue(any("RAND" in a for a in avisos), avisos)
 
+    def medidas_en_hoja(self, con, doc, hoja, filas, fecha=None):
+        """Medidas en una hoja con nombre propio. filas: (cota, fila, celdas, nominal, tol_sup, tol_inf)."""
+        con.execute("INSERT INTO lectura_dr(documento_id, hoja, papel, columnas) VALUES (?, ?, 'informe', ?)",
+                    (doc, hoja, json.dumps({"codigo": 1, "tipo": 3, "nominal": 4})))
+        if fecha:
+            con.execute("INSERT INTO perfil_ppap VALUES (?, ?, ?)", (doc, hoja, json.dumps({"report_date": fecha})))
+        for cota, fila, celdas, nominal, sup, inf in filas:
+            for col, (cavidad, valor, marca) in enumerate(celdas, 8):
+                con.execute("INSERT INTO medida_dr VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'CMM', ?, ?, ?)",
+                            (doc, hoja, fila, col, cota, nominal, sup, inf, cavidad, valor, marca))
+
+    def cadena_de(self, con, doc):
+        return con.execute("SELECT origen_muestreo, origen_n, origen_fuera, validacion_muestreo, validacion_n, validacion_fuera, "
+                           "validacion_estado, avisos FROM cadena_correccion WHERE documento_id = ?", (doc,)).fetchone()
+
+    def test_cadena_no_mezcla_las_piezas_de_un_libro(self):
+        """3288 cota 58: el plan de BASE contaba los valores fuera de la tapa (30/60, y la base tiene 0/20)."""
+        base = "4- Tetones/3288/"
+        docs = [(1, base + "5- Retoques molde/20260110_Mold correction_1_P3288_BASE.pptx", "retoques", "pptx"),
+                (2, base + "5- Retoques molde/20260110_Mold correction_1_P3288_TAPA.pptx", "retoques", "pptx"),
+                (11, base + "4- Metrologia/3288-00_intern.01.xls", "metrologia", "xls"),
+                (12, base + "4- Metrologia/3288-00_intern.02.xls", "metrologia", "xls")]
+        con = self.bd_cadena("3288", docs, [(1, "Correccio nr. 1.1 (DIM. Nr. 58) 10/01/2026", ["58"]),
+                                            (2, "Correccio nr. 1.1 (DIM. Nr. 58) 10/01/2026", ["58"])], {})
+        tol_base, tol_tapa = (3.15, .1, -.1), (2.0, .1, -.1)
+        self.medidas_en_hoja(con, 11, "DR(base)", [("58", 20, self.celdas(3.1, 3.2, 3.1, 3.2), *tol_base)], "2026-01-05")
+        self.medidas_en_hoja(con, 11, "DR(tapa)", [("58", 30, self.celdas(9.1, 9.2, 9.3, 9.4), *tol_tapa)], "2026-01-05")
+        self.medidas_en_hoja(con, 12, "DR(base)", [("58", 20, self.celdas(3.15, 3.16, 3.14, 3.13), *tol_base)], "2026-02-05")
+        self.medidas_en_hoja(con, 12, "DR(tapa)", [("58", 30, self.celdas(2.0, 2.01, 2.02, 9.9), *tol_tapa)], "2026-02-05")
+        self.assertEqual(cadena_correcciones.construir(con, "3288"), 2)
+        self.assertEqual(self.cadena_de(con, 1)[:6], (1, 4, 0, 2, 4, 0))
+        self.assertEqual(self.cadena_de(con, 2)[:6], (1, 4, 4, 2, 4, 1))
+        self.assertNotIn("nominales distintos", self.cadena_de(con, 1)[7])
+
+    def test_cadena_compara_herencias_dentro_de_cada_pieza(self):
+        """Si la base repite y la tapa cambia, juntas parecerian una repeticion parcial en intern.02. La base no se
+        volvio a medir hasta intern.03; la tapa, si."""
+        base = "4- Tetones/3288/"
+        docs = [(1, base + "5- Retoques molde/20260110_Mold correction_1_P3288_BASE.pptx", "retoques", "pptx"),
+                (2, base + "5- Retoques molde/20260110_Mold correction_1_P3288_TAPA.pptx", "retoques", "pptx"),
+                (11, base + "4- Metrologia/3288-00_intern.01.xls", "metrologia", "xls"),
+                (12, base + "4- Metrologia/3288-00_intern.02.xls", "metrologia", "xls"),
+                (13, base + "4- Metrologia/3288-00_intern.03.xls", "metrologia", "xls")]
+        con = self.bd_cadena("3288", docs, [(1, "Correccio nr. 1.1 (DIM. Nr. 58) 10/01/2026", ["58"]),
+                                            (2, "Correccio nr. 1.1 (DIM. Nr. 58) 10/01/2026", ["58"])], {})
+        tol = (3.0, .5, -.5)
+        igual = self.celdas(3.1, 3.2, 3.3, 3.4)
+        self.medidas_en_hoja(con, 11, "DR(base)", [("58", 20, igual, *tol)], "2026-01-05")
+        self.medidas_en_hoja(con, 11, "DR(tapa)", [("58", 30, self.celdas(2.8, 2.9, 3.0, 3.05), *tol)], "2026-01-05")
+        self.medidas_en_hoja(con, 12, "DR(base)", [("58", 20, igual, *tol)], "2026-02-05")
+        self.medidas_en_hoja(con, 12, "DR(tapa)", [("58", 30, self.celdas(3.11, 3.12, 3.13, 3.14), *tol)], "2026-02-05")
+        self.medidas_en_hoja(con, 13, "DR(base)", [("58", 20, self.celdas(3.01, 3.02, 3.03, 3.04), *tol)], "2026-03-05")
+        self.medidas_en_hoja(con, 13, "DR(tapa)", [("58", 30, self.celdas(3.21, 3.22, 3.23, 3.24), *tol)], "2026-03-05")
+        cadena_correcciones.construir(con, "3288")
+        fila_base, fila_tapa = self.cadena_de(con, 1), self.cadena_de(con, 2)
+        self.assertEqual((fila_base[3], fila_base[6]), (3, "nueva"))
+        self.assertIn("intern.02 = intern.01", fila_base[7])
+        self.assertEqual((fila_tapa[3], fila_tapa[6]), (2, "nueva"))
+
+    def test_cadena_las_fechas_de_cabecera_son_de_cada_pieza(self):
+        """3288 intern.03: 23/06 en DR(base) y 22/05 en DR(tapa). Con la menor de las dos, una correccion de base del 01/06
+        descartaba por anterior un informe de base posterior."""
+        base = "4- Tetones/3288/"
+        docs = [(1, base + "5- Retoques molde/20260601_Mold correction_1_P3288_BASE.pptx", "retoques", "pptx"),
+                (11, base + "4- Metrologia/3288-00_intern.02.xls", "metrologia", "xls"),
+                (12, base + "4- Metrologia/3288-00_intern.03.xls", "metrologia", "xls")]
+        con = self.bd_cadena("3288", docs, [(1, "Correccio nr. 1.1 (DIM. Nr. 58) 01/06/2026", ["58"])], {})
+        tol = (3.0, .5, -.5)
+        self.medidas_en_hoja(con, 11, "DR(base)", [("58", 20, self.celdas(3.1, 3.2, 3.3, 3.4), *tol)], "2026-05-20")
+        self.medidas_en_hoja(con, 12, "DR(base)", [("58", 20, self.celdas(3.0, 3.01, 3.02, 3.03), *tol)], "2026-06-23")
+        self.medidas_en_hoja(con, 12, "DR(tapa)", [("99", 30, self.celdas(7.0, 7.1, 7.2, 7.3), *tol)], "2026-05-22")
+        cadena_correcciones.construir(con, "3288")
+        self.assertEqual(self.cadena_de(con, 1)[3], 3)
+
+    def test_cadena_el_orden_de_los_planes_es_de_cada_pieza(self):
+        """Un plan de la tapa que parte de un muestreo posterior no deja indeterminado un plan de la base."""
+        base = "4- Tetones/3288/5- Retoques molde/"
+        docs = [(1, base + "loop3/20260301_Mold correction_3_P3288_TAPA.pptx", "retoques", "pptx"),
+                (2, base + "loop3/3288-00_intern.03.xls", "retoques", "xls"),
+                (3, base + "loop1/20260401_Mold correction_1_P3288_BASE.pptx", "retoques", "pptx"),
+                (4, base + "loop1/3288-00_intern.01.xls", "retoques", "xls"),
+                (11, "4- Tetones/3288/4- Metrologia/3288-00_intern.01.xls", "metrologia", "xls"),
+                (12, "4- Tetones/3288/4- Metrologia/3288-00_intern.02.xls", "metrologia", "xls"),
+                (13, "4- Tetones/3288/4- Metrologia/3288-00_intern.03.xls", "metrologia", "xls")]
+        con = self.bd_cadena("3288", docs, [(1, "Correccio nr. 3.1 (DIM. Nr. 77) 01/03/2026", ["77"]),
+                                            (3, "Correccio nr. 1.1 (DIM. Nr. 58) 01/04/2026", ["58"])], {})
+        tol = (3.0, .5, -.5)
+        self.medidas_en_hoja(con, 11, "DR(base)", [("58", 20, self.celdas(3.1, 3.2, 3.3, 3.4), *tol)], "2026-03-30")
+        self.medidas_en_hoja(con, 12, "DR(base)", [("58", 20, self.celdas(3.0, 3.01, 3.02, 3.03), *tol)], "2026-04-20")
+        self.medidas_en_hoja(con, 11, "DR(tapa)", [("77", 30, self.celdas(3.1, 3.2, 3.3, 3.4), *tol)], "2026-01-10")
+        self.medidas_en_hoja(con, 13, "DR(tapa)", [("77", 30, self.celdas(3.0, 3.01, 3.02, 3.03), *tol)], "2026-03-05")
+        cadena_correcciones.construir(con, "3288")
+        fila = self.cadena_de(con, 3)
+        self.assertEqual((fila[0], fila[3], fila[6]), (1, 2, "nueva"))
+        self.assertNotIn("contradiccion de orden", fila[7])
+
+    def test_cadena_plan_sin_componente_en_el_nombre_lo_avisa(self):
+        base = "4- Tetones/3288/"
+        docs = [(1, base + "5- Retoques molde/20260110_Mold correction_1_P3288.pptx", "retoques", "pptx"),
+                (11, base + "4- Metrologia/3288-00_intern.01.xls", "metrologia", "xls")]
+        con = self.bd_cadena("3288", docs, [(1, "Correccio nr. 1.1 (DIM. Nr. 58) 10/01/2026", ["58"])], {})
+        tol = (3.0, .5, -.5)
+        self.medidas_en_hoja(con, 11, "DR(base)", [("58", 20, self.celdas(3.1, 3.2, 3.3, 3.4), *tol)], "2026-01-05")
+        self.medidas_en_hoja(con, 11, "DR(tapa)", [("58", 30, self.celdas(3.0, 3.01, 3.02, 3.03), *tol)], "2026-01-05")
+        cadena_correcciones.construir(con, "3288")
+        fila = self.cadena_de(con, 1)
+        self.assertEqual(fila[1], 8)
+        self.assertIn("no dice de que componente", fila[7])
+
+    def test_cadena_otra_pieza_no_separa_hojas_aunque_se_llamen_igual(self):
+        """Solo se separan las piezas declaradas: en otra, `DR(base)` y `DR(tapa)` son hojas de la misma pieza."""
+        base = "1- Clips/9987/"
+        docs = [(1, base + "5- Retoques molde/20260110_Mold correction_1_P9987_BASE.pptx", "retoques", "pptx"),
+                (11, base + "4- Metrologia/9987-00_intern.01.xls", "metrologia", "xls")]
+        con = self.bd_cadena("9987", docs, [(1, "Correccio nr. 1.1 (DIM. Nr. 58) 10/01/2026", ["58"])], {})
+        tol = (3.0, .5, -.5)
+        self.medidas_en_hoja(con, 11, "DR(base)", [("58", 20, self.celdas(3.1, 3.2, 3.3, 3.4), *tol)], "2026-01-05")
+        self.medidas_en_hoja(con, 11, "DR(tapa)", [("58", 30, self.celdas(3.0, 3.01, 3.02, 3.03), *tol)], "2026-01-05")
+        cadena_correcciones.construir(con, "9987")
+        fila = self.cadena_de(con, 1)
+        self.assertEqual(fila[1], 8)
+        self.assertNotIn("componente", fila[7])
+
     def test_cadena_series_filas_desplazadas_copias_y_valores_sin_tolerancia(self):
         """Revision del 28/10/2026: 3168-00 frente a 3168-10 (series), 3218 cota 2402 (valores contenidos en el
         bloque anterior pero distintos celda a celda), copia de intern.03 que repite intern.02 y filas sin tolerancia."""

@@ -4,6 +4,11 @@ El despliegue utiliza `compose.yml` y el proxy HTTPS de `compose.traefik.yml`.
 Este repositorio **no incluye workflows de GitHub Actions ni entornos de CI/CD configurados**.
 Los pasos siguientes se ejecutan en el servidor preparado por el responsable del despliegue.
 
+Para el despliegue interno acordado el **05/11/2026**, empezar por
+[Servidor interno: Linux, HTTPS y petición a IT](docs/despliegue-servidor.md).
+La receta de proxy de este documento usa Let's Encrypt con TLS-ALPN-01; requiere adaptación
+para los certificados internos o el proxy corporativo, según esa guía.
+
 ## Preparación
 
 - Docker Engine y Docker Compose instalados.
@@ -81,7 +86,9 @@ explícitos de arriba para seleccionar el fichero de producción y excluir el ov
 Ver [archivos externos](docs/ficheros-externos.md). El acceso a los originales de INTEPLAST debe
 acordarse antes del despliegue; una ruta del ordenador de desarrollo no es una conexión Graph.
 El modo [SharePoint](docs/ficheros-externos.md#sharepoint-microsoft-graph) necesita un registro
-de aplicación en el tenant del cliente y su redirect URI pública.
+de aplicación autorizado en el tenant correspondiente y su redirect URI HTTPS registrada,
+accesible desde el navegador del usuario. Puede ser interna, por red corporativa o VPN;
+no necesita ser pública en Internet.
 
 ## Persistencia y actualización desde la versión anterior
 

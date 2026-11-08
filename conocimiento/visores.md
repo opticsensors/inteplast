@@ -18,6 +18,10 @@ en `backend/app/ingestion/`; Docker no incluye la carpeta `prototypes/`.
 
 ---
 
+> 🆕 **04/11/2026:** el visor de lo ya extraído (planos en cuadrícula, piezas, grafo, esquema y revisión de
+> enlaces pieza ↔ muestreo) está en [`prototypes/data-explorer/conocimiento/`](../prototypes/data-explorer/conocimiento/README.md).
+> Lee `conocimiento/` y solo abre los PDF de plano originales para dibujarlos.
+
 ## Qué hay
 
 | Fichero | Qué hace |

@@ -46,6 +46,7 @@ segunda explicación en prosa.
 | Columnas CSV y reglas de parsing | [Formatos y parsing](formatos-parsing.md) |
 | Variantes PPTX y contenido de acciones del 3212 | [Retoques: qué fichero usar](0-bolt-eye/3212/5-retoques-molde.md#qué-fichero-usar) |
 | Cronología y comparación antes/después | [Historial del molde](0-bolt-eye/3212/historial-molde.md) (3212, a mano); otras piezas: tabla `cadena_correccion` (`rag.py exacto cadena`) |
+| Varios valores para una cota, muestreo y cavidad | [Valores por punto](valores-por-punto.md): causas y censo de todas las piezas (I-008) |
 | Cliente, plano, nº de cliente e ITP de cada pieza | [Identidad de las piezas](identidad-piezas.md) (generada); cliente poco fiable: [I-005](incongruencias.md) |
 | Vocabulario metrológico y ensayos | [Método de medida](0-bolt-eye/3212/6-metodo-medida.md) |
 | Fórmulas aleatorias, procedencia y recuentos I-003 | [Incongruencias I-003](incongruencias.md#i-003-en-detalle) |
@@ -58,12 +59,13 @@ segunda explicación en prosa.
 |---|---|---|
 | [AVANCE.md](AVANCE.md) | Estado de la lectura de Exemples y qué queda pendiente | ✅ |
 | [comparativa.md](comparativa.md) | Diferencias entre features y piezas: esqueleto, formatos, plantillas | ✅ |
-| [planos-globos.md](planos-globos.md) | Qué planos llevan globos, de qué color y estilo, y cuáles traen `.icp` con su calibración | ✅ |
+| [planos-globos.md](planos-globos.md) | Qué planos llevan globos, de qué color y estilo, cuáles traen `.icp` con su calibración, y el [estado de los 56](planos-globos.md#estado-de-cada-plano-05112026) | ✅ |
 | [identidad-piezas.md](identidad-piezas.md) | Nombre, plano, nº de cliente, ITP, cliente y columnas de cavidad por pieza, con recuentos y valores anómalos. **Generado** por `identidad_piezas.py` | ✅ |
 | [rag/](rag/README.md) | Investigación de arquitectura (27/10/2026), glosario multilingüe y preguntas de evaluación del RAG. No se indexa | ✅ |
 | [incongruencias.md](incongruencias.md) | Lo que no cuadra o habría que pedir a INTEPLAST, con evidencia | ✅ |
 | [hallazgos.jsonl](hallazgos.jsonl) | Un registro por hallazgo o incongruencia: afirmación, fuentes (ruta, SHA-256, localizador), estado | ✅ |
 | [formatos-parsing.md](formatos-parsing.md) | Formatos del 3212 columna a columna (CSV CMM, XLS PPAP, PPTX) | ✅ |
+| [valores-por-punto.md](valores-por-punto.md) | Por qué una cota en un muestreo y una cavidad tiene varios valores, con censo por pieza (`valores_por_punto.py`) | ✅ |
 | [visores.md](visores.md) | Los visores de `prototypes/data-explorer/` y lo que confirmaron | ✅ |
 | `0-bolt-eye/` … `7-planitudes/` | Una carpeta por feature: `README.md` del feature y fichas de pieza (`3212/` en detalle) | ✅ |
 | `herramientas/` | Inventario, extracción, perfiles y consultas (Python) | ✅ |

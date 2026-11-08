@@ -211,6 +211,9 @@ Dos problemas verificados:
    cavidades) idénticos 15 meses después — y sus `N275`/`N276` copiados de `intern.08`.
    **`intern.09.xls` es un collage de tres muestreos distintos.**
    → [historial-molde.md §8](historial-molde.md#8-hubo-una-tercera-corrección-de-molde--pendiente-de-confirmar)
+   En `intern.08.xls!DR` conviven los dos dentro de la misma hoja: las cotas 113, 117 y 118 repiten
+   `intern.01` en las filas 25–28 y 36–43, y las filas 52–63 coinciden con el CSV de `support.intern.08`
+   ([I-008](../../valores-por-punto.md#bloques-separados-en-una-misma-hoja)).
 2. **Informes parciales.** Solo `intern.01` cubre todas las cotas: 115 filas de `DR(3D)` frente a
    46 en `.03` y 47 en `.05`, donde la hoja contiene **solo N242 + N117 + N118**. Mirando
    únicamente los XLS parecería que N170 nunca se volvió a medir. **Sí se midió: está en los

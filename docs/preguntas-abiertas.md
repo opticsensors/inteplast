@@ -4,7 +4,8 @@
 > han resuelto leyendo los datos, sin necesidad de consultar.
 >
 > Última revisión documental: **2026-10-26**. El **2026-11-04** se añadieron las preguntas de la
-> entrega ampliada (A17–A23), cerradas el mismo día. Los análisis y localizadores
+> entrega ampliada (A17–A23), cerradas el mismo día, el **2026-11-06** la [A24](#a24-csv-cmm) y el **2026-11-08** la
+> [A25](#a25-3288-tapa). Los análisis y localizadores
 > viven en las fichas enlazadas; aquí se mantiene la pregunta o la resolución.
 
 ---
@@ -580,6 +581,73 @@ pero no indica en qué pieza ni carpeta.
 I-501. Puede estar repartido en carpetas de otros features; no se ha encontrado por nombre.
 </details>
 
+<a id="a24-csv-cmm"></a>
+### A24 · ¿Guardáis los CSV de la CMM del resto de piezas?
+
+*Añadida el 06/11/2026. Es la que más dudas de lectura resolvería: se propone enviarla junto con A17.*
+
+**Recordatorio.** Del 3212 y del 3197 tenemos los ficheros que exporta la CMM en cada muestreo, en carpetas como
+`4- Metrologia/support.intern.08/C13/13_3212.csv` y `4- Metrologia/Support_intern.03/`.
+
+**Qué no nos cuadra.** Del resto de piezas solo tenemos los informes Excel, y sin el CSV no podemos saber qué valor es
+de ese muestreo cuando el informe trae más de uno o repite uno anterior. Dos ejemplos del 3212, donde sí podemos comprobarlo:
+
+| Informe | Cota 113, cavidad 13 | CSV de ese muestreo |
+|---|---|---|
+| `3212-00_intern.05.xls`, `DR(100%)!H25` | 3,056, igual que en `intern.03` | 3,042 |
+| `3212-00_intern.08.xls`, `DR!H25` y `DR!H52` | 3,297 y 3,074, los dos en la misma hoja | 3,074 |
+
+**Preguntas:**
+
+1. **¿Guardáis los CSV de la CMM de las demás piezas y nos los podéis pasar?**
+2. **Si en alguna pieza no se exportan, ¿de dónde salen los valores de CMM de sus informes?**
+
+<details><summary>Contexto interno (no enviar)</summary>
+
+I-001, I-008; [valores por punto](../conocimiento/valores-por-punto.md#contraste-con-los-csv). Exportes de máquina por
+muestreo: 3212 (19) y 3197 (118). Sin ninguno: 3051, 3056, 3168, 3186, 3195, 3202, 3205, 3206, 3214, 3218, 3226, 3288 y 3309.
+Con CSV sueltos que no sirven para contrastar muestreos: 3167, 3174, 3233, 3237 y 3238. Del 2820 no hay ninguna metrología:
+eso ya lo pregunta [A7](#a7--del-2820-pump-housing-solo-tenemos-2-ficheros). Los CSV solo cubrirían lo medido con CMM, no
+el escáner CT, las galgas ni el Keyence. Se solapa con [A14](#a14--cómo-se-elaboran-los-xls-de-metrología-y-de-retoques),
+que pregunta cómo pasan las medidas al Excel; esta pide los ficheros.
+</details>
+
+<a id="a25-3288-tapa"></a>
+### A25 · 3288, tapa: tolerancias de cuatro cotas y medición de rebabas
+
+*Añadida el 08/11/2026, después de contrastar plano, diapositivas, informes y PDF. Solo recoge lo que los documentos no resuelven.*
+
+**Recordatorio.** Planes de corrección de la tapa del 3288: `20260430_Mold correction_1_P3288_TAPA`, `20260525_Mold
+correction_2_P3288_TAPA` y `20260525_Mold correction_3_P3288_TAPA`, este último junto a `DR-3288_intern03_flashes.pdf`
+en la carpeta `20260622_3rd loop of correction`.
+
+**Qué no nos cuadra.**
+
+- Los títulos de las correcciones 1.2, 1.3, 1.4, 2.2 y 2.3 dicen *«89,95 ± 0,03 and 42,95 ± 0,03»*, *«4,1 ± 0,01»* y
+  *«Ø 3,15 ± 0,01»*. El plano BSG-296-02 rev 1, los informes y la tabla de la propia diapositiva dicen ±0,3 y ±0,1.
+- En la medición de rebabas con lupa, 45 de las 144 celdas dicen `> 0,05`.
+- La corrección 3.2 (cota 115) junta los puntos 2, 3.1, 3.2 y 3.3, pero en el plano el globo 115 señala un solo agujero.
+- En `intern.04`, las cotas 115 a 120 valen 0 en todas las cavidades. La inspección visual de Foboha de la inyección del
+  18/09/2026 marca rebabas *Critical* en algunos agujeros.
+- Hay dos `3288-00_intern.03.xls`, uno en Metrología y otro en la carpeta del tercer loop, con rebabas distintas. La tabla
+  de rebabas de la corrección 2.2 coincide con `3288-00_intern02.xlsx`, no con `3288-00_intern.02.xls`.
+
+**Preguntas:**
+
+1. **¿±0,03 y ±0,01 son una errata de ±0,3 y ±0,1, o hay una revisión del plano de la tapa con esas tolerancias?**
+2. **¿Qué significa `> 0,05` en las rebabas: menos de 0,05, o más de 0,05 sin anotar cuánto?**
+3. **¿La cota 115 incluye los agujeros 3.1, 3.2 y 3.3, o esos van por la nota general de ±0,20?**
+4. **En `intern.04`, ¿el 0 de las cotas 115 a 120 es «sin rebaba» o que no se midieron?**
+5. **Cuando un informe tiene dos versiones (`intern.02` e `intern.03` de la tapa), ¿cuál es la de referencia?**
+
+<details><summary>Contexto interno (no enviar)</summary>
+
+I-109 a I-113; detalle y efecto en los recuentos en [3288](../conocimiento/4-tetones/3288.md#tolerancias-y-rebabas-de-la-tapa).
+La cadena sigue con la tolerancia del informe y con el origen del plan 3 inferido (`intern.02` por fecha) hasta la respuesta.
+La 1 cambia poco: todas las demás fuentes dicen ±0,3 y ±0,1. Las 3 y 4 son las que más mueven los recuentos del plan 3.
+La 5 se solapa con [A17](#a17-versiones-informes): si se envía A17, basta con añadir allí estos dos casos.
+</details>
+
 ### Correspondencia con las incongruencias abiertas
 
 Las 31 entradas `abierta` de [incongruencias.md](../conocimiento/incongruencias.md) a
@@ -599,6 +667,8 @@ Las 31 entradas `abierta` de [incongruencias.md](../conocimiento/incongruencias.
 | I-204 variantes de la corrección 2 del 3212 | [A16](#a11--uso-exacto-de-punts_nous-y-trazabilidad-de-ejecución) y [A1](#a1--se-cerró-el-molde-con-3-cotas-fuera-de-tolerancia--por-qué) |
 | I-207 velocidad de inserción del 3212 | [A3](#a3--cuánto-mide-el-pin-del-ensayo-de-inserción) |
 | I-501 Anclajes sin datos | [A23](#a23-anclajes) |
+| I-008 varios valores por cota, muestreo y cavidad (añadida el 06/11/2026) | [A24](#a24-csv-cmm) |
+| I-109 a I-113 tolerancias y rebabas de la tapa del 3288 (añadidas el 08/11/2026) | [A25](#a25-3288-tapa) |
 | I-602 planes del 3056 solo en imagen | No se pregunta: es un límite de nuestra lectura (OCR o lectura visual); pedir texto solo si se prioriza el 3056 |
 | I-701 carpeta del 3168 fechada en 2027 | No se pregunta: la fecha de carpeta no se usa como fecha de ejecución; no cambia la lectura |
 

@@ -908,3 +908,39 @@ prototipo en el 3212, el 3205, el 3288 (página mixta), el 3202 «G» y el 3167:
 identificadores, lecturas y puntuaciones. Si se reentrena el modelo o cambian los umbrales, hay que
 copiar el ONNX nuevo y actualizar `drawing_version.THRESHOLDS`. La identidad del lector invalida
 sola los índices en caché.
+
+## Visor de `conocimiento/` (04/11/2026)
+
+App local en [`conocimiento/`](conocimiento/README.md) (`app.py`, en http://127.0.0.1:8765) que
+parte de lo ya extraído a `conocimiento/` y no de los originales. Tiene cinco pestañas:
+
+- **Planos:** cuadrícula de los 56 PDF de plano, con visor y buscador de globos y texto.
+- **Piezas:** cuadrícula con la captura del CAD, tabla para comparar sus cifras y ficha con cotas por
+  muestreo, correcciones y hallazgos.
+- **Grafo:** de los Markdown, piezas, hallazgos y preguntas.
+- **Esquema:** de la biblioteca.
+- **Revisión:** de los enlaces pieza ↔ muestreo (`revision.py`).
+
+La única lectura de originales son los PDF de plano, para dibujarlos.
+
+### Tags, familias y gráfica de piezas (06/11/2026)
+
+En Piezas, cada pieza lleva un tag (Medidas y correcciones, Medidas sin correcciones o Sin medidas, en rojo) y, si
+tiene, una familia. La evolución de una cota es ahora una línea por cavidad, con tramos pulsables y panel debajo, como en
+la app principal. Como una cota puede tener varios valores por muestreo y cavidad (I-008), se elige pestaña y elemento, y
+lo demás se resuelve con convenciones que siempre se avisan. Detalle en
+[`conocimiento/README.md`](conocimiento/README.md#pestañas) y
+[`valores-por-punto.md`](../../conocimiento/valores-por-punto.md#cómo-dibuja-un-punto-el-visor-decidido-el-06112026).
+
+### Tags y lecturas de planos (05/11/2026)
+
+Cada plano lleva un solo tag: Con `.icp` (30), Globos sin `.icp` (7), Numerado sin globos (6) o Sin
+globos ni numeración (13, con tinte rojo). Lo decide `conocimiento/leer_planos.py`, que también lee
+una sola vez los planos sin `.icp`:
+
+- **Globos de color:** el lector oficial de `backend/app/ingestion/`, sin cambios. Da las mismas
+  1.332 lecturas, con la misma puntuación, que `buscar_en_plano.py` en esos 7 planos. Por eso el
+  visor no usa este prototipo, que sigue congelado.
+- **`[]`, `No.` y recuadros:** lectores nuevos, solo en este prototipo y probados en 4 planos.
+
+Medidas y límites en [`planos-globos.md`](../../conocimiento/planos-globos.md#estado-de-cada-plano-05112026).

@@ -16,6 +16,7 @@ su cobertura no implica que el importador de la aplicación soporte los mismos f
 | Importar y consultar cotas, mediciones y correcciones | [Cotas y evidencia](cotas-y-evidencia-web.md) | Contrato actual y límites del piloto |
 | Buscar, navegar y consultar gráficos o planos | [Interfaz](interfaz.md) | Comportamiento actual de la UI |
 | Acceder a originales, SharePoint y visores PDF/3D | [Ficheros externos](ficheros-externos.md) | Implementado; prueba real de SharePoint pendiente |
+| Preparar el servidor y solicitar infraestructura a IT | [Despliegue en servidor interno](despliegue-servidor.md) | Decisión del 05/11/2026: Linux y HTTPS interno; configuración y validación pendientes |
 | Convertir CAD grandes a GLB y gestionar su cola | [Vistas 3D](vistas-3d.md) | Implementado y límites conocidos |
 | Elegir caras, encuadres y capturas del CAD | [Portadas CAD](portadas-cad.md) | Implementado y limitaciones de actualización |
 | Chat, herramientas, fuentes y concurrencia | [Asistente](asistente.md) | Implementado; decisiones de despliegue pendientes |

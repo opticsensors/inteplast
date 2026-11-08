@@ -38,6 +38,9 @@ revisada el 28/10/2026 en dos rondas de revision externa:
 - **Valores**: `medida_dr` de hojas con papel `informe` en carpetas de metrologia. `*_evaluables` son los que tienen
   nominal y las dos tolerancias; `*_fuera` se cuenta sobre ellos. No incluye los CSV de la CMM (en el 3212 son la
   fuente preferente: trampas.md, 1).
+- **Componentes**: en un libro con dos piezas (3288, base y tapa) el mismo numero es otra cota en cada una. El plan dice
+  de cual es por el nombre de su fichero (`_BASE`, `_TAPA`), y cada pieza se construye aparte: copias, fechas de cabecera,
+  herencias y orden entre planes. Un plan sin componente en el nombre compara todas las hojas y lo avisa.
 - Cota sin medidas propias: se juntan sus subpuntos (`210` -> `210.1`…`210.5`). Cita ambigua de `perfil_correccion`
   (`DIM. Nr.45,1`): subpunto o lista segun lo que se mida en la pieza; si no se puede decidir, las dos lecturas, con
   aviso. Diapositiva con el mismo texto que otra pieza: aviso (I-309).
@@ -58,7 +61,7 @@ from datetime import date
 from pathlib import Path, PurePosixPath
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from comun import conectar  # noqa: E402
+from comun import COMPONENTES, componente_de_nombre, conectar  # noqa: E402
 
 # Sin `INF`: es la numeracion de las entregas PPAP al cliente, no la de muestreos (3202 `PPAP-…_INF.01` es de 01/2024 y
 # `intern.01` de 06/2023; en 7 piezas los numeros chocan).
@@ -188,11 +191,15 @@ def etiquetas_de_elemento(con, pieza: str) -> dict[tuple[int, str, int], str]:
     return {k: " ".join(v) for k, v in partes.items()}
 
 
-def cargar(con, pieza: str) -> tuple[dict, dict]:
-    """cota -> (serie, n) -> [copias]; y (serie, n) -> {fechas: [(fecha, copia)], consenso}."""
+def cargar(con, pieza: str, componente: str | None = None) -> tuple[dict, dict]:
+    """cota -> (serie, n) -> [copias]; y (serie, n) -> {fechas: [(fecha, copia)], consenso}.
+    Con `componente`, solo las hojas de esa pieza del libro, tambien para las fechas: 3288 `intern.03` tiene 23/06 en
+    `DR(base)` y 22/05 en `DR(tapa)`."""
     fechas_doc: dict = defaultdict(list)
-    for doc, meta in con.execute("SELECT p.documento_id, p.metadatos FROM perfil_ppap p JOIN documento d ON d.id = p.documento_id "
-                                 "WHERE d.codigo = ?", (pieza,)):
+    for doc, hoja, meta in con.execute("SELECT p.documento_id, p.hoja, p.metadatos FROM perfil_ppap p JOIN documento d ON d.id = p.documento_id "
+                                       "WHERE d.codigo = ?", (pieza,)):
+        if componente and componente_de_nombre(pieza, hoja) != componente:
+            continue
         f = fecha_valida(json.loads(meta or "{}").get("report_date"))
         if f:
             fechas_doc[doc].append(f)
@@ -205,7 +212,7 @@ def cargar(con, pieza: str) -> tuple[dict, dict]:
         "ORDER BY d.id, m.cota, m.hoja, m.fila, m.col", (pieza,)).fetchall()
     por_doc: dict = {}
     for doc, nombre, ruta, cota, hoja, fila, col, cavidad, valor, nominal, tsup, tinf, marca in filas:
-        if not MUESTREO.search(nombre):
+        if not MUESTREO.search(nombre) or (componente and componente_de_nombre(pieza, hoja) != componente):
             continue
         c = por_doc.setdefault((doc, cota), {"documento": doc, "nombre": nombre,
                                              "copia": f"{PurePosixPath(ruta).parent.name}/{nombre}",
@@ -686,6 +693,16 @@ def fila_cadena(p, doc, diap, numero, cota, fecha, fuente_fecha, plan_doc, plane
             ref and ref[0], ref and ref[1], ref and ref[2], json.dumps(avisos, ensure_ascii=False))
 
 
+def planes_por_componente(pieza: str, filas: list) -> list[tuple[str | None, list]]:
+    """Las diapositivas de cada pieza del libro, segun el nombre de su plan. Sin componentes, un solo grupo con todas."""
+    if pieza not in COMPONENTES:
+        return [(None, filas)]
+    grupos: dict = defaultdict(list)
+    for f in filas:
+        grupos[componente_de_nombre(pieza, PurePosixPath(f[5]).name)].append(f)
+    return sorted(grupos.items(), key=lambda g: str(g[0]))
+
+
 def construir(con, pieza: str | None) -> int:
     if preparar_tabla(con) and pieza:
         pieza = None   # tabla de una version anterior: se rehace entera
@@ -700,30 +717,34 @@ def construir(con, pieza: str | None) -> int:
     total = 0
     textos = textos_de_otras_piezas(con)
     for p in piezas:
-        copias, muestreos = cargar(con, p)
-        filas = con.execute(
+        todas = con.execute(
             f"SELECT documento_id, diapositiva, numero, cotas, texto, ruta, plan, {ambiguas} FROM perfil_correccion "
             f"WHERE substr(pieza, 1, 4) = ? AND {con_citas}", (p,)).fetchall()
-        planes = planes_de_la_pieza(con, p, filas, muestreos)
-        medidas = set(copias)
-        for doc, diap, numero, cotas, texto, ruta, plan, citas_ambiguas in filas:
-            fecha, fuente_fecha = fecha_correccion(texto, ruta)
-            otras = sorted({c for c in OTRA_PIEZA.findall(texto or "") if c != p})
-            copias_texto = sorted(f"{nombre} d{d} (pieza {pz})" for pz, nombre, d in
-                                  textos.get(re.sub(r"\s+", " ", texto or "").strip().casefold(), ()) if pz != p)
-            citadas = [(c, []) for c in json.loads(cotas or "[]") if c != "XX"]
-            for cita in json.loads(citas_ambiguas or "[]"):
-                if cita.get("tipo") == "lista_o_subpunto":
-                    citadas += resolver_ambigua(cita, medidas)
-            for cota, avisos_cita in citadas:
-                avisos = [f"el texto nombra otra pieza: P{', P'.join(otras)}"] if otras else []
-                if copias_texto:
-                    avisos.append("diapositiva identica a otra pieza (I-309), puede no ser de esta: "
-                                  + "; ".join(copias_texto[:3]))
-                avisos += avisos_cita
-                con.execute(insertar, fila_cadena(p, doc, diap, numero, cota, fecha, fuente_fecha, planes[doc], planes,
-                                                  copias, muestreos, avisos))
-                total += 1
+        for componente, filas in planes_por_componente(p, todas):
+            copias, muestreos = cargar(con, p, componente)
+            planes = planes_de_la_pieza(con, p, filas, muestreos)
+            medidas = set(copias)
+            sin_componente = p in COMPONENTES and componente is None
+            for doc, diap, numero, cotas, texto, ruta, plan, citas_ambiguas in filas:
+                fecha, fuente_fecha = fecha_correccion(texto, ruta)
+                otras = sorted({c for c in OTRA_PIEZA.findall(texto or "") if c != p})
+                copias_texto = sorted(f"{nombre} d{d} (pieza {pz})" for pz, nombre, d in
+                                      textos.get(re.sub(r"\s+", " ", texto or "").strip().casefold(), ()) if pz != p)
+                citadas = [(c, []) for c in json.loads(cotas or "[]") if c != "XX"]
+                for cita in json.loads(citas_ambiguas or "[]"):
+                    if cita.get("tipo") == "lista_o_subpunto":
+                        citadas += resolver_ambigua(cita, medidas)
+                for cota, avisos_cita in citadas:
+                    avisos = [f"el texto nombra otra pieza: P{', P'.join(otras)}"] if otras else []
+                    if copias_texto:
+                        avisos.append("diapositiva identica a otra pieza (I-309), puede no ser de esta: "
+                                      + "; ".join(copias_texto[:3]))
+                    if sin_componente:
+                        avisos.append("el nombre del plan no dice de que componente es: se comparan todas sus hojas")
+                    avisos += avisos_cita
+                    con.execute(insertar, fila_cadena(p, doc, diap, numero, cota, fecha, fuente_fecha, planes[doc], planes,
+                                                      copias, muestreos, avisos))
+                    total += 1
     con.commit()
     return total
 

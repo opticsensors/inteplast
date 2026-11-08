@@ -246,7 +246,8 @@ cuenta en `alcance.excluidas_no_vigentes`.
   (vacía o no extraída); marca las RAND y si el texto de las fórmulas está disponible (no en XLS BIFF).
   Un duplicado se lee desde su original, con aviso.
 - `exacto hallazgo` devuelve el registro y, con `--comprobar`, ejecuta su `comprobacion.sql`.
-- `exacto cadena` lee `cadena_correccion` (`herramientas/cadena_correcciones.py`): por cada cota citada
+- `exacto cadena` lee `cadena_correccion` (`herramientas/cadena_correcciones.py`). En un libro con dos piezas (3288, base y
+  tapa), cada plan se compara solo con las hojas de su pieza, según el nombre del fichero. Por cada cota citada
   en una diapositiva, el muestreo de origen (XLS de la carpeta del plan o de una subcarpeta con su número;
   si no hay, por fecha ±7 días) y el siguiente con valores nuevos, con recuento, valores evaluables (con
   nominal y dos tolerancias), mínimo, máximo, valores fuera y su proporción. Un muestreo es serie + número

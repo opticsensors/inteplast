@@ -4,6 +4,19 @@
 
 Registro de trabajo para poder retomar entre sesiones. Actualizar al terminar cada paso.
 
+## Valores por punto · 06/11/2026
+
+Censo de las 19 piezas con medidas leídas: por qué una cota en un muestreo y una cavidad tiene varios valores.
+Solo se leyó la biblioteca. Resultado en [valores-por-punto.md](valores-por-punto.md) e I-008, con la herramienta
+`valores_por_punto.py`. Con eso, el visor de `prototypes/data-explorer/conocimiento/` dibuja una línea por cavidad, con
+las convenciones y la auditoría descritas en esa ficha. El 07/11/2026, tras una revisión externa, se corrigieron cinco fallos
+del visor: correcciones fusionadas, mezcla de base y tapa del 3288, exclusiones ocultas, búsqueda con marca y lista
+recortada en `revision.json`. Después se separó la cadena de correcciones del 3288 por componente: cambian sus 25 pasos mezclados
+y las otras 16 piezas quedan idénticas ([ficha](4-tetones/3288.md)). El 08/11/2026 se contrastaron con el plano las
+tolerancias de las cotas 98, 100, 102 y 105 de la tapa y el PDF de rebabas del plan 3: I-109 a I-113 y
+[A25](../docs/preguntas-abiertas.md#a25-3288-tapa). No se cambió la cadena. Pendiente: qué significan hojas y bloques
+(A24 y A17 ayudarían) y cargar los 118 CSV del 3197 en `medida_cmm`.
+
 ## Implementación de la revisión · 02/11/2026
 
 [Estado por fase y verificaciones](../docs/plan-ingesta-2026-11-02.md).

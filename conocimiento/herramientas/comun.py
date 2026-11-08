@@ -26,6 +26,15 @@ BD = DATOS / "biblioteca.sqlite"
 # Atributos de Windows de un placeholder de OneDrive (Files On-Demand).
 NUBE = 0x400000 | 0x40000 | 0x1000
 
+# Libros con dos piezas: el mismo numero de cota es otra medida en cada una (I-008, 4-tetones/3288.md).
+COMPONENTES = {"3288": {"base": "Base", "tapa": "Tapa"}}
+
+
+def componente_de_nombre(codigo: str, nombre: str | None) -> str | None:
+    """El componente que dice el nombre de una hoja (`DR(tapa)`, `BASE`) o de un PPTX (`..._P3288_TAPA.pptx`)."""
+    t = (nombre or "").casefold()
+    return next((k for k in COMPONENTES.get(codigo, {}) if k in t), None)
+
 
 def ahora() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")

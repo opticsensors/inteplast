@@ -11,6 +11,10 @@ La implementación de protecciones y criterios de aceptación para todas las pie
 
 ## Próxima sesión: quitar el copiar y pegar del login de Microsoft
 
+**Despliegue futuro acordado el 05/11/2026:** Linux con Docker y HTTPS interno, accesible
+por red corporativa o VPN. La petición a IT, configuración y comprobaciones pendientes
+están en [Despliegue en servidor interno](despliegue-servidor.md). El servidor aún no está validado.
+
 **Esta es la siguiente tarea acordada con Eduard (30/10/2026).** Se deja pendiente para
 retomarla con tiempo; en esta sesión solo se documenta, sin cambiar configuración ni permisos.
 

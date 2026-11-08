@@ -1,5 +1,7 @@
 # Planos con globos: inventario (29/10/2026)
 
+> **Estado de cada plano (los 56, con un tag):** [tabla al final](#estado-de-cada-plano-05112026).
+
 Qué planos de `Exemples` llevan globos (la numeración de cotas dibujada sobre el plano), de qué
 color y estilo son, y cuáles traen el `.icp` de infra-CONVERT con el número y la posición de cada
 globo. Base: los 56 PDF de plano únicos de la biblioteca (`1- 2D y 3D pieza`, carpetas de globos y
@@ -29,9 +31,11 @@ recortes ampliados. Lo demás sale solo de los recuentos.
   ampliado el 29/10/2026:
   - **2820 (Bosch):** «□153» junto a la cota; dibujo vectorial sin capa de texto.
   - **3214 (Clunas):** número en un recuadro bajo la cota, como «22» o «47»; escaneo.
-  - **3174 (Autoliv):** «No. 214» sobre la cota; vectorial sin capa de texto.
+  - **3174 (Autoliv):** «No. 214» sobre la cota; vectorial sin capa de texto. **3186:** igual.
+  - **3237 y 3238 (`2D 05`):** número sobrerrayado junto a la cota, en la capa de texto (05/11/2026).
 
-  El resto de originales está sin revisar. El detector de color no ve ninguno de estos estilos.
+  El detector de color no ve ninguno de estos estilos. Quién lleva cada uno, en la
+  [tabla final](#estado-de-cada-plano-05112026).
 - **Lo habitual es un globo azul con su `.icp`.** 20 de los 27 PDF con globos lo traen en su
   carpeta o en la de una copia idéntica. Sin `.icp`: 3212, 3167, 3195, 3202 rev. A, 3237, 3238 y
   la copia del BSG-296-02 en `5- Retoques molde` del 3288, que no es idéntica.
@@ -169,3 +173,112 @@ número y posición.
 - **El detector solo ve aros verdes o azules.** Desde el 29/10/2026 ya no tiene un tamaño fijo:
   primero mide el tamaño típico de los globos de cada plano. Sigue sin ver los globos grises o
   negros, ni la numeración del cliente en recuadros o etiquetas.
+
+## Estado de cada plano (05/11/2026)
+
+Cada plano lleva un solo tag, según cómo se puede buscar una cota en él. Lo decide
+[`leer_planos.py`](../prototypes/data-explorer/conocimiento/leer_planos.py), sin revisión manual:
+
+| Tag | PDF | Búsqueda por número |
+|---|---:|---|
+| **Con `.icp`** | 30 | Número y posición salen del `.icp`, tenga o no los globos dibujados |
+| **Globos sin `.icp`** | 7 | Lector de globos de la aplicación (`backend/app/ingestion/`). Lectura automática |
+| **Numerado sin globos** | 6 | `[]210`, `No. 200` y recuadros con OCR (lectura automática); sobrerrayados, por la capa de texto |
+| **Sin globos ni numeración** | 13 | No se puede; como mucho, el texto del plano. Tinte rojo en el visor |
+
+**Qué significa `.icp` en un plano limpio.** Cada sello guarda la cabeza del globo y la punta que
+señala la cota (`x1, y1` y `x2, y2`). Por eso el visor reconstruye el globo sobre el plano sin
+dibujar: el número en el círculo y una línea hasta la cota. En 9 de los 10 planos limpios el `.icp`
+cae a un 0,1–0,3 % de la hoja de su sitio en la versión globada, con escala 1:1 y origen en el
+centro. La excepción es `20231129_885253-11250_insulator_motor_v1.pdf`, con la hoja a la mitad: el
+1:1 dejaba 88 de 228 puntos en la hoja. Usa la calibración de su versión globada, porque el `.icp`
+es el mismo y coinciden las formas de la hoja. Un `.icp` no garantiza todos los globos (en el 3205,
+93 sellos con número y posición de 96 globos dibujados).
+
+**Cómo se decide el tag sin `.icp`:**
+- **Globos:** al menos 20 aros y al menos el 40 % leídos. Así salen `Drw_Marking` (125 aros, 0
+  leídos: son cotas resaltadas) y el 3309 (70 aros, 2 leídos: dibujo en azul).
+- **Numerado:** al menos 20 marcas `[]` o `No.`; o el 80 % de las cotas de los informes como número
+  en la capa de texto; o al menos 15 recuadros que cubran la mitad de esas cotas.
+
+**Qué fiabilidad tienen las lecturas (revisado a ojo con muestras al azar):**
+
+| Lector | Planos | Resultado |
+|---|---|---|
+| Globos | 7 PDF: 1.332 leídos de 1.946 | Muestra de 96: ningún error claro, 2 dudosos a esa resolución (3238 `9891`, 3202 `286`). En otra muestra del 3195, 1 de 22 mal: lee `1210.T` donde pone 1630, con 0,985 de confianza |
+| `[]` | 2820 | Muestra de 36 tras corregir la cuarta cifra pegada: 36 números bien, 1 con la marca desplazada. Sin informes con los que contrastar |
+| `No.` | 3174 y 3186 | 94,6 % de 129 y 92,9 % de 168 cotas numéricas de informes. Muestras de 24: 21 y 24 sobre su cota; las otras 3 son el número correcto en una tabla o nota |
+| Recuadros | 3214, escaneo | 45 de 45 bien y todas las cotas numéricas de los informes (42 de 42, más 45.1 y 45.2). **Sus filtros se ajustaron en este mismo plano: no es una medida independiente** |
+
+Límites: 614 globos quedan sin leer (234 del 3195, 148 del 3212, 113 del 3167), y buscarlos no da
+resultado. Las 11 cotas con letra del 3214 (`A4`, `D5`, `F3`…) no aparecen en el OCR; no se ha
+comprobado si están en el plano. Buscar en el 3237 o el 3238 también encuentra otras cifras de su
+texto (`30` y `30°`). Los lectores de `[]`, `No.` y recuadros son prototipo: solo se han probado en
+estos 4 planos y no están en la aplicación.
+
+`20231129_213137-10300-B.pdf` y `3206.pdf` (2003) parecen el mismo dibujo que versiones globadas de
+otra carpeta, pero el detector no encuentra globos y su carpeta no tiene `.icp`: van como «Sin globos
+ni numeración».
+
+Generada con `leer_planos.py --tabla`; no editar a mano.
+
+<!-- tabla-planos:inicio -->
+| Pieza | Plano | Tag | Pág. | Detalle |
+|---|---|---|---:|---|
+| 3202 | `20231129_885253-11250_insulator_motor_v1.pdf` | Con .icp | 1 | 226 sellos de `885253-11250_G.icp`; sin globos dibujados, calibración de la gemela |
+| 3202 | `20231129_885253-11250_insulator_motor_v1_ Ballooned.pdf` | Con .icp | 1 | 226 sellos de `885253-11250_G.icp`; globos dibujados, calibración |
+| 3202 | `3202.pdf` | Con .icp | 1 | 226 sellos de `3202.icp`; sin globos dibujados, calco 1:1 |
+| 3202 | `3202_DRW_ballooned.pdf` | Con .icp | 1 | 193 sellos de `insulator_240W_ballooned.icp`; globos dibujados, calibración |
+| 3202 | `3202_balloned low resolution.pdf` | Con .icp | 1 | 226 sellos de `3202.icp`; globos dibujados, calibración |
+| 3202 | `3202_balloned.pdf` | Con .icp | 1 | 226 sellos de `3202.icp`; globos dibujados, calibración |
+| 3205 | `20231129_213137-10300-B_shroud_vG_Ballooned.pdf` | Con .icp | 1 | 104 sellos de `213137-10300-  -B.icp`; globos dibujados, calibración |
+| 3205 | `20241121_213137-10300-B_balloned.pdf` | Con .icp | 1 | 103 sellos de `20241121_213137-10300-B.icp`; globos dibujados, calibración |
+| 3205 | `3205-A.pdf` | Con .icp | 1 | 102 sellos de `3205-A.icp`; sin globos dibujados, calco 1:1 |
+| 3205 | `3205-A_balloned.pdf` | Con .icp | 1 | 102 sellos de `3205-A.icp`; globos dibujados, calibración |
+| 3205 | `3205-A_balloned_1.pdf` | Con .icp | 1 | 102 sellos de `3205-A.icp`; globos dibujados, calibración |
+| 3205 | `3205.pdf` | Con .icp | 1 | 91 sellos de `3205.icp`; sin globos dibujados, calco 1:1 |
+| 3205 | `3205_DRW ballooned.pdf` | Con .icp | 1 | 71 sellos de `Shroud_150W_ballooned.icp`; globos dibujados, calibración |
+| 3205 | `3205_balloned.pdf` | Con .icp | 1 | 91 sellos de `3205.icp`; globos dibujados, calibración |
+| 3206 | `20231129_213137-10280-B_shroud_vG_Ballooned.pdf` | Con .icp | 1 | 64 sellos de `213137-10280-  -B.icp`; globos dibujados, calibración |
+| 3206 | `20241121_213137-10280-B_balloned.pdf` | Con .icp | 1 | 67 sellos de `20241121_213137-10280-B.icp`; globos dibujados, calibración |
+| 3206 | `3206-A.pdf` | Con .icp | 1 | 62 sellos de `3206-A.icp`; sin globos dibujados, calco 1:1 |
+| 3206 | `3206-A_balloned lr.pdf` | Con .icp | 1 | 62 sellos de `3206-A.icp`; globos dibujados, calibración |
+| 3206 | `3206.pdf` | Con .icp | 1 | 65 sellos de `3206.icp`; sin globos dibujados, calco 1:1 |
+| 3206 | `3206_DRW ballooned.pdf` | Con .icp | 1 | 42 sellos de `Shroud_240W_ballooned.icp`; globos dibujados, calibración |
+| 3206 | `3206_balloned.pdf` | Con .icp | 1 | 65 sellos de `3206.icp`; globos dibujados, calibración |
+| 3288 | `2. 20250714_BSG-296-00 SOP RCP 3.1 balloned.pdf` | Con .icp | 1 | 26 sellos de `20250714_BSG-296-00 SOP RCP 3.1.icp`; globos dibujados, calibración |
+| 3288 | `20250714_BSG-296-00 SOP RCP 3.1 balloned.pdf` | Con .icp | 1 | 26 sellos de `20250714_BSG-296-00 SOP RCP 3.1.icp`; globos dibujados, calibración |
+| 3288 | `20250714_BSG-296-00 SOP RCP 3.1.pdf` | Con .icp | 1 | 26 sellos de `20250714_BSG-296-00 SOP RCP 3.1.icp`; sin globos dibujados, calco 1:1 |
+| 3288 | `BSG-296-00 SOP RCP 3.1 .pdf` | Con .icp | 2 | 29 sellos de `BSG-296-00 SOP RCP 3.1.icp`; sin globos dibujados, calco 1:1 |
+| 3288 | `BSG-296-00 SOP RCP 3.1 balonned.pdf` | Con .icp | 1 | 29 sellos de `BSG-296-00 SOP RCP 3.1.icp`; globos dibujados, calibración |
+| 3288 | `BSG-296-01-N0 BASE SOP RCP 3.1_balloned.pdf` | Con .icp | 1 | 129 sellos de `Cj20240714_BSG-296-01-N0 BASE SOP RCP 3.1.icp`; globos dibujados, calibración |
+| 3288 | `BSG-296-2 SOP RCP 3.1 balloned.pdf` | Con .icp | 1 | 112 sellos de `BSG-296-2 SOP RCP 3.1.icp`; globos dibujados, calibración |
+| 3288 | `BSG-296-2 SOP RCP 3.1.pdf` | Con .icp | 1 | 112 sellos de `BSG-296-2 SOP RCP 3.1.icp`; sin globos dibujados, calco 1:1 |
+| 3288 | `Cj20240714_BSG-296-01-N0 BASE SOP RCP 3.1.pdf` | Con .icp | 3 | 129 sellos de `Cj20240714_BSG-296-01-N0 BASE SOP RCP 3.1.icp`; sin globos dibujados, calco 1:1 |
+| 3167 | `Drawing baloneed.pdf` | Globos sin .icp | 1 | 126 leídos de 239 detectados; 68% de 150 cotas de informes |
+| 3195 | `1 - 0130S1B006-DRW-000-07-1-EN DE_ballown.pdf` | Globos sin .icp | 1 | 629 leídos de 863 detectados; 83% de 616 cotas de informes |
+| 3202 | `20241121_885253-11250-A_INSULAT balooned.pdf` | Globos sin .icp | 1 | 212 leídos de 229 detectados; 90% de 190 cotas de informes |
+| 3212 | `20250523_DRW 0140S00237_07.pdf` | Globos sin .icp | 1 | 114 leídos de 262 detectados; 59% de 120 cotas de informes |
+| 3237 | `1 - 3130589019_D_03_balloned.pdf` | Globos sin .icp | 1 | 65 leídos de 111 detectados; 58% de 102 cotas de informes |
+| 3238 | `1 - 313058901F_D_03_balloned.pdf` | Globos sin .icp | 1 | 68 leídos de 123 detectados; 54% de 114 cotas de informes |
+| 3288 | `BSG-296-2 SOP RCP 3.1 balloned.pdf` | Globos sin .icp | 1 | 118 leídos de 119 detectados; 83% de 140 cotas de informes |
+| 2820 | `20160817_DRW_3130516933_0140S00050-DRW-000-02-1-EN_DE.pdf` | Numerado sin globos | 1 | 166 marcas `[]`; sin informes con los que contrastar |
+| 3174 | `20250219_6494730_004.pdf` | Numerado sin globos | 5 | 326 marcas `No.`; 95% de 129 cotas de informes |
+| 3186 | `20230123_6494730_002.pdf` | Numerado sin globos | 5 | 319 marcas `No.`; 93% de 168 cotas de informes |
+| 3214 | `R-2718, R-2971_C11692_rev.B.pdf` | Numerado sin globos | 2 | 45 marcas `recuadro`; 100% de 42 cotas de informes |
+| 3237 | `20260914_3130589019 2D 05.pdf` | Numerado sin globos | 1 | número en la capa de texto: 99% de 102 cotas de informes |
+| 3238 | `20260914_313058901F 2D 05.pdf` | Numerado sin globos | 1 | número en la capa de texto: 98% de 114 cotas de informes |
+| 3051 | `20211205_0140S00275-DRW_pendent acceptació.pdf` | Sin globos ni numeración | 1 | nada encontrado |
+| 3056 | `20240417_DRW_0131S00135_D_04.pdf` | Sin globos ni numeración | 1 | nada encontrado |
+| 3167 | `20260727_0130S00338_DRAFT_V07.pdf` | Sin globos ni numeración | 1 | nada encontrado |
+| 3168 | `20260727_0130S00337_DRAFT_V02.pdf` | Sin globos ni numeración | 1 | nada encontrado |
+| 3195 | `20241121_3134341864_0130S0002K_D_01.pdf` | Sin globos ni numeración | 1 | nada encontrado |
+| 3197 | `20240222_0140S00363 D 02.pdf` | Sin globos ni numeración | 1 | nada encontrado |
+| 3205 | `20231129_213137-10300-B.pdf` | Sin globos ni numeración | 1 | nada encontrado |
+| 3206 | `3206.pdf` | Sin globos ni numeración | 1 | nada encontrado |
+| 3206 | `Drw_Marking_DR_intern02.pdf` | Sin globos ni numeración | 1 | 125 aros de color sin números legibles |
+| 3226 | `20241028_DW-UMED-2-2_REV01.PDF` | Sin globos ni numeración | 1 | nada encontrado |
+| 3233 | `20230728_DRW_0196S0000K_D_01.pdf` | Sin globos ni numeración | 1 | nada encontrado |
+| 3233 | `20250316_DRW_0196S0000K_D_02.pdf` | Sin globos ni numeración | 1 | nada encontrado |
+| 3309 | `dwg_ab_77217-02200-000A_2864368.pdf` | Sin globos ni numeración | 1 | 70 aros de color sin números legibles |
+<!-- tabla-planos:fin -->
