@@ -252,11 +252,12 @@ externos; su conservación corresponde al almacenamiento que los contiene.
 
 Implementado el **2026-10-22** y probado con Graph y MSAL simulados. El **30/10/2026** Eduard
 confirmó el primer login real correcto con su cuenta de Eurecat, tras darla de alta como
-usuario activo de la app, sin rol de administrador. La instalación está en modo SharePoint
-y aún usa el retorno de Postman. **Lo siguiente es eliminar el copiar y pegar**:
-[pasos y responsables para la próxima sesión](proximos-pasos.md#próxima-sesión-quitar-el-copiar-y-pegar-del-login-de-microsoft).
+usuario activo de la app, sin rol de administrador. La instalación está en modo SharePoint.
+**El 09/11/2026 Eduard confirma el retorno automático**: la URI Web de `localhost` está
+registrada en Entra y en `MICROSOFT_REDIRECT_URI`, y entró en la app con su cuenta de Eurecat
+sin Postman ni copiar y pegar ([próximos pasos](proximos-pasos.md#login-de-microsoft-sin-copiar-y-pegar-hecho-09112026)).
 La lectura de archivos reales mediante Graph sigue sin comprobarse; con `SHAREPOINT_DRIVE_ID`
-vacío, la prueba usa el OneDrive de Eduard, no una biblioteca de INTEPLAST.
+vacío, la prueba usa el OneDrive de quien inicia sesión, no una biblioteca de INTEPLAST.
 
 El mismo conjunto de datos se puede leer desde la carpeta local o desde OneDrive/SharePoint.
 Se elige con **una sola variable**, `SHAREPOINT_ENABLED` (`false` por defecto). Las dos
@@ -329,17 +330,17 @@ En `.env` (plantilla en `.env.example`; Compose las pasa al backend):
 | `SHAREPOINT_ROOT_PATH` | `Escritorio/proyectos/11. inteplast/Exemples`, dentro de la unidad |
 | `SHAREPOINT_DRIVE_ID` | vacío = OneDrive del usuario conectado. Para otros usuarios haría falta el ID de la unidad y la carpeta compartida con ellos: sin comprobar |
 | `MICROSOFT_TENANT_ID`, `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | App registrada por informática de Eurecat (25/09/2026). La nota inicial indicaba unos 60 días de vigencia del secret; verificar su caducidad efectiva en el registro antes de activar |
-| `MICROSOFT_REDIRECT_URI` | `https://oauth.pstmn.io/v1/browser-callback` (la de Postman, ya registrada) |
+| `MICROSOFT_REDIRECT_URI` | `http://localhost:8000/api/v1/login/microsoft/callback`, plataforma Web, retorno automático (09/11/2026). Antes, `https://oauth.pstmn.io/v1/browser-callback` (Postman, copiar y pegar) |
 | `MICROSOFT_SCOPES` | `https://graph.microsoft.com/.default`: los permisos ya concedidos a la app |
 
 Mantener el bloque de originales locales con el mismo `ASSETS_SOURCE_ID`: identifica el
 conjunto de datos en ambos modos.
 
 **Redirect URI.** Con la de Postman, la web abre Microsoft en otra pestaña y el usuario pega
-la dirección final (`?code=…&state=…`) en la pantalla de login. Cuando informática registre
-`http://localhost:8000/api/v1/login/microsoft/callback` (plataforma Web) y se ponga en
-`MICROSOFT_REDIRECT_URI`, Microsoft envía la respuesta al backend por `form_post` y el login es
-automático: el backend redirige a `/login?microsoft=<ticket>`, un ticket de un solo uso válido
+la dirección final (`?code=…&state=…`) en la pantalla de login. Con
+`http://localhost:8000/api/v1/login/microsoft/callback` registrada como Web y puesta en
+`MICROSOFT_REDIRECT_URI` (así desde el 09/11/2026), Microsoft envía la respuesta al backend por
+`form_post` y el login es automático: el backend redirige a `/login?microsoft=<ticket>`, un ticket de un solo uso válido
 2 minutos que la web canjea por su token.
 
 ### Activarlo y volver a local
@@ -349,8 +350,9 @@ automático: el backend redirige a `/login?microsoft=<ticket>`, un ticket de un 
 2. Poner `SHAREPOINT_ENABLED=true` y recrear el backend: `docker compose up -d backend`
    (si el código cambió, con `--build`). El frontend consulta el modo en
    `GET /login/methods`; recargar la web tras cambiar de modo. No hace falta reconstruirla.
-3. En la web: **Entrar con Microsoft** → iniciar sesión en la pestaña nueva → copiar la
-   dirección de la página de Postman → pegarla → **Continuar**.
+3. En la web: **Entrar con Microsoft** → iniciar sesión → Microsoft devuelve a la app con la
+   sesión iniciada. Solo con la URI de Postman: copiar la dirección de su página → pegarla →
+   **Continuar**.
 4. Para volver a local: `SHAREPOINT_ENABLED=false` y recrear el backend.
 
 ### API

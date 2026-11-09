@@ -4,6 +4,18 @@
 
 Registro de trabajo para poder retomar entre sesiones. Actualizar al terminar cada paso.
 
+## CSV del 3197 · 09/11/2026
+
+Cargados en la biblioteca los 118 CSV del 3197, leídos de los originales con `medidas_cmm.py` ampliado. Tablas nuevas
+`medida_cmm_comparativa` (también las 3 «totes» del 3212) y `punto_cmm`; columna `variante` en `medida_cmm`. El 3212 queda
+idéntico (3.376 evaluaciones y 144 perfiles). Detalle, contrastes y límites en [3197](0-bolt-eye/3197.md#csv-de-la-cmm-en-la-biblioteca-09112026).
+El visor los usa desde el mismo día: en el 3197 salen 72 cotas-muestreo con «el CSV dice otra cosa» (antes 4), y de ahí
+[I-208](incongruencias.md). Hallazgo de paso: el lector del backend asigna los POINT de las comparativas del 3212 a N178
+(el título va en la misma línea que el primer valor); el de la biblioteca ya los separa. Pendiente: reconstruir el índice
+RAG (`rag.py construir`) para que recoja las fichas editadas.
+Tras la revisión del mismo día se corrigió el cruce CSV-Excel del visor, que emparejaba medidas distintas (310 MAX con el
+mínimo; 550 y 560 a otra altura): ahora exige el mismo número de elementos en toda la hoja y calificadores compatibles.
+
 ## Valores por punto · 06/11/2026
 
 Censo de las 19 piezas con medidas leídas: por qué una cota en un muestreo y una cavidad tiene varios valores.

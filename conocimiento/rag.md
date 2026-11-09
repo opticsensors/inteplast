@@ -240,7 +240,7 @@ cuenta en `alcance.excluidas_no_vigentes`.
   marca (`aleatoria`, `cero`, `atipico`) y una clasificación: `generada_rand` si la celda tiene RAND,
   si no `indeterminada` con su motivo (papel de la hoja, cero, atípico). Ni `con_correccion` ni la
   ausencia en `celda_aleatoria` certifican medición, previsión o copia. Exige `--pieza` o `--documento`.
-  Desde el 02/11 incluye `medida_cmm` (3.376 evaluaciones) y `medida_contorno` (144 perfiles) del 3212 si están construidas; `por_fuente` distingue los totales. PA/PB no se asignan a un N-number sin evidencia. `alcance` da filtros, total, documentos,
+  Desde el 02/11 incluye `medida_cmm` (3.376 evaluaciones) y `medida_contorno` (144 perfiles) del 3212 si están construidas, y desde el 09/11 las 4.920 evaluaciones del 3197 (las comparativas y los puntos van en tablas aparte y no entran); `por_fuente` distingue los totales. PA/PB no se asignan a un N-number sin evidencia. `alcance` da filtros, total, documentos,
   hojas y si se truncó; sin filas, avisa de que eso no prueba que la cota no exista.
 - `exacto celdas` distingue `sin_valor_guardado` (fórmula sin caché), `cero` y celda no listada
   (vacía o no extraída); marca las RAND y si el texto de las fórmulas está disponible (no en XLS BIFF).

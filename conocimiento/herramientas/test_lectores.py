@@ -749,5 +749,54 @@ class LectoresTest(unittest.TestCase):
             self.assertEqual(ejecutar.call_count, 2)
 
 
+class MedidasCmmTest(unittest.TestCase):
+    """CSV de la CMM del 3197 y comparativas (09/11/2026). Fixtures con la forma de los originales."""
+
+    def test_contexto_3197_conserva_condiciones_y_repeticiones(self):
+        from medidas_cmm import contexto_3197, etiqueta
+
+        casos = {
+            "0- Bolt Eye/3197 Pot/4- Metrologia/Support_intern.02/135ºC/500bar/3197 C1.csv": ("02", "c1", "c1@135ºC/500bar"),
+            "0- Bolt Eye/3197 Pot/4- Metrologia/Support_intern.02/140ºC/600bar/C4.1/3197.csv": ("02", "c4.1", "c4.1@140ºC/600bar"),
+            "0- Bolt Eye/3197 Pot/4- Metrologia/Support_intern.03/c5bis-3197.csv": ("03", "c5bis", "c5bis"),
+            "0- Bolt Eye/3197 Pot/4- Metrologia/Support_intern.03/c5.1-3197.csv": ("03", "c5.1", "c5.1"),
+            "0- Bolt Eye/3197 Pot/4- Metrologia/Support_intern.05/C3/3197_Punts_nervis_Frontal.csv": ("05", "c3", "c3"),
+            "0- Bolt Eye/3197 Pot/4- Metrologia/Support_intern.06/3197_c1-24.csv": ("06", "c1", "c1@24"),
+            "0- Bolt Eye/3197 Pot/4- Metrologia/Support_intern.07/3197c8.csv": ("07", "c8", "c8"),
+            "0- Bolt Eye/3197 Pot/4- Metrologia/Support_intern.05/3197_Diametres.csv": ("05", None, None),
+        }
+        for ruta, (muestreo, cavidad, rotulo) in casos.items():
+            m, cav, condiciones = contexto_3197(ruta)
+            self.assertEqual((m, cav, etiqueta(cav, condiciones)[0]), (muestreo, cavidad, rotulo), ruta)
+        self.assertEqual(contexto_3197("x/Support_intern.08/3197_totes_nozzle 55.csv")[2], ["nozzle 55"])
+
+    def test_comparativa_tres_disposiciones(self):
+        from medidas_cmm import leer_comparativa
+
+        # intern.03: tolerancias y columna vacia antes de las cavidades; c5.1 en la posicion de c5.
+        a = leer_comparativa("N230 ø4 (GX) Hole 1;;;;;;;c1;c5.1;;c5bis\n"
+                             "16;Diámetro;Durchmesser;4;0.1;0;;4.073;4.071;;4.07\n".encode("cp1252"), "3197")
+        self.assertEqual([(r["rotulo"], r["valor"], r["tol_sup"], r["tol_inf"], r["cota"]) for r in a],
+                         [("c1", 4.073, .1, 0, "230"), ("c5.1", 4.071, .1, 0, "230"), ("c5bis", 4.07, .1, 0, "230")])
+        # intern.08 nozzle: sin columna en aleman ni tolerancias; la nominal va en la columna 2.
+        c = leer_comparativa("N720.1  Ø29,2 (GN) in height 4mm;;;;c1;c2\n6;Diámetro;29.2;;29.074;29.078\n"
+                             "N470 3±0.1 (AVG/36Points);;;;;\n;Cálculo de fórmula;3;;2.968;2.959\n".encode("cp1252"), "3197")
+        self.assertEqual([(r["cota"], r["nominal"], r["valor"], r["tol_sup"]) for r in c],
+                         [("720.1", 29.2, 29.074, None), ("720.1", 29.2, 29.078, None), ("470", 3, 2.968, None), ("470", 3, 2.959, None)])
+        # 3212: el titulo POINT va en la misma linea que su primer valor; no es de N178.
+        p = leer_comparativa("N178 PLAN. 0.10 MAX.;;;;;;c13;c14\n11;Planitud;;0;0.1;0;0.061;0.073\n////////;;;;;;;\n"
+                             "POINT 1 -> 1.35-0.05 MIN/MAX;Cálculo de fórmula;;1.35;0;-0.05;1.447;1.467\n"
+                             ";Cálculo de fórmula;;1.35;0;-0.05;1.467;1.478\n".encode("cp1252"), "3212")
+        self.assertEqual([(r["cota"], r["elemento_cmm"], r["indice"]) for r in p],
+                         [("178", "11", 1)] * 2 + [("165", "", 1)] * 2 + [("165", "", 2)] * 2)
+
+    def test_puntos_sin_nominal_tal_cual(self):
+        from medidas_cmm import leer_puntos
+
+        filas = leer_puntos(b"*****\nPOSICIONS Z/Y N670 1...8\n1001;SYM-POINT;   M;4.006;10.273;12.275\n", "3197")
+        self.assertEqual([(r["cota"], r["elemento_cmm"], r["marca"], r["coord_1"], r["coord_3"]) for r in filas],
+                         [("670", "1001", "M", 4.006, 12.275)])
+
+
 if __name__ == "__main__":
     unittest.main()

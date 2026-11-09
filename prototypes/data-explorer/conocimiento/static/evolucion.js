@@ -29,7 +29,7 @@ function detallePunto(p, nombre, color) {
   const fichero = `${esc(p.carpeta)}/${esc(p.fichero)}`
   const origen = p.hoja === HOJA_CSV
     ? `${fichero}, ${esc(p.celda)}`
-    : `${fichero}<br>${esc(p.hoja)}!${esc(p.celda)}${p.csv ? `<br>CSV: ${esc(p.csv.carpeta)}/${esc(p.csv.fichero)}, línea ${p.csv.linea}` : ""}`
+    : `${fichero}<br>${esc(p.hoja)}!${esc(p.celda)}${p.csv ? `<br>CSV: ${esc(p.csv.carpeta)}/${esc(p.csv.fichero)}, línea ${p.csv.linea}${p.csv.columna ? `, columna ${esc(p.csv.columna)}` : ""}` : ""}`
   return `<div class="tip-punto"><span class="punto" style="background:${color}"></span><b>${esc(nombre.toUpperCase())}: ${fmt(p.v)}${p.media ? " (media)" : ""}</b>
     <div class="tip-origen">${origen}${p.fecha ? `<br>Fecha del informe: ${esc(p.fecha)}` : ""}</div>
     ${p.avisos.map((a) => `<div class="tip-aviso">${esc(a)}</div>`).join("")}</div>`

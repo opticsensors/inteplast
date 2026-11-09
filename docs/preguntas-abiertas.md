@@ -269,6 +269,8 @@ originales del 3212. Desde el 22/10/2026 hay un modo SharePoint (login delegado 
 construido con la app de prueba de Eurecat; para INTEPLAST hará falta su registro de
 aplicación y la ubicación de su biblioteca. La integración con EURECAT, si se prueba,
 no concede acceso al entorno de INTEPLAST. Ver [ficheros-externos.md](ficheros-externos.md).
+Fases fijadas por Eduard el 09/11/2026: cuentas de Eurecat, después servidor + cuentas + SharePoint de
+Eurecat y, al final, los servidores de INTEPLAST. Esta pregunta hace falta para la última fase.
 
 ---
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sqlite3
 import sys
 import threading
@@ -18,25 +19,43 @@ import webbrowser
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import datos  # noqa: E402
+import errores  # noqa: E402
 import evolucion  # noqa: E402
 import grafo  # noqa: E402
 import revision  # noqa: E402
 
 AQUI = Path(__file__).resolve().parent
 app = FastAPI(title="Visor de conocimiento")
-app.mount("/static", StaticFiles(directory=AQUI / "static"), name="static")
+
+
+class SinCache(StaticFiles):
+    """El navegador pregunta siempre si ha cambiado (304 si no): sin esto, tras tocar app.js seguía con la versión
+    vieja contra la API nueva («Cannot read properties of undefined (reading 'map')», 09/11/2026)."""
+
+    async def get_response(self, path, scope):
+        respuesta = await super().get_response(path, scope)
+        respuesta.headers["Cache-Control"] = "no-cache"
+        return respuesta
+
+
+app.mount("/static", SinCache(directory=AQUI / "static"), name="static")
 # Capturas ya hechas por miniaturas_cad.py: el visor no lee STEP.
 app.mount("/cad", StaticFiles(directory=datos.MINIATURAS, check_dir=False), name="cad")
 
 
 @app.get("/")
 def inicio():
-    return FileResponse(AQUI / "static" / "index.html", headers={"Cache-Control": "no-store"})
+    """Cada fichero de `static/` se pide con su fecha de modificación (`app.js?v=…`): al cambiar, la dirección es otra y
+    el navegador no puede reutilizar la copia vieja, ni siquiera la guardada antes de `SinCache`."""
+    estaticos = AQUI / "static"
+    html = re.sub(r'"/static/([^"?]+)"', lambda m: f'"/static/{m[1]}?v={(estaticos / m[1]).stat().st_mtime_ns}"',
+                  (estaticos / "index.html").read_text(encoding="utf-8"))
+    return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
 
 # ---------------------------------------------------------------- planos
@@ -95,11 +114,47 @@ def pieza(codigo: str):
     return datos.pieza(codigo)
 
 
+@app.get("/api/pieza/{codigo}/ficheros")
+def ficheros_de_pieza(codigo: str):
+    """Desglose por carpeta de la columna «Ficheros» de Números."""
+    if not any(p["codigo"] == codigo for p in datos.piezas()):
+        raise HTTPException(404)
+    return datos.ficheros(codigo)
+
+
 @app.get("/api/pieza/{codigo}/cota")
 def cota(codigo: str, c: str = Query(...), hoja: str | None = None, elemento: str | None = None, componente: str | None = None):
     # La cabecera y la gráfica tienen que ser del mismo componente.
     s = evolucion.serie(codigo, c, hoja, elemento, componente)
     return {"info": datos.resumen_cota(codigo, c, s["componente"]), **s}
+
+
+# ---------------------------------------------------------------- errores
+
+@app.get("/api/errores")
+def api_errores():
+    return errores.lista()
+
+
+@app.get("/api/errores/generales")
+def api_errores_generales(pieza: str | None = None):
+    """Con `pieza`, solo las generales que le afectan."""
+    if pieza and pieza not in errores.catalogo():
+        raise HTTPException(404)
+    return errores.generales(pieza)
+
+
+@app.get("/api/errores/pieza/{codigo}")
+def api_errores_pieza(codigo: str):
+    if codigo not in errores.catalogo():
+        raise HTTPException(404)
+    return errores.de_pieza(codigo)
+
+
+@app.get("/api/revision/referencias")
+def api_referencias():
+    """Casos de referencia de los lectores y observaciones de estructura y formato."""
+    return errores.tecnicos()
 
 
 # ---------------------------------------------------------------- grafo, revisión, esquema

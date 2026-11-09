@@ -10,7 +10,9 @@ elemento, y lo que aún queda se resuelve con estas reglas, acordadas el 06/11/2
 - Varias piezas de una cavidad: la media, rotulada como media.
 - Copias que discrepan: la de `Interns`; si no hay, la de nombre más corto.
 - Muestreo con los mismos valores que otro anterior: se dibuja y se marca. No se da por erróneo.
-- CSV de la CMM de ese muestreo: manda sobre el Excel en las filas de CMM. Hoy solo está cargado el del 3212.
+- CSV de la CMM de ese muestreo: manda sobre el Excel en las filas de CMM. Cargados el 3212 y el 3197 (09/11/2026), sin condición
+  de proceso; la comparativa «totes» solo donde no hay export individual (`csv_de`). Solo con correspondencia segura: mismo número
+  de elementos en la hoja que filas en el CSV y calificadores compatibles (`fila_csv`); si no, el Excel y un aviso.
 
     python evolucion.py --resumen   # qué dibuja, pieza a pieza, con la selección por defecto
 """
@@ -62,6 +64,57 @@ def limites(tolerancia: tuple) -> list | None:
     return [round(nominal + inf, 6), round(nominal + sup, 6)]
 
 
+def calificadores(texto: str | None) -> dict:
+    """Lo que distingue dos medidas de la misma cota y nominal: extremo, ajuste y altura o posición.
+
+    Excel (rótulo y comentario: `MAX`, `GG`, `H=-8.5 mm`) y título del bloque del CSV (`(Max-Value ...)`, `(GG)`, `X=-4,5`,
+    `in height 4mm`). Las alturas se comparan en valor absoluto: el Excel escribe `H=-4.5` donde el CSV dice `X=-4,5`."""
+    t = re.sub(r"min-zone", "", (texto or "").casefold()).replace(",", ".")
+    salida: dict = {}
+    extremos = set(re.findall(r"(?<![a-z])(min|max)(?:imum|-value)?(?![a-z])", t))  # también «BOLT 1MIN/MAX» (3212)
+    if len(extremos) == 1:
+        salida["extremo"] = extremos.pop()
+    ajustes = set(re.findall(r"\b(gg|gn|gx|gc|lp|ls)\b", t))
+    if len(ajustes) == 1:
+        salida["ajuste"] = ajustes.pop()
+    posiciones = re.findall(r"\b[hx]\s*=\s*(-?\d+(?:\.\d+)?)", t) + re.findall(r"height\s*(\d+(?:\.\d+)?)\s*mm", t)
+    if posiciones:
+        salida["posicion"] = frozenset(abs(float(x)) for x in posiciones)
+    return salida
+
+
+def compatibles(a: dict, b: dict) -> bool:
+    """Ninguna característica que digan los dos lados se contradice."""
+    return all(a[k] == b[k] for k in a.keys() & b.keys())
+
+
+def calificadores_excel(x: dict) -> dict:
+    etiqueta, tipo, _, _, comentario = x["identidad"]  # el `MAX` o `GG` del Excel va en el tipo
+    return calificadores(f"{etiqueta or ''} {tipo or ''} {comentario or ''}")
+
+
+def elementos_de_hoja(filas: list[dict]) -> dict:
+    """Elementos de CMM distintos (identidad y orden) por libro, hoja, cavidad y nominal, en el orden de su primera fila.
+
+    Toda la hoja, no cada bloque: una cota medida a dos alturas en dos zonas son dos elementos (3197 `intern.05`, cotas 550
+    y 560), y el CSV solo se cruza por posición si trae tantas filas como elementos hay."""
+    primera: dict = defaultdict(dict)
+    for x in filas:
+        if x["elemento"][3].startswith("cmm"):
+            e = (x["identidad"], x["orden"])
+            d = primera[(x["doc"], x["hoja"], x["cavidad"], x["identidad"][2])]
+            d[e] = min(d.get(e, x["fila"]), x["fila"])
+    return {k: sorted(d, key=d.get) for k, d in primera.items()}
+
+
+def fila_csv(ref: list | None, lista: list, e: tuple, cal: dict) -> dict | None:
+    """La fila del CSV que es este elemento: misma posición, mismo número de elementos y calificadores compatibles."""
+    if not ref or len(lista) != len(ref) or e not in lista:
+        return None
+    r = ref[lista.index(e)]
+    return r if compatibles(cal, calificadores(r.get("bloque"))) else None
+
+
 def preparar(filas: list[dict]) -> list[dict]:
     """Da a cada valor su `clave` de elemento. La posición entre filas iguales del mismo bloque la distingue."""
     iguales: dict = defaultdict(set)
@@ -103,7 +156,7 @@ def origen_de(x: dict) -> dict:
             "celda": celda(x["fila"], x["col"])}
 
 
-def punto(lineas: list[dict], ref: list | None, pestana: str, filas_cmm: dict) -> dict:
+def punto(lineas: list[dict], ref: list | None, pestana: str, elementos: dict) -> dict:
     """Un punto a partir de las filas candidatas de una pestaña: copia, bloque, muestra y CSV, por este orden."""
     copias: dict = defaultdict(list)
     for x in lineas:
@@ -131,17 +184,19 @@ def punto(lineas: list[dict], ref: list | None, pestana: str, filas_cmm: dict) -
         if distintos:
             avisos.append(f"Otra copia ({k[2].split('/')[-2]}/{k[1]}) da {' · '.join(coma(v) for v in distintos)}.")
     if ref and base["elemento"][3].startswith("cmm"):
-        presentes = sorted(filas_cmm.get((base["doc"], base["hoja"], base["bloque"], base["cavidad"], base["identidad"][2]), ()))
-        if len(presentes) == len(ref) and base["fila"] in presentes:
-            r = ref[presentes.index(base["fila"])]
-            p["csv"] = {"fichero": r["nombre"], "carpeta": r["carpeta"], "linea": r["fila"]}
+        cal = calificadores_excel(base)
+        lista = elementos.get((base["doc"], base["hoja"], base["cavidad"], base["identidad"][2]), [])
+        r = fila_csv(ref, lista, (base["identidad"], base["orden"]), cal)
+        if r:
+            p["csv"] = {"fichero": r["nombre"], "carpeta": r["carpeta"], "linea": r["fila"], "columna": r.get("columna")}
             if abs(r["valor"] - valor) > TOLERANCIA_CSV:
                 avisos.insert(0, f"CSV de la CMM: {coma(r['valor'])}; el Excel dice {coma(valor)}. Se usa el CSV.")
                 p["v"], p["hueco"] = r["valor"], False
-        else:
-            r = next((r for r in ref if abs(r["valor"] - valor) <= TOLERANCIA_CSV), None)
+        else:  # sin correspondencia segura, el CSV solo confirma un valor igual de la misma medida
+            r = next((r for r in ref if abs(r["valor"] - valor) <= TOLERANCIA_CSV
+                      and compatibles(cal, calificadores(r.get("bloque")))), None)
             if r:
-                p["csv"] = {"fichero": r["nombre"], "carpeta": r["carpeta"], "linea": r["fila"]}
+                p["csv"] = {"fichero": r["nombre"], "carpeta": r["carpeta"], "linea": r["fila"], "columna": r.get("columna")}
             else:
                 avisos.append("Este muestreo tiene CSV de la CMM, pero esta fila no se ha podido cruzar con él.")
     if p["hueco"]:
@@ -154,9 +209,10 @@ def solo_csv(ref: list | None, posicion: int | None) -> dict | None:
     if not ref or posicion is None:
         return None
     r = ref[posicion]
-    return {"v": r["valor"], "fichero": r["nombre"], "carpeta": r["carpeta"], "hoja": HOJA_CSV, "celda": f"línea {r['fila']}",
+    celda = f"línea {r['fila']}" + (f", columna {r['columna']}" if r.get("columna") else "")
+    return {"v": r["valor"], "fichero": r["nombre"], "carpeta": r["carpeta"], "hoja": HOJA_CSV, "celda": celda,
             "hueco": False, "fecha": None, "media": None, "repite": None, "lim": r["lim"],
-            "csv": {"fichero": r["nombre"], "carpeta": r["carpeta"], "linea": r["fila"]},
+            "csv": {"fichero": r["nombre"], "carpeta": r["carpeta"], "linea": r["fila"], "columna": r.get("columna")},
             "avisos": ["El Excel de este muestreo no trae esta fila: valor del CSV de la CMM."]}
 
 
@@ -225,20 +281,27 @@ def construir(filas: list[dict], csv: dict | None = None, pestana: str | None = 
         por_muestreo[(x["serie"], x["n"])].append(x)
     orden_hojas = {h: i for i, h in enumerate(hojas)}
 
-    # El CSV se cruza por posición entre las filas de CMM con la misma nominal de cada bloque.
-    filas_cmm: dict = defaultdict(set)
-    for x in validas:
-        if x["elemento"][3].startswith("cmm"):
-            filas_cmm[(x["doc"], x["hoja"], x["bloque"], x["cavidad"], x["identidad"][2])].add(x["fila"])
+    # El CSV se cruza por posición entre los elementos de CMM de la hoja con la misma nominal, si cuadra su número y
+    # los calificadores (extremo, ajuste, altura) no se contradicen.
+    elementos_cmm = elementos_de_hoja(validas)
     nominal = ejemplo[elemento]["identidad"][2]
     es_cmm = ejemplo[elemento]["elemento"][3].startswith("cmm")
+    cal_elemento = calificadores_excel(ejemplo[elemento])
     posiciones: dict = {}
     for x in candidatas if es_cmm else ():
-        lista = sorted(filas_cmm.get((x["doc"], x["hoja"], x["bloque"], x["cavidad"], x["identidad"][2]), ()))
-        if x["fila"] in lista:
-            posiciones.setdefault((x["cavidad"], len(lista)), lista.index(x["fila"]))
-    # Sin fila en el Excel pero con CSV también hay medida de este elemento, si la posición es inequívoca.
-    solo_en_csv = {k for k, lista in csv.items() if es_cmm and k[3] == nominal and (k[2], len(lista)) in posiciones}
+        lista = elementos_cmm.get((x["doc"], x["hoja"], x["cavidad"], x["identidad"][2]), [])
+        e = (x["identidad"], x["orden"])
+        if e in lista:
+            posiciones.setdefault((x["cavidad"], len(lista)), lista.index(e))
+
+    def relleno(ref: list | None, cav: str) -> dict | None:
+        """Muestreo sin fila en el Excel: la fila del CSV en la misma posición, si es inequívoca y compatible."""
+        i = posiciones.get((cav, len(ref))) if ref else None
+        if i is None or not compatibles(cal_elemento, calificadores(ref[i].get("bloque"))):
+            return None
+        return solo_csv(ref, i)
+
+    solo_en_csv = {k for k, lista in csv.items() if es_cmm and k[3] == nominal and relleno(lista, k[2])}
 
     muestreos = sorted(set(por_muestreo) | {k[:2] for k in solo_en_csv})
     cavidades = sorted({x["cavidad"] for x in candidatas} | {k[2] for k in solo_en_csv}, key=clave_natural)
@@ -251,9 +314,9 @@ def construir(filas: list[dict], csv: dict | None = None, pestana: str | None = 
             de_cav = [x for x in lineas if x["cavidad"] == cav]
             hoja = pestana if any(x["hoja"] == pestana for x in de_cav) else next((h for h in hojas_aqui if any(x["hoja"] == h for x in de_cav)), None)
             if hoja is None:
-                puntos[cav].append(solo_csv(ref, posiciones.get((cav, len(ref))) if ref else None))
+                puntos[cav].append(relleno(ref, cav))
             else:
-                puntos[cav].append(punto([x for x in de_cav if x["hoja"] == hoja], ref, pestana, filas_cmm))
+                puntos[cav].append(punto([x for x in de_cav if x["hoja"] == hoja], ref, pestana, elementos_cmm))
 
     etiquetas = [etiqueta_muestreo(*m) for m in muestreos]
     marcar_repetidos(puntos, muestreos, etiquetas)
@@ -275,15 +338,37 @@ def construir(filas: list[dict], csv: dict | None = None, pestana: str | None = 
     return salida
 
 
+def columnas(c, tabla: str) -> set:
+    return {r[1] for r in c.execute(f"PRAGMA table_info({tabla})")}
+
+
 def csv_de(c, codigo: str, cota: str) -> dict:
-    """Evaluaciones de la CMM de una cota, por muestreo, cavidad y nominal, en el orden del fichero."""
+    """Evaluaciones de la CMM de una cota, por muestreo, cavidad y nominal, en el orden del fichero.
+
+    Solo exportes sin condición (`variante` vacía): una medida a 135 ºC/500 bar, a ciclo 24 o con la boquilla a 55 ºC no es
+    la de la pestaña de esa cavidad. La comparativa «totes» solo entra donde el muestreo y la cavidad no tienen export
+    individual (3197 `intern.09`-`.11`); donde hay los dos, coinciden en valor y cota (09/11/2026)."""
     salida: dict = defaultdict(list)
-    for f in c.execute("SELECT d.nombre, d.ruta, m.muestreo, m.cavidad, m.fila, m.nominal, m.tol_sup, m.tol_inf, m.valor"
+    sin_condicion = " AND m.variante IS NULL" if "variante" in columnas(c, "medida_cmm") else ""
+    for f in c.execute("SELECT d.nombre, d.ruta, m.muestreo, m.cavidad, m.fila, m.bloque, m.nominal, m.tol_sup, m.tol_inf, m.valor"
                        " FROM medida_cmm m JOIN documento d ON d.id = m.documento_id WHERE m.pieza = ? AND m.cota = ? AND m.valor IS NOT NULL"
-                       " ORDER BY m.muestreo, m.cavidad, m.fila", (codigo, cota)):
+                       + sin_condicion + " ORDER BY m.muestreo, m.cavidad, m.fila", (codigo, cota)):
         nominal = None if f["nominal"] is None else round(f["nominal"], 6)
         salida[("00", int(f["muestreo"]), (f["cavidad"] or "").casefold(), nominal)].append({
-            "nombre": f["nombre"], "carpeta": f["ruta"].split("/")[-2], "fila": f["fila"], "valor": f["valor"],
+            "nombre": f["nombre"], "carpeta": f["ruta"].split("/")[-2], "fila": f["fila"], "bloque": f["bloque"], "valor": f["valor"],
+            "lim": limites((f["nominal"], f["tol_sup"], f["tol_inf"]))})
+    if not columnas(c, "medida_cmm_comparativa"):
+        return dict(salida)
+    individuales = {(m, (cav or "").casefold()) for m, cav in c.execute(
+        "SELECT DISTINCT muestreo, cavidad FROM medida_cmm WHERE pieza = ?" + sin_condicion.replace("m.", ""), (codigo,))}
+    for f in c.execute("SELECT d.nombre, d.ruta, m.muestreo, m.cavidad, m.fila, m.rotulo, m.bloque, m.nominal, m.tol_sup, m.tol_inf, m.valor"
+                       " FROM medida_cmm_comparativa m JOIN documento d ON d.id = m.documento_id WHERE m.pieza = ? AND m.cota = ?"
+                       " AND m.valor IS NOT NULL AND m.variante IS NULL ORDER BY m.muestreo, m.cavidad, m.fila", (codigo, cota)):
+        if (f["muestreo"], (f["cavidad"] or "").casefold()) in individuales:
+            continue
+        nominal = None if f["nominal"] is None else round(f["nominal"], 6)
+        salida[("00", int(f["muestreo"]), (f["cavidad"] or "").casefold(), nominal)].append({
+            "nombre": f["nombre"], "carpeta": f["ruta"].split("/")[-2], "fila": f["fila"], "columna": f["rotulo"], "bloque": f["bloque"], "valor": f["valor"],
             "lim": limites((f["nominal"], f["tol_sup"], f["tol_inf"]))})
     return dict(salida)
 
@@ -425,7 +510,44 @@ def resumen() -> None:
     linea("**Total**", total)
 
 
+def csv_frente_excel(codigo: str) -> dict:
+    """Puntos donde el CSV de la CMM y el Excel del mismo muestreo discrepan (selección por defecto de cada cota).
+
+    Para cada uno mira si el valor del Excel es, ±0,0005, el del CSV de un muestreo anterior de la misma cota y cavidad.
+    El control es lo mismo frente a un muestreo posterior, que no se puede haber heredado: mide la coincidencia casual."""
+    c = datos.con()
+    por_cota: dict = defaultdict(list)
+    for x in cargar(c, codigo, excluidas=True):
+        por_cota[x["cota"]].append(x)
+    casos = []
+    for cota, filas in por_cota.items():
+        csv = csv_de(c, codigo, cota)
+        valores: dict = defaultdict(set)
+        for (_, n, cav, _), lista in csv.items():
+            valores[(cav, n)].update(r["valor"] for r in lista)
+        s = construir(filas, csv)
+        for cav, pts in s["puntos"].items():
+            for m, p in zip(s["muestreos"], pts):
+                aviso = next((a for a in (p or {}).get("avisos", ()) if a.startswith("CSV de la CMM:")), None)
+                if not aviso:
+                    continue
+                excel = float(re.search(r"el Excel dice (-?\d+(?:,\d+)?)", aviso)[1].replace(",", "."))
+                iguales = sorted(n for (cv, n), vs in valores.items() if cv == cav and any(abs(excel - v) <= .0005 for v in vs))
+                casos.append({"cota": cota, "cavidad": cav, "muestreo": m["n"], "csv": p["v"], "excel": excel,
+                              "celda": f"{p['fichero']}!{p['hoja']}!{p['celda']}",
+                              "anterior": [n for n in iguales if n < m["n"]], "posterior": [n for n in iguales if n > m["n"]]})
+    return {"discrepan": len(casos), "igual_a_csv_anterior": sum(bool(x["anterior"]) for x in casos),
+            "control_igual_a_csv_posterior": sum(bool(x["posterior"]) for x in casos),
+            "por_muestreo": sorted(Counter((x["muestreo"], x["anterior"][-1] if x["anterior"] else 0) for x in casos).items()),
+            "casos": casos}
+
+
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
     if "--resumen" in sys.argv:
         resumen()
+    elif "--csv-frente-excel" in sys.argv:
+        r = csv_frente_excel(sys.argv[sys.argv.index("--csv-frente-excel") + 1])
+        print(json.dumps({k: v for k, v in r.items() if k != "casos"}, ensure_ascii=False))
+        for x in r["casos"][:10]:
+            print(json.dumps(x, ensure_ascii=False))

@@ -75,6 +75,14 @@ button:hover { border-color: var(--acento); }
 .numeros tr[data-codigo]:hover td { background: #eef3fd; }
 .numeros .cifra-col { text-align: right; font-variant-numeric: tabular-nums; }
 .numeros .cero { color: #b4bac6; }
+.numeros > .nota { margin: 0 0 8px; }
+.numeros tr.abierta td { background: #eef3fd; }
+.numeros tr.detalle > td { background: var(--fondo); padding: 8px 12px 14px 32px; }
+.numeros .desglose-caja { max-width: calc(100vw - 110px); overflow-x: auto; }
+.numeros .desglose { width: auto; min-width: 60%; font-size: 12.5px; }
+.numeros .desglose th { position: static; white-space: normal; }
+.numeros .desglose th.tipo { white-space: nowrap; font-weight: 500; color: var(--suave); }
+.numeros .desglose .tipo { background: #f8f9fb; }.numeros .desglose tr.total td { font-weight: 600; border-top: 2px solid var(--borde); }
 .contenido { overflow: auto; padding: 16px 22px 40px; }
 .tarjetas { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 14px; }
 .cifra { background: var(--panel); border: 1px solid var(--borde); border-radius: 8px; padding: 8px 14px; min-width: 110px; }
@@ -156,3 +164,22 @@ details.comp summary { padding: 10px 14px; cursor: pointer; display: flex; gap: 
 details.comp summary .n { margin-left: auto; color: var(--suave); }
 details.comp .cuerpo { padding: 0 14px 12px; overflow: auto; }
 .mermaid { background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 10px; overflow: auto; }
+
+/* Errores: una fila por pieza y una tarjeta por incidencia */
+.filas-errores { display: flex; flex-direction: column; gap: 6px; max-width: 1000px; }
+.fila-error { display: flex; align-items: center; gap: 14px; background: var(--panel); border: 1px solid var(--borde); border-radius: 8px; padding: 6px 12px; color: inherit; text-decoration: none; }
+.fila-error:hover { border-color: var(--acento); box-shadow: 0 3px 10px rgba(20, 30, 60, .10); }
+.fila-error .mini { width: 72px; height: 51px; flex: none; background: #fff; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: var(--suave); font-size: 20px; overflow: hidden; }
+.fila-error .mini img { width: 100%; height: 100%; object-fit: contain; }
+.fila-error .mini span { font-size: 10px; }
+.fila-error .que { flex: 1; min-width: 0; }
+.fila-error .contador { white-space: nowrap; font-size: 13px; color: var(--suave); }
+.fila-error .contador.pendiente { color: var(--texto); }
+.fila-error .contador.pendiente b { color: var(--aviso); }
+.incidencia { background: var(--panel); border: 1px solid var(--borde); border-left: 4px solid var(--aviso); border-radius: 8px; padding: 10px 14px; margin: 10px 0; max-width: 1000px; }
+.incidencia.cerrada { border-left-color: var(--ok); }
+.incidencia .cab { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.incidencia .cab .id { margin-left: auto; color: var(--suave); font-size: 12px; }
+.incidencia p { margin: 6px 0; }
+.incidencia details summary { cursor: pointer; color: var(--acento); font-size: 13px; }
+.evidencia { margin: 6px 0; padding-left: 18px; }

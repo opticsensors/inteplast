@@ -80,7 +80,9 @@ máquina. No hay tiempos medidos que permitan cuantificarlo.
 ### Qué hay que decidir
 
 1. **Proveedor:** Ollama local, un modelo en la nube como motor de este chat, o un agente de
-   Copilot Studio.
+   Copilot Studio. **Preferencia de Eduard (09/11/2026): a poder ser, el Copilot de empresa
+   mediante un agente.** Es trabajo futuro, junto con el servidor; falta acordarlo con
+   INTEPLAST y su IT. Mientras tanto sigue el chat con Ollama.
 2. **Máquina del servidor**, si se mantiene Ollama: GPU, RAM disponible y modelos de chat y
    de embeddings.
 3. **Tiempos de respuesta medidos** con esos modelos en esa máquina.

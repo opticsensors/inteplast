@@ -5,6 +5,12 @@ con **HTTPS interno**, acceso desde la red corporativa o VPN e inicio de sesión
 automático con Microsoft. Los usuarios abrirán un enlace; SSH quedará para administrar
 y actualizar el servidor.
 
+**Fases fijadas por Eduard el 09/11/2026:**
+
+1. Pruebas con cuentas de Eurecat (en curso: login automático confirmado en local).
+2. Servidor de Eurecat, con cuentas de Eurecat y SharePoint de Eurecat.
+3. Traslado a los servidores de INTEPLAST. Esta fase depende de [A10](preguntas-abiertas.md#a10-acceso-originales).
+
 Esta guía recoge la opción elegida, la petición a IT y el trabajo pendiente. **No implica
 que el servidor esté provisionado ni que se haya desplegado o validado la aplicación allí.**
 Los comandos generales están en [deployment.md](../deployment.md); la integración de
@@ -39,7 +45,7 @@ de localhost para desarrollo. Véanse los
 
 | Acceso | Aplicación a INTEPLAST |
 |---|---|
-| HTTP por IP y puerto, con el login manual actual | Técnicamente permite mantener el flujo de copiar y pegar el enlace: el retorno registrado sigue siendo el HTTPS de Postman. Opción temporal de prueba; no es el acceso elegido para el equipo. |
+| HTTP por IP y puerto, con el login manual de Postman | Técnicamente permite el flujo de copiar y pegar el enlace, con el retorno HTTPS de Postman (el que se usó hasta el 09/11/2026). Opción temporal de prueba; no es el acceso elegido para el equipo. |
 | HTTP por IP y puerto, con retorno automático a esa IP | Microsoft no admite esa URI HTTP de retorno para el flujo actual. |
 | HTTPS interno, desde red corporativa o VPN | **Opción elegida.** Enlace compartido y retorno automático, sin publicar el servicio en Internet. |
 | Túnel SSH y acceso por localhost | Alternativa de desarrollo, registrando el retorno de localhost y encaminando web y API. Cada usuario tendría que mantener su túnel. |
@@ -154,8 +160,10 @@ de migraciones y volúmenes está en [deployment.md](../deployment.md#persistenc
 
 Al recoger esta decisión, la configuración local tiene SharePoint activado y el identificador
 de unidad vacío. Está documentado el login real correcto del 30/10/2026, usando el retorno
-manual de Postman. **La lectura de archivos reales por Graph sigue pendiente de validar.**
-El seguimiento está en [próximos pasos](proximos-pasos.md#próxima-sesión-quitar-el-copiar-y-pegar-del-login-de-microsoft).
+manual de Postman, y desde el **09/11/2026** el retorno automático a `localhost`, confirmado por
+Eduard con su cuenta de Eurecat. En el servidor habrá que registrar su URL HTTPS.
+**La lectura de archivos reales por Graph sigue pendiente de validar.**
+El seguimiento está en [próximos pasos](proximos-pasos.md#próxima-sesión-de-la-app-final-usuarios-y-prueba-real-de-archivos).
 
 Comprobar en el servidor de destino:
 

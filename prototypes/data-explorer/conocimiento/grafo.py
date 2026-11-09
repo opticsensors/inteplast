@@ -189,10 +189,11 @@ def piezas_y_features() -> dict:
              for f in c.execute("SELECT DISTINCT feature FROM documento WHERE feature IS NOT NULL ORDER BY 1")]
     nodos += [{"id": f"pieza:{p['codigo']}", "tipo": "pieza", "etiqueta": p["codigo"]} for p in datos.piezas()]
     aristas = [{"source": f"pieza:{f['codigo']}", "target": f"feature:{f['feature']}", "tipo": "feature", "ficheros": f["n"]}
-               for f in c.execute("SELECT codigo, feature, count(*) n FROM documento WHERE codigo IS NOT NULL GROUP BY 1, 2")]
+               for f in c.execute(f"SELECT codigo, feature, count(*) n FROM documento WHERE codigo IS NOT NULL AND {datos.SIN_THUMBS}"
+                                  " GROUP BY 1, 2")]
     por_contenido: dict[str, dict[str, dict]] = defaultdict(dict)
     for f in c.execute("SELECT sha256, codigo, nombre, carpeta_norm FROM documento WHERE sha256 IS NOT NULL AND codigo IS NOT NULL"
-                       " AND tamano > 0 AND lower(coalesce(ext, '')) NOT IN ('', 'txt') ORDER BY nombre"):
+                       f" AND tamano > 0 AND lower(coalesce(ext, '')) NOT IN ('', 'txt') AND {datos.SIN_THUMBS} ORDER BY nombre"):
         por_contenido[f["sha256"]].setdefault(f["codigo"], {"nombre": f["nombre"], "carpeta": f["carpeta_norm"]})
     comunes: dict[tuple[str, str], list[dict]] = defaultdict(list)
     for piezas in por_contenido.values():

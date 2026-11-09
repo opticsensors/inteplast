@@ -912,14 +912,15 @@ sola los índices en caché.
 ## Visor de `conocimiento/` (04/11/2026)
 
 App local en [`conocimiento/`](conocimiento/README.md) (`app.py`, en http://127.0.0.1:8765) que
-parte de lo ya extraído a `conocimiento/` y no de los originales. Tiene cinco pestañas:
+parte de lo ya extraído a `conocimiento/` y no de los originales. Tiene seis pestañas:
 
 - **Planos:** cuadrícula de los 56 PDF de plano, con visor y buscador de globos y texto.
-- **Piezas:** cuadrícula con la captura del CAD, tabla para comparar sus cifras y ficha con cotas por
-  muestreo, correcciones y hallazgos.
+- **Piezas:** cuadrícula con la captura del CAD, tabla para comparar sus cifras (con los ficheros por carpeta
+  de cada pieza) y ficha con cotas por muestreo y correcciones.
+- **Errores:** incidencias por pieza, con su evidencia; las generales, aparte (09/11/2026).
 - **Grafo:** de los Markdown, piezas, hallazgos y preguntas.
 - **Esquema:** de la biblioteca.
-- **Revisión:** de los enlaces pieza ↔ muestreo (`revision.py`).
+- **Revisión:** de los enlaces pieza ↔ muestreo (`revision.py`), con los casos de referencia de los lectores.
 
 La única lectura de originales son los PDF de plano, para dibujarlos.
 

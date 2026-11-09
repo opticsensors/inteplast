@@ -4,8 +4,9 @@ Base colaborativa de conocimiento para el diseño de piezas inyectadas: features
 lessons learned y ficheros agrupados por pieza. Piloto actual: **3212 Pump Housing**.
 Las mediciones CMM y PPAP se leen en cualquier pieza; las correcciones de molde solo se
 interpretan en el piloto 3212. El modelo completo normalizado sigue pendiente. La lectura
-desde SharePoint con Microsoft Graph está implementada (22/10/2026) y el login real se
-confirmó el 30/10/2026; falta probar con Graph real la lectura de archivos
+desde SharePoint con Microsoft Graph está implementada (22/10/2026); el login real se
+confirmó el 30/10/2026 y funciona sin copiar y pegar desde el 09/11/2026. Falta probar con
+Graph real la lectura de archivos
 ([estado](docs/ficheros-externos.md#sharepoint-microsoft-graph)).
 
 El proyecto se desarrolla en **tres etapas**: (1) transferir y consultar el conocimiento

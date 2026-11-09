@@ -108,8 +108,9 @@ filas 26 y 241: 2,681 y 2,671) y ninguna repite nada. Qué significan esas zonas
 
 ## Contraste con los CSV
 
-Hoy solo se puede contrastar el 3212: `medida_cmm` tiene 3.376 filas y son todas suyas. Exportes de la máquina por
-muestreo solo hay dos: 3212 (19 CSV) y 3197 (118, sin cargar en esa tabla). Los CSV de 3167, 3174, 3233, 3237 y 3238 (de 1
+Se pueden contrastar el 3212 y, desde el 09/11/2026, el 3197: `medida_cmm` tiene 3.376 filas del 3212 y 4.920 del 3197
+(detalle de la carga en [3197](0-bolt-eye/3197.md#csv-de-la-cmm-en-la-biblioteca-09112026)). Exportes de la máquina por
+muestreo solo hay de esas dos piezas: 3212 (19 CSV) y 3197 (118). Los CSV de 3167, 3174, 3233, 3237 y 3238 (de 1
 a 5) son exportes `#P#`, del método de medida o una prueba suelta, y no sirven para contrastar muestreos. Las otras 14 piezas
 no tienen ninguno ([A24](../docs/preguntas-abiertas.md#a24-csv-cmm)). Por eso «CSV antes que XLS» ([trampa 1](trampas.md))
 resuelve el piloto, pero no el resto de piezas.
@@ -217,7 +218,7 @@ Primero se elige qué se mira, **pestaña** y **elemento**. Por defecto, la pest
 | Copias con los mismos valores | Una, sin aviso | No cambian nada |
 | Copias que discrepan | La de `Interns` (si no hay, la de nombre más corto), con aviso del otro valor | Nada dice cuál vale (I-006, [A17](../docs/preguntas-abiertas.md#a17-versiones-informes)) |
 | Muestreo con los mismos valores que uno anterior | **Se dibuja**, en rombo, con aviso | No se da por erróneo: el dato está así en el informe y no sabemos si se volvió a medir (decisión de Eduard) |
-| Hay CSV de ese muestreo y la fila es de CMM | El valor del CSV, con aviso si el Excel dice otra cosa. Se cruza por posición entre las filas de CMM con la misma nominal | «CSV antes que XLS» ([trampa 1](trampas.md)). Hoy solo está cargado el del 3212 |
+| Hay CSV de ese muestreo y la fila es de CMM | El valor del CSV, con aviso si el Excel dice otra cosa. Se cruza por posición entre los elementos de CMM de **toda la hoja** con la misma nominal, solo si hay tantos como filas trae el CSV y los calificadores no se contradicen (mínimo/máximo, GG/GN/GX, altura `H=`/`X=`/`in height`). Si no, el Excel se queda y se avisa; el relleno de un muestreo solo en CSV sigue la misma regla | «CSV antes que XLS» ([trampa 1](trampas.md)). Cargados el 3212 y el 3197; solo exportes sin condición de proceso, y la comparativa «totes» solo donde no hay export individual. Corregido el 09/11/2026 tras revisión: el cruce por bloque cambiaba en el 3197 el 310 MAX por el mínimo y las alturas −8,5/−2,5 por −4,5/−1,5 ([3197](0-bolt-eye/3197.md#csv-de-la-cmm-en-la-biblioteca-09112026)) |
 | `RAND()`, ceros y atípicos | Fuera de la línea, en una lista con el motivo, también si no queda ningún punto que dibujar (10 de las 13 cotas así que se han mirado son del 3168) | I-002, I-003 |
 
 **Correcciones de un tramo:** se conserva cada variante con su fichero y diapositiva, y ninguna se oculta. Solo comparten
@@ -230,10 +231,12 @@ La cadena de correcciones sigue saltando los muestreos que repiten otro al busca
 que un tramo de la gráfica puede mostrar una corrección que se valida más tarde. Cambiar entre dos muestreos es una
 secuencia, no una prueba de que la corrección funcionó.
 
-**Qué sale con la selección por defecto de cada cota** (`python evolucion.py --resumen`), sobre 33.512 pares
-cota-muestreo: 30.126 tienen punto (90 %): 23.567 de la pestaña elegida (70 %), 6.554 huecos (20 %) y 5 solo del CSV.
-Otros 3.386 no tienen punto (10 %). De los que tienen punto, 20.382 repiten un muestreo anterior, 1.044 tienen otro valor
-y 262 son media.
+**Qué sale con la selección por defecto de cada cota** (`python evolucion.py --resumen`, 09/11/2026, con el 3288 separado
+por componente, los CSV del 3197 y el cruce corregido), sobre 33.934 pares cota-muestreo: 30.557 tienen punto (90 %):
+24.024 de la pestaña elegida (71 %), 6.514 huecos (19 %) y 19 solo del CSV. Otros 3.377 no tienen punto (10 %). De los que
+tienen punto, 20.624 repiten un muestreo anterior, 1.172 tienen otro valor y 262 son media. Son pares cota-muestreo, no
+mediciones sueltas. *Histórico:* el 06/11/2026, antes de esos tres cambios, eran 33.512 pares, 30.126 con punto y 20.382
+repetidos; no repetir esas cifras como actuales.
 
 **Auditoría del 06/11/2026** (semilla 20261106, contra los ficheros originales, todos en local): en 60 puntos al azar,
 59 de 59 valores coinciden con la celda del Excel que cita el punto (el otro es una media) y 60 de 60 están en la cota
@@ -255,6 +258,10 @@ punto de partida si se cargan esos CSV en la biblioteca. Si INTEPLAST guarda los
   un comentario distinto entre copias (`post1 pasted from 13`) separa dos filas que quizá son la misma, y por
   eso «Copias que discrepan» puede quedarse corta.
 - «Solo el primero repite» compara con muestreos anteriores por valores. No demuestra cómo se guardó el dato.
+- **El cruce con el CSV evita contradicciones explícitas, no las certifica todas.** Rechaza mínimo frente a máximo, GG
+  frente a GN/GX y alturas distintas, y exige el mismo número de elementos en la hoja que filas en el CSV. Cuando ni el
+  Excel ni el título del bloque dicen nada que distinga dos medidas, sigue dependiendo del orden. La revisión del
+  09/11/2026 validó la corrección y que no hubiera cambios indebidos, no todos los emparejamientos posibles.
 
 La cadena de correcciones también separa las dos piezas del 3288 desde el 07/11/2026: copias, fechas, herencias y orden entre
 planes se construyen aparte para cada una. Regenerada toda la tabla, las 2.030 filas de las otras 16 piezas son idénticas, y en

@@ -81,6 +81,15 @@ posteriores siguen pendientes de confirmar.
 `conocimiento/`, con la biblioteca consultable. Antes de generalizar la app a otras piezas, partir
 de [conocimiento/comparativa.md](conocimiento/comparativa.md).
 
+🔑 **Banco de pruebas antes de la app final (09/11/2026):** antes de cargar las 21 piezas en la
+aplicación, Eduard prueba con el **visor de `conocimiento/`**
+([`prototypes/data-explorer/conocimiento/app.py`](prototypes/data-explorer/conocimiento/README.md)),
+incluidos los lectores de planos. **«La app de conocimiento» es ese visor, no la app final.**
+Lo que se valide allí se reimplementa en `backend/app/ingestion/`, sin copiar el prototipo.
+**Primero se termina el visor**; nada pasa a la app final antes. Terminado, sirve para enseñar sus resultados
+a INTEPLAST, con cada error respaldado por escrito (fichero, celda o línea).
+Pendientes del visor en su [README](prototypes/data-explorer/conocimiento/README.md#pendiente-09112026).
+
 ---
 
 ## La aplicación — lo que ya está construido
@@ -113,6 +122,8 @@ búsqueda en planos:
 
 El prototipo está **congelado**: no se ajusta más sobre los planos actuales sin evidencia nueva.
 Ver [Lector de globos](docs/cotas-y-evidencia-web.md#lector-de-globos-30102026).
+Los lectores nuevos para planos sin globos de color (`[]`, `No.`, recuadros) y el uso de los `.icp`
+se prueban primero en el visor de `conocimiento/`; todavía no están en la app.
 
 ```powershell
 docker compose up -d --build db prestart backend   # backend + BD (aplica migraciones)
@@ -153,11 +164,16 @@ docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bo
 - **SharePoint (2026-10-22):** `SHAREPOINT_ENABLED=true` en `.env` lee el mismo `Exemples` por
   Microsoft Graph en vez de la carpeta local, con las mismas rutas y la misma BD; cada usuario
   entra con su cuenta de Microsoft (MSAL, login delegado). `false` deja todo como en local.
-  Login real de Eduard confirmado el **30/10/2026**; sigue pendiente probar archivos con Graph real.
-  **Lo próximo es quitar el copiar y pegar del login**, registrando el retorno Web en Entra
-  y después cambiando `MICROSOFT_REDIRECT_URI`: [pasos y responsables](docs/proximos-pasos.md#próxima-sesión-quitar-el-copiar-y-pegar-del-login-de-microsoft).
-  Su cuenta sigue siendo usuario normal; configurar el primer administrador corporativo está pendiente. Detalle y
+  Login real de Eduard confirmado el **30/10/2026**. **Desde el 09/11/2026 el retorno es automático**
+  (sin Postman ni copiar y pegar): URI Web de `localhost` registrada en Entra y en `.env`, y Eduard
+  entró en la app con su cuenta de Eurecat. Sigue pendiente probar archivos con Graph real.
+  **Fases (Eduard, 09/11/2026):** 1) pruebas con cuentas de Eurecat; 2) servidor de Eurecat + cuentas de Eurecat +
+  SharePoint de Eurecat; 3) traslado a los servidores de INTEPLAST ([despliegue](docs/despliegue-servidor.md)).
+  Su cuenta sigue siendo usuario normal; configurar el primer administrador corporativo está pendiente:
+  [próxima sesión](docs/proximos-pasos.md#próxima-sesión-de-la-app-final-usuarios-y-prueba-real-de-archivos). Detalle y
   activación en [docs/ficheros-externos.md](docs/ficheros-externos.md#sharepoint-microsoft-graph).
+- **Asistente:** preferencia de Eduard (09/11/2026): a poder ser, **Copilot de empresa mediante un agente**.
+  Es trabajo futuro, junto con el servidor; mientras tanto sigue el chat con Ollama ([docs/asistente.md](docs/asistente.md#concurrencia-y-despliegue)).
 - **Portadas CAD:** pulsar la cabecera abre la ampliación de imagen/3D; en edición abre una
   modal para pegar/arrastrar/elegir imágenes o crear una portada desde el STEP vinculado de
   la pieza, con caras rojas y encuadre guardados. `Feature.cover_3d`

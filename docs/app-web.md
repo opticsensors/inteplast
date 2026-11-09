@@ -41,7 +41,8 @@ La interpretación de correcciones de otras piezas sigue pendiente.
 
 Desde el **2026-10-22** el mismo conjunto se puede leer desde **SharePoint** con
 `SHAREPOINT_ENABLED=true`: cada usuario entra con su cuenta de Microsoft y los archivos se leen
-por Graph con sus permisos. Falta la primera prueba real. Ver
+por Graph con sus permisos. El login real funciona con retorno automático desde el 09/11/2026;
+falta la primera prueba real de archivos. Ver
 [SharePoint](ficheros-externos.md#sharepoint-microsoft-graph).
 
 El **bloque transversal** del modelo de datos: `FEATURE` + `WARNING` + `LESSON_LEARNED` +
@@ -653,7 +654,7 @@ La cobertura HTML se genera dentro del stack de tests y desaparece al limpiarlo.
 | **Imagen con la zona marcada en rojo** | Implementada la [portada CAD](portadas-cad.md): caras del STEP, captura, cámara y 3D interactivo. El marcado libre sobre imágenes/planos sigue pendiente |
 | **Vincular un feature con sus N-numbers y sus cotas** | Implementado con `PartCharacteristic` + `FeatureCharacteristicLink` (cota por pieza y revisión, con rol); ver [Cotas y evidencia](cotas-y-evidencia-web.md). Las tolerancias se leen de las mediciones importadas; el modelo normalizado `INSTANCIA_EN_PROYECTO` de [modelo-datos.md](modelo-datos.md) sigue pendiente |
 | **Vistas ligeras de escaneo y molde** | Implementadas: cola persistente, GLB en caché, original intacto y descarga íntegra; ver [vistas-3d.md](vistas-3d.md) |
-| **Conexión Microsoft 365** | Implementada el 22/10/2026 con la app de Eurecat (login delegado + Graph), pendiente de la primera prueba real. INTEPLAST: confirmar ubicación y permisos con su IT (A10, prioridad 1). Se direcciona por ruta: un renombrado rompe el vínculo. Ver [SharePoint](ficheros-externos.md#sharepoint-microsoft-graph) |
+| **Conexión Microsoft 365** | Implementada el 22/10/2026 con la app de Eurecat (login delegado + Graph). Login real el 30/10 y retorno automático el 09/11/2026; pendiente la primera prueba real de archivos. INTEPLAST: confirmar ubicación y permisos con su IT (A10, prioridad 1). Se direcciona por ruta: un renombrado rompe el vínculo. Ver [SharePoint](ficheros-externos.md#sharepoint-microsoft-graph) |
 | **La ficha de una pieza** | Implementada el 22/09/2026: `/parts/{id}` con identidad, carpeta, Cotas, Features y Archivos (`Parts/PartDetailPage.tsx`) |
 | **Adjuntos del feature copiados de la pieza** | No se actualizan si cambian los archivos de la pieza; afecta a la portada CAD y al plano de la fila COTAS. Ver [portadas CAD](portadas-cad.md#origen-del-cad-de-la-portada) |
 | **Concurrencia del asistente** | Pendiente de decidir con el despliegue (proveedor, máquina, usuarios). Ver [asistente](asistente.md#concurrencia-y-despliegue) |

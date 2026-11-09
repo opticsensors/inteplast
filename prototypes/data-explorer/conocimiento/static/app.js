@@ -34,6 +34,9 @@ async function render() {
     else if (tab === "planos") await vistaPlanos(q)
     else if (tab === "piezas" && partes[1] && !(partes[1] in SUBPESTANAS)) await vistaPieza(partes[1], q)
     else if (tab === "piezas") await vistaPiezas(partes[1] || "", q)
+    else if (tab === "errores" && partes[1] === "generales") await vistaGenerales(q)
+    else if (tab === "errores" && partes[1]) await vistaErroresPieza(partes[1], q)
+    else if (tab === "errores") await vistaErrores()
     else if (tab === "grafo") await vistaGrafo(q)
     else if (tab === "esquema") await vistaEsquema()
     else if (tab === "revision") await vistaRevision()
@@ -325,7 +328,7 @@ const featuresDe = (p) => [...new Set(p.features)]
 
 // Las cifras que se comparan entre piezas: [campo, título de la columna].
 const CIFRAS = [["documentos", "Ficheros"], ["planos", "Planos"], ["muestreos", "Muestreos"], ["cotas", "Cotas medidas"],
-  ["correcciones", "Pasos de corrección"], ["hallazgos", "Hallazgos"], ["casos", "Casos de referencia"]]
+  ["correcciones", "Pasos de corrección"], ["errores", "Errores propios pendientes"], ["generales", "Errores generales pendientes"]]
 let ordenNumeros = { campo: "codigo", sentido: 1 }
 const SUBPESTANAS = { "": "Cuadrícula", numeros: "Números", grafo: "Grafo" }
 // Un solo tag por pieza: qué datos tiene. En rojo, las que no tienen medidas.
@@ -399,13 +402,52 @@ function rejillaPiezas(cuerpo, lista, tags, familias) {
   cuerpo.append(rejilla)
 }
 
+// Desglose de la columna «Ficheros»: se despliega bajo la fila al pulsarla. Sigue abierto al reordenar.
+const desplegadasNumeros = new Set()
+const AYUDA_TIPO = {
+  "pdf": "PDF con capa de texto: se puede buscar en él.",
+  "pdf escaneado": "PDF sin capa de texto: casi siempre un escaneo; alguno puede ser un PDF exportado como imagen. Para buscar en él haría falta OCR.",
+  "vacíos": "Ficheros de 0 bytes o con solo saltos de línea. No cuentan en su tipo.",
+  "otros sin texto extraíble": "Ficheros no PDF cuyo contenido no se puede consultar como texto; pueden contener imágenes o gráficos. Excluye los vacíos. No cuentan en su tipo (xls, docx…).",
+}
+
+async function desgloseFicheros(codigo) {
+  const d = await una(`/api/pieza/${encodeURIComponent(codigo)}/ficheros`)
+  // Una columna por tipo, de más a menos ficheros en la pieza, junto a «Ficheros», que es su suma. Vacía si no hay.
+  const exts = d.total.tipos.map((t) => t.ext)
+  const cifra = (n, clase = "") => `<td class="cifra-col ${clase} ${n ? "" : "cero"}">${num(n)}</td>`
+  const tipo = (n) => n ? cifra(n, "tipo") : `<td class="tipo"></td>`
+  const fila = (x, nombre, clase = "") => {
+    const porTipo = Object.fromEntries(x.tipos.map((t) => [t.ext, t.n]))
+    return `<tr class="${clase}"><td>${nombre}</td>${cifra(x.n)}${exts.map((e) => tipo(porTipo[e])).join("")}</tr>`
+  }
+  return `<div class="desglose-caja"><table class="desglose"><tr><th>Carpeta</th><th class="cifra-col">Ficheros</th>
+    ${exts.map((e) => `<th class="cifra-col tipo" ${AYUDA_TIPO[e] ? `title="${esc(AYUDA_TIPO[e])}"` : ""}>${esc(e || "sin ext.")}</th>`).join("")}</tr>
+    ${d.carpetas.map((x) => fila(x, esc(x.carpeta_norm ?? "—"))).join("")}${fila(d.total, "Total", "total")}</table></div>`
+}
+
+function despliegaFicheros(tr, ancho) {
+  const codigo = tr.dataset.codigo
+  if (tr.nextElementSibling?.classList.contains("detalle")) {
+    tr.nextElementSibling.remove(); tr.classList.remove("abierta"); desplegadasNumeros.delete(codigo); return
+  }
+  desplegadasNumeros.add(codigo); tr.classList.add("abierta")
+  const detalle = document.createElement("tr")
+  detalle.className = "detalle"
+  detalle.innerHTML = `<td colspan="${ancho}"><span class="nota">Cargando…</span></td>`
+  tr.after(detalle)
+  desgloseFicheros(codigo).then((html) => { detalle.firstElementChild.innerHTML = html })
+    .catch((e) => { detalle.firstElementChild.textContent = `Error: ${e.message}` })
+}
+
 function tablaNumeros(cuerpo, lista, tags, familias) {
   const { campo, sentido } = ordenNumeros
   const orden = [...lista].sort((a, b) => sentido * (campo === "codigo" ? a.codigo.localeCompare(b.codigo) : a[campo] - b[campo]) || a.codigo.localeCompare(b.codigo))
   const titulo = (c, texto, clase = "") => `<th class="${clase}" data-campo="${c}" title="Ordenar">${texto}${c === campo ? (sentido > 0 ? " ▲" : " ▼") : ""}</th>`
-  cuerpo.innerHTML = `<div class="numeros"><table>
+  const ancho = 4 + CIFRAS.length
+  cuerpo.innerHTML = `<div class="numeros"><p class="nota">Pulsa una fila para ver sus ficheros por carpeta; el número de la pieza abre su ficha.</p><table>
     <tr>${titulo("codigo", "Pieza")}<th class="fijo">Feature</th><th class="fijo">Tag</th><th class="fijo">Familia</th>${CIFRAS.map(([c, t]) => titulo(c, t, "cifra-col")).join("")}</tr>
-    ${orden.map((p) => `<tr data-codigo="${esc(p.codigo)}"><td><b>${esc(p.codigo)}</b></td><td>${esc(featuresDe(p).join(" | "))}</td><td>${tagPieza(p, tags)}</td><td>${familiaPieza(p, familias)}</td>${CIFRAS.map(([c]) => `<td class="cifra-col ${p[c] ? "" : "cero"}">${num(p[c])}</td>`).join("")}</tr>`).join("")}
+    ${orden.map((p) => `<tr data-codigo="${esc(p.codigo)}"><td><a href="#/piezas/${esc(p.codigo)}" title="Abrir la ficha"><b>${esc(p.codigo)}</b></a></td><td>${esc(featuresDe(p).join(" | "))}</td><td>${tagPieza(p, tags)}</td><td>${familiaPieza(p, familias)}</td>${CIFRAS.map(([c]) => `<td class="cifra-col ${p[c] ? "" : "cero"}">${num(p[c])}</td>`).join("")}</tr>`).join("")}
   </table></div>`
   cuerpo.querySelectorAll("th[data-campo]").forEach((th) => {
     th.onclick = () => {
@@ -415,7 +457,10 @@ function tablaNumeros(cuerpo, lista, tags, familias) {
       tablaNumeros(cuerpo, lista, tags, familias)
     }
   })
-  cuerpo.querySelectorAll("tr[data-codigo]").forEach((tr) => { tr.onclick = () => ir(`#/piezas/${tr.dataset.codigo}`) })
+  cuerpo.querySelectorAll("tr[data-codigo]").forEach((tr) => {
+    tr.onclick = (e) => { if (!e.target.closest("a")) despliegaFicheros(tr, ancho) }
+    if (desplegadasNumeros.has(tr.dataset.codigo)) { desplegadasNumeros.delete(tr.dataset.codigo); despliegaFicheros(tr, ancho) }
+  })
 }
 
 /* Grafo de piezas y features. Pinta menos que el de la pestaña Grafo, pero con la misma línea. */
@@ -568,7 +613,6 @@ async function vistaPieza(codigo, q) {
     <h2>Pieza ${esc(codigo)}</h2>
     <div>${tagPieza(d.resumen, tags)}${familiaPieza(d.resumen, familias)}${d.resumen.features.map((f) => `<span class="chip azul">${esc(f)}</span>`).join("")} ${d.resumen.carpetas.map((f) => `<span class="chip">${esc(f)}</span>`).join("")}</div>
     ${d.resumen.tag_motivo ? `<div class="nota">${esc(d.resumen.tag_motivo)}</div>` : ""}
-    ${d.identidad.length ? `<div class="bloque md"><b>Identidad</b> <span class="chip">identidad-piezas.md</span>${md(d.identidad.join("\n"))}</div>` : ""}
     <div class="bloque">
       <b>Evolución de una cota</b> <span class="chip">informes intern.NN · un valor por cavidad y muestreo</span>
       <div class="selectores">
@@ -586,31 +630,21 @@ async function vistaPieza(codigo, q) {
         <td>${m.fechas.map(esc).join("<br>")}</td><td>${Object.entries(m.papeles).map(([k, v]) => `${esc(k)}: ${num(v)}`).join("<br>")}</td></tr>`).join("")}
       </table></div>
       ${d.sin_muestreo.length ? `<details><summary>${d.sin_muestreo.length} ficheros con medidas DR sin intern.NN en el nombre</summary>${d.sin_muestreo.map(esc).join("<br>")}</details>` : ""}
-    </div>
-    <div class="bloque"><b>Hallazgos e incongruencias</b> <span class="chip">hallazgos.jsonl</span>
-      <table><tr><th>Id</th><th>Tipo</th><th>Relevancia</th><th>Estado</th><th>Afirmación</th></tr>
-      ${d.hallazgos.map((x) => `<tr><td><a href="#/grafo?n=${encodeURIComponent(x.id)}">${esc(x.id)}</a></td><td>${esc(x.tipo)}</td><td>${esc(x.relevancia)}</td><td>${esc(x.estado)}</td><td>${esc((x.afirmacion || "").slice(0, 400))}</td></tr>`).join("")}</table></div>
-    ${d.casos.length ? `<div class="bloque"><b>Casos de referencia</b> <span class="chip">casos-referencia.jsonl</span><table><tr><th>Id</th><th>Fichero</th><th>Celda</th><th>Tratamiento</th><th>Motivo</th></tr>
-      ${d.casos.map((x) => `<tr><td>${esc(x.id)}</td><td>${esc((x.ruta || "").split("/").pop())}</td><td>${esc(x.hoja)}!${esc(x.celda)}</td><td>${esc(x.tratamiento_esperado)}</td><td>${esc(x.motivo)}</td></tr>`).join("")}</table></div>` : ""}
-    <div class="bloque"><b>Ficheros por carpeta</b> <span class="chip">documento</span>
-      <table><tr><th>Carpeta</th><th>Ficheros</th><th>Con contenido extraído</th><th>Solo metadatos</th><th>Sin texto</th><th>Duplicados</th></tr>
-      ${d.carpetas.map((x) => `<tr><td>${esc(x.carpeta_norm)}</td><td>${x.n}</td><td>${x.extraidos}</td><td>${x.metadatos}</td><td>${x.sin_texto}</td><td>${x.duplicados}</td></tr>`).join("")}</table>
-      <p>${d.extensiones.map((x) => `<span class="chip">${esc(x.ext || "sin ext.")} ${x.n}</span>`).join("")}</p></div>`
+    </div>`
   document.getElementById("volver").onclick = () => ir(ultimasPiezas)
 
   let componenteActual = null
   const cadenasActuales = () => d.cadenas.filter((x) => !componenteActual || !x.componente || x.componente === componenteActual)
-  const tablaCad = (cota) => {
-    const todas = cadenasActuales()
-    const filas = cota ? todas.filter((x) => x.cota === cota) : todas
-    document.getElementById("filtroCad").innerHTML = cota ? `cota ${esc(cota)}: ${filas.length} de ${todas.length} · <a href="#" id="todasCad">ver todas</a>` : `${todas.length} pasos`
+  // Siempre todos los pasos, sin filtrar por la cota de la gráfica; pulsar una cota la dibuja.
+  const tablaCad = () => {
+    const filas = cadenasActuales()
+    document.getElementById("filtroCad").textContent = `${filas.length} pasos`
     document.getElementById("tablaCad").innerHTML = `<tr><th>Cota</th><th>Corrección</th><th>Fecha</th><th>Origen</th><th>Validación</th><th>Estado</th><th>Avisos</th></tr>` +
       filas.map((x) => `<tr><td><a href="#" data-cota="${esc(x.cota)}">${esc(x.cota)}</a></td><td>${esc(x.numero ?? "")}</td><td>${esc(x.fecha_correccion ?? "")}</td>
         <td>${x.origen_muestreo != null ? `intern.${String(x.origen_muestreo).padStart(2, "0")} · ${x.origen_fuera ?? "?"}/${x.origen_n ?? "?"} fuera` : "—"}</td>
         <td>${x.validacion_muestreo != null ? `intern.${String(x.validacion_muestreo).padStart(2, "0")} · ${x.validacion_fuera ?? "?"}/${x.validacion_n ?? "?"} fuera` : "—"}</td>
         <td>${esc(x.validacion_estado ?? "")}</td><td style="font-size:11px;color:var(--suave)">${esc((JSON.parse(x.avisos || "[]") || []).join("; "))}</td></tr>`).join("")
     document.querySelectorAll("#tablaCad a[data-cota]").forEach((a) => { a.onclick = (e) => { e.preventDefault(); document.getElementById("selCota").value = a.dataset.cota; dibuja() } })
-    const verTodas = document.getElementById("todasCad"); if (verTodas) verTodas.onclick = (e) => { e.preventDefault(); tablaCad(null) }
   }
   // La cabecera, la lista de cotas y la tabla de correcciones siguen a lo que dibuja la gráfica.
   const alCargar = (r) => {
@@ -622,17 +656,127 @@ async function vistaPieza(codigo, q) {
     }
     const info = r.info
     document.getElementById("infoCota").textContent = `${num(info.medidas)} medidas · ${info.documentos} ficheros · ${cuantasCorrecciones(r.correcciones.length)}${info.nominal.length > 1 ? " · varias nominales o tolerancias con el mismo número" : ""}`
-    tablaCad(cadenasActuales().some((x) => x.cota === info.cota) ? info.cota : null)
+    tablaCad()
   }
   const muestraCota = evolucionCota(document.getElementById("evolucion"), codigo, { componente: q.get("componente"), alCargar })
   const dibuja = () => {
     const cota = document.getElementById("selCota").value
     if (cota) muestraCota(cota)
-    else { document.getElementById("evolucion").innerHTML = `<div class="vacio">Sin medidas DR.</div>`; tablaCad(null) }
+    else { document.getElementById("evolucion").innerHTML = `<div class="vacio">Sin medidas DR.</div>`; tablaCad() }
   }
   document.getElementById("selCota").onchange = dibuja
   dibuja()
 }
+
+/* ------------------------------------------------------------ errores */
+
+// Ninguna incidencia se presenta como error demostrado: «Pendiente de aclarar» es lo que falta aclarar con INTEPLAST.
+const CLASE_ESTADO = { "Duda": "morado", "Pendiente de aclarar": "naranja", "Explicación posible · sin confirmar": "azul", "Resuelta": "verde", "Corregida": "verde" }
+
+function resumenTexto(t, largo = 320) {
+  t = t || ""
+  if (t.length <= largo) return { corto: t, cortado: false }
+  const corte = t.lastIndexOf(" ", largo - 10)
+  return { corto: t.slice(0, corte > largo / 2 ? corte : largo) + "…", cortado: true }
+}
+
+function piezasDeIncidencia(i, actual, catalogo) {
+  const enlace = (c) => catalogo.has(c) ? `<a href="#/errores/${esc(c)}">${esc(c)}</a>` : `${esc(c)} (fuera del catálogo)`
+  if (!i.piezas.length) return `<div class="nota">No cita ninguna pieza.</div>`
+  const otras = i.piezas.filter((c) => c !== actual)
+  if (!otras.length) return ""
+  return `<div class="nota">${actual ? "También afecta a" : `Afecta a ${i.piezas.length > 1 ? `${i.piezas.length} piezas:` : ""}`} ${otras.map(enlace).join(", ")}</div>`
+}
+
+function tarjetaIncidencia(i, actual, catalogo) {
+  const { corto, cortado } = resumenTexto(i.texto)
+  const detalle = cortado || i.evidencia.length || i.graficas.length
+  return `<div class="incidencia ${i.pendiente ? "" : "cerrada"}">
+    <div class="cab"><span class="chip ${CLASE_ESTADO[i.estado] || ""}">${esc(i.estado)}</span><b>${esc(i.titulo)}</b><span class="id">${esc(i.id)}</span></div>
+    <p>${esc(corto)}</p>
+    ${piezasDeIncidencia(i, actual, catalogo)}
+    ${detalle ? `<details><summary>Ver evidencia</summary>
+      ${cortado ? `<p>${esc(i.texto)}</p>` : ""}
+      ${i.evidencia.length ? `<ul class="evidencia">${i.evidencia.map((e) => `<li><b>${esc(e.fichero)}</b>${e.localizador ? ` · ${esc(e.localizador)}` : ""}<div class="nota">${esc(e.carpeta)}</div></li>`).join("")}</ul>` : ""}
+      ${i.graficas.map((g) => `<p><a href="#/piezas/${esc(g.pieza)}?c=${encodeURIComponent(g.cota)}">Ver la gráfica de la cota ${esc(g.cota)} de la ${esc(g.pieza)} →</a></p>`).join("")}
+    </details>` : ""}
+  </div>`
+}
+
+// Pendientes por defecto, también las de explicación posible (sin confirmar); las resueltas y corregidas, con la casilla.
+function listaIncidencias(incidencias, q, actual, catalogo, vacio) {
+  const todas = q.get("todas") === "1"
+  const cerradas = incidencias.filter((i) => !i.pendiente).length
+  const lista = todas ? incidencias : incidencias.filter((i) => i.pendiente)
+  return `${cerradas ? `<label class="nota"><input type="checkbox" id="todas" ${todas ? "checked" : ""}> Mostrar también las resueltas y corregidas (${cerradas})</label>` : ""}
+    ${lista.length ? lista.map((i) => tarjetaIncidencia(i, actual, catalogo)).join("") : `<div class="vacio">${incidencias.length ? "Ninguna pendiente." : vacio}</div>`}`
+}
+
+function casillaTodas(q) {
+  const casilla = document.getElementById("todas")
+  if (!casilla) return
+  casilla.onchange = () => {
+    const p = new URLSearchParams(q)
+    if (casilla.checked) p.set("todas", "1"); else p.delete("todas")
+    const [camino] = location.hash.split("?")
+    ir(`${camino}${p.toString() ? "?" + p : ""}`)
+  }
+}
+
+const catalogoPiezas = async () => new Set((await una("/api/piezas")).piezas.map((p) => p.codigo))
+
+function contadorErrores(e) {
+  const propias = e.propias ? `<b>${e.propias_pendientes}</b> propia${e.propias_pendientes === 1 ? "" : "s"} pendiente${e.propias_pendientes === 1 ? "" : "s"} de ${e.propias}` : "Sin incidencias propias"
+  const generales = e.generales ? ` · <b>${e.generales_pendientes}</b> general${e.generales_pendientes === 1 ? "" : "es"}` : ""
+  return propias + generales
+}
+
+async function vistaErrores() {
+  const { piezas, otras } = await api("/api/errores")
+  vista.innerHTML = `<section class="contenido">
+    <h2>Errores</h2>
+    <p class="nota">Incongruencias y dudas de los datos, por pieza. «Pendiente de aclarar» no quiere decir comprobado: es lo que falta
+    aclarar con INTEPLAST. «Explicación posible» es una hipótesis sin confirmar y también cuenta como pendiente. Las generales afectan a varias piezas y tienen una sola ficha; cada pieza cuenta las que le afectan.</p>
+    <div class="filas-errores">
+      ${piezas.map((p) => `<a class="fila-error" href="#/errores/${esc(p.codigo)}">
+        <div class="mini"><img loading="lazy" alt="" src="/cad/${esc(p.codigo)}.jpg"></div>
+        <div class="que"><b>${esc(p.codigo)}</b> <span class="nota">${esc([...new Set(p.carpetas)].join(" · "))}</span>
+          <div>${[...new Set(p.features)].map((f) => `<span class="chip">${esc(f)}</span>`).join("")}</div></div>
+        <div class="contador ${p.propias_pendientes || p.generales_pendientes ? "pendiente" : ""}">${contadorErrores(p)}</div></a>`).join("")}
+      <a class="fila-error" href="#/errores/generales">
+        <div class="mini">∑</div>
+        <div class="que"><b>Generales y otras referencias</b><div class="nota">Afectan a varias piezas, no citan ninguna o son de una pieza fuera del catálogo</div></div>
+        <div class="contador ${otras.pendientes ? "pendiente" : ""}"><b>${otras.pendientes}</b> pendiente${otras.pendientes === 1 ? "" : "s"} de ${otras.total}</div></a>
+    </div></section>`
+  vista.querySelectorAll(".fila-error img").forEach((img) => { img.onerror = () => { img.replaceWith(h(`<span>sin miniatura</span>`)) } })
+}
+
+async function vistaErroresPieza(codigo, q) {
+  const [d, catalogo] = await Promise.all([api(`/api/errores/pieza/${encodeURIComponent(codigo)}`), catalogoPiezas()])
+  vista.innerHTML = `<section class="contenido">
+    <p><button id="volver" title="Volver a la lista de piezas">☰ Lista</button></p>
+    <h2>Errores · pieza ${esc(codigo)}</h2>
+    ${d.generales ? `<p><a href="#/errores/generales?pieza=${esc(codigo)}">Le afectan además ${d.generales} incidencia${d.generales === 1 ? "" : "s"} general${d.generales === 1 ? "" : "es"} (${d.generales_pendientes} pendiente${d.generales_pendientes === 1 ? "" : "s"}) →</a></p>` : ""}
+    ${listaIncidencias(d.incidencias, q, codigo, catalogo, "Esta pieza no tiene incidencias propias.")}
+  </section>`
+  document.getElementById("volver").onclick = () => ir("#/errores")
+  casillaTodas(q)
+}
+
+async function vistaGenerales(q) {
+  const pieza = q.get("pieza")
+  const [d, catalogo] = await Promise.all([api(`/api/errores/generales${pieza ? `?pieza=${encodeURIComponent(pieza)}` : ""}`), catalogoPiezas()])
+  vista.innerHTML = `<section class="contenido">
+    <p><button id="volver" title="Volver a la lista de piezas">☰ Lista</button></p>
+    <h2>${pieza ? `Incidencias generales que afectan a la ${esc(pieza)}` : "Generales y otras referencias"}</h2>
+    <p class="nota">${pieza ? `Solo las generales que citan la ${esc(pieza)}. <a href="#/errores/${esc(pieza)}">Errores propios de la ${esc(pieza)} →</a> · <a href="#/errores/generales">todas las generales →</a>`
+      : "Las de la sección «Transversales» de las incongruencias, más las que no citan ninguna pieza del catálogo."}</p>
+    ${listaIncidencias(d.incidencias, q, pieza, catalogo, "No le afecta ninguna incidencia general.")}
+  </section>`
+  document.getElementById("volver").onclick = () => ir(pieza ? `#/errores/${pieza}` : "#/errores")
+  casillaTodas(q)
+}
+
 
 /* ------------------------------------------------------------ grafo */
 
@@ -828,7 +972,7 @@ async function vistaEsquema() {
 
 async function vistaRevision(recalcular = false) {
   vista.innerHTML = `<div class="vacio">${recalcular ? "Recalculando (tarda unos segundos)…" : "Cargando…"}</div>`
-  const r = await api(`/api/revision${recalcular ? "?recalcular=true" : ""}`)
+  const [r, ref] = await Promise.all([api(`/api/revision${recalcular ? "?recalcular=true" : ""}`), una("/api/revision/referencias")])
   const grupos = { pieza: "Pieza: ¿cada dato está en la pieza correcta?", muestreo: "Muestreo: ¿cada medida está en el muestreo correcto?" }
   vista.innerHTML = `<section class="contenido">
     <h2>Revisión de enlaces pieza y muestreo</h2>
@@ -842,6 +986,11 @@ async function vistaRevision(recalcular = false) {
         <div class="cuerpo"><p>${esc(x.que)} ${x.nota ? `<i>${esc(x.nota)}</i>` : ""}</p>
         ${x.casos.length ? tabla(x.casos.slice(0, CASOS_VISIBLES)) + (x.n > CASOS_VISIBLES ? `<p style="color:var(--suave)">Se muestran ${CASOS_VISIBLES} de ${num(x.n)}; la lista completa está en <code>revision.json</code>.</p>` : "") : "<p>Sin casos.</p>"}
         </div></details>`).join("")).join("")}
+    <h3>Pruebas de los lectores y observaciones de los ficheros</h3>
+    <details class="comp"><summary><span class="nivel info">info</span><b>Casos de referencia</b> comprobados en los originales<span class="n">${num(ref.casos.length)}</span></summary>
+      <div class="cuerpo">${ref.casos.length ? tabla(ref.casos) : "<p>Sin casos.</p>"}</div></details>
+    <details class="comp"><summary><span class="nivel info">info</span><b>Estructura y formato</b> de los ficheros<span class="n">${num(ref.notas.length)}</span></summary>
+      <div class="cuerpo">${ref.notas.map((x) => `<p><span class="chip">${esc(x.tipo)}</span> <b>${esc(x.id)}</b> · ${esc(x.piezas.join(", "))}<br>${esc(x.texto)}</p>`).join("")}</div></details>
   </section>`
   document.getElementById("recalc").onclick = () => vistaRevision(true)
 }

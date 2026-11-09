@@ -42,6 +42,8 @@ from comun import COMPONENTES, EXEMPLES, componente_de_nombre, original  # noqa:
 
 RECALL = 0x400000 | 0x40000 | 0x1000  # atributos de OneDrive: el fichero no está en local
 EXCLUIDAS = {"aleatoria": "generada con RAND() (I-003)", "cero": "cero (I-002)", "atipico": "atípico"}
+# Thumbs.db son miniaturas que crea Windows, no ficheros del proyecto: no cuentan como ficheros de la pieza (09/11/2026).
+SIN_THUMBS = "lower(nombre) <> 'thumbs.db'"
 # Planos guardados de lado: giro horario (grados) que deja el texto derecho. Comprobado a ojo el 05/11/2026.
 GIROS = {"3202_balloned low resolution.pdf": 90, "3206-A_balloned lr.pdf": 90, "Drw_Marking_DR_intern02.pdf": 270}
 MIN_DENTRO_HOJA = .95  # parte de los sellos que debe caer en la hoja para dar por bueno el calco 1:1
@@ -467,29 +469,24 @@ def cad_de(codigo: str) -> list[sqlite3.Row]:
 @lru_cache(maxsize=1)
 def piezas() -> list[dict]:
     """Una fila por pieza con sus cifras, para poder compararlas. Mismas definiciones que `pieza()`."""
+    import errores  # importa este módulo: aquí dentro para no hacerlo en círculo
+
     c = con()
     salida = {}
     for f in c.execute("SELECT codigo, feature, pieza, count(*) n, sum(tamano) b FROM documento WHERE codigo IS NOT NULL"
-                       " GROUP BY codigo, feature, pieza"):
+                       f" AND {SIN_THUMBS} GROUP BY codigo, feature, pieza"):
         p = salida.setdefault(f["codigo"], {"codigo": f["codigo"], "features": [], "carpetas": [], "documentos": 0, "bytes": 0,
-                                            "planos": 0, "correcciones": 0, "hallazgos": 0, "casos": 0})
+                                            "planos": 0, "correcciones": 0})
         p["features"].append(f["feature"])
         p["carpetas"].append(f["pieza"])
         p["documentos"] += f["n"]
         p["bytes"] += f["b"] or 0
-    for h in hallazgos():
-        for cod in piezas_de(h.get("pieza")):
-            if cod in salida:
-                salida[cod]["hallazgos"] += 1
     for f in c.execute("SELECT pieza, count(*) FROM cadena_correccion GROUP BY pieza"):
         if f[0] in salida:
             salida[f[0]]["correcciones"] = f[1]
     for p in planos():
         if p["codigo"] in salida:
             salida[p["codigo"]]["planos"] += 1
-    for x in casos():
-        if str(x.get("pieza")) in salida:
-            salida[str(x.get("pieza"))]["casos"] += 1
     muestreos, cotas = defaultdict(set), defaultdict(set)
     for f in c.execute("SELECT d.codigo, d.nombre, m.cota FROM medida_dr m JOIN documento d ON d.id=m.documento_id"
                        " WHERE d.carpeta_norm='metrologia' AND d.codigo IS NOT NULL GROUP BY d.id, m.cota"):
@@ -502,6 +499,8 @@ def piezas() -> list[dict]:
         p["cad"] = [f["nombre"] for f in cad_de(codigo)]
         p["tag"], p["tag_motivo"] = TAG_FIJO.get(codigo) or (tag_de_pieza(p), None)
         p["familia"] = FAMILIA_DE.get(codigo)
+        e = errores.resumen_pieza(codigo)  # pestaña Errores: propias y generales pendientes
+        p["errores"], p["generales"] = e["propias_pendientes"], e["generales_pendientes"]
     return sorted(salida.values(), key=lambda p: p["codigo"])
 
 
@@ -509,25 +508,44 @@ def tag_de_pieza(p: dict) -> str:
     return "nada" if not p["cotas"] else "correcciones" if p["correcciones"] else "medidas"
 
 
-def identidad(codigo: str) -> list[str]:
-    """Filas de identidad-piezas.md que citan la pieza (tal cual, Markdown)."""
-    texto = (CONOCIMIENTO / "identidad-piezas.md").read_text(encoding="utf-8")
-    cabecera, filas = None, []
-    for linea in texto.splitlines():
-        if linea.startswith("|") and cabecera is None and "---" not in linea:
-            cabecera = linea
-        if linea.startswith("|") and re.search(rf"\b{codigo}\b", linea):
-            filas.append(linea)
-    return ([cabecera, "|" + "---|" * (cabecera.count("|") - 1)] + filas) if cabecera and filas else []
+ESCANEADO, VACIOS, OTROS_SIN_TEXTO = "pdf escaneado", "vacíos", "otros sin texto extraíble"
+# Tipo de cada fichero en el desglose. Cada fichero cae en uno solo, así que los tipos suman «Ficheros». Una copia
+# idéntica (`duplicado`) no se vuelve a leer: cuenta como su original. Revisión del 09/11/2026:
+# - vacíos: 0 bytes, o texto sin nada más que saltos de línea (cav_1.txt del 3237); salen de su tipo;
+# - pdf escaneado: PDF sin capa de texto (casi siempre un escaneo; alguno puede ser un PDF exportado como imagen);
+# - otros sin texto extraíble: el resto sin texto (Excel, ODS y Word hechos de imágenes o gráficos); salen de su tipo.
+TIPO_FICHERO = f"""CASE WHEN tamano = 0 OR (estado_real = 'sin_texto' AND lector_real = 'texto') THEN '{VACIOS}'
+    WHEN estado_real = 'sin_texto' AND lower(ext) = 'pdf' THEN '{ESCANEADO}'
+    WHEN estado_real = 'sin_texto' THEN '{OTROS_SIN_TEXTO}' ELSE lower(ext) END"""
+CON_ORIGINAL = """(SELECT d.*, coalesce(o.estado, d.estado) AS estado_real, coalesce(o.lector, d.lector) AS lector_real
+    FROM documento d LEFT JOIN documento o ON o.id = d.duplicado_de AND d.estado = 'duplicado')"""
+
+
+def ficheros(codigo: str) -> dict:
+    """Desglose de la columna «Ficheros» de Números: por carpeta y tipo de fichero, con total.
+
+    «pdf escaneado» va junto a «pdf»; «vacíos» y «otros sin texto extraíble», al final. Ver `TIPO_FICHERO`.
+    """
+    c = con()
+    carpetas = {f["carpeta_norm"]: {**dict(f), "tipos": []} for f in c.execute(
+        f"SELECT carpeta_norm, count(*) n FROM documento WHERE codigo=? AND {SIN_THUMBS} GROUP BY 1 ORDER BY 2 DESC, 1", (codigo,))}
+    tipos: Counter = Counter()
+    for f in c.execute(f"SELECT carpeta_norm, {TIPO_FICHERO} ext, count(*) n FROM {CON_ORIGINAL} WHERE codigo=? AND {SIN_THUMBS}"
+                       " GROUP BY 1, 2 ORDER BY 3 DESC, 2", (codigo,)):
+        carpetas[f["carpeta_norm"]]["tipos"].append({"ext": f["ext"], "n": f["n"]})
+        tipos[f["ext"]] += f["n"]
+    orden = sorted((e for e in tipos if e not in (VACIOS, OTROS_SIN_TEXTO)), key=lambda e: (-tipos[e], e or ""))
+    if ESCANEADO in orden and "pdf" in orden:  # junto a «pdf»
+        orden.remove(ESCANEADO)
+        orden.insert(orden.index("pdf") + 1, ESCANEADO)
+    orden += [e for e in (VACIOS, OTROS_SIN_TEXTO) if e in tipos]
+    filas = list(carpetas.values())
+    total = {"n": sum(x["n"] for x in filas), "tipos": [{"ext": e, "n": tipos[e]} for e in orden]}
+    return {"codigo": codigo, "carpetas": filas, "total": total}
 
 
 def pieza(codigo: str) -> dict:
     c = con()
-    carpetas = [dict(f) for f in c.execute(
-        "SELECT carpeta_norm, count(*) n, sum(estado='extraido') extraidos, sum(estado='solo_metadatos') metadatos,"
-        " sum(estado='sin_texto') sin_texto, sum(estado='duplicado') duplicados FROM documento WHERE codigo=? GROUP BY 1 ORDER BY 2 DESC",
-        (codigo,))]
-    extensiones = [dict(f) for f in c.execute("SELECT ext, count(*) n FROM documento WHERE codigo=? GROUP BY 1 ORDER BY 2 DESC", (codigo,))]
     filas = medidas(codigo)
     muestreos = defaultdict(lambda: {"documentos": set(), "medidas": 0, "excluidas": 0, "fechas": set(), "papeles": Counter()})
     cotas = defaultdict(lambda: {"medidas": 0, "muestreos": set()})
@@ -559,16 +577,14 @@ def pieza(codigo: str) -> dict:
     return {
         "codigo": codigo, "resumen": next((p for p in piezas() if p["codigo"] == codigo), None),
         "componentes": COMPONENTES.get(codigo, {}),
-        "identidad": identidad(codigo), "carpetas": carpetas, "extensiones": extensiones,
         "muestreos": [{"clave": k, "documentos": sorted(v["documentos"]), "medidas": v["medidas"], "excluidas": v["excluidas"],
                        "fechas": sorted(v["fechas"]), "papeles": dict(v["papeles"])} for k, v in sorted(muestreos.items())],
         "sin_muestreo": sorted(sin_muestreo),
         "cotas": [{"cota": k, "medidas": v["medidas"], "muestreos": len(v["muestreos"]),
                    "por_componente": {n: {"medidas": x["medidas"], "muestreos": len(x["muestreos"])} for n, x in por_componente[k].items()}}
                   for k, v in sorted(cotas.items(), key=lambda kv: clave_cota(kv[0]))],
+        # Errores, en su pestaña; casos de referencia, en Revisión; ficheros por carpeta, en Números (`ficheros`).
         "cadenas": cadenas,
-        "hallazgos": [h for h in hallazgos() if codigo in piezas_de(h.get("pieza"))],
-        "casos": [x for x in casos() if str(x.get("pieza")) == codigo],
     }
 
 

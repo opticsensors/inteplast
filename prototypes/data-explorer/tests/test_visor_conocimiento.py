@@ -132,8 +132,43 @@ def test_los_numeros_de_cada_pieza_son_los_de_su_ficha():
         assert fila["muestreos"] == len(ficha["muestreos"])
         assert fila["cotas"] == len(ficha["cotas"])
         assert fila["correcciones"] == len(ficha["cadenas"])
-        assert fila["hallazgos"] == len(ficha["hallazgos"])
-        assert fila["casos"] == len(ficha["casos"])
+        # Los errores, con lo que enseña la pestaña Errores (la ficha ya no los cuenta).
+        import errores
+
+        assert fila["errores"] == sum(i["pendiente"] for i in errores.de_pieza(fila["codigo"])["incidencias"])
+        assert fila["generales"] == sum(i["pendiente"] for i in errores.generales(fila["codigo"])["incidencias"])
+
+
+def test_el_desglose_de_ficheros_suma_la_columna_de_numeros():
+    for fila in datos.piezas():
+        d = datos.ficheros(fila["codigo"])
+    from collections import Counter
+
+    especiales = Counter()
+    for fila in datos.piezas():
+        d = datos.ficheros(fila["codigo"])
+        assert d["total"]["n"] == fila["documentos"] == sum(x["n"] for x in d["carpetas"])
+        assert "db" not in {t["ext"] for t in d["total"]["tipos"]}  # sin Thumbs.db: no son ficheros del proyecto
+        exts = [t["ext"] for t in d["total"]["tipos"]]
+        if "pdf" in exts and datos.ESCANEADO in exts:
+            assert exts.index(datos.ESCANEADO) == exts.index("pdf") + 1  # juntos
+        finales = [e for e in exts if e in (datos.VACIOS, datos.OTROS_SIN_TEXTO)]
+        assert exts[len(exts) - len(finales):] == finales  # al final
+        for x in d["carpetas"] + [d["total"]]:
+            assert sum(t["n"] for t in x["tipos"]) == x["n"]  # cada fichero, en un solo tipo: no se cuenta dos veces
+        for t in d["total"]["tipos"]:
+            especiales[t["ext"]] += t["n"]
+    # Los 4 PDF de 0 bytes y cav_1..4.txt del 3237 (solo saltos de línea); 3 Excel/ODS y 2 Word hechos de imágenes.
+    assert (especiales[datos.VACIOS], especiales[datos.OTROS_SIN_TEXTO]) == (8, 5)
+    # Las copias cuentan como su original: 3205-C.pdf y 3205-D.pdf del 3206 son escaneos del 3205.
+    n3206 = {t["ext"]: t["n"] for t in datos.ficheros("3206")["total"]["tipos"]}
+    assert n3206[datos.ESCANEADO] == 18
+    c = datos.con()
+    for codigo in ("3205", "3206", "3212"):
+        pdf = c.execute(f"SELECT count(*), sum(estado_real='sin_texto') FROM {datos.CON_ORIGINAL} WHERE codigo=? AND lower(ext)='pdf'"
+                        " AND tamano > 0", (codigo,)).fetchone()
+        n = {t["ext"]: t["n"] for t in datos.ficheros(codigo)["total"]["tipos"]}
+        assert (n.get("pdf", 0) + n.get(datos.ESCANEADO, 0), n.get(datos.ESCANEADO, 0)) == (pdf[0], pdf[1] or 0)
 
 
 def test_cada_pieza_tiene_su_cad():
@@ -660,3 +695,171 @@ def test_revision_cuenta_y_ejemplos_coherentes():
         assert len(x["casos"]) == x["n"]
         assert x["nivel"] in {"ok", "info", "aviso"}
         assert (x["n"] == 0) == (x["nivel"] == "ok") or x["nivel"] == "info"
+
+
+def test_csv_de_sin_condiciones_y_comparativa_solo_sin_individual():
+    import sqlite3
+
+    import evolucion
+
+    c = sqlite3.connect(":memory:")
+    c.row_factory = sqlite3.Row
+    c.executescript("""
+        CREATE TABLE documento (id INTEGER, nombre TEXT, ruta TEXT);
+        CREATE TABLE medida_cmm (documento_id INTEGER, pieza TEXT, muestreo TEXT, cavidad TEXT, variante TEXT, fila INTEGER,
+                                 bloque TEXT, cota TEXT, nominal REAL, tol_sup REAL, tol_inf REAL, valor REAL);
+        CREATE TABLE medida_cmm_comparativa (documento_id INTEGER, pieza TEXT, muestreo TEXT, cavidad TEXT, variante TEXT,
+                                             fila INTEGER, rotulo TEXT, bloque TEXT, cota TEXT, nominal REAL, tol_sup REAL, tol_inf REAL,
+                                             valor REAL);
+        INSERT INTO documento VALUES (1, 'c1-3197.csv', 'x/Support_intern.03/c1-3197.csv'),
+                                     (2, '3197 C1.csv', 'x/Support_intern.02/140ºC/600bar/3197 C1.csv'),
+                                     (3, 'totes-3197.csv', 'x/Support_intern.03/totes-3197.csv'),
+                                     (4, '3197-totes.csv', 'x/Support_intern.09/3197-totes.csv'),
+                                     (5, '3197_totes_nozzle 55.csv', 'x/Support_intern.08/3197_totes_nozzle 55.csv');
+        INSERT INTO medida_cmm VALUES (1, '3197', '03', 'c1', NULL, 10, 'N230 ø4 (GX) Hole 1', '230', 4, .1, 0, 4.07),
+                                      (2, '3197', '02', 'c1@140ºC/600bar', '140ºC/600bar', 10, 'N230 ø4 (GX) Hole 1', '230', 4, .1, 0, 4.05);
+        INSERT INTO medida_cmm_comparativa VALUES (3, '3197', '03', 'c1', NULL, 20, 'c1', 'N230 ø4 (GX) Hole 1', '230', 4, .1, 0, 4.07),
+                                                  (4, '3197', '09', 'c1', NULL, 7, 'c1', 'N230 ø4 (GX) Hole 1', '230', 4, NULL, NULL, 4.08),
+                                                  (5, '3197', '08', 'c1@nozzle 55', 'nozzle 55', 7, 'c1', 'N230 ø4 (GX) Hole 1', '230', 4, NULL, NULL, 4.09);
+    """)
+    csv = evolucion.csv_de(c, "3197", "230")
+    assert set(csv) == {("00", 3, "c1", 4.0), ("00", 9, "c1", 4.0)}  # sin condición; totes solo en .09
+    assert [r["nombre"] for r in csv[("00", 3, "c1", 4.0)]] == ["c1-3197.csv"]
+    assert csv[("00", 9, "c1", 4.0)][0]["columna"] == "c1" and csv[("00", 9, "c1", 4.0)][0]["lim"] is None
+    assert csv[("00", 9, "c1", 4.0)][0]["bloque"] == "N230 ø4 (GX) Hole 1"
+    p = evolucion.solo_csv(csv[("00", 9, "c1", 4.0)], 0)
+    assert p["celda"] == "línea 7, columna c1" and p["csv"]["columna"] == "c1"
+
+
+def medida_cmm(tipo, comentario, nominal, **kw):
+    """Fila de CMM con el rótulo en el tipo (`max`, `gg`), como en los DR del 3197."""
+    x = medida(**kw)
+    x["elemento"] = ("", tipo, (nominal, .05, -.1), "cmm (dg0216)", comentario)
+    return x
+
+
+def csv_bloques(n, nominal, *filas, cav="c1"):
+    return {("00", n, cav, nominal): [{"nombre": "c1.csv", "carpeta": f"Support_intern.{n:02d}", "fila": linea, "bloque": bloque,
+                                       "valor": v, "lim": None} for linea, bloque, v in filas]}
+
+
+def test_el_csv_no_cambia_un_maximo_por_un_minimo():
+    # 3197 intern.07: DR!I59 es la cota 310 MAX (1,485); el CSV numera N310 el mínimo (1,429, línea 132) y N310.1 el máximo.
+    import evolucion
+
+    filas = [medida_cmm("max", "36 points", 1.5, n=7, fila=59, valor=1.485)]
+    p = lineas(evolucion.construir(filas, csv_bloques(7, 1.5, (132, "N310 Thickness 1,5 (Min-Value / 36 Points)  - No ICL dimension", 1.429))))[0]
+    assert p["v"] == 1.485 and p["csv"] is None
+    assert any("no se ha podido cruzar" in a for a in p["avisos"])
+
+
+def test_el_csv_no_cambia_una_altura_por_otra_ni_rellena_con_ella():
+    # 3197 intern.05: la cota 550 a -4,5 mm (DR!I85) y a -8,5 mm (DR!I89, otro bloque); el CSV solo trae X=-4,5 (línea 92).
+    import evolucion
+
+    def filas():  # intern.07 solo trae la de -4,5 (DR!I113): ahí la posición es inequívoca y permite rellenar intern.03
+        return [medida_cmm("gg", "h=-4.5 mm", 61.4, n=5, fila=85, valor=61.27, bloque=1),
+                medida_cmm("gg", "h=-8.5 mm a la punta", 61.4, n=5, fila=89, valor=61.385, bloque=2),
+                medida_cmm("gg", "h=-4.5 mm", 61.4, n=7, fila=113, valor=61.293, bloque=1)]
+
+    csv = {**csv_bloques(5, 61.4, (92, "N550 ø61,4 (GG) X=-4,5", 61.27)), **csv_bloques(3, 61.4, (92, "N550 ø61,4 (GG) X=-4,5", 60.723))}
+    s = evolucion.construir(filas(), csv)
+    punta = next(e["id"] for e in s["elementos"] if "8.5" in e["etiqueta"])
+    abajo = next(e["id"] for e in s["elementos"] if "4.5" in e["etiqueta"])
+    a = evolucion.construir(filas(), csv, elemento=punta)
+    assert [m["n"] for m in a["muestreos"]] == [5]  # intern.03 solo tiene la otra altura: no se rellena
+    assert lineas(a)[0]["v"] == 61.385 and lineas(a)[0]["csv"] is None
+    b = evolucion.construir(filas(), csv, elemento=abajo)
+    assert [m["n"] for m in b["muestreos"]] == [3, 5, 7]
+    assert lineas(b)[0]["v"] == 60.723 and lineas(b)[1]["csv"]["linea"] == 92 and lineas(b)[1]["v"] == 61.27
+
+
+def test_calificadores_de_excel_y_csv():
+    from evolucion import calificadores, compatibles
+
+    assert calificadores("N310.1 Thickness 1,5 (Max-Value / 36 Points)") == {"extremo": "max"}
+    assert calificadores("N730 Roundness 0,1 ø29,2 (Min-Zone) in height 4mm") == {"posicion": frozenset({4.0})}
+    assert compatibles(calificadores("gg h=-4.5 mm"), calificadores("N550 ø61,4 (GG) X=-4,5"))
+    assert not compatibles(calificadores("gg h=-8.5 mm a la punta"), calificadores("N550 ø61,4 (GG) X=-4,5"))
+    assert not compatibles(calificadores("gn"), calificadores("N720 ø29,2 (GG) in height 4mm"))
+    assert compatibles(calificadores(""), calificadores("POINT 1 -> 1.35-0.05 MIN/MAX"))  # sin datos no hay contradicción
+    # 3212: el bloque trae las dos medidas (GX y LP máximo); «1MIN» pegado no lo convierte en un máximo.
+    assert calificadores("N170 BOLT 1MIN/MAX H=1.5mm") == {"posicion": frozenset({1.5})}
+    assert compatibles(calificadores("min ø1 h= -1.5"), calificadores("N170 BOLT 1MIN/MAX H=1.5mm"))
+
+
+# ---------------------------------------------------------------- pestaña Errores
+
+def test_cada_hallazgo_tiene_un_sitio_y_ninguno_se_pierde():
+    import errores
+
+    import grafo
+
+    sitio = {**{t: "grafo" for t in errores.EN_EL_GRAFO}, **{t: "revision" for t in errores.TECNICOS}}
+    for x in datos.hallazgos():
+        assert x["id"].startswith("I-") or x["tipo"] in sitio, x["id"]
+    en_el_grafo = {n["id"] for n in grafo.construir()["nodos"]}
+    assert {x["id"] for x in datos.hallazgos() if x["tipo"] in errores.EN_EL_GRAFO} <= en_el_grafo
+    inc = errores.incidencias()
+    assert len(inc) == sum(x["id"].startswith("I-") for x in datos.hallazgos())
+    vistas = {i["id"] for c in errores.catalogo() for i in errores.propias(c)} | {i["id"] for i in errores.generales()["incidencias"]}
+    assert vistas == {i["id"] for i in inc}  # cada incidencia sale en una pieza o en «Generales y otras referencias»
+
+
+def test_titulos_de_incongruencias_y_estados_sin_dar_nada_por_comprobado():
+    import errores
+
+    assert errores.transversales() == {f"I-00{n}" for n in range(1, 9)}  # la sección «Transversales», no un umbral
+    for i in errores.incidencias():
+        assert i["id"] in errores.titulos() and i["titulo"] == errores.titulos()[i["id"]]
+        assert i["estado"] in ("Duda", "Pendiente de aclarar", "Explicación posible · sin confirmar", "Resuelta", "Corregida")
+        # Una explicación posible no está confirmada: sigue pendiente (revisión del 09/11/2026).
+        assert i["pendiente"] == (i["estado"] in ("Duda", "Pendiente de aclarar", "Explicación posible · sin confirmar"))
+    explicables = [i["id"] for i in errores.incidencias() if i["estado"].startswith("Explicación posible")]
+    assert {"I-002", "I-201"} <= set(explicables) and len(explicables) == 9
+    i208 = next(i for i in errores.incidencias() if i["id"] == "I-208")
+    assert i208["estado"] == "Pendiente de aclarar" and i208["graficas"] == [{"pieza": "3197", "cota": "120"}]
+    assert {e["fichero"] for e in i208["evidencia"]} == {"3197-00_intern.07.xls", "3197c1.csv", "3197.csv"}
+    assert errores.estado({"tipo": "pregunta", "estado": "abierta"}) == "Duda"
+
+
+def test_las_generales_de_una_pieza_son_solo_las_que_le_afectan():
+    import errores
+
+    for codigo in errores.catalogo():
+        g = errores.generales(codigo)["incidencias"]
+        assert all(i["general"] and codigo in i["piezas"] for i in g)
+        r = errores.resumen_pieza(codigo)
+        assert r["generales"] == len(g) and r["generales_pendientes"] == sum(i["pendiente"] for i in g)
+        p = errores.propias(codigo)
+        assert not any(i["general"] for i in p) and r["propias_pendientes"] == sum(i["pendiente"] for i in p)
+    assert [i["id"] for i in errores.generales("3197")["incidencias"]] == ["I-008"]
+
+
+def test_revision_recibe_los_casos_y_las_notas_tecnicas():
+    import errores
+
+    t = errores.tecnicos()
+    assert len(t["casos"]) == len(datos.casos())
+    assert {x["tipo"] for x in t["notas"]} <= set(errores.TECNICOS.values())
+
+
+def test_api_de_errores():
+    pytest.importorskip("httpx")
+    from fastapi.testclient import TestClient
+
+    import app
+
+    c = TestClient(app.app)
+    lista = c.get("/api/errores").json()
+    assert len(lista["piezas"]) == len(datos.piezas()) and lista["otras"]["total"] >= 8
+    assert c.get("/api/errores/pieza/3197").json()["propias"] == len([x for x in datos.hallazgos() if x["id"].startswith("I-")
+                                                                        and "3197" in datos.piezas_de(x["pieza"]) and x["id"] not in {f"I-00{n}" for n in range(1, 9)}])
+    assert c.get("/api/errores/pieza/9999").status_code == 404
+    assert [i["id"] for i in c.get("/api/errores/generales?pieza=3197").json()["incidencias"]] == ["I-008"]
+    assert len(c.get("/api/revision/referencias").json()["casos"]) == len(datos.casos())
+    # Tras cambiar la API, el navegador no puede quedarse con el app.js viejo.
+    assert c.get("/static/app.js").headers["cache-control"] == "no-cache"
+    assert c.get("/api/pieza/3051/ficheros").json()["total"]["n"] > 0 and c.get("/api/pieza/9999/ficheros").status_code == 404
+    inicio = c.get("/").text
+    assert '"/static/app.js?v=' in inicio and '"/static/app.css?v=' in inicio and '"/static/app.js"' not in inicio
