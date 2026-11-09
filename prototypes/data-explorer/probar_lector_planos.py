@@ -36,6 +36,10 @@ en el visor; configuracion.json lleva la identidad del lector combinado. Los res
 (out/probar-planos*/, hasta el 29/10/2026) son histórico: guardan las puntuaciones redondeadas a 4
 decimales, y una lectura justo por debajo del umbral podía contarse como ofrecida. No se añaden
 resultados nuevos a una carpeta hecha con puntuaciones redondeadas o con otro lector combinado.
+Cada página con referencia guarda además, en `fallos_combinado`, los fallos del lector combinado tal
+como lo ve el visor (umbral por fuente): sellos sin globo detectado, globos sin lectura ofrecida,
+números erróneos, lecturas en globos falsos y lecturas ofrecidas en detecciones sin referencia; la
+hoja errores-<página>.png muestra los dos tipos con globo detectado.
 
 Lee los originales sin copiarlos; resultados y hojas en out/probar-planos/ (fuera de Git).
 """
@@ -366,6 +370,39 @@ def compare(before: Path, after: Path):
                   f"pendientes ofrecidas {a_p}→{b_p}")
 
 
+def failures(balloons, combined, truth, size: tuple[int, int], not_found=()) -> dict:
+    """Fallos del lector combinado en una página, con lo que ofrece el visor (umbral de la fuente de cada globo).
+
+    - `no_detectados`: sellos del .icp sin globo detectado (`not_found`: número y posición en píxeles).
+    - `sin_lectura`: globo con referencia sin lectura ofrecida; `propuesta` es lo que quedó bajo el umbral.
+    - `erroneos`: lectura ofrecida con otro número.
+    - `en_falso`: lectura ofrecida en algo comprobado que no es un globo.
+    - `sin_referencia`: lectura ofrecida en una detección sin referencia (ni acierto ni error: no se sabe).
+    Posiciones normalizadas a la página sin girar (0–1); la puntuación, completa.
+    """
+    height, width = size
+    where = lambda x, y: {"x": round(float(x) / width, 4), "y": round(float(y) / height, 4)}
+    out = {"no_detectados": [dict(numero=label, **where(x, y)) for label, x, y in not_found],
+           "sin_lectura": [], "erroneos": [], "en_falso": [], "sin_referencia": []}
+    for balloon, candidates, label in zip(balloons, combined, truth):
+        source = balloon.get("fuente", "imagen")
+        read = lectores.label_of(candidates[0][0]) if candidates else None
+        value = float(candidates[0][1]) if candidates else 0.
+        shown = read if read and value >= lectores.COMBINED_THRESHOLDS[source] else None
+        item = {"puntuacion": value, "fuente": source, **where(*balloon["circle"][:2])}
+        if label is None:
+            if shown:
+                out["sin_referencia"].append(dict(leido=shown, **item))
+        elif label == NOT_A_BALLOON:
+            if shown:
+                out["en_falso"].append(dict(leido=shown, **item))
+        elif shown is None:
+            out["sin_lectura"].append(dict(numero=label, propuesta=read, **item))
+        elif shown != label:
+            out["erroneos"].append(dict(numero=label, leido=shown, **item))
+    return out
+
+
 def mixing_problem(folder: Path, config: dict) -> str | None:
     """Por qué no se pueden añadir resultados a `folder` con esta configuración, o None si se puede.
 
@@ -540,7 +577,7 @@ def main():
                              radio_mediano_px=round(float(np.median([b["circle"][2] for b in balloons])), 1))
                 readings = [[lectores.label_of(c[0][0]) if c else None for c in p] for p in predictions.values()]
                 # Las referencias se emparejan sobre la página sin girar.
-                truth = None
+                truth, not_found = None, []
                 if key in NO_BALLOON_PAGES:
                     truth = [NOT_A_BALLOON] * len(balloons)
                     entry["emparejados"] = 0
@@ -552,8 +589,13 @@ def main():
                                                     args.recalibrar, pdf_digest, digests)
                     if calibrated:
                         icp, fit = calibrated
-                        truth, matched = lectores.truth_from_stamps(balloons, candidates[icp], fit)
-                        entry.update(icp=icp, referencias=len(candidates[icp]), ajuste=f"{fit[0]}/{fit[1]}",
+                        stamps = candidates[icp]
+                        match = lectores.match_stamps(balloons, stamps, fit)
+                        truth = [None if j is None else stamps[j]["label"] for j in match]
+                        matched = sum(j is not None for j in match)
+                        mapped, used = lectores.stamps_on_page(stamps, fit), set(match)
+                        not_found = [(s["label"], *mapped[j]) for j, s in enumerate(stamps) if j not in used]
+                        entry.update(icp=icp, referencias=len(stamps), ajuste=f"{fit[0]}/{fit[1]}",
                                      emparejados=matched)
                         lectores.guarda_calibraciones(calibration, CALIBRATION)
                     else:
@@ -561,10 +603,13 @@ def main():
                 if truth is not None:
                     sources = [b.get("fuente", "imagen") for b in balloons]
                     entry["lectores"] = {name: score(p, truth, sources) for name, p in predictions.items()}
-                    best = next((n for n in ("propio-general + desplazados + únicos", "propio-amplio + desplazados + únicos",
-                                           "propio + desplazados + únicos") if n in predictions), None)
-                    if best:
-                        error_sheet(rgb, balloons, predictions[best], truth, args.salida / f"errores-{key}.png")
+                    if "combinado" in predictions:
+                        entry["fallos_combinado"] = failures(balloons, predictions["combinado"], truth, rgb.shape[:2],
+                                                             not_found)
+                        # Hoja de errores con lo que ofrece el visor: número erróneo o sin lectura («-»).
+                        shown = [c if c and c[0][1] >= lectores.COMBINED_THRESHOLDS[s] else []
+                                 for c, s in zip(predictions["combinado"], sources)]
+                        error_sheet(rgb, balloons, shown, truth, args.salida / f"errores-{key}.png")
                 else:
                     entry["lectores"] = {name: {"leidos": sum(bool(c) for c in p)} for name, p in predictions.items()}
                     sample_sheet(image, moved, predictions, args.salida / f"muestra-{key}.png")

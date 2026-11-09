@@ -1019,3 +1019,29 @@ una carpeta con puntuaciones redondeadas o de otro lector: las mediciones nuevas
 nueva (`--salida`), sin mezclarse con las antiguas.
 
 Pasan los 174 tests del prototipo (`python -m pytest tests`), 18 de ellos en `tests/test_lectores_planos.py`.
+
+### Medición contra los `.icp` con el código común (09/11/2026)
+
+```powershell
+$env:PYTHONIOENCODING = "utf-8"   # la salida lleva «≈», que no cabe en cp1252
+& $py "$s\probar_lector_planos.py" --grupo desarrollo --lectores buscador --salida "$s\out\probar-planos-2026-11-09-desarrollo"
+& $py "$s\probar_lector_planos.py" --grupo examen --lectores buscador --salida "$s\out\probar-planos-2026-11-09-examen"
+```
+
+`--lectores buscador` basta: el «combinado», el lector del visor, se calcula siempre que esté
+RapidOCR. Cada página con referencia guarda ahora en `fallos_combinado` los fallos tal como los ve el
+visor, con número y posición:
+- sellos no detectados;
+- globos sin lectura, con lo que quedó bajo el umbral;
+- números erróneos;
+- lecturas en falso;
+- lecturas sin referencia.
+
+La hoja `errores-<página>.png` es la del combinado. El módulo común expone qué sello corresponde a cada
+globo (`match_stamps`) y dónde cae cada sello (`stamps_on_page`).
+
+Resultados: las mismas lecturas, página a página, que el 29/10. Desarrollo, 95,0 % de los sellos
+bien leídos; examen, 89,3 %. Al revisar los fallos aparecieron 27 sellos mal extraídos por
+`conocimiento/herramientas/globos_icp.py`, que inflan errores y omisiones. Medición, fallos por plano
+y causa en [`planos-globos.md`](../../conocimiento/planos-globos.md#lector-de-globos-contra-los-icp-09112026).
+Pasan los 176 tests del prototipo.

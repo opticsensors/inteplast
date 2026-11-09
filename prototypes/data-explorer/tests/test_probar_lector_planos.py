@@ -218,6 +218,19 @@ class EvaluationTests(unittest.TestCase):
         self.assertEqual(summary(.43401, .60721), [])  # con puntuaciones completas: los mismos umbrales a 4 decimales
         self.assertTrue(summary(.43401, .61))  # otro umbral de imagen: avisa
 
+    def test_failures_are_what_the_viewer_offers_against_the_reference(self):
+        balloons = [{"circle": [100, 50, 5], "fuente": "imagen"} for _ in range(6)]
+        combined = [[("N1", .9)], [("N2", .9)], [("N3", .5)], [], [("N7", .9)], [("N8", .9)]]
+        truth = ["N1", "N9", "N3", "N4", plans.NOT_A_BALLOON, None]
+        out = plans.failures(balloons, combined, truth, (100, 200), [("N5", 20., 10.)])
+        self.assertEqual(out["no_detectados"], [{"numero": "N5", "x": .1, "y": .1}])
+        self.assertEqual([(e["numero"], e["leido"]) for e in out["erroneos"]], [("N9", "N2")])
+        # N3 quedó bajo el umbral de la imagen (0,6072): sin lectura, con su propuesta; N4, sin nada.
+        self.assertEqual([(e["numero"], e["propuesta"]) for e in out["sin_lectura"]], [("N3", "N3"), ("N4", None)])
+        self.assertEqual([e["leido"] for e in out["en_falso"]], ["N7"])
+        self.assertEqual([e["leido"] for e in out["sin_referencia"]], ["N8"])
+        self.assertEqual((out["erroneos"][0]["x"], out["erroneos"][0]["y"]), (.5, .5))
+
     def test_new_results_are_not_mixed_with_rounded_or_other_reader_ones(self):
         config = {"puntuaciones": "completas", "lector_combinado": "lectores-planos-v1:a:b:umbrales"}
         with tempfile.TemporaryDirectory() as directory:

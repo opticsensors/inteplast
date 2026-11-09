@@ -9,6 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 EXPLORER = Path(__file__).resolve().parents[1]
@@ -82,6 +83,18 @@ def test_el_calco_1a1_falla_si_los_sellos_se_salen_de_la_hoja():
     assert len(lectores.sellos_a_escala(dentro + [fuera], *a4)) == 20  # 20 de 21 dentro: más del 95 %
     assert lectores.sellos_a_escala(dentro[:10] + [fuera], *a4) is None  # 10 de 11: menos del 95 %
     assert lectores.sellos_a_escala([], *a4) == []
+
+
+def test_cada_sello_se_empareja_con_un_solo_globo_y_los_libres_se_ven():
+    # Ajuste identidad (escala 1, sin giro), punto 0 y signo 1: el sello cae donde dicen sus unidades.
+    fit = (3, 3, np.array([[1., 0., 0.], [0., 1., 0.]]), 0, 1)
+    stamps = [{"label": f"N{i}", "points": ((x, 50.), (0., 0.))} for i, x in ((1, 10.), (2, 40.), (3, 90.))]
+    balloons = [{"circle": [11., 50., 5.]}, {"circle": [12., 51., 5.]}, {"circle": [41., 50., 5.]}]
+    match = lectores.match_stamps(balloons, stamps, fit)
+    assert match == [0, None, 1]  # el segundo globo, también cerca del N1, se queda sin sello
+    assert lectores.truth_from_stamps(balloons, stamps, fit) == (["N1", None, "N2"], 2)
+    libres = [j for j in range(len(stamps)) if j not in set(match)]
+    assert libres == [2] and lectores.stamps_on_page(stamps, fit)[2].tolist() == [90., 50.]
 
 
 def test_la_gemela_es_otro_plano_con_el_mismo_icp_y_la_misma_forma():

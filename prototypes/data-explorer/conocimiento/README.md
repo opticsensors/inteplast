@@ -149,6 +149,7 @@ Recogido de las fichas enlazadas el 09/11/2026; las cifras son las de esas ficha
 
 | Tema | Qué falta | Fuente |
 |---|---|---|
+| Extractor de `.icp` (`globos_icp.py`) | 27 de 2.020 sellos mal extraídos, vistos el 09/11/2026. En 7, el visor pone el número del `.prf` y no el dibujado (45 en el globo 70 del 3205). En 20 sitúa el sello donde no hay globo, por coordenadas leídas con un byte de desfase. Además, 47 sellos con posición no se muestran porque no tienen fila en el `.prf`. Arreglarlo cambia la referencia de la medición y lo que enseña el visor: decisión pendiente | [planos-globos.md](../../../conocimiento/planos-globos.md#por-qué-falla-la-referencia-el-extractor-de-icp) |
 | ~~Un solo código de lectura de planos~~ | **Hecho el 09/11/2026**: el visor y los scripts de medida usan `lectores_planos.py`, sin depender del backend; las 26 lecturas y lo que enseña el visor en los 56 planos no cambian | [README del prototipo](../README.md#un-solo-código-de-lectura-de-planos-09112026) |
 | Lectores `[]`, `No.` y recuadros | Probados solo en el 2820, el 3174, el 3186 y el 3214. Los filtros de recuadros se ajustaron en el mismo plano en que se midieron. Antes de llevarlos a la app, probarlos en planos que no se hayan usado para ajustarlos, con muestra al azar | [planos-globos.md](../../../conocimiento/planos-globos.md#estado-de-cada-plano-05112026) |
 | Globos sin leer *(aparcado)* | 614 globos de color sin lectura (234 del 3195, 148 del 3212, 113 del 3167). Las 11 cotas con letra del 3214 no salen en el OCR. 13 planos sin globos ni numeración | ídem |

@@ -882,23 +882,34 @@ def calibrate(key: str, balloons, readings, candidates: dict, size: tuple[int, i
     return icp, fits[icp]
 
 
-def truth_from_stamps(balloons, stamps, fit) -> tuple[list[str | None], int]:
-    """Número del sello más cercano a cada globo detectado (uno a uno, a menos de un radio)."""
+def stamps_on_page(stamps, fit) -> np.ndarray:
+    """Posición en píxeles de la página de cada sello, con la transformación `fit` de `calibrate`."""
     _, _, matrix, which, flip = fit
     points = np.array([(s["points"][which][0], flip * s["points"][which][1]) for s in stamps], np.float64)
-    mapped = points @ matrix[:, :2].T + matrix[:, 2]
+    return points @ matrix[:, :2].T + matrix[:, 2]
+
+
+def match_stamps(balloons, stamps, fit) -> list[int | None]:
+    """Índice del sello de cada globo detectado (el más cercano, uno a uno, a menos de un radio), o None."""
+    mapped = stamps_on_page(stamps, fit)
     pairs = []
     for i, balloon in enumerate(balloons):
         x, y, radius = balloon["circle"]
         distance = np.hypot(mapped[:, 0] - x, mapped[:, 1] - y)
         for j in np.nonzero(distance < radius)[0]:
             pairs.append((distance[j], i, j))
-    truth, used = [None] * len(balloons), set()
+    match, used = [None] * len(balloons), set()
     for _, i, j in sorted(pairs):
-        if truth[i] is None and j not in used:
-            truth[i] = stamps[j]["label"]
+        if match[i] is None and j not in used:
+            match[i] = int(j)
             used.add(j)
-    return truth, len(used)
+    return match
+
+
+def truth_from_stamps(balloons, stamps, fit) -> tuple[list[str | None], int]:
+    """Número del sello más cercano a cada globo detectado (uno a uno, a menos de un radio)."""
+    match = match_stamps(balloons, stamps, fit)
+    return [None if j is None else stamps[j]["label"] for j in match], sum(j is not None for j in match)
 
 
 def sellos_calibrados(filas, cal: dict) -> list[dict]:
