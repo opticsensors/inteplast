@@ -40,6 +40,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import buscar_en_plano as finder
+import lectores_planos as lectores
 
 HERE = Path(__file__).resolve().parent
 REFERENCE = HERE / "out" / "referencia-3167" / "chuleta-3167-2026-10-29.json"
@@ -129,7 +130,7 @@ def main():
         return
     reference = json.loads(args.referencia.read_text(encoding="utf-8"))
     with fitz.open(args.pdf) as doc:
-        rgb = finder.page_raster(doc[0])
+        rgb = lectores.page_raster(doc[0])
     merged = regenerate(reference, rgb, args.referencia, args.semilla, args.n, args.n_racimos, args.forzar)
     print(status(merged))
 

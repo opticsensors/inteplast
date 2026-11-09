@@ -25,8 +25,12 @@ marked y mermaid desde jsDelivr (hace falta internet). La gráfica de cota es un
 `leer_planos.py` guarda en `out/conocimiento/lecturas/`, fuera de Git, el tag y las lecturas de los 26
 planos sin `.icp` (unos 30 minutos con 4 procesos; solo rehace los que hayan cambiado). El visor
 solo consulta esos ficheros. Sin ellos arranca igual, pero esos planos no tienen tag ni lecturas.
-Tras leer, hay que reiniciar `app.py`. Para el lector de globos usa el código oficial de
-`backend/app/ingestion/`, que necesita onnxruntime y scipy, ya instalados en ese Python.
+Tras leer, hay que reiniciar `app.py`. Los lectores (globos de color, `[]`, `No.` y recuadros) y el
+uso de los `.icp` (calibración, calco 1:1 y gemela) salen de
+[`lectores_planos.py`](../lectores_planos.py), el mismo código que usan los scripts de medida del
+prototipo (desde el 09/11/2026; antes, el lector de globos era la copia de `backend/app/ingestion/`,
+con las mismas lecturas). Necesita onnxruntime, scipy y rapidocr-onnxruntime, ya instalados en ese
+Python, y el modelo `out/lector-globos/general/lector_globos.onnx`, fuera de Git.
 
 `miniaturas_cad.py` guarda en `out/conocimiento/cad/`, fuera de Git, una captura de cada pieza a partir
 de su STEP de `1- 2D y 3D pieza`. Se hace una vez y el visor solo sirve esos JPEG, sin leer ningún
@@ -145,6 +149,7 @@ Recogido de las fichas enlazadas el 09/11/2026; las cifras son las de esas ficha
 
 | Tema | Qué falta | Fuente |
 |---|---|---|
+| ~~Un solo código de lectura de planos~~ | **Hecho el 09/11/2026**: el visor y los scripts de medida usan `lectores_planos.py`, sin depender del backend; las 26 lecturas y lo que enseña el visor en los 56 planos no cambian | [README del prototipo](../README.md#un-solo-código-de-lectura-de-planos-09112026) |
 | Lectores `[]`, `No.` y recuadros | Probados solo en el 2820, el 3174, el 3186 y el 3214. Los filtros de recuadros se ajustaron en el mismo plano en que se midieron. Antes de llevarlos a la app, probarlos en planos que no se hayan usado para ajustarlos, con muestra al azar | [planos-globos.md](../../../conocimiento/planos-globos.md#estado-de-cada-plano-05112026) |
 | Globos sin leer *(aparcado)* | 614 globos de color sin lectura (234 del 3195, 148 del 3212, 113 del 3167). Las 11 cotas con letra del 3214 no salen en el OCR. 13 planos sin globos ni numeración | ídem |
 | `.icp` | 30 de los 56 planos dan número y posición sin leer nada. En la app final, la lectura directa de `.icp` sigue abierta | [próximos pasos](../../../docs/proximos-pasos.md#prioridad-a-corto-plazo-28102026) |

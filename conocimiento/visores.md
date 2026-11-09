@@ -303,3 +303,12 @@ usando los `.icp` como referencia automática.
 [Comparativa de lectores](../prototypes/data-explorer/README.md#comparativa-de-lectores-de-globos-29102026).
 La propuesta para la app distingue tres casos: `.icp`, número escrito o solo el valor.
 Se resume en la [ingesta](../docs/ingesta-automatica.md#24-localizar-cotas-en-el-plano-2d-28102026).
+
+**09/11/2026.** Todos los lectores de planos del prototipo están en un solo módulo,
+`prototypes/data-explorer/lectores_planos.py`: globos de color, `[]`, `No.`, recuadros y uso de
+los `.icp`. Lo comparten el visor de `conocimiento/`, el buscador y los scripts de medida
+(`probar_lector_planos.py`, `comparar_ocr_globos.py`, `entrenar_lector_globos.py` y
+`muestra_verificacion.py`). Antes, el visor usaba la copia del lector de globos de la aplicación y
+los scripts de medida, la del prototipo. Las dos copias dieron lo mismo en las 68 páginas de los 56
+planos, y la unificación no cambió ninguna lectura.
+[Detalle](../prototypes/data-explorer/README.md#un-solo-código-de-lectura-de-planos-09112026).

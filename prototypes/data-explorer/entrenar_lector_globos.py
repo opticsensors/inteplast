@@ -6,7 +6,8 @@
 Dibuja números de globo (1–999, con sufijo .1–.9 o .T) con tipografías de dibujo técnico
 instaladas en Windows y a la escala de un plano escaneado: cifras de 4–7 px, aro, líneas que
 cruzan, globos vecinos, desenfoque, ruido y JPEG 4:2:0. Después aplica el mismo recorte y la
-misma vista que comparar_ocr_globos.py y entrena una CRNN pequeña con CTC en CPU (minutos).
+misma vista con los que lee el visor (lectores_planos.text_crop) y entrena una CRNN pequeña con
+CTC en CPU (minutos).
 
 Las lecturas de referencia del 3212 no se usan para entrenar ni para elegir la época: solo
 para medir al final. Requiere torch (instalado en el Python del equipo).
@@ -28,6 +29,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import comparar_ocr_globos as bench
+import lectores_planos as lectores  # el mismo recorte con el que lee el visor
 
 OUTPUT = Path(__file__).resolve().parent / "out" / "lector-globos"
 CHARACTERS = list("0123456789.T")
@@ -162,7 +164,7 @@ def synth(seed: int, profile: str = "3212") -> tuple[np.ndarray, str]:
     # El detector de círculos no da el centro exacto: el recorte se desplaza igual que en el plano.
     circle = (centre[0] + rng.normal(0, .6), centre[1] + rng.normal(0, .6), radius + rng.normal(0, .5))
     padded = cv2.copyMakeBorder(rgb, 8, 8, 8, 8, cv2.BORDER_CONSTANT, value=(255, 255, 255))
-    crop = bench.text_crop(padded, (circle[0] + 8, circle[1] + 8, circle[2]), "luma", fit_text=p["fit_text"])
+    crop = lectores.text_crop(padded, (circle[0] + 8, circle[1] + 8, circle[2]), "luma", fit_text=p["fit_text"])
     return to_input(crop), label
 
 

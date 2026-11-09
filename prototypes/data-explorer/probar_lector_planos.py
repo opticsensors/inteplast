@@ -7,8 +7,11 @@ Recorre los PDF de planos de la biblioteca (conocimiento/datos/biblioteca.sqlite
 globos verdes o azules (en la capa vectorial si el PDF los trae como vectores), elige la
 orientación de la página y los lee con RapidOCR (como el buscador del 28/10), PP-OCRv6 small (si
 está descargado), los lectores propios de entrenar_lector_globos.py (perfiles 3212, amplio y
-general) y el lector combinado del buscador (RapidOCR + general, un número por plano). Ningún
-lector se reentrena con estos planos.
+general, con torch) y el lector combinado (RapidOCR + general en ONNX, un número por plano).
+Ningún lector se reentrena con estos planos.
+
+Detección, orientación, lector combinado y calibración `.icp` salen de lectores_planos.py: lo que
+se mide aquí es lo mismo que enseña el visor de conocimiento/.
 
 Referencias, sin lectura manual por parte de los usuarios:
 - `.icp` de infra-CONVERT de la misma carpeta, o de la de un duplicado exacto (tabla `globo`):
@@ -27,6 +30,12 @@ detecciones sin referencia se cuentan como pendientes de validar. Las páginas c
 evalúan aunque no tengan ninguna detección. Cada ejecución guarda su configuración (modelos,
 umbral, versión) en configuracion.json. Planos sin referencia: se leen y se guarda una muestra de
 32 globos para revisarla a ojo.
+
+Desde el 09/11/2026 las puntuaciones se guardan completas y los umbrales se aplican sobre ellas, como
+en el visor; configuracion.json lleva la identidad del lector combinado. Los resultados anteriores
+(out/probar-planos*/, hasta el 29/10/2026) son histórico: guardan las puntuaciones redondeadas a 4
+decimales, y una lectura justo por debajo del umbral podía contarse como ofrecida. No se añaden
+resultados nuevos a una carpeta hecha con puntuaciones redondeadas o con otro lector combinado.
 
 Lee los originales sin copiarlos; resultados y hojas en out/probar-planos/ (fuera de Git).
 """
@@ -47,8 +56,8 @@ import fitz
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import buscar_en_plano as finder
 import comparar_ocr_globos as bench
+import lectores_planos as lectores
 
 REPO = Path(__file__).resolve().parents[2]
 LIBRARY = REPO / "conocimiento" / "datos" / "biblioteca.sqlite"
@@ -105,7 +114,7 @@ def stamps_near(con, ruta: str) -> dict[str, list[dict]]:
             continue
         rows = con.execute("SELECT etiqueta, x1, y1, x2, y2 FROM globo WHERE documento_id=? AND x1 IS NOT NULL"
                            " AND etiqueta IS NOT NULL", (doc_id,)).fetchall()
-        stamps = [{"label": finder.normalize_number(e), "points": ((x1, y1), (x2, y2))} for e, x1, y1, x2, y2 in rows]
+        stamps = [{"label": lectores.normalize_number(e), "points": ((x1, y1), (x2, y2))} for e, x1, y1, x2, y2 in rows]
         found[posixpath.basename(icp)] = [s for s in stamps if s["label"]]
     return found
 
@@ -118,97 +127,11 @@ def icp_digests(con, ruta: str) -> dict[str, str]:
             if posixpath.dirname(icp) == folder}
 
 
-# Compartidos con el buscador: ráster de la página, capa vectorial y orientación.
-vector_layer, page_raster, rotate, best_rotation = (finder.vector_layer, finder.page_raster, finder.rotate,
-                                                    finder.best_rotation)
-
 # Referencia de cada detección: el número, NOT_A_BALLOON si está comprobado que no es un globo, o
 # None si no se sabe (p. ej., un globo real cuyo sello del .icp no tiene número ni posición).
 NOT_A_BALLOON = "—"
-# Calibración .icp → página, compartida por todas las ejecuciones (ver `calibrate`).
-CALIBRATION = OUTPUT.parent / "probar-planos-calibracion.json"
-
-
-def calibrate(key: str, balloons, readings, candidates: dict, size: tuple[int, int], store: dict,
-              refresh: bool, pdf_digest: str = "", digests: dict | None = None) -> tuple[str, tuple] | None:
-    """Transformación .icp → píxeles de la página, calculada una vez y guardada.
-
-    La primera vez se ajusta con RANSAC usando como emparejamientos tentativos las lecturas de
-    todos los lectores de esa ejecución. Se guarda en coordenadas normalizadas de la página sin
-    girar, con la página y las huellas SHA-256 del PDF y del .icp, y las ejecuciones siguientes la
-    reutilizan solo si coinciden: la referencia ya no depende de lo que se está evaluando.
-    `--recalibrar` la vuelve a calcular. Las calibraciones guardadas antes de registrar huellas
-    (29/10/2026) las adoptan en su primera reutilización.
-    """
-    height, width = size
-    digests = digests or {}
-    saved = store.get(key)
-    if saved and not refresh and saved["icp"] in candidates:
-        same_pdf = saved.get("pdf_sha256", pdf_digest) == pdf_digest
-        same_icp = saved.get("icp_sha256", digests.get(saved["icp"], "")) == digests.get(saved["icp"], "")
-        if same_pdf and same_icp:
-            saved.setdefault("pdf_sha256", pdf_digest)
-            saved.setdefault("icp_sha256", digests.get(saved["icp"], ""))
-            matrix = np.array(saved["matriz"]) * np.array([[width], [height]])
-            return saved["icp"], (saved["inliers"], saved["tentativos"], matrix, saved["punto"], saved["signo"])
-    fits = {name: fit_stamps(balloons, readings, stamps) for name, stamps in candidates.items() if stamps}
-    # Ajuste fiable: el RANSAC explica al menos el 30 % de los globos detectados (y 10 o más).
-    fits = {k: v for k, v in fits.items() if v and v[0] >= max(10, .3 * len(balloons))}
-    if not fits:
-        return None
-    icp = max(fits, key=lambda k: fits[k][0])
-    inliers, putative, matrix, which, flip = fits[icp]
-    store[key] = {"icp": icp, "inliers": inliers, "tentativos": putative, "punto": which, "signo": flip,
-                  "matriz": (matrix / np.array([[width], [height]])).tolist(),
-                  "pdf_sha256": pdf_digest, "icp_sha256": digests.get(icp, ""),
-                  "fecha": time.strftime("%Y-%m-%d %H:%M")}
-    return icp, fits[icp]
-
-
-def fit_stamps(balloons, readings: list[list[str | None]], stamps: list[dict]):
-    """Transformación unidades del dibujo → píxeles. Devuelve (inliers, tentativos, matriz, punto, signo)."""
-    by_label = {}
-    for s in stamps:
-        by_label.setdefault(s["label"], []).append(s)
-    radius = float(np.median([b["circle"][2] for b in balloons]))
-    best = None
-    for which in (0, 1):
-        for flip in (1, -1):
-            src, dst = [], []
-            for balloon, labels in zip(balloons, zip(*readings)):
-                for label in {l for l in labels if l}:
-                    if len(by_label.get(label, [])) == 1:
-                        x, y = by_label[label][0]["points"][which]
-                        src.append((x, flip * y))
-                        dst.append(balloon["circle"][:2])
-            if len(src) < 6:
-                continue
-            matrix, inliers = cv2.estimateAffinePartial2D(np.float32(src), np.float32(dst), method=cv2.RANSAC,
-                                                          ransacReprojThreshold=radius * .6, maxIters=20000,
-                                                          confidence=.999)
-            count = int(inliers.sum()) if inliers is not None else 0
-            if matrix is not None and (best is None or count > best[0]):
-                best = (count, len(src), matrix, which, flip)
-    return best
-
-
-def truth_from_stamps(balloons, stamps, fit) -> tuple[list[str | None], int]:
-    """Número del sello más cercano a cada globo detectado (uno a uno, a menos de un radio)."""
-    _, _, matrix, which, flip = fit
-    points = np.array([(s["points"][which][0], flip * s["points"][which][1]) for s in stamps], np.float64)
-    mapped = points @ matrix[:, :2].T + matrix[:, 2]
-    pairs = []
-    for i, balloon in enumerate(balloons):
-        x, y, radius = balloon["circle"]
-        distance = np.hypot(mapped[:, 0] - x, mapped[:, 1] - y)
-        for j in np.nonzero(distance < radius)[0]:
-            pairs.append((distance[j], i, j))
-    truth, used = [None] * len(balloons), set()
-    for _, i, j in sorted(pairs):
-        if truth[i] is None and j not in used:
-            truth[i] = stamps[j]["label"]
-            used.add(j)
-    return truth, len(used)
+# Calibración .icp → página, compartida por todas las ejecuciones y por el visor (ver `lectores.calibrate`).
+CALIBRATION = lectores.CALIBRACION
 
 
 def visual_reference(digest: str) -> dict | None:
@@ -239,26 +162,24 @@ def visual_truth(reference: dict, size: tuple[int, int], balloons) -> tuple[list
     return truth, sum(1 for t in truth if t not in (None, NOT_A_BALLOON))
 
 
-def read_all(rgb, balloons, readers) -> dict[str, list[list[tuple[str, float]]]]:
+def read_all(rgb, balloons, readers, combined=None) -> dict[str, list[list[tuple[str, float]]]]:
+    """Lecturas de cada lector, por globo. «combinado» es el del visor y el buscador (lectores_planos.py),
+    con el lector propio en ONNX que se pasa en `combined`; necesita también «buscador»."""
     out = {}
     for name, read in readers.items():
         if name == "buscador":  # el buscador actual tal cual: RapidOCR sobre tres vistas
-            copies = [dict(b, candidates=[]) for b in balloons]
-            finder.read_balloons(rgb, copies, read)
-            out[name] = [[(b["candidates"][0]["label"], max(r["score"] for r in b["candidates"][0]["readings"]))]
-                         if b["candidates"] else [] for b in copies]
+            out[name] = lectores.rapid_predictions(rgb, balloons, read)
             continue
         own = name.startswith("propio")
-        runs = [read([bench.text_crop(rgb, b["circle"], "luma", shift=s, fit_text=True) for b in balloons])
-                for s in (bench.SHIFTS if own else bench.SHIFTS[:1])]
-        out[name] = bench.merge(runs[:1])
+        runs = [read([lectores.text_crop(rgb, b["circle"], "luma", shift=s, fit_text=True) for b in balloons])
+                for s in (lectores.SHIFTS if own else lectores.SHIFTS[:1])]
+        out[name] = lectores.merge(runs[:1])
         if own:
-            out[name + " + desplazados"] = bench.merge(runs)
-            out[name + " + desplazados + únicos"] = bench.unique_assignment(out[name + " + desplazados"])
-    own = next((n for n in ("propio-general + desplazados", "propio-amplio + desplazados") if n in out), None)
-    if "buscador" in out and own:
+            out[name + " + desplazados"] = lectores.merge(runs)
+            out[name + " + desplazados + únicos"] = lectores.unique_assignment(out[name + " + desplazados"])
+    if "buscador" in out and combined is not None:
         # Los dos lectores votan con su puntuación; después, un número por plano.
-        out["combinado"] = bench.unique_assignment(bench.merge([out["buscador"], out[own]]))
+        out["combinado"] = lectores.combine(out["buscador"], lectores.own_predictions(rgb, balloons, combined))
     return out
 
 
@@ -269,14 +190,16 @@ def score(predictions, truth, sources: list[str] | None = None) -> dict:
     como tal en la curva de confianza («aceptables») y en `detalle`, que guarda (puntuación,
     resultado, fuente del globo) para fijar después umbrales comunes, también por fuente. Las
     detecciones sin referencia no se dan por buenas ni por falsas: son pendientes de validar.
+    La puntuación se guarda completa: redondeada, una lectura de 0,60718 pasaría el umbral de 0,6072,
+    y el visor no la ofrece.
     """
     counts = {"acierto": 0, "error": 0, "sin_lectura": 0, "falsas_con_lectura": 0, "pendientes": 0,
               "pendientes_con_lectura": 0}
     sources = sources or ["imagen"] * len(truth)
     scored = []
     for candidates, label, source in zip(predictions, truth, sources):
-        read = bench.label_of(candidates[0][0]) if candidates else None
-        value = round(float(candidates[0][1]), 4) if candidates else 0.
+        read = lectores.label_of(candidates[0][0]) if candidates else None
+        value = float(candidates[0][1]) if candidates else 0.
         if label is None:
             counts["pendientes"] += 1
             if read:
@@ -334,8 +257,8 @@ def threshold_summary(development: Path, exam: Path, max_wrong: float = .02, ima
     **cobertura** (globos de referencia con su número bien ofrecido). El denominador son todas las
     referencias de las páginas evaluadas, tengan o no detecciones; solo quedan fuera las páginas
     declaradas sin globos (`NO_BALLOON_PAGES`). Para el combinado se usa el umbral exacto del
-    buscador, y se ensaya además un umbral por fuente del globo: el del buscador para la capa
-    vectorial y, para la imagen, el mayor entre ese y el elegido en el primer grupo solo con globos
+    buscador (lectores_planos.py), y se ensaya además un umbral por fuente del globo: el del buscador
+    para la capa vectorial y, para la imagen, el mayor entre ese y el elegido en el primer grupo solo con globos
     de imagen (o `image_threshold`). El ensayo no cambia el buscador.
     """
     groups = {name: json.loads(path.read_text(encoding="utf-8")) for name, path in
@@ -344,7 +267,7 @@ def threshold_summary(development: Path, exam: Path, max_wrong: float = .02, ima
                       if "detalle" in e["lectores"][r]})
     counted = lambda entries: {k: e for k, e in entries.items() if k not in NO_BALLOON_PAGES}
     result = {"fecha": time.strftime("%Y-%m-%d %H:%M"), "max_errores": max_wrong,
-              "umbrales_buscador": dict(finder.COMBINED_THRESHOLDS),
+              "umbrales_buscador": dict(lectores.COMBINED_THRESHOLDS),
               "ficheros": {str(path): hashlib.sha256(path.read_bytes()).hexdigest()[:16]
                            for path in (development, exam) if path.is_file()},
               "paginas_sin_globos": sorted(NO_BALLOON_PAGES), "lectores": {}, "por_plano": {}}
@@ -377,10 +300,13 @@ def threshold_summary(development: Path, exam: Path, max_wrong: float = .02, ima
         if reader == "combinado":
             # Las dos políticas usan los valores exactos del buscador; se avisa si los que se
             # eligen ahora en desarrollo son otros. «un umbral» es el de la capa vectorial para todo.
-            single, by_source = finder.COMBINED_THRESHOLDS["capa vectorial"], dict(finder.COMBINED_THRESHOLDS)
+            single, by_source = lectores.COMBINED_THRESHOLDS["capa vectorial"], dict(lectores.COMBINED_THRESHOLDS)
             image = choose_threshold([d for d in development_detail if d[2] == "imagen"], max_wrong)
             for name, chosen, used in (("un umbral", threshold, single), ("imagen", max(single, image), by_source["imagen"])):
-                if abs(chosen - used) > 1e-9:
+                # Solo para este aviso se redondea a 4 decimales, como se fijaron los umbrales del buscador:
+                # con puntuaciones completas se elige, p. ej., 0,60721 donde se fijó 0,6072. La decisión
+                # de ofrecer una lectura usa siempre la puntuación completa.
+                if round(chosen, 4) != round(used, 4):
                     print(f"AVISO: en desarrollo se elige {chosen} ({name}), pero el buscador usa {used}")
             if image_threshold is not None:
                 by_source["imagen"] = image_threshold
@@ -440,10 +366,29 @@ def compare(before: Path, after: Path):
                   f"pendientes ofrecidas {a_p}→{b_p}")
 
 
+def mixing_problem(folder: Path, config: dict) -> str | None:
+    """Por qué no se pueden añadir resultados a `folder` con esta configuración, o None si se puede.
+
+    Una carpeta con resultados de otro lector combinado, o con puntuaciones redondeadas (todas las
+    anteriores al 09/11/2026), no se mezcla con resultados nuevos.
+    """
+    if not (folder / "resultados.json").is_file():
+        return None
+    try:
+        saved = json.loads((folder / "configuracion.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        saved = {}
+    if saved.get("puntuaciones") != config["puntuaciones"]:
+        return "tiene resultados con puntuaciones redondeadas a 4 decimales (histórico, anterior al 09/11/2026)"
+    if saved.get("lector_combinado") != config["lector_combinado"]:
+        return f"tiene resultados de otro lector combinado ({saved.get('lector_combinado')})"
+    return None
+
+
 def error_sheet(rgb, balloons, predictions, truth, path: Path, limit: int = 48):
     tiles = []
     for b, candidates, label in zip(balloons, predictions, truth):
-        read = bench.label_of(candidates[0][0]) if candidates else None
+        read = lectores.label_of(candidates[0][0]) if candidates else None
         if label in (None, NOT_A_BALLOON) or read == label:
             continue
         x, y, r = b["circle"]
@@ -473,7 +418,7 @@ def sample_sheet(rgb, balloons, predictions, path: Path, count: int = 32,
         crop = rgb[max(0, int(y) - k):int(y) + k, max(0, int(x) - k):int(x) + k][:, :, ::-1]
         if not crop.size:
             continue
-        lines = [f"{n[:6]}: {(bench.label_of(p[i][0][0]) or '-')[1:] if p[i] else '-'}"
+        lines = [f"{n[:6]}: {(lectores.label_of(p[i][0][0]) or '-')[1:] if p[i] else '-'}"
                  for n, p in predictions.items() if n in shown]
         tile = cv2.copyMakeBorder(cv2.resize(crop, (150, 150), interpolation=cv2.INTER_AREA), 0, 18 * len(lines), 0, 0,
                                   cv2.BORDER_CONSTANT, value=(255, 255, 255))
@@ -529,19 +474,25 @@ def main():
     readers |= {name: bench.ctc_reader(recognizer, "digitos", []) for name, recognizer in own.items()}
     if args.lectores:
         readers = {name: read for name, read in readers.items() if name in args.lectores}
-    # para elegir la orientación de la página
-    recognizer = own.get("propio-general") or own.get("propio-amplio") or own["propio"]
+    # Lector propio del visor (ONNX): orienta la página y entra en el combinado.
+    recognizer = lectores.own_reader()
+    if recognizer is None:
+        parser.error(f"Falta el lector propio en ONNX: {lectores.MODELO}")
     results_file = args.salida / "resultados.json"
     results = json.loads(results_file.read_text(encoding="utf-8")) if results_file.is_file() else {}
-    calibration = json.loads(CALIBRATION.read_text(encoding="utf-8")) if CALIBRATION.is_file() else {}
-    # Qué se ha medido y con qué: modelos, umbral, versión del índice y opciones.
-    (args.salida / "configuracion.json").write_text(json.dumps({
+    calibration = lectores.lee_calibraciones(CALIBRATION)
+    # Qué se ha medido y con qué: modelos, umbral, identidad del lector, precisión y opciones.
+    config = {
         "fecha": time.strftime("%Y-%m-%d %H:%M"), "lectores": sorted(readers), "grupo": args.grupo,
         "modelos": {name: hashlib.sha256(model_path(profile).read_bytes()).hexdigest()[:16] for name, profile in
                     (("propio", "3212"), ("propio-amplio", "amplio"), ("propio-general", "general")) if name in own},
-        "umbrales_combinado": dict(finder.COMBINED_THRESHOLDS), "version_indice": finder.VERSION, "minimo": args.minimo,
-        "sin_vectores": args.sin_vectores, "calibracion": str(CALIBRATION)}, ensure_ascii=False, indent=1),
-        encoding="utf-8")
+        "lector_combinado": lectores.reader_id(), "umbrales_combinado": dict(lectores.COMBINED_THRESHOLDS),
+        "version_lectores": lectores.VERSION, "puntuaciones": "completas", "minimo": args.minimo,
+        "sin_vectores": args.sin_vectores, "calibracion": str(CALIBRATION)}
+    problem = mixing_problem(args.salida, config)
+    if problem:
+        parser.error(f"{args.salida} {problem}. Usa otra carpeta con --salida.")
+    (args.salida / "configuracion.json").write_text(json.dumps(config, ensure_ascii=False, indent=1), encoding="utf-8")
     for doc_id, piece, ruta in drawing_pdfs(con):
         if args.solo and doc_id not in args.solo or GROUPS[args.grupo] and piece[:4] not in GROUPS[args.grupo]:
             continue
@@ -559,10 +510,10 @@ def main():
             for page in doc:
                 start = time.perf_counter()
                 if args.sin_vectores:
-                    rgb = page_raster(page)
-                    balloons, via = [dict(b, fuente="imagen") for b in finder.detect_balloons(rgb)], "imagen"
+                    rgb = lectores.page_raster(page)
+                    balloons, via = [dict(b, fuente="imagen") for b in lectores.detect_balloons(rgb)], "imagen"
                 else:
-                    rgb, balloons, via = finder.balloon_source(EXEMPLES / ruta, page)
+                    rgb, balloons, via = lectores.balloon_source(EXEMPLES / ruta, page)
                 key = f"{doc_id}-p{page.number + 1}"
                 referenced = bool(candidates) or bool(visual) or key in NO_BALLOON_PAGES
                 if len(balloons) < args.minimo and not referenced:
@@ -582,12 +533,12 @@ def main():
                     print(f"{key} {piece}: sin detecciones · referencias {entry.get('referencias', 0)}", flush=True)
                     results_file.write_text(json.dumps(results, ensure_ascii=False, indent=1), encoding="utf-8")
                     continue
-                turns = best_rotation(rgb, balloons, recognizer)
-                image, moved = rotate(rgb, balloons, turns) if turns else (rgb, balloons)
-                predictions = read_all(image, moved, readers)  # mismo orden que `balloons`
+                turns = lectores.best_rotation(rgb, balloons, recognizer)
+                image, moved = lectores.rotate(rgb, balloons, turns) if turns else (rgb, balloons)
+                predictions = read_all(image, moved, readers, recognizer)  # mismo orden que `balloons`
                 entry.update(giro_antihorario=90 * turns,
                              radio_mediano_px=round(float(np.median([b["circle"][2] for b in balloons])), 1))
-                readings = [[bench.label_of(c[0][0]) if c else None for c in p] for p in predictions.values()]
+                readings = [[lectores.label_of(c[0][0]) if c else None for c in p] for p in predictions.values()]
                 # Las referencias se emparejan sobre la página sin girar.
                 truth = None
                 if key in NO_BALLOON_PAGES:
@@ -597,14 +548,14 @@ def main():
                     truth, matched = visual_truth(visual, rgb.shape[:2], balloons)
                     entry.update(referencia=f"lectura visual del {visual.get('fecha', '?')}", emparejados=matched)
                 elif candidates:
-                    calibrated = calibrate(key, balloons, readings, candidates, rgb.shape[:2], calibration,
-                                           args.recalibrar, pdf_digest, digests)
+                    calibrated = lectores.calibrate(key, balloons, readings, candidates, rgb.shape[:2], calibration,
+                                                    args.recalibrar, pdf_digest, digests)
                     if calibrated:
                         icp, fit = calibrated
-                        truth, matched = truth_from_stamps(balloons, candidates[icp], fit)
+                        truth, matched = lectores.truth_from_stamps(balloons, candidates[icp], fit)
                         entry.update(icp=icp, referencias=len(candidates[icp]), ajuste=f"{fit[0]}/{fit[1]}",
                                      emparejados=matched)
-                        CALIBRATION.write_text(json.dumps(calibration, ensure_ascii=False, indent=1), encoding="utf-8")
+                        lectores.guarda_calibraciones(calibration, CALIBRATION)
                     else:
                         entry.update(referencia="calibración .icp fallida", emparejados=0)
                 if truth is not None:

@@ -64,51 +64,6 @@ def test_la_cota_se_busca_con_su_marca(texto, cota):
     assert datos.normaliza_cota(texto) == cota
 
 
-@pytest.mark.parametrize("texto, esperado", [
-    ("[]246", [("[]", "246")]),
-    ("1.8 ±0.15 []247", [("[]", "247")]),
-    ("[]25 1", [("[]", "251")]),
-    ("No.508", [("No.", "508")]),
-    ("No.407 Φ3.55 ±0.05", [("No.", "407")]),
-    ("ADDED NOTE No.15.", []),
-    ("No.100 - No.108", []),
-    ("VIEW No. 1", []),
-    ("DIM NO.504 WAS 3X5.65 ±0.07", []),
-    ("[]", []),
-])
-def test_marcas_propias_del_plano(texto, esperado):
-    import leer_planos
-
-    assert [(e, n) for e, n, *_ in leer_planos.marcas_en_token(texto)] == esperado
-
-
-def test_numero_cortado_por_la_tesela_no_cuenta_dos_veces():
-    import leer_planos
-
-    base = {"p": 1, "s": .9, "via": "[]", "w": .01, "h": .01}
-    marcas = [{**base, "t": "27", "x": .500, "y": .5}, {**base, "t": "271", "x": .503, "y": .5}, {**base, "t": "27", "x": .9, "y": .9}]
-    assert sorted(m["t"] for m in leer_planos.sin_repetir(marcas)) == ["27", "271"]
-
-
-def test_la_cuarta_cifra_pegada_a_una_marca_de_tres_no_cuenta():
-    import leer_planos
-
-    base = {"p": 1, "s": .9, "via": "[]", "w": .01, "h": .01, "y": .5}
-    tres = [{**base, "t": str(100 + i), "x": .1 * i} for i in range(9)]
-    pegada = {**base, "t": "1980", "x": .95}
-    assert "198" in [m["t"] for m in leer_planos.recorta_cuadros(tres + [pegada])]
-    # Con mayoría de cuatro cifras, la cuarta sí es parte del número.
-    cuatro = [{**base, "t": str(1000 + i), "x": .1 * i} for i in range(9)]
-    assert "1980" in [m["t"] for m in leer_planos.recorta_cuadros(cuatro + [pegada])]
-
-
-def test_el_texto_no_se_lee_boca_abajo():
-    import leer_planos
-
-    assert leer_planos.sentido_admitido(0) and leer_planos.sentido_admitido(269.1) and leer_planos.sentido_admitido(45)
-    assert not leer_planos.sentido_admitido(180) and not leer_planos.sentido_admitido(135)
-
-
 @pytest.mark.parametrize("args, tag", [
     ((863, 629, 0, 0, 0., 0.), "globos"),
     ((125, 2, 0, 0, 0., 0.), "nada"),  # aros sin números: cotas resaltadas, no globos

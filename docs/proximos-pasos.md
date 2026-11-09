@@ -71,8 +71,14 @@ tests: la app no importa ni copia el prototipo (separación de producto, `CLAUDE
 **Primero se termina el visor** (Eduard, 09/11/2026). Terminado, sirve para enseñar sus resultados a
 INTEPLAST, con cada error respaldado por escrito; lo que ya está en las preguntas a INTEPLAST no se repite.
 
-Estado el 09/11/2026: 100 tests del visor correctos (`tests/test_visor_conocimiento.py`),
-26 lecturas de planos sin `.icp` y 21 capturas CAD ya generadas en `out/conocimiento/`.
+Estado el 09/11/2026: 26 lecturas de planos sin `.icp` y 21 capturas CAD ya generadas en
+`out/conocimiento/`. Los lectores de planos del visor y de los scripts de medida son ya un solo
+código, `prototypes/data-explorer/lectores_planos.py`, sin cambiar ninguna lectura
+([detalle](../prototypes/data-explorer/README.md#un-solo-código-de-lectura-de-planos-09112026)).
+Tests: 97 del visor (`tests/test_visor_conocimiento.py`) y 18 de los lectores
+(`tests/test_lectores_planos.py`), dentro de los 174 del prototipo, todos correctos. Las mediciones
+de `probar_lector_planos.py` anteriores al 09/11 son histórico, con puntuaciones redondeadas; las
+nuevas, con puntuación completa, van a una carpeta nueva.
 Pendientes: [visor, pendiente](../prototypes/data-explorer/conocimiento/README.md#pendiente-09112026).
 
 <a id="1-correcciones-de-otras-piezas-en-espera-de-ejemplos"></a>

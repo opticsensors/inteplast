@@ -27,8 +27,12 @@ CONOCIMIENTO = REPO / "conocimiento"
 BD = CONOCIMIENTO / "datos" / "biblioteca.sqlite"
 OUT = EXPLORER / "out" / "conocimiento"
 CACHE = OUT / "cache"
+sys.path.insert(0, str(EXPLORER))
+# Lectores de planos y uso de los .icp: el mismo código que los scripts de medida del prototipo.
+import lectores_planos as lectores  # noqa: E402
+
 # Calibración .icp → página que dejó probar_lector_planos.py (prototipo de lectura de globos).
-CALIBRACION = EXPLORER / "out" / "probar-planos-calibracion.json"
+CALIBRACION = lectores.CALIBRACION
 # Lecturas y tag de los planos sin .icp que deja leer_planos.py.
 LECTURAS = OUT / "lecturas"
 # Capturas de cada pieza que deja miniaturas_cad.py.
@@ -46,7 +50,6 @@ EXCLUIDAS = {"aleatoria": "generada con RAND() (I-003)", "cero": "cero (I-002)",
 SIN_THUMBS = "lower(nombre) <> 'thumbs.db'"
 # Planos guardados de lado: giro horario (grados) que deja el texto derecho. Comprobado a ojo el 05/11/2026.
 GIROS = {"3202_balloned low resolution.pdf": 90, "3206-A_balloned lr.pdf": 90, "Drw_Marking_DR_intern02.pdf": 270}
-MIN_DENTRO_HOJA = .95  # parte de los sellos que debe caer en la hoja para dar por bueno el calco 1:1
 # Tag de la pieza: qué datos tiene. La cuenta automática falla en dos, por cómo están hechos sus ficheros.
 TAGS_PIEZA = {"correcciones": "Medidas y correcciones", "medidas": "Medidas sin correcciones", "nada": "Sin medidas"}
 TAG_FIJO = {
@@ -92,10 +95,7 @@ PLANOS_SQL = (
 
 @lru_cache(maxsize=1)
 def calibraciones() -> dict:
-    try:
-        return json.loads(CALIBRACION.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
+    return lectores.lee_calibraciones(CALIBRACION)
 
 
 def icps_de_carpeta(c, ruta: str) -> list[sqlite3.Row]:
@@ -250,37 +250,24 @@ def filas_globo(c, icp_id: int) -> list[sqlite3.Row]:
 
 
 def globos_calibrados(c, icp_id: int, cal: dict, giro: int = 0) -> list[dict]:
-    m, cual, signo = cal["matriz"], cal["punto"], cal["signo"]
-
-    def aplica(x: float, y: float) -> tuple[float, float]:
-        y = signo * y
-        return girar_punto(m[0][0] * x + m[0][1] * y + m[0][2], m[1][0] * x + m[1][1] * y + m[1][2], giro)
-
+    """Sellos del .icp sobre la página con su calibración, enderezados con el giro del visor."""
     salida = []
-    for f in filas_globo(c, icp_id):
-        cabeza, punta = ((f["x1"], f["y1"]), (f["x2"], f["y2"])) if cual == 0 else ((f["x2"], f["y2"]), (f["x1"], f["y1"]))
-        x, y = aplica(*cabeza)
-        px, py = aplica(*punta)
-        salida.append({"etiqueta": f["etiqueta"], "x": x, "y": y, "px": px, "py": py})
+    for g in lectores.sellos_calibrados(filas_globo(c, icp_id), cal):
+        x, y = girar_punto(g["x"], g["y"], giro)
+        px, py = girar_punto(g["px"], g["py"], giro)
+        salida.append({"etiqueta": g["etiqueta"], "x": x, "y": y, "px": px, "py": py})
     return salida
 
 
 def calibracion_gemela(doc: int, nombre_icp: str, pag: dict) -> dict | None:
-    """Calibración de otro plano con el mismo .icp y la misma forma de hoja: el mismo dibujo globado.
-
-    Sirve cuando el 1:1 falla porque la hoja está impresa a otra escala. Las calibraciones están
-    normalizadas a la página, así que no dependen del tamaño.
-    """
+    """Calibración de la gemela (mismo .icp y misma forma de hoja): ver `lectores.calibracion_gemela`."""
     c = con()
-    forma = pag["ancho_pt"] / pag["alto_pt"]
-    for clave, cal in calibraciones().items():
-        otro, _, numero = clave.partition("-p")
-        if cal["icp"] != nombre_icp or int(otro) == doc:
-            continue
-        pag_otro = next((x for x in paginas(c, int(otro)) if str(x["pagina"]) == numero), None)
-        if pag_otro and pag_otro["ancho_pt"] and abs(pag_otro["ancho_pt"] / pag_otro["alto_pt"] - forma) < .01:
-            return cal
-    return None
+
+    def forma_de(otro: int, numero: str) -> float | None:
+        pag_otro = next((x for x in paginas(c, otro) if str(x["pagina"]) == numero), None)
+        return pag_otro["ancho_pt"] / pag_otro["alto_pt"] if pag_otro and pag_otro["ancho_pt"] else None
+
+    return lectores.calibracion_gemela(calibraciones(), nombre_icp, doc, pag["ancho_pt"] / pag["alto_pt"], forma_de)
 
 
 def globos_leidos(doc: int, pagina: int) -> dict:
@@ -328,11 +315,8 @@ def globos(doc: int, pagina: int) -> dict:
         return {"globos": [], "metodo": None}
     raiz = Path(p["nombre"]).stem.lower()
     icp = next((i for i in icps if Path(i["nombre"]).stem.lower() == raiz), None) or max(icps, key=lambda i: i["situados"] or 0)
-    ancho_mm, alto_mm = pag["ancho_pt"] * 25.4 / 72, pag["alto_pt"] * 25.4 / 72
-    todos = [{"etiqueta": f["etiqueta"], "x": .5 + f["x1"] / ancho_mm, "y": .5 - f["y1"] / alto_mm,
-              "px": .5 + f["x2"] / ancho_mm, "py": .5 - f["y2"] / alto_mm} for f in filas_globo(c, icp["id"])]
-    dentro = [g for g in todos if -.05 < g["x"] < 1.05 and -.05 < g["y"] < 1.05]
-    if len(dentro) < MIN_DENTRO_HOJA * len(todos):
+    dentro = lectores.sellos_a_escala(filas_globo(c, icp["id"]), pag["ancho_pt"], pag["alto_pt"])
+    if dentro is None:
         gemela = calibracion_gemela(doc, icp["nombre"], pag)
         if gemela:
             return {"globos": globos_calibrados(c, icp["id"], gemela), "metodo": "gemela", "icp": icp["nombre"],

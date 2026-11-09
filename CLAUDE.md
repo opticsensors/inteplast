@@ -124,6 +124,10 @@ El prototipo está **congelado**: no se ajusta más sobre los planos actuales si
 Ver [Lector de globos](docs/cotas-y-evidencia-web.md#lector-de-globos-30102026).
 Los lectores nuevos para planos sin globos de color (`[]`, `No.`, recuadros) y el uso de los `.icp`
 se prueban primero en el visor de `conocimiento/`; todavía no están en la app.
+🔑 **En el prototipo hay un solo código de lectura de planos (09/11/2026):**
+`prototypes/data-explorer/lectores_planos.py` (globos, `[]`, `No.`, recuadros y `.icp`). Lo comparten
+el visor y los scripts de medida, y ya no importan el backend. Un cambio se hace ahí; la app
+mantiene su copia en `backend/app/ingestion/`.
 
 ```powershell
 docker compose up -d --build db prestart backend   # backend + BD (aplica migraciones)

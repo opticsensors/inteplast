@@ -11,6 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import buscar_en_plano as finder
+import lectores_planos as lectores
 
 
 class IdentifierTests(unittest.TestCase):
@@ -24,11 +25,11 @@ class IdentifierTests(unittest.TestCase):
         self.assertFalse(finder.number_matches("N170.2", "N170.3"))
 
     def test_ocr_punctuation_does_not_guess_missing_digits(self):
-        self.assertEqual(finder.ocr_number("[170]"), "N170")
-        self.assertEqual(finder.ocr_number("(161.T)"), "N161.T")
-        self.assertIsNone(finder.ocr_number("I70"))
-        self.assertIsNone(finder.ocr_number("170 173"))
-        self.assertIsNone(finder.normalize_number("170 mm"))
+        self.assertEqual(lectores.ocr_number("[170]"), "N170")
+        self.assertEqual(lectores.ocr_number("(161.T)"), "N161.T")
+        self.assertIsNone(lectores.ocr_number("I70"))
+        self.assertIsNone(lectores.ocr_number("170 173"))
+        self.assertIsNone(lectores.normalize_number("170 mm"))
 
 
 @unittest.skipUnless(shutil.which("node"), "Node.js no disponible")
@@ -64,15 +65,31 @@ class CombinedThresholdTests(unittest.TestCase):
         thresholds = {"capa vectorial": .4, "imagen": .6}
         balloons = [{"fuente": "capa vectorial"}, {"fuente": "imagen"}, {"fuente": "imagen"}]
         choices = [[("N12", .5)], [("N13", .5)], [("N14", .7)]]
-        finder.offer_readings(balloons, choices, [[], [], []], [[], [], []], thresholds)
+        lectores.offer_readings(balloons, choices, [[], [], []], [[], [], []], thresholds)
         offered = [b["candidates"][0]["label"] if b["candidates"] else None for b in balloons]
         self.assertEqual(offered, ["N12", None, "N14"])  # el 0,5 vale en la capa, no en la imagen
 
     def test_cache_signature_includes_both_thresholds(self):
-        signature = finder.index_signature("abc", True, "modelo")
-        self.assertEqual(signature["lector"]["umbrales"], finder.COMBINED_THRESHOLDS)
-        with mock.patch.dict(finder.COMBINED_THRESHOLDS, {"imagen": .7}):
-            self.assertNotEqual(finder.index_signature("abc", True, "modelo"), signature)
+        signature = finder.index_signature("abc", True, True)
+        self.assertEqual(signature["lector"]["lector"], lectores.reader_id())
+        with mock.patch.dict(lectores.COMBINED_THRESHOLDS, {"imagen": .7}):
+            self.assertNotEqual(finder.index_signature("abc", True, True), signature)
+        with mock.patch.object(lectores, "VERSION", lectores.VERSION + 1):
+            self.assertNotEqual(finder.index_signature("abc", True, True), signature)
+
+    def test_cache_signature_changes_with_the_model_metadata(self):
+        # Los caracteres del lector propio están en el .json, no en el .onnx: cambiar solo el .json
+        # cambia cómo se interpretan los números, así que el índice tiene que rehacerse.
+        with tempfile.TemporaryDirectory() as directory:
+            model = Path(directory) / "lector_globos.onnx"
+            model.write_bytes(b"modelo")
+            model.with_suffix(".json").write_text('{"caracteres": ["0", "1"]}', encoding="utf-8")
+            with mock.patch.object(lectores, "MODELO", model):
+                before = finder.index_signature("abc", True, True)
+                model.with_suffix(".json").write_text('{"caracteres": ["1", "0"]}', encoding="utf-8")
+                after = finder.index_signature("abc", True, True)
+        self.assertNotEqual(before, after)
+        self.assertEqual(finder.index_signature("abc", True, False)["lector"], "rapidocr")
 
 
 class PDFIndexTests(unittest.TestCase):
@@ -98,7 +115,7 @@ class PDFIndexTests(unittest.TestCase):
             with finder.fitz.open(pdf) as doc:
                 page = doc[1]
                 rect = finder.fitz.Rect(page.get_text("words")[0][:4]) * page.rotation_matrix
-                expected = finder.normalized_box(rect, page.rect.width, page.rect.height)
+                expected = lectores.normalized_box(rect, page.rect.width, page.rect.height)
             self.assertEqual(word["box"], expected)
             self.assertGreater(word["box"][0], .6)
             self.assertLess(word["box"][1], .3)

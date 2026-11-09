@@ -25,6 +25,8 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import buscar_en_plano as finder
+# Recortes, identificadores y combinación: los mismos que el lector del visor y del buscador.
+from lectores_planos import SHIFTS, label_of, luma, merge, text_crop, unique_assignment  # noqa: E402,F401
 
 HERE = Path(__file__).resolve().parent
 # Índice del 28/10/2026, congelado: la lectura de referencia se hizo sobre sus círculos.
@@ -50,96 +52,11 @@ def load_balloons(index: Path, reference: Path) -> tuple[np.ndarray, list[dict]]
 
 
 # --- Vistas del recorte -------------------------------------------------------------------------
-# El JPEG del 3212 guarda el color a media resolución (4:2:0): la luminancia es el canal más nítido.
-
-def luma(rgb: np.ndarray) -> np.ndarray:
-    return cv2.cvtColor(rgb, cv2.COLOR_RGB2YCrCb)[:, :, 0]
-
-
-def colour_strength(rgb: np.ndarray) -> np.ndarray:
-    r, g, b = [c.astype(np.int16) for c in cv2.split(rgb)]
-    return np.maximum(np.minimum(g - r, g - b), np.minimum(b - r, b - g))
-
-
-def channel(rgb: np.ndarray, name: str) -> np.ndarray:
-    if name == "rojo":
-        return rgb[:, :, 0]
-    if name == "luma":
-        return luma(rgb)
-    if name == "luma-color":
-        # Luminancia solo donde hay tinta de color cerca: quita líneas negras del dibujo.
-        near = cv2.dilate(np.uint8(colour_strength(rgb) > 12), np.ones((3, 3), np.uint8))
-        return np.where(near > 0, luma(rgb), 255).astype(np.uint8)
-    raise ValueError(name)
-
-
-def ink_box(rgb: np.ndarray, circle) -> tuple[float, float, float, float] | None:
-    """Caja del número dentro del globo: tinta oscura del interior que no toca el aro.
-
-    Las líneas del dibujo y el propio aro cruzan el borde interior y se descartan. Sin tinta
-    aislada (por ejemplo, una línea que atraviesa el número) devuelve None.
-    """
-    x, y, radius = round(circle[0]), round(circle[1]), circle[2]
-    inner = int(radius * .82)
-    if inner < 4 or y - inner < 0 or x - inner < 0:
-        return None
-    gray = luma(rgb[y - inner:y + inner + 1, x - inner:x + inner + 1])
-    if gray.shape != (2 * inner + 1, 2 * inner + 1):
-        return None
-    yy, xx = np.mgrid[-inner:inner + 1, -inner:inner + 1]
-    distance = np.hypot(xx, yy)
-    inside = distance <= inner
-    if np.median(gray[inside]) < 128:
-        gray = 255 - gray
-    threshold, _ = cv2.threshold(gray[inside].reshape(-1, 1), 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    ink = ((gray <= threshold) & inside).astype(np.uint8)  # Otsu de OpenCV: fondo = valores > umbral
-    count, labels, stats, _ = cv2.connectedComponentsWithStats(ink, connectivity=8)
-    edge = np.unique(labels[(distance >= inner - 1.5) & inside])
-    keep = [i for i in range(1, count) if i not in edge and stats[i, cv2.CC_STAT_AREA] >= 2]
-    if not keep:
-        return None
-    x0 = min(stats[i, 0] for i in keep)
-    y0 = min(stats[i, 1] for i in keep)
-    x1 = max(stats[i, 0] + stats[i, 2] for i in keep)
-    y1 = max(stats[i, 1] + stats[i, 3] for i in keep)
-    return x - inner + x0, y - inner + y0, x - inner + x1, y - inner + y1
-
-
-def text_crop(rgb: np.ndarray, circle, view: str, scale: float = 4, pad: int = 8,
-              width: float = .84, height: float = .43, shift: tuple[int, int] = (0, 0),
-              fit_text: bool = False) -> np.ndarray:
-    """Interior del globo, sin el aro, ampliado. Devuelve gris uint8.
-
-    La geometría por defecto es la vista «Canal rojo · interior» de buscar_en_plano.py: un píxel
-    más o menos de recorte cambia mucho el resultado de los lectores con cifras de este tamaño.
-    Con `fit_text` el recorte se centra en la tinta del número y se escala a su altura (el número
-    ocupa el 44 % del alto, como en el 3212), sea cual sea la proporción entre número y globo.
-    """
-    x, y, radius = circle
-    box = ink_box(rgb, circle) if fit_text else None
-    if box:
-        text_h, text_w = box[3] - box[1], box[2] - box[0]
-        crop_h = max(text_h / .44, text_w * 1.1 / 1.95)
-        x, y = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
-        width, height, radius = .975, .5, crop_h  # mismo encuadre 1,95:1 que el recorte por defecto
-        scale = scale * 12 / max(12., crop_h)  # recortes grandes: no se amplían más de lo necesario
-    x, y = round(x) + shift[0], round(y) + shift[1]
-    half_w, half_h, margin = max(3, int(radius * width)), max(3, int(radius * height)), 2
-    region = rgb[max(0, y - half_h - margin):y + half_h + 1 + margin,
-                 max(0, x - half_w - margin):x + half_w + 1 + margin]
-    gray = channel(region, view)[margin:-margin, margin:-margin]
-    if gray.size and np.median(gray) < 128:  # globo relleno con el número en claro: siempre tinta oscura
-        gray = 255 - gray
-    big = cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
-    return cv2.copyMakeBorder(big, pad, pad, pad, pad, cv2.BORDER_CONSTANT, value=255)
+# Las vistas («rojo», «luma», «luma-color») y el recorte (`text_crop`) están en lectores_planos.py.
 
 
 # --- Lectores ----------------------------------------------------------------------------------
 # Cada lector recibe recortes en gris y devuelve, por recorte, una lista de (texto, puntuación).
-
-def label_of(text: str) -> str | None:
-    return finder.ocr_number(text.replace(" ", ""))
-
 
 class CTCRecognizer:
     """Reconocedor CTC en ONNX (PP-OCR). Da acceso a las probabilidades por columna."""
@@ -362,47 +279,7 @@ def available_readers(words: list[str], models: Path) -> dict:
 
 
 # --- Combinación -------------------------------------------------------------------------------
-
-SHIFTS = [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)]
-
-
-def merge(runs: list[list[list[tuple[str, float]]]]) -> list[list[tuple[str, float]]]:
-    """Varios recortes del mismo globo (desplazados 1 px): media de la puntuación de cada identificador."""
-    merged = []
-    for options in zip(*runs):
-        totals = {}
-        for candidates in options:
-            for text, score in candidates:
-                label = label_of(text)
-                if label:
-                    totals[label] = totals.get(label, 0.) + score / len(options)
-        merged.append(sorted(totals.items(), key=lambda kv: -kv[1]))
-    return merged
-
-
-def unique_assignment(predictions: list[list[tuple[str, float]]], floor: float = 1e-3):
-    """Un identificador aparece una sola vez por plano: asignación de máxima probabilidad conjunta.
-
-    No usa la posición ni la numeración vecina. Un globo sin candidato por encima de `floor`
-    se queda sin lectura en vez de recibir un número sobrante.
-    """
-    from scipy.optimize import linear_sum_assignment
-    labels = sorted({label for p in predictions for label, _ in p})
-    column = {label: i for i, label in enumerate(labels)}
-    n = len(predictions)
-    cost = np.full((n, len(labels) + n), 50.)
-    cost[np.arange(n), len(labels) + np.arange(n)] = -np.log(floor)
-    for i, candidates in enumerate(predictions):
-        for label, score in candidates:
-            cost[i, column[label]] = -np.log(max(score, 1e-12))
-    out = []
-    for i, j in zip(*linear_sum_assignment(cost)):
-        if j >= len(labels):
-            out.append([])
-            continue
-        chosen = labels[j]
-        out.append([(chosen, dict(predictions[i])[chosen])] + [(l, s) for l, s in predictions[i] if l != chosen])
-    return out
+# Recortes desplazados (`SHIFTS`), `merge` y `unique_assignment`: en lectores_planos.py.
 
 
 class SynthesisVerifier:

@@ -1,4 +1,4 @@
-"""Decodificación con léxico, combinación de recortes y asignación única. Sin ficheros del cliente."""
+"""Decodificación con léxico, recortes, combinación y asignación única. Sin ficheros del cliente."""
 
 import sys
 import unittest
@@ -8,6 +8,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import comparar_ocr_globos as bench
+import lectores_planos as lectores
 
 
 class LexiconTests(unittest.TestCase):
@@ -37,7 +38,7 @@ class CropTests(unittest.TestCase):
         cv2.circle(image, (40, 40), 30, (0, 128, 0), 2)
         cv2.line(image, (0, 22), (79, 22), (0, 0, 0), 1)
         cv2.putText(image, "12", (29, 47), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 128, 0), 1)
-        x0, y0, x1, y1 = bench.ink_box(image, (40, 40, 30))
+        x0, y0, x1, y1 = lectores.ink_box(image, (40, 40, 30))
         self.assertTrue(26 <= x0 < x1 <= 54 and 30 <= y0 < y1 <= 50, (x0, y0, x1, y1))
 
     def test_filled_balloon_is_read_as_dark_ink(self):
@@ -45,27 +46,26 @@ class CropTests(unittest.TestCase):
         image = np.full((80, 80, 3), 255, np.uint8)
         cv2.circle(image, (40, 40), 30, (0, 0, 200), -1)
         cv2.putText(image, "7", (34, 47), cv2.FONT_HERSHEY_SIMPLEX, .5, (255, 255, 255), 1)
-        crop = bench.text_crop(image, (40, 40, 30), "luma")
+        crop = lectores.text_crop(image, (40, 40, 30), "luma")
         self.assertGreater(np.median(crop), 128)
 
     def test_page_rotation_moves_circles_with_the_image(self):
-        import probar_lector_planos as plans
         image = np.zeros((50, 100, 3), np.uint8)
         image[5, 10] = 255
         for turns in range(4):
-            rotated, (moved,) = plans.rotate(image, [{"circle": [10, 5, 3]}], turns)
+            rotated, (moved,) = lectores.rotate(image, [{"circle": [10, 5, 3]}], turns)
             x, y, _ = moved["circle"]
             self.assertEqual(rotated[y, x].tolist(), [255, 255, 255])
 
 
 class CombinationTests(unittest.TestCase):
     def test_merge_averages_shifted_crops(self):
-        merged = bench.merge([[[("155", .8)]], [[("156", .6)]]])
+        merged = lectores.merge([[[("155", .8)]], [[("156", .6)]]])
         self.assertEqual(merged, [[("N155", .4), ("N156", .3)]])
 
     def test_each_identifier_once(self):
         predictions = [[("N155", .9), ("N156", .1)], [("N155", .6), ("N165", .4)], [("N155", 1e-5)]]
-        assigned = bench.unique_assignment(predictions)
+        assigned = lectores.unique_assignment(predictions)
         self.assertEqual([p[0][0] if p else None for p in assigned], ["N155", "N165", None])
 
 

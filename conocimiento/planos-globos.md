@@ -182,7 +182,7 @@ Cada plano lleva un solo tag, según cómo se puede buscar una cota en él. Lo d
 | Tag | PDF | Búsqueda por número |
 |---|---:|---|
 | **Con `.icp`** | 30 | Número y posición salen del `.icp`, tenga o no los globos dibujados |
-| **Globos sin `.icp`** | 7 | Lector de globos de la aplicación (`backend/app/ingestion/`). Lectura automática |
+| **Globos sin `.icp`** | 7 | Lector de globos del prototipo ([`lectores_planos.py`](../prototypes/data-explorer/lectores_planos.py), el mismo que usan las medidas; hasta el 09/11/2026, la copia de la aplicación, con las mismas lecturas). Lectura automática |
 | **Numerado sin globos** | 6 | `[]210`, `No. 200` y recuadros con OCR (lectura automática); sobrerrayados, por la capa de texto |
 | **Sin globos ni numeración** | 13 | No se puede; como mucho, el texto del plano. Tinte rojo en el visor |
 

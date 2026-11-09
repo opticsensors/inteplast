@@ -941,7 +941,81 @@ una sola vez los planos sin `.icp`:
 
 - **Globos de color:** el lector oficial de `backend/app/ingestion/`, sin cambios. Da las mismas
   1.332 lecturas, con la misma puntuación, que `buscar_en_plano.py` en esos 7 planos. Por eso el
-  visor no usa este prototipo, que sigue congelado.
+  visor no usa este prototipo, que sigue congelado. *(Cambiado el 09/11/2026: ver abajo.)*
 - **`[]`, `No.` y recuadros:** lectores nuevos, solo en este prototipo y probados en 4 planos.
 
 Medidas y límites en [`planos-globos.md`](../../conocimiento/planos-globos.md#estado-de-cada-plano-05112026).
+
+### Un solo código de lectura de planos (09/11/2026)
+
+Hasta ahora había dos copias del lector de globos. Los scripts de medida usaban la del prototipo
+(`buscar_en_plano.py` y `comparar_ocr_globos.py`, con el lector propio en torch) y el visor, la de la
+aplicación final (`backend/app/ingestion/`): se medía una copia y el visor ejecutaba otra. Los
+lectores de `[]`, `No.` y recuadros solo estaban en `conocimiento/leer_planos.py`, y la calibración
+`.icp` se repartía entre `probar_lector_planos.py` y `conocimiento/datos.py`.
+
+Ahora todos están en [`lectores_planos.py`](lectores_planos.py), sin cambiar ninguna lectura:
+
+| Parte | Qué hay | Dónde estaba |
+|---|---|---|
+| Globos de color | ráster y capa vectorial, detector, fuente por globo, orientación, recortes, RapidOCR, lector propio, combinación, umbrales y `read_page_balloons` (todo seguido) | `buscar_en_plano.py`, `comparar_ocr_globos.py` y, para el visor, el backend |
+| `[]` y `No.` | OCR por teselas y marcas | `conocimiento/leer_planos.py` |
+| Recuadros | rectángulos y lectura de su interior | `conocimiento/leer_planos.py` |
+| `.icp` | calibración RANSAC, referencia para medir, sellos calibrados, calco 1:1 y gemela | `probar_lector_planos.py` y `conocimiento/datos.py` |
+
+Lo importan el visor (`leer_planos.py` y `datos.py`), el buscador y los scripts de medida
+(`probar_lector_planos.py`, `comparar_ocr_globos.py`, `entrenar_lector_globos.py` y
+`muestra_verificacion.py`). Ninguno importa ya `backend/`, y un test lo comprueba.
+`probar_lector_planos.py` sigue midiendo otros lectores para comparar (PP-OCRv6 y los perfiles en
+torch); su «combinado» es exactamente el que ofrece el visor.
+
+**Lector propio en ONNX.** Antes de elegir, las dos copias se pasaron por las 68 páginas de los 56
+planos del visor (`out/unificar-lectores-2026-11-09/copias/`). Dieron los mismos 4.308 globos
+(posición, fuente y orientación) y las mismas 3.373 lecturas ofrecidas, con el mismo número y la
+misma puntuación combinada. Solo 2 puntuaciones del lector propio cambian en 0,0001, por redondeo
+entre torch y ONNX (en el 2201 y el 2202). Se queda la versión ONNX, la que ya usaba el visor: no
+necesita torch. El modelo es `out/lector-globos/general/lector_globos.onnx`, fuera de Git, el mismo
+fichero que lleva la aplicación (SHA-256 `38936e0f…`).
+
+**Comprobación de que no cambia nada.** Todo está en `out/unificar-lectores-2026-11-09/`, fuera de
+Git; `antes/` guarda las lecturas, los globos que enseñaba el visor y la tabla de
+`planos-globos.md` previos al cambio.
+- **Lector común frente a la copia del backend**, en las 68 páginas: los mismos 4.308 globos y las
+  mismas 3.373 lecturas, con las mismas puntuaciones (`comun/`).
+- **`leer_planos.py` rehecho con el código común** en los 26 planos sin `.icp`: las mismas 2.188
+  lecturas, tags y recuentos; solo cambian el tiempo y la firma del lector (`despues/`). El visor
+  enseña los mismos 5.322 globos en las 68 páginas, y la tabla de `planos-globos.md` no cambia.
+- **`.icp` en el visor:** 33 páginas y 3.134 globos situados (2.066 calibrados, 842 con calco 1:1 y
+  226 con la calibración de la gemela), idénticos.
+- **Buscador en el 3212:** los mismos 262 globos, con los mismos identificadores, 114 lecturas y
+  1.569 palabras que su índice anterior.
+
+`VERSION` de `lectores_planos.py` sube cuando cambia lo que lee cualquiera de los lectores; entra en
+la firma de las lecturas del visor y del índice del buscador. La aplicación final conserva su copia
+en `backend/app/ingestion/` y no puede importar este fichero (`CLAUDE.md`). Cuando se lleve allí lo
+validado, habrá que añadir una prueba que compare las salidas de las dos copias en los mismos planos.
+
+Quedan fuera, porque no son copias: el lector del fichero `.icp` (`conocimiento/herramientas/globos_icp.py`,
+que llena la biblioteca de la que leen el visor y las medidas) y el visor antiguo del 3212
+(`planos/ver_plano.py`), que solo localiza globos por color y no lo usa nadie más.
+**Dos arreglos tras la revisión (09/11/2026), sin cambiar ninguna lectura:**
+- **Caché del buscador.** Su firma usa ahora la identidad completa del lector (`lectores.reader_id()`:
+  versión, huellas del `.onnx` y de su `.json`, y umbrales), como las lecturas del visor. Antes solo
+  miraba el `.onnx`, y un cambio en el `.json`, donde están los caracteres del modelo, no rehacía el
+  índice. El índice del 3212, rehecho por la firma nueva, da los mismos globos, lecturas y palabras.
+- **Umbral en la medición.** `probar_lector_planos.py` guarda las puntuaciones completas y aplica el
+  umbral sobre ellas, como el visor. Antes las redondeaba a 4 decimales, y una lectura de 0,60718 se
+  contaba como ofrecida con umbral 0,6072, aunque el visor no la ofrece. Solo el aviso que compara el
+  umbral elegido en desarrollo con el del buscador redondea, a 4 decimales.
+  - En las mediciones del 29/10 solo había una lectura justo en el límite: N198 del 3212, en el grupo
+    de desarrollo, con 0,6072. El visor también la ofrece, así que esas cifras no cambian.
+  - En el 3122, repetido con puntuaciones completas, las lecturas ofrecidas siguen siendo 108 bien,
+    1 mal y 9 pendientes.
+
+**Las mediciones guardadas hasta el 29/10 (`out/probar-planos*/`) son histórico**, con puntuaciones
+redondeadas a 4 decimales. Las nuevas guardan en `configuracion.json` la identidad del lector
+combinado y `"puntuaciones": "completas"`. `probar_lector_planos.py` se niega a añadir resultados a
+una carpeta con puntuaciones redondeadas o de otro lector: las mediciones nuevas van a una carpeta
+nueva (`--salida`), sin mezclarse con las antiguas.
+
+Pasan los 174 tests del prototipo (`python -m pytest tests`), 18 de ellos en `tests/test_lectores_planos.py`.
