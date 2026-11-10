@@ -1055,3 +1055,30 @@ y causa en [`planos-globos.md`](../../conocimiento/planos-globos.md#lector-de-gl
   - Examen: 90,5 %, con 14 errores, 10 de ellos en el 3202 «G».
 
 Pasan los 177 tests del prototipo.
+
+### Medición de los lectores numerados (10/11/2026)
+
+`probar_lectores_numerados.py` mide los lectores de planos sin globos (`[]`, `No.` y recuadros) tal como
+los usa el visor, sin ajustarlos. Tiene tres fases, todas en la misma carpeta:
+- **`leer`:** lee los 4 planos numerados y los 4 controles negativos. Guarda la identidad del lector y
+  comprueba que las lecturas son las del visor. Solo reutiliza una lectura guardada si coinciden el
+  código y la firma del PDF.
+- **`muestra`:** elige la muestra con semilla y genera los recortes y las hojas de revisión, más el
+  barrido del 2820 y del 3214. Concilia `revision.json`:
+  - **Huella:** cada decisión guarda la de lo que se revisó: el PDF más la lectura exacta, o el PDF más
+    la cota. Las omisiones guardan el PDF más todo lo que ofrece el lector en ese plano.
+  - **Si la huella no coincide:** la decisión pasa a `invalidadas`, con el motivo, y su sitio vuelve a
+    quedar vacío. Así una decisión no se arrastra a otra lectura que caiga en el mismo identificador.
+- **`informe`:** cuenta por plano y página a partir de `revision.json`.
+  - **Comprobaciones:** rechaza decisiones fuera de las categorías y se detiene si las lecturas, las
+    detecciones de los controles o el PDF ya no son los de la muestra.
+  - **Decisiones válidas:** solo cuenta las que tienen la huella de lo revisado.
+  - **Controles:** solo cuentan como revisadas las detecciones que tienen decisión.
+
+Para poder hacerlo, `conocimiento/leer_planos.py` separa la lectura de un plano (`lee_plano`) de su
+guardado (`analiza`). Con `detalle=True` devuelve también lo que encontraron los lectores aunque el
+tag no lo use, y el texto del OCR. Lo que guarda el visor no cambia.
+
+Resultados y fallos por plano y página en
+[`planos-globos.md`](../../conocimiento/planos-globos.md#lectores-de-planos-numerados-10112026).
+Pasan los 194 tests del prototipo.

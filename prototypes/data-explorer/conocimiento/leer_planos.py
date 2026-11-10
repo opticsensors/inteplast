@@ -109,7 +109,12 @@ def lee_globos(ruta: Path, page, motor, lector) -> tuple[list[dict], int, str]:
     return salida, len(globos), fuente
 
 
-def analiza(doc: int) -> dict:
+def lee_plano(doc: int, detalle: bool = False) -> dict:
+    """Lecturas y tag de un plano, sin guardar nada.
+
+    Con `detalle` añade lo que encontraron los lectores de marcas y recuadros aunque el tag no lo use,
+    y el texto del OCR por página (lo usa probar_lectores_numerados.py). Las lecturas son las mismas.
+    """
     p = datos.plano(doc)
     ruta = Path(datos.original(p["ruta"]))
     local, motivo = datos.estado_onedrive(p["ruta"])
@@ -119,7 +124,7 @@ def analiza(doc: int) -> dict:
     motor, lector = herramientas()
     c = datos.con()
     cotas = cotas_informes(c, p["codigo"])
-    globos, marcas, recuadros, paginas = [], [], [], []
+    globos, marcas, recuadros, paginas, ocr = [], [], [], [], []
     numeros_texto: set[str] = set()
     with fitz.open(ruta) as pdf:
         for page in pdf:
@@ -130,7 +135,10 @@ def analiza(doc: int) -> dict:
             pagina = {"pagina": page.number + 1, "detectados": detectados, "leidos": len(leidos),
                       "fuente": fuente, "palabras": len(palabras)}
             if detectados < MIN_GLOBOS and len(palabras) < POCO_TEXTO:
-                marcas_pag = lectores.marcas_de_pagina(page, motor)
+                tokens = lectores.ocr_teselas(page, motor)  # lo mismo que lectores.marcas_de_pagina
+                marcas_pag = lectores.marcas_de_tokens(tokens, page.number + 1)
+                if detalle:
+                    ocr.append({"pagina": page.number + 1, "tokens": tokens})
                 marcas += marcas_pag
                 pagina["marcas"] = len(marcas_pag)
                 if len(marcas_pag) < MIN_MARCAS:
@@ -154,8 +162,16 @@ def analiza(doc: int) -> dict:
                  "cobertura_recuadros": round(cob_recuadros, 3),
                  "cobertura_lecturas": round(cobertura({base_cota(x["t"]) for x in lecturas}, cotas), 3),
                  "paginas": paginas, "lecturas": lecturas, "segundos": round(time.time() - t0)}
-    datos.LECTURAS.mkdir(parents=True, exist_ok=True)
-    (datos.LECTURAS / f"{doc}.json").write_text(json.dumps(resultado, ensure_ascii=False), encoding="utf-8")
+    if detalle:
+        resultado["detalle"] = {"marcas": marcas, "recuadros": recuadros, "ocr": ocr}
+    return resultado
+
+
+def analiza(doc: int) -> dict:
+    resultado = lee_plano(doc)
+    if not resultado.get("error"):
+        datos.LECTURAS.mkdir(parents=True, exist_ok=True)
+        (datos.LECTURAS / f"{doc}.json").write_text(json.dumps(resultado, ensure_ascii=False), encoding="utf-8")
     return resultado
 
 

@@ -5,6 +5,12 @@
 > **Lector de globos contra los `.icp` (09/11/2026):** 97,1 % de aciertos en desarrollo, sin errores,
 > y 90,5 % en examen, con 14 errores. Medido con el extractor de `.icp` ya corregido.
 > [Medición y fallos por plano](#lector-de-globos-contra-los-icp-09112026).
+>
+> **Lectores de planos numerados (`[]`, `No.`, recuadros) (10/11/2026):** en una muestra al azar de 165
+> lecturas, los 165 números están bien leídos; 149 están bien situados y 16 están en una tabla o
+> desplazados. La revisión confirma 24 omisiones, casi todas marcas giradas. Los 70 recuadros
+> encontrados en planos sin numeración son todos falsos. Solo son los 4 planos conocidos, sin
+> validación independiente. [Medición y fallos](#lectores-de-planos-numerados-10112026).
 
 Qué planos de `Exemples` llevan globos (la numeración de cotas dibujada sobre el plano), de qué
 color y estilo son, y cuáles traen el `.icp` de infra-CONVERT con el número y la posición de cada
@@ -411,6 +417,116 @@ el número del `.prf` (45, 115, 17) pasa al globo que de verdad lo lleva. Copias
 `prototypes/data-explorer/out/referencia-icp-2026-11-09/antes/` (tabla `globo`, calibraciones y lo
 que enseñaba el visor), fuera de Git.
 
+## Lectores de planos numerados (10/11/2026)
+
+**Qué se mide.** Los tres lectores de planos sin globos de
+[`lectores_planos.py`](../prototypes/data-explorer/lectores_planos.py), tal como los usa el visor:
+- `[]210` en el 2820;
+- `No. 200` en el 3174 y el 3186;
+- números en recuadro en el 3214.
+
+Sin ajustar nada. Las lecturas son exactamente las que enseña el visor (comprobado plano a plano).
+
+**Alcance.** Son los 4 planos donde se probaron estos lectores, y los filtros de recuadros se ajustaron
+en el 3214. No hay validación independiente: eso exige planos nuevos, apartados antes de mirarlos. El
+3237 y el 3238 tampoco son numerados por OCR: su número está en la capa de texto.
+
+**Cómo.**
+- **Lecturas ofrecidas:** una muestra al azar de 40 por plano (semilla 20261110) y las 45 del 3214. En
+  cada una se mira por separado si el número es el del plano y si la caja está sobre la marca de
+  numeración de una cota (y no sobre el mismo número en una tabla o una nota, ni desplazada).
+- **Omisiones:** solo cuentan las marcas vistas en el plano que el lector no ofrece.
+  - **2820 y 3214:** barrido a ojo de todas las páginas, con una caja en cada lectura.
+  - **3174 y 3186:** se buscan en el plano las cotas de los informes que el lector no encuentra.
+
+  No se ha inventariado todo el plano en el 3174 ni en el 3186: no hay tasa de detección.
+- **Informes:** sirven de contraste, no de referencia. Una cota del informe que no aparece y cuya
+  marca no se ve en el plano queda como «cota del informe no encontrada».
+- **Controles negativos:** planos donde no debería salir nada. Cada detección se revisa antes de
+  contarla como falsa.
+  - el 3205-B y el `3206.pdf`, dos escaneos limpios donde el visor sí pasa estos lectores;
+  - dos escaneos donde el visor no los pasa y aquí se fuerzan: el 3212 rev. 07, con globos, y el
+    `Drw_Marking`, con cotas resaltadas.
+
+**Lecturas ofrecidas (muestra):**
+
+| Plano | Pág. | Ofrecidas | Muestra | Número correcto | Ubicación correcta |
+|---|---:|---:|---:|---:|---:|
+| 2820 `[]` | 1 | 166 | 40 | 40 | 38 |
+| 3174 `No.` | 1 · 2 · 3 · 4 | 76 · 59 · 91 · 100 | 10 · 11 · 11 · 8 | 10 · 11 · 11 · 8 | 10 · 11 · 8 · 3 |
+| 3186 `No.` | 1 · 2 · 3 · 4 | 75 · 59 · 85 · 100 | 4 · 12 · 15 · 9 | 4 · 12 · 15 · 9 | 4 · 10 · 12 · 8 |
+| 3214 recuadros | 1 · 2 | 43 · 2 | 43 · 2 | 43 · 2 | 43 · 2 |
+| **Total** | | | **165** | **165** | **149** |
+
+La página 5 del 3174 y del 3186 no ofrece ninguna lectura (es la tabla de cotas por vista).
+
+**Fallos de ubicación (16, todos con el número bien leído):**
+- **Tablas de vistas: 14 en total, 8 en el 3174 y 6 en el 3186.** El lector toma por marca el rango
+  «No.1600 – No.1611» de la tabla que dice qué cotas salen en cada vista.
+  - 3174: 1611, 1900 y 1304 en la p3; 2705, 2407, 2700, 2100 y 2802 en la p4.
+  - 3186: 1000 y 1100 en la p2; 1611, 1700 y 1912 en la p3; 2213 en la p4.
+
+  Fuera de la muestra se vio además otro caso: el texto de nota «TO BE MEASURED AT No.1504» (3186, p3).
+- **Cajas desplazadas en el 2820: 2 (las notas 254 y 111).** La caja cae sobre el texto de la nota y
+  deja la marca fuera. Esas notas, y también la 255 y la 114, se leen dos veces: una caja sobre la
+  marca y otra corrida.
+
+**Omisiones confirmadas en la revisión (24).** Hay recorte de cada una en `recortes/`:
+- **2820 (barrido de la p1): 10.**
+  - **Giradas unos 45°:** 133, 155, 250 y 256.
+  - **Otras formas:** 171, vertical; 178, pegada a su cota.
+  - **Notas numeradas:** 118 y 115.
+  - **Una sola cifra:** 1 y 3. El lector exige dos cifras o más, así que no las lee nunca.
+- **3174: 1,** la 401 (p1). Está girada unos 30° sobre el ángulo «90°» en recuadro.
+- **3186: 13,** todas marcas giradas:
+  - 401 en la p1 (la misma que en el 3174);
+  - en la p3: 1208, 1500–1504, 1507–1510, 1604 y 1909.
+
+  El lector sí lee algunas giradas unos 30° (No.1701, No.1702), pero no las de la sección P-P.
+- **3214 (barrido de las 2 páginas): ninguna.**
+
+**Contraste con los informes:**
+- **3174:** 122 de 129 cotas encontradas.
+  - **401:** es una omisión confirmada.
+  - **1–5 y 14:** no hay marca `No.` con ese número, porque el plano numera las cotas con 3 o 4
+    cifras. Las notas generales del plano llevan esos números; puede que los informes se refieran a
+    ellas, pero no está confirmado.
+- **3186:** 156 de 168.
+  - **11:** son omisiones confirmadas.
+  - **Cota 1:** como en el 3174, no tiene marca `No.`.
+- **3214:** 42 de 42.
+- **El contraste se engaña.** En el 3186, la 1500 y la 1504 cuentan como encontradas, pero solo se
+  leen en la tabla de vistas y en el texto de una nota; sus marcas giradas no se leen.
+
+**Controles negativos: 70 detecciones, las 70 falsas.**
+- **Marcas `[]` y `No.`:** ninguna detección en las 4 páginas.
+- **Recuadros:** 21 en el 3205-B y 19 en el 3206 (planos donde el visor sí los pasa), y 18 y 12 en los
+  dos forzados. Todo son recuadros que no numeran nada:
+  - cotas básicas (12.02, 1.65…);
+  - celdas de marcos de tolerancia (0.15, 0.1);
+  - radios en recuadro (R4, R22);
+  - letras de referencia leídas como cifras (B como 8, E como 3).
+
+  El lector de recuadros lee cualquier número enmarcado. Lo que deja el 3205-B y el 3206 como «Sin
+  globos ni numeración» es la regla del tag: hacen falta 15 recuadros que cubran la mitad de las cotas
+  de los informes.
+
+**Pendiente:**
+- **Las 11 cotas con letra del 3214** (`A4`, `D5`, `F3`…). En el barrido no aparecen como recuadro.
+  Las letras A–F y las cifras 1–8 del marco son la cuadrícula de zonas del plano; podrían ser
+  referencias de zona, pero no está comprobado.
+- **Validación independiente:** necesita planos numerados nuevos.
+
+**Reproducir.** Con [`probar_lectores_numerados.py`](../prototypes/data-explorer/probar_lectores_numerados.py),
+en tres fases: `leer`, `muestra` e `informe`. Todo queda en
+`prototypes/data-explorer/out/probar-numerados-2026-11-10/`, fuera de Git:
+- las lecturas, con la identidad del lector (huellas del código y versión de RapidOCR);
+- `muestra.json`, con la semilla y la selección;
+- `revision.json`, con las decisiones a ojo, cada una ligada al PDF y a la lectura exacta que se
+  revisó (si cambian, deja de contar y hay que revisarla de nuevo);
+- `informe.json`;
+- los recortes, las hojas de revisión y el barrido.
+
 ## Estado de cada plano (05/11/2026)
 
 Cada plano lleva un solo tag, según cómo se puede buscar una cota en él. Lo decide
@@ -445,13 +561,16 @@ extractor anterior; hoy sus 96 sellos tienen número y posición.
 | Lector | Planos | Resultado |
 |---|---|---|
 | Globos | 7 PDF: 1.332 leídos de 1.946 | Muestra de 96: ningún error claro, 2 dudosos a esa resolución (3238 `9891`, 3202 `286`). En otra muestra del 3195, 1 de 22 mal: lee `1210.T` donde pone 1630, con 0,985 de confianza |
-| `[]` | 2820 | Muestra de 36 tras corregir la cuarta cifra pegada: 36 números bien, 1 con la marca desplazada. Sin informes con los que contrastar |
-| `No.` | 3174 y 3186 | 94,6 % de 129 y 92,9 % de 168 cotas numéricas de informes. Muestras de 24: 21 y 24 sobre su cota; las otras 3 son el número correcto en una tabla o nota |
-| Recuadros | 3214, escaneo | 45 de 45 bien y todas las cotas numéricas de los informes (42 de 42, más 45.1 y 45.2). **Sus filtros se ajustaron en este mismo plano: no es una medida independiente** |
+| `[]` | 2820 | Muestra de 40 (10/11/2026): 40 números bien, 38 bien situados (2 cajas desplazadas). 10 omisiones confirmadas en el barrido. Sin informes con los que contrastar |
+| `No.` | 3174 y 3186 | Muestras de 40 (10/11/2026): 80 números bien; 32 y 34 sobre su cota, el resto en tablas de vistas. 1 y 13 omisiones confirmadas, marcas giradas. Contraste: 122 de 129 y 156 de 168 cotas de informes |
+| Recuadros | 3214, escaneo | 45 de 45 bien (10/11/2026), sin omisiones en el barrido, 42 de 42 cotas numéricas de informes. **Sus filtros se ajustaron en este mismo plano: no es una medida independiente**. En planos sin numeración lee cualquier número enmarcado (70 detecciones, todas falsas) |
+
+Detalle en [Lectores de planos numerados](#lectores-de-planos-numerados-10112026). Las muestras
+anteriores (36 y 24) no guardaron su selección; las del 10/11 son reproducibles.
 
 Límites: 614 globos quedan sin leer (234 del 3195, 148 del 3212, 113 del 3167), y buscarlos no da
-resultado. Las 11 cotas con letra del 3214 (`A4`, `D5`, `F3`…) no aparecen en el OCR; no se ha
-comprobado si están en el plano. Buscar en el 3237 o el 3238 también encuentra otras cifras de su
+resultado. Las 11 cotas con letra del 3214 (`A4`, `D5`, `F3`…) no aparecen en el OCR ni, en el
+barrido del 10/11/2026, como recuadro: siguen pendientes. Buscar en el 3237 o el 3238 también encuentra otras cifras de su
 texto (`30` y `30°`). Los lectores de `[]`, `No.` y recuadros son prototipo: solo se han probado en
 estos 4 planos y no están en la aplicación.
 
