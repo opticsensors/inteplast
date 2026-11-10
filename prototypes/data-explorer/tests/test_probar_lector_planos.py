@@ -289,6 +289,30 @@ class EvaluationTests(unittest.TestCase):
             again = lectores.calibrate("x", [], [], {"a.icp": stamps}, (800, 1200), store, refresh=False)
         np.testing.assert_allclose(again[1][2], first[1][2] * 2, atol=1e-6)
 
+    def test_calibration_is_redone_when_the_extracted_stamps_change(self):
+        # Mismo PDF y mismo .icp, pero otros sellos extraídos (p. ej., tras corregir globos_icp.py).
+        stamps = [{"label": f"N{i}", "points": ((10. * i, 5. * (i % 4)), (0., 0.))} for i in range(1, 13)]
+        balloons = [{"circle": [2. * s["points"][0][0] + 100, -2. * s["points"][0][1] + 300, 6.]} for s in stamps]
+        readings = [[s["label"] for s in stamps]]
+        store, digest = {}, {"a.icp": lectores.stamps_digest(stamps)}
+        lectores.calibrate("x", balloons, readings, {"a.icp": stamps}, (400, 600), store, False, stamp_digests=digest)
+        self.assertEqual(store["x"]["sellos_sha256"], digest["a.icp"])
+        with mock.patch.object(lectores, "fit_stamps", side_effect=AssertionError("no debería reajustar")):
+            lectores.calibrate("x", [], [], {"a.icp": stamps}, (400, 600), store, False, stamp_digests=digest)
+        moved = [dict(stamps[0], points=((99., 99.), (0., 0.)))] + stamps[1:]
+        self.assertNotEqual(lectores.stamps_digest(moved), digest["a.icp"])
+        with mock.patch.object(lectores, "fit_stamps", wraps=lectores.fit_stamps) as fit:
+            lectores.calibrate("x", balloons, readings, {"a.icp": moved}, (400, 600), store, False,
+                               stamp_digests={"a.icp": lectores.stamps_digest(moved)})
+        self.assertTrue(fit.called)
+        old = dict(store["x"])
+        old.pop("sellos_sha256")  # calibración anterior a la huella: se reajusta
+        store["x"] = old
+        with mock.patch.object(lectores, "fit_stamps", wraps=lectores.fit_stamps) as fit:
+            lectores.calibrate("x", balloons, readings, {"a.icp": moved}, (400, 600), store, False,
+                               stamp_digests={"a.icp": lectores.stamps_digest(moved)})
+        self.assertTrue(fit.called)
+
 
 if __name__ == "__main__":
     unittest.main()

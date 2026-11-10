@@ -1044,4 +1044,14 @@ Resultados: las mismas lecturas, página a página, que el 29/10. Desarrollo, 95
 bien leídos; examen, 89,3 %. Al revisar los fallos aparecieron 27 sellos mal extraídos por
 `conocimiento/herramientas/globos_icp.py`, que inflan errores y omisiones. Medición, fallos por plano
 y causa en [`planos-globos.md`](../../conocimiento/planos-globos.md#lector-de-globos-contra-los-icp-09112026).
-Pasan los 176 tests del prototipo.
+
+**Con el extractor de `.icp` corregido (09/11/2026).**
+- **Referencia:** el número sale del propio `.icp`, con el nombre del sello leído por su longitud.
+- **Calibraciones:** cada una guarda la huella de los sellos con que se ajustó (`sellos_sha256`), y
+  `lectores.calibrate` la reajusta si los sellos cambian aunque el PDF y el `.icp` sean los mismos.
+- **Medición:** se repitió en serie, porque dos procesos escribirían a la vez en
+  `probar-planos-calibracion.json`. Resultados en `out/probar-planos-2026-11-09-icp2-*`.
+  - Desarrollo: 97,1 %, sin errores.
+  - Examen: 90,5 %, con 14 errores, 10 de ellos en el 3202 «G».
+
+Pasan los 177 tests del prototipo.

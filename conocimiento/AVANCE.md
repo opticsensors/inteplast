@@ -295,7 +295,7 @@ fuera de `conocimiento/`.
 - [x] Analizados y documentados: 0 Bolt Eye (README + 3197, 3051, 2820), 1 Clips, 2 Nervios,
       3 Paredes delgadas, 4 Tetones (README + 3288), 5 Anclajes. Incongruencias I-0xx…I-5xx y
       hallazgos H-xxx en `incongruencias.md` / `hallazgos.jsonl`.
-- [x] `.icp` de planos con globos descodificado (tabla `globo`, 19 planos).
+- [x] `.icp` de planos con globos descodificado (tabla `globo`, 19 planos). Corregido el 09/11/2026: número del propio `.icp`, nombre leído con su longitud (2.126 sellos); ver `planos-globos.md`.
 
 - [x] Extracción completa: 4.530 ficheros, 0 errores (reintentos con Excel COM para XLS que xlrd no
       lee y texto aproximado para `.doc` bloqueados por Word). Incluye los 220 que estaban en la nube.

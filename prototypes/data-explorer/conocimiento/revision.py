@@ -129,7 +129,9 @@ def revisar() -> dict:
     rotos = [{"id": i, "pieza": cod, "ruta": r, "sellos": n, "sin_posicion": a or 0, "sin_numero": b or 0}
              for i, cod, r, n, a, b in icp if (a or 0) or (b or 0) or not n]
     res.append(comprobacion("P9", "pieza", ".icp con globos sin posición o sin número",
-                            "Sellos desalineados (coordenadas nulas) o sin número visible en el .prf.", rotos, len(icp), nivel="info"))
+                            "Sellos sin coordenadas o sin número visible. Desde la corrección de globos_icp.py (09/11/2026) "
+                            "el número sale del propio .icp; el del .prf solo se contrasta (etiqueta_prf).",
+                            rotos, len(icp), nivel="info"))
     pdf_dirs = {posixpath.dirname(p["ruta"]) for p in datos.planos()}
     sueltos = [{"id": i, "ruta": r} for i, _, r, *_ in icp if posixpath.dirname(r) not in pdf_dirs]
     res.append(comprobacion("P10", "pieza", ".icp sin plano PDF en su carpeta",

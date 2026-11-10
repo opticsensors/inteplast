@@ -36,6 +36,8 @@ en el visor; configuracion.json lleva la identidad del lector combinado. Los res
 (out/probar-planos*/, hasta el 29/10/2026) son histórico: guardan las puntuaciones redondeadas a 4
 decimales, y una lectura justo por debajo del umbral podía contarse como ofrecida. No se añaden
 resultados nuevos a una carpeta hecha con puntuaciones redondeadas o con otro lector combinado.
+Cada página calibrada guarda la huella de los sellos del .icp que usó (`sellos_sha256`), y la
+calibración solo se reutiliza si esos sellos no han cambiado (corrección de globos_icp.py, 09/11/2026).
 Cada página con referencia guarda además, en `fallos_combinado`, los fallos del lector combinado tal
 como lo ve el visor (umbral por fuente): sellos sin globo detectado, globos sin lectura ofrecida,
 números erróneos, lecturas en globos falsos y lecturas ofrecidas en detecciones sin referencia; la
@@ -585,8 +587,9 @@ def main():
                     truth, matched = visual_truth(visual, rgb.shape[:2], balloons)
                     entry.update(referencia=f"lectura visual del {visual.get('fecha', '?')}", emparejados=matched)
                 elif candidates:
+                    stamp_digests = {name: lectores.stamps_digest(s) for name, s in candidates.items()}
                     calibrated = lectores.calibrate(key, balloons, readings, candidates, rgb.shape[:2], calibration,
-                                                    args.recalibrar, pdf_digest, digests)
+                                                    args.recalibrar, pdf_digest, digests, stamp_digests)
                     if calibrated:
                         icp, fit = calibrated
                         stamps = candidates[icp]
@@ -596,7 +599,7 @@ def main():
                         mapped, used = lectores.stamps_on_page(stamps, fit), set(match)
                         not_found = [(s["label"], *mapped[j]) for j, s in enumerate(stamps) if j not in used]
                         entry.update(icp=icp, referencias=len(stamps), ajuste=f"{fit[0]}/{fit[1]}",
-                                     emparejados=matched)
+                                     emparejados=matched, sellos_sha256=stamp_digests[icp])
                         lectores.guarda_calibraciones(calibration, CALIBRATION)
                     else:
                         entry.update(referencia="calibración .icp fallida", emparejados=0)

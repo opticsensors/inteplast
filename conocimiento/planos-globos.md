@@ -2,9 +2,9 @@
 
 > **Estado de cada plano (los 56, con un tag):** [tabla al final](#estado-de-cada-plano-05112026).
 >
-> **Lector de globos contra los `.icp` (09/11/2026):** 95,0 % de aciertos en desarrollo y 89,3 % en
-> examen. 27 sellos de la referencia están mal extraídos por `globos_icp.py`, y eso también afecta al
-> visor. [Medición y fallos por plano](#lector-de-globos-contra-los-icp-09112026).
+> **Lector de globos contra los `.icp` (09/11/2026):** 97,1 % de aciertos en desarrollo, sin errores,
+> y 90,5 % en examen, con 14 errores. Medido con el extractor de `.icp` ya corregido.
+> [Medición y fallos por plano](#lector-de-globos-contra-los-icp-09112026).
 
 Qué planos de `Exemples` llevan globos (la numeración de cotas dibujada sobre el plano), de qué
 color y estilo son, y cuáles traen el `.icp` de infra-CONVERT con el número y la posición de cada
@@ -105,7 +105,8 @@ Solo la aleatoria estima la fiabilidad de la referencia.
 
 ## Calibración `.icp` → PDF
 
-Validada a mano en BSG-296-02 (3288) el 21/10. El 29/10 se ajustó de forma automática en 19 de
+Validada a mano en BSG-296-02 (3288) el 21/10 (cifras de esta sección con el extractor anterior al
+09/11/2026, ver [la corrección](#referencia-el-extractor-de-icp-corregido-el-09112026)). El 29/10 se ajustó de forma automática en 19 de
 los 20 PDF con `.icp`. El ajuste es un RANSAC con giro, escala, desplazamiento y simetría
 vertical, que toma como emparejamientos tentativos las lecturas OCR de los globos. En esos 19, el
 detector encuentra **1.992 de los 2.024 sellos** que tienen número y posición (98,4 %). De sus
@@ -119,7 +120,8 @@ con los 43 sellos de `Shroud_240W_ballooned.icp`.
 ## Por PDF
 
 Globos = círculos que encuentra el detector en el ráster original. Sellos = sellos del `.icp` con
-número y posición.
+número y posición, contados el 29/10 con el extractor anterior. Con el corregido hay más: por ejemplo,
+232 en `3202.icp` ([09/11/2026](#referencia-el-extractor-de-icp-corregido-el-09112026)).
 
 | Pieza | PDF | Globos | `.icp` (sellos) | Notas |
 |---|---|---|---|---|
@@ -184,12 +186,13 @@ número y posición.
 [`lectores_planos.py`](../prototypes/data-explorer/lectores_planos.py), es el mismo que usa el visor:
 RapidOCR y el lector propio en ONNX, un número por plano y umbral de 0,434 en la capa vectorial y de
 0,6072 en la imagen. Se ha medido en los 20 planos con globos dibujados y `.icp`, sin cambiar el lector.
-- **Referencia:** cada sello del `.icp`, con su posición según la calibración guardada y el número de
-  su fila del `.prf`, como hasta ahora.
+- **Referencia:** cada sello del `.icp`, con su número y su posición según la calibración. El
+  extractor se corrigió el 09/11/2026 (abajo) y las calibraciones se reajustaron con los sellos
+  corregidos.
 - **Puntuaciones:** completas.
 - **Grupos:** desarrollo (3205 y 3206) y examen (3202 y 3288), por separado.
-- **Resultados:** `prototypes/data-explorer/out/probar-planos-2026-11-09-desarrollo/` y `-examen/`,
-  fuera de Git, con `probar_lector_planos.py --grupo … --lectores buscador`.
+- **Resultados:** `prototypes/data-explorer/out/probar-planos-2026-11-09-icp2-desarrollo/` y
+  `-examen/`, fuera de Git, con `probar_lector_planos.py --grupo … --lectores buscador`.
 
 Qué cuenta en cada columna:
 - **Acierto:** lectura ofrecida con el número del sello.
@@ -204,48 +207,62 @@ Qué cuenta en cada columna:
 
 | Grupo | Planos | Sellos | Aciertos | No detectados | Sin lectura | Erróneos | En falso | Sin referencia |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| desarrollo | 11 | 873 | 829 (95,0 %) | 15 | 22 | 7 | 0 | 62 |
-| examen | 9 | 1193 | 1065 (89,3 %) | 22 | 94 | 12 | 2 | 64 |
+| desarrollo | 11 | 925 | 898 (97,1 %) | 5 | 22 | 0 | 0 | 0 |
+| examen | 9 | 1247 | 1128 (90,5 %) | 12 | 95 | 12 | 2 | 1 |
 
-Página a página son las mismas lecturas ofrecidas que en la medición del 29/10
-(`out/probar-planos-v6-*`), con los mismos umbrales: bien, mal y sin referencia. Unificar el código
-no cambió ninguna.
+**Primera medición, con la referencia sin corregir: provisional.** Daba un 95,0 % en desarrollo y un
+89,3 % en examen. Parte de sus fallos eran de la referencia, no del lector:
+- los 7 «erróneos» de desarrollo;
+- 21 de los 37 no detectados;
+- casi todas sus 126 lecturas sin referencia.
+
+Las lecturas del lector son las mismas; solo ha cambiado la referencia. Su detalle está en el
+commit `d67b52b`.
+
+| | Desarrollo | Examen |
+|---|---|---|
+| Sellos | 873 → 925 | 1193 → 1247 |
+| Aciertos | 829 (95,0 %) → 898 (97,1 %) | 1065 (89,3 %) → 1128 (90,5 %) |
+| No detectados | 15 → 5 | 22 → 12 |
+| Sin lectura | 22 → 22 | 94 → 95 |
+| Erróneos | 7 → 0 | 12 → 12 |
+| En falso | 0 → 0 | 2 → 2 |
+| Sin referencia | 62 → 0 | 64 → 1 |
 
 | Grupo | Página | Pieza | PDF | Fuente | Sellos | Aciertos | No det. | Sin lect. | Erróneos | En falso | Sin ref. |
 |---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| desarrollo | 1931-p1 | 3205 | `3205_DRW ballooned.pdf` | capa vectorial | 71 | 67 | 4 | 0 | 0 | 0 | 5 |
-| desarrollo | 1937-p1 | 3205 | `3205_balloned.pdf` | capa vectorial | 91 | 88 | 2 | 0 | 1 | 0 | 7 |
-| desarrollo | 1941-p1 | 3205 | `3205-A_balloned.pdf` | capa vectorial | 102 | 100 | 1 | 0 | 1 | 0 | 7 |
-| desarrollo | 1942-p1 | 3205 | `3205-A_balloned_1.pdf` | capa vectorial | 102 | 99 | 1 | 1 | 1 | 0 | 7 |
-| desarrollo | 1943-p1 | 3205 | `20231129_213137-10300-B_shroud_vG_Ballooned.pdf` | capa vectorial | 104 | 99 | 2 | 1 | 2 | 0 | 7 |
-| desarrollo | 1949-p1 | 3205 | `20241121_213137-10300-B_balloned.pdf` | capa vectorial | 103 | 99 | 2 | 2 | 0 | 0 | 8 |
+| desarrollo | 1931-p1 | 3205 | `3205_DRW ballooned.pdf` | capa vectorial | 75 | 72 | 3 | 0 | 0 | 0 | 0 |
+| desarrollo | 1937-p1 | 3205 | `3205_balloned.pdf` | capa vectorial | 96 | 96 | 0 | 0 | 0 | 0 | 0 |
+| desarrollo | 1941-p1 | 3205 | `3205-A_balloned.pdf` | capa vectorial | 108 | 108 | 0 | 0 | 0 | 0 | 0 |
+| desarrollo | 1942-p1 | 3205 | `3205-A_balloned_1.pdf` | capa vectorial | 108 | 107 | 0 | 1 | 0 | 0 | 0 |
+| desarrollo | 1943-p1 | 3205 | `20231129_213137-10300-B_shroud_vG_Ballooned.pdf` | capa vectorial | 110 | 108 | 1 | 1 | 0 | 0 | 0 |
+| desarrollo | 1949-p1 | 3205 | `20241121_213137-10300-B_balloned.pdf` | capa vectorial | 109 | 107 | 0 | 2 | 0 | 0 | 0 |
 | desarrollo | 2184-p1 | 3206 | `Drw_Marking_DR_intern02.pdf` (sin globos) | imagen | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| desarrollo | 2191-p1 | 3206 | `3206_DRW ballooned.pdf` | mixta | 42 | 40 | 2 | 0 | 0 | 0 | 3 |
-| desarrollo | 2197-p1 | 3206 | `3206_balloned.pdf` | capa vectorial | 65 | 64 | 1 | 0 | 0 | 0 | 4 |
-| desarrollo | 2201-p1 | 3206 | `3206-A_balloned lr.pdf` | imagen | 62 | 45 | 0 | 17 | 0 | 0 | 6 |
-| desarrollo | 2202-p1 | 3206 | `20231129_213137-10280-B_shroud_vG_Ballooned.pdf` | capa vectorial | 64 | 61 | 0 | 1 | 2 | 0 | 6 |
-| desarrollo | 2208-p1 | 3206 | `20241121_213137-10280-B_balloned.pdf` | capa vectorial | 67 | 67 | 0 | 0 | 0 | 0 | 2 |
-| examen | 4079-p1 | 3202 | `3202_balloned.pdf` | capa vectorial | 226 | 223 | 2 | 1 | 0 | 0 | 8 |
-| examen | 4080-p1 | 3202 | `3202_DRW_ballooned.pdf` | capa vectorial | 193 | 185 | 7 | 1 | 0 | 0 | 13 |
-| examen | 4088-p1 | 3202 | `3202_balloned low resolution.pdf` | imagen | 226 | 160 | 5 | 60 | 1 | 0 | 7 |
-| examen | 4091-p1 | 3202 | `20231129_885253-11250_insulator_motor_v1_ Ballooned.pdf` («G») | capa vectorial | 226 | 185 | 4 | 27 | 10 | 0 | 7 |
-| examen | 3049-p1 | 3288 | `BSG-296-01-N0 BASE SOP RCP 3.1_balloned.pdf` | mixta | 129 | 126 | 0 | 3 | 0 | 0 | 12 |
-| examen | 3113-p1 | 3288 | `2. 20250714_BSG-296-00 SOP RCP 3.1 balloned.pdf` | mixta | 26 | 25 | 1 | 0 | 0 | 0 | 4 |
-| examen | 3114-p1 | 3288 | `20250714_BSG-296-00 SOP RCP 3.1 balloned.pdf` | mixta | 26 | 25 | 0 | 1 | 0 | 0 | 3 |
-| examen | 3122-p1 | 3288 | `BSG-296-2 SOP RCP 3.1 balloned.pdf` | capa vectorial | 112 | 108 | 2 | 1 | 1 | 0 | 9 |
-| examen | 3127-p1 | 3288 | `BSG-296-00 SOP RCP 3.1 balonned.pdf` | capa vectorial | 29 | 28 | 1 | 0 | 0 | 0 | 1 |
+| desarrollo | 2191-p1 | 3206 | `3206_DRW ballooned.pdf` | mixta | 43 | 43 | 0 | 0 | 0 | 0 | 0 |
+| desarrollo | 2197-p1 | 3206 | `3206_balloned.pdf` | capa vectorial | 69 | 68 | 1 | 0 | 0 | 0 | 0 |
+| desarrollo | 2201-p1 | 3206 | `3206-A_balloned lr.pdf` | imagen | 68 | 51 | 0 | 17 | 0 | 0 | 0 |
+| desarrollo | 2202-p1 | 3206 | `20231129_213137-10280-B_shroud_vG_Ballooned.pdf` | capa vectorial | 70 | 69 | 0 | 1 | 0 | 0 | 0 |
+| desarrollo | 2208-p1 | 3206 | `20241121_213137-10280-B_balloned.pdf` | capa vectorial | 69 | 69 | 0 | 0 | 0 | 0 | 0 |
+| examen | 4079-p1 | 3202 | `3202_balloned.pdf` | capa vectorial | 232 | 231 | 0 | 1 | 0 | 0 | 0 |
+| examen | 4080-p1 | 3202 | `3202_DRW_ballooned.pdf` | capa vectorial | 202 | 198 | 3 | 1 | 0 | 0 | 0 |
+| examen | 4088-p1 | 3202 | `3202_balloned low resolution.pdf` | imagen | 232 | 167 | 3 | 61 | 1 | 0 | 0 |
+| examen | 4091-p1 | 3202 | `20231129_885253-11250_insulator_motor_v1_ Ballooned.pdf` («G») | capa vectorial | 232 | 192 | 3 | 27 | 10 | 0 | 0 |
+| examen | 3049-p1 | 3288 | `BSG-296-01-N0 BASE SOP RCP 3.1_balloned.pdf` | mixta | 141 | 138 | 0 | 3 | 0 | 0 | 0 |
+| examen | 3113-p1 | 3288 | `2. 20250714_BSG-296-00 SOP RCP 3.1 balloned.pdf` | mixta | 29 | 28 | 1 | 0 | 0 | 0 | 1 |
+| examen | 3114-p1 | 3288 | `20250714_BSG-296-00 SOP RCP 3.1 balloned.pdf` | mixta | 29 | 28 | 0 | 1 | 0 | 0 | 0 |
+| examen | 3122-p1 | 3288 | `BSG-296-2 SOP RCP 3.1 balloned.pdf` | capa vectorial | 120 | 117 | 1 | 1 | 1 | 0 | 0 |
+| examen | 3127-p1 | 3288 | `BSG-296-00 SOP RCP 3.1 balonned.pdf` | capa vectorial | 30 | 29 | 1 | 0 | 0 | 0 | 0 |
 | examen | 1588-p1 | 3309 | `dwg_ab_77217-02200-000A_2864368.pdf` (sin globos) | imagen | 0 | 0 | 0 | 0 | 0 | 2 | 0 |
 
 Las demás páginas declaradas sin globos no tienen ninguna detección. Posición: x, y en fracción de
-la página sin girar. Recortes de cada fallo en `out/probar-planos-2026-11-09-informe/`; hojas por
-página, `errores-<página>.png`.
+la página sin girar.
 
-### Revisión de los fallos: parte es de la referencia, no del lector
+### Fallos, por plano y página
 
-Se han mirado a ojo, contra el plano, los 21 errores, los 37 sellos no detectados y las 11 lecturas
-sin referencia que no explica el `.icp`. Están en las hojas `hoja-errores-*.png` y
-`hoja-tipo-b.png` y en las carpetas de recortes de `out/probar-planos-2026-11-09-informe/`.
-- **Azul:** posición de cada sello, con la calibración guardada.
+Se han mirado a ojo, contra el plano, todos los errores, todos los no detectados y la lectura sin
+referencia. Están en las hojas `hoja-errores-*.png` y `hoja-tipo-b.png` y en las carpetas de recortes
+de `out/probar-planos-2026-11-09-informe/` y `-icp2-informe/`.
+- **Azul:** posición de cada sello, con la calibración.
 - **Rojo:** el globo o el sello en cuestión.
 
 **Errores del lector: 14, todos en examen.** En las 14 el número es legible y la referencia es
@@ -270,136 +287,129 @@ una tabla, en la columna «番号 No.». Están bien leídos, pero no son globos
 | 1588-p1 | 3309 | no es globo | 2 | 0,986 | imagen | 0,79; 0,26 |
 | 1588-p1 | 3309 | no es globo | 1 | 0,623 | imagen | 0,62; 0,63 |
 
-**Errores de la referencia: los 7 «erróneos» de desarrollo.** El lector lee el número dibujado y el
-`.prf` asigna otro a ese sello; el número del propio `.icp` coincide con el dibujo (causa más abajo,
-tipo A). El número del `.prf` aparece en otro globo del mismo plano, ofrecido como «sin referencia».
+**No detectados: 17, todos del detector.** El globo está dibujado donde cae el sello, con el número
+legible, y el detector no lo encuentra.
+- 1931-p1: 45, 102, 121
+- 1943-p1: 94
+- 2197-p1: 50
+- 4080-p1: 201, 242, 260
+- 4088-p1: 101, 173, 178
+- 4091-p1: 17, 101, 163. El 163, en negrita, es nuevo: su sello no estaba en la referencia antigua.
+- 3113-p1: 25
+- 3122-p1: 2
+- 3127-p1: 72
 
-| Página | Pieza | `.prf` | Dibujado y leído (= `.icp`) | Puntuación | Posición |
-|---|---|---|---|---:|---|
-| 1937-p1 | 3205 | 45 | 70 | 0,999 | 0,43; 0,36 |
-| 1941-p1 | 3205 | 45 | 70 | 0,999 | 0,43; 0,36 |
-| 1942-p1 | 3205 | 45 | 70 | 0,999 | 0,43; 0,36 |
-| 1943-p1 | 3205 | 45 | 70 | 0,999 | 0,43; 0,36 |
-| 1943-p1 | 3205 | 115 | 148 | 1,000 | 0,88; 0,14 |
-| 2202-p1 | 3206 | 45 | 110 | 0,998 | 0,95; 0,23 |
-| 2202-p1 | 3206 | 17 | 106 | 0,685 | 0,52; 0,52 |
-
-**No detectados: 16 son del detector y 21 de la referencia.**
-- **Detector (16).** El globo está dibujado donde cae el sello, con el número legible, y el detector
-  no lo encuentra.
-  - 1931-p1: 45, 102, 121
-  - 1943-p1: 94
-  - 2197-p1: 50
-  - 4080-p1: 201, 242, 260
-  - 4088-p1: 101, 173, 178
-  - 4091-p1: 17, 101
-  - 3113-p1: 25
-  - 3122-p1: 2
-  - 3127-p1: 72
-- **Referencia (21).** El sello cae en un punto sin globo, o fuera de la hoja (94 del 1949), porque
-  sus coordenadas se leyeron con desfase (tipo B, más abajo).
-  - 1931-p1: 63
-  - 1937-p1: 19, 128
-  - 1941-p1, 1942-p1 y 1943-p1: 128
-  - 1949-p1: 93, 94
-  - 2191-p1: 68, 83
-  - 4079-p1, 4088-p1 y 4091-p1: 193, 204
-  - 4080-p1: 71, 185, 210, 406
-  - 3122-p1: 67
-
-  En 20 de los 21, el globo de ese número sí se detecta y se ofrece bien leído, como «sin
-  referencia». No pasa con el 193 del 4088.
-
-**Sin lectura: 116.** El lector se abstiene. Entre paréntesis, cuántos tenían el número correcto
+**Sin lectura: 117.** El lector se abstiene. Entre paréntesis, cuántos tenían el número correcto
 por debajo del umbral.
 - 1942-p1 (1 de 1): 7
 - 1943-p1 (0 de 1): 92
 - 1949-p1 (0 de 2): 8, 203
-- 2201-p1 (13 de 17; ráster de 150 ppp, girado): 1, 2, 3, 9, 12, 17, 20, 21, 23, 30, 40, 43, 60, 71,
-  76, 84, 90. El «17» es en realidad el globo 106 (tipo A).
+- 2201-p1 (13 de 17; ráster de 150 ppp, girado): 1, 2, 3, 9, 12, 20, 21, 23, 30, 40, 43, 60, 71, 76,
+  84, 90, 106
 - 2202-p1 (0 de 1): 83
 - 4079-p1 (1 de 1): 270
 - 4080-p1 (1 de 1): 175
-- 4088-p1 (44 de 60; ráster de 150 ppp, girado): 2, 6, 7, 9, 12, 14, 21, 26, 27, 32, 33, 34, 35, 36,
+- 4088-p1 (45 de 61; ráster de 150 ppp, girado): 2, 6, 7, 9, 12, 14, 21, 26, 27, 32, 33, 34, 35, 36,
   38, 39, 40, 42, 44, 45, 50, 53, 70, 73, 76, 81, 92, 95, 117, 125, 126, 136, 166, 167, 169, 185,
-  186, 190, 191, 197, 199, 203, 214, 221, 225, 226, 232, 234, 236, 250, 276, 287, 290, 292, 293, 294,
-  300, 302, 335, 350
+  186, 190, 191, 193, 197, 199, 203, 214, 221, 225, 226, 232, 234, 236, 250, 276, 287, 290, 292, 293,
+  294, 300, 302, 335, 350
 - 4091-p1 (13 de 27; «G», negritas): 34, 44, 90, 115, 116, 135, 139, 152, 165, 169, 176, 185, 235,
   236, 250, 251, 260, 261, 275, 276, 280, 285, 292, 294, 295, 325, 330
 - 3049-p1 (2 de 3): 55, 95, 132
 - 3114-p1 (1 de 1): 25
 - 3122-p1 (1 de 1): 20
 
-**Sin referencia: 126, ninguna inventada.**
-- **115 se explican por número:** son globos cuyo sello es de tipo A o B, o no tiene fila en el
-  `.prf`. No se han mirado una a una.
-- **Las 11 restantes, vistas a ojo:** globos dibujados, con el número bien leído y sin sello cerca.
-  Son el 203 del 1931; el 14 del 1943; el 7 del 2197, el 2201 y el 2202; el 16 del 4079, el 4088 y
-  el 4091; el 40 del 4080; el 80 del 3113 y el 120 del 3122.
+**Sin referencia: 1.** El 80 del 3113-p1 es un globo dibujado y bien leído. El `.icp` de REV.01
+(`20250714_BSG-296-00 SOP RCP 3.1.icp`) no tiene ese sello. El otro PDF del mismo `.icp`, el 3114,
+no lo dibuja.
 
-**Con la referencia revisada:**
+**En resumen:**
 - **Desarrollo:** 0 errores del lector.
 - **Examen:** 14 errores; 10 son del 3202 «G».
-- **Omisiones:** 16 del detector y 116 sin lectura. Casi todas las sin lectura están en los dos
-  rásteres de 150 ppp (4088 y 2201) y en el «G».
+- **Omisiones:** 17 del detector y 117 sin lectura. Casi todas las sin lectura están en los dos
+  rásteres de 150 ppp (61 en el 4088 y 17 en el 2201) y en el «G» (27).
 
-**Planos con referencia visual, no `.icp`.** Se miden aparte; la referencia es una lectura visual de
-Claude.
+**Planos con referencia visual, no `.icp`.** Se miden aparte, sin cambios; la referencia es una
+lectura visual de Claude.
 - **3212** (desarrollo): 111 aciertos de 253 globos (43,9 %), 3 erróneos (156→155, 166→165,
   236.T→235.T), 5 no detectados y 134 sin lectura.
 - **3167** (examen): 126 de 212 (59,4 %), 0 erróneos, 14 no detectados y 72 sin lectura. Su
   referencia sigue sin verificar.
 
-### Por qué falla la referencia: el extractor de `.icp`
+### Referencia: el extractor de `.icp`, corregido el 09/11/2026
 
-El fallo está en nuestro [`globos_icp.py`](herramientas/globos_icp.py), no en los ficheros de INTEPLAST.
-Afecta a 27 de los 2.020 sellos con número y posición, en 13 de los 19 `.icp`. Son los sellos en los
-que el número del `.icp` (`sello`, el `<n>` de `INFRA_CONVERT_STAMP_<n>`) y el de la fila del `.prf`
-(`etiqueta`) no coinciden.
+**Formato.** Cada sello del `.icp` guarda dos cadenas, cada una con su longitud delante (entero de 4
+bytes): el texto visible del globo y su nombre, `INFRA_CONVERT_STAMP_<n>`. Después vienen los dos
+puntos en doble precisión, el estilo, un índice y el GUID. En los 2.126 sellos de los 19 `.icp`, el
+texto visible coincide con el número del nombre y todas las coordenadas tienen sentido.
 
-- **Tipo A, 7 sellos: la regla «fila del `.prf` = índice − 1» falla.** La regla se dedujo el 21/10 en
-  BSG-296-02 ([3288](4-tetones/3288.md#planos-con-globos)); infra-CONVERT no la documenta.
-  - En `3205.icp` el `.prf` salta de la fila 16 a la 19. El sello 70, de índice 17, recibe la fila
-    16, que dice 45. El sello 45, de índice 19, se queda sin fila.
-  - En los 7 casos, el plano dibuja el número del `.icp`.
-- **Tipo B, 20 sellos: número y coordenadas leídos con un byte de desfase.** La expresión
-  `INFRA_CONVERT_STAMP_(\d+)` se come la primera cifra de la coordenada siguiente, cuando ese byte es
-  un dígito ASCII: 1287 por 128. Las seis coordenadas se leen un byte después, con valores sin sentido.
-  - El `.prf` da el número bueno (128).
-  - La posición cae donde no hay globo, a veces con varios sellos en el mismo punto: 71, 185, 210 y
-    406 del 4080. El 94 del 1949 cae fuera de la hoja. Los 51 sellos «desalineados» que ya se guardaban sin
-    coordenadas son probablemente el mismo fallo, con valores fuera de rango.
+**Qué fallaba en el extractor anterior.** El fallo era nuestro, no de los ficheros de INTEPLAST.
+- **Coordenadas desplazadas.** Leía el número con `INFRA_CONVERT_STAMP_(\d+)`, que se comía la
+  primera cifra de la coordenada siguiente cuando ese byte era un dígito ASCII: 1287 por 128.
+  - Las coordenadas quedaban desplazadas un byte. Hubo 20 sellos en puntos sin globo y 51 con valores
+    fuera de rango, que se guardaban sin posición.
+  - Además, 8 sellos se perdían, pisados por un número mal leído: 192 en vez de 19 sustituía al sello 192.
+- **Número equivocado.** Tomaba el número de la fila del `.prf` con id = índice − 1, regla deducida
+  el 21/10 en BSG-296-02. Cuando el `.prf` se salta filas falla:
+  - 7 sellos recibían otro número (el globo 70 del 3205 salía como 45);
+  - 49 se quedaban sin número y fuera de la referencia y del visor.
 
-| Pieza | `.icp` | `sello` / `etiqueta` (`.icp` / `.prf`) |
-|---|---|---|
-| 3202 | `3202.icp` | 1938 / 193 · 2044 / 204 |
-| 3202 | `885253-11250_G.icp` | 1938 / 193 · 2044 / 204 |
-| 3202 | `insulator_240W_ballooned.icp` | 717 / 71 · 1854 / 185 · 2100 / 210 · 4060 / 406 |
-| 3205 | `20241121_213137-10300-B.icp` | 935 / 93 · 948 / 94 |
-| 3205 | `213137-10300-  -B.icp` | 1287 / 128 · 70 / 45 (A) · 148 / 115 (A) |
-| 3205 | `3205-A.icp` | 1287 / 128 · 70 / 45 (A) |
-| 3205 | `3205.icp` | 192 / 19 · 1287 / 128 · 70 / 45 (A) |
-| 3205 | `Shroud_150W_ballooned.icp` | 632 / 63 |
-| 3206 | `20230202_10000024273_000_05_DRW.icp` | 1150 / 115 · 2298 / 229 |
-| 3206 | `213137-10280-  -B.icp` | 106 / 17 (A) · 110 / 45 (A) |
-| 3206 | `3206-A.icp` | 106 / 17 (A) |
-| 3206 | `Shroud_240W_ballooned.icp` | 687 / 68 · 830 / 83 |
-| 3288 | `BSG-296-2 SOP RCP 3.1.icp` | 678 / 67 |
+**Corrección** ([`globos_icp.py`](herramientas/globos_icp.py), versión 2):
+- el nombre se lee con su longitud;
+- el número es el texto visible del propio `.icp`;
+- el `.prf` se guarda aparte, en `etiqueta_prf`, solo para contrastar;
+- un sello repetido o con un formato inesperado es un error, no se descarta en silencio;
+- primero se leen y validan todos los ficheros, y después la tabla `globo` se sustituye en una sola
+  transacción. Si falla un fichero o la escritura, queda la tabla anterior. Antes se borraba al
+  empezar y un `.icp` defectuoso la dejaba vacía.
 
-Además, 49 sellos no tienen fila en el `.prf` (47 con coordenadas). No entran en la referencia ni en
-el visor.
+Tests con registros sintéticos en `herramientas/test_globos_icp.py`: el byte que parece una cifra, el
+`.prf` con saltos, los sellos sin fila, y un `.icp` defectuoso, uno que falta o un fallo al escribir, que
+dejan intacta la tabla anterior. Hoy hay 2.126 sellos; el `.prf` coincide en 2.070, discrepa
+en 7 y no tiene fila para 49.
 
-**Consecuencias:**
-- **Visor.** En los planos con `.icp`, el visor muestra el número del `.prf`. Con el tipo A pone 45
-  donde está dibujado el 70. Con el tipo B sitúa 20 sellos donde no hay globo. Los sellos sin fila no
-  aparecen.
-- **Medición.** Los errores y omisiones de esta medición incluyen esos fallos de la referencia.
+**Contraste con el plano.** En las páginas medidas, los sellos cuyo número decide ahora solo el `.icp`
+se han contrastado por posición con la lectura del lector: 7 en los que el `.prf` discrepa y 52 casos
+sin fila (contando cada página).
+- En 59 de 60, el lector ofrece en su globo el número del `.icp`.
+- El que falta es el 106 del 2201: sin lectura, con 108 bajo el umbral. El mismo sello es acierto en
+  el 2202.
 
-**No se ha corregido:** cambiaría la referencia y lo que enseña el visor, y este paso solo mide.
-El arreglo iría en `globos_icp.py`:
-- delimitar bien el número del sello;
-- tomar como número el del `.icp`, o contrastarlo con el `.prf`;
-- volver a extraer la tabla `globo`.
+**Calibraciones.** Cada calibración guarda ahora la huella de los sellos con que se ajustó
+(`sellos_sha256`) y solo se reutiliza si los sellos no cambian. Las 20 se reajustaron:
+- el mismo `.icp` en todas, con ajustes más limpios (por ejemplo, 127 de 173 emparejamientos pasan
+  a 140 de 140 en el 3049);
+- los sellos se desplazan como mucho 0,00007 del lado de la página, menos de un píxel.
+
+**Qué cambia en el visor.**
+- **En las 30 páginas con `.icp`:** 3.094 sellos quedan igual, 40 cambian de sitio (los que estaban
+  mal), 163 aparecen por primera vez y ninguno desaparece.
+- **Planos sin `.icp`:** no cambian.
+- **Total:** el visor pasa de 5.322 a 5.485 globos en las 68 páginas.
+
+| Página | Método | Sellos | Movidos | Nuevos |
+|---|---|---|---|---|
+| 1931-p1 | calibrada | 71 → 75 | 63 | 37, 61, 84, 203 |
+| 1935-p1 · 1937-p1 | 1:1 · calibrada | 91 → 96 | 19, 45, 128 | 14, 36, 37, 70, 101 |
+| 1939-p1 · 1941-p1 · 1942-p1 | 1:1 · calibrada | 102 → 108 | 45, 128 | 14, 33, 36, 37, 70, 145 |
+| 1943-p1 | calibrada | 104 → 110 | 45, 115, 128 | 14, 33, 36, 37, 70, 148 |
+| 1949-p1 | calibrada | 103 → 109 | 93, 94 | 33, 47, 53, 54, 70, 91 |
+| 2191-p1 | calibrada | 42 → 43 | 68, 83 | 203 |
+| 2195-p1 · 2197-p1 | 1:1 · calibrada | 65 → 69 | — | 7, 102, 104, 106 |
+| 2199-p1 · 2201-p1 | 1:1 · calibrada | 62 → 68 | 17 | 7, 62, 67, 104, 106, 107 |
+| 2202-p1 | calibrada | 64 → 70 | 17, 45 | 7, 62, 67, 104, 106, 110 |
+| 2208-p1 | calibrada | 67 → 69 | — | 14, 110 |
+| 3029-p1 · 3049-p1 | 1:1 · calibrada | 129 → 141 | — | 20, 30, 51, 61, 86, 108, 123, 124, 133, 135, 136, 141 |
+| 3113-p1 · 3114-p1 · 3116-p1 | calibrada · calibrada · 1:1 | 26 → 29 | — | 26, 60, 71 |
+| 3122-p1 · 3124-p1 | calibrada · 1:1 | 112 → 120 | 67 | 14, 17, 19, 28, 42, 45, 58, 120 |
+| 3126-p1 · 3127-p1 | 1:1 · calibrada | 29 → 30 | — | 80 |
+| 4077-p1 · 4079-p1 · 4086-p1 · 4088-p1 · 4091-p1 | gemela · calibrada · 1:1 · calibrada · calibrada | 226 → 232 | 193, 204 | 1, 16, 110, 119, 163, 227 |
+| 4080-p1 | calibrada | 193 → 202 | 71, 185, 210, 406 | 22, 38, 40, 83, 176, 285, 289, 405, 407 |
+
+«Movidos»: sellos con el mismo número a más del 0,5 % del lado de su posición anterior. En el tipo A,
+el número del `.prf` (45, 115, 17) pasa al globo que de verdad lo lleva. Copias del estado anterior:
+`prototypes/data-explorer/out/referencia-icp-2026-11-09/antes/` (tabla `globo`, calibraciones y lo
+que enseñaba el visor), fuera de Git.
 
 ## Estado de cada plano (05/11/2026)
 
@@ -452,36 +462,36 @@ Generada con `leer_planos.py --tabla`; no editar a mano.
 <!-- tabla-planos:inicio -->
 | Pieza | Plano | Tag | Pág. | Detalle |
 |---|---|---|---:|---|
-| 3202 | `20231129_885253-11250_insulator_motor_v1.pdf` | Con .icp | 1 | 226 sellos de `885253-11250_G.icp`; sin globos dibujados, calibración de la gemela |
-| 3202 | `20231129_885253-11250_insulator_motor_v1_ Ballooned.pdf` | Con .icp | 1 | 226 sellos de `885253-11250_G.icp`; globos dibujados, calibración |
-| 3202 | `3202.pdf` | Con .icp | 1 | 226 sellos de `3202.icp`; sin globos dibujados, calco 1:1 |
-| 3202 | `3202_DRW_ballooned.pdf` | Con .icp | 1 | 193 sellos de `insulator_240W_ballooned.icp`; globos dibujados, calibración |
-| 3202 | `3202_balloned low resolution.pdf` | Con .icp | 1 | 226 sellos de `3202.icp`; globos dibujados, calibración |
-| 3202 | `3202_balloned.pdf` | Con .icp | 1 | 226 sellos de `3202.icp`; globos dibujados, calibración |
-| 3205 | `20231129_213137-10300-B_shroud_vG_Ballooned.pdf` | Con .icp | 1 | 104 sellos de `213137-10300-  -B.icp`; globos dibujados, calibración |
-| 3205 | `20241121_213137-10300-B_balloned.pdf` | Con .icp | 1 | 103 sellos de `20241121_213137-10300-B.icp`; globos dibujados, calibración |
-| 3205 | `3205-A.pdf` | Con .icp | 1 | 102 sellos de `3205-A.icp`; sin globos dibujados, calco 1:1 |
-| 3205 | `3205-A_balloned.pdf` | Con .icp | 1 | 102 sellos de `3205-A.icp`; globos dibujados, calibración |
-| 3205 | `3205-A_balloned_1.pdf` | Con .icp | 1 | 102 sellos de `3205-A.icp`; globos dibujados, calibración |
-| 3205 | `3205.pdf` | Con .icp | 1 | 91 sellos de `3205.icp`; sin globos dibujados, calco 1:1 |
-| 3205 | `3205_DRW ballooned.pdf` | Con .icp | 1 | 71 sellos de `Shroud_150W_ballooned.icp`; globos dibujados, calibración |
-| 3205 | `3205_balloned.pdf` | Con .icp | 1 | 91 sellos de `3205.icp`; globos dibujados, calibración |
-| 3206 | `20231129_213137-10280-B_shroud_vG_Ballooned.pdf` | Con .icp | 1 | 64 sellos de `213137-10280-  -B.icp`; globos dibujados, calibración |
-| 3206 | `20241121_213137-10280-B_balloned.pdf` | Con .icp | 1 | 67 sellos de `20241121_213137-10280-B.icp`; globos dibujados, calibración |
-| 3206 | `3206-A.pdf` | Con .icp | 1 | 62 sellos de `3206-A.icp`; sin globos dibujados, calco 1:1 |
-| 3206 | `3206-A_balloned lr.pdf` | Con .icp | 1 | 62 sellos de `3206-A.icp`; globos dibujados, calibración |
-| 3206 | `3206.pdf` | Con .icp | 1 | 65 sellos de `3206.icp`; sin globos dibujados, calco 1:1 |
-| 3206 | `3206_DRW ballooned.pdf` | Con .icp | 1 | 42 sellos de `Shroud_240W_ballooned.icp`; globos dibujados, calibración |
-| 3206 | `3206_balloned.pdf` | Con .icp | 1 | 65 sellos de `3206.icp`; globos dibujados, calibración |
-| 3288 | `2. 20250714_BSG-296-00 SOP RCP 3.1 balloned.pdf` | Con .icp | 1 | 26 sellos de `20250714_BSG-296-00 SOP RCP 3.1.icp`; globos dibujados, calibración |
-| 3288 | `20250714_BSG-296-00 SOP RCP 3.1 balloned.pdf` | Con .icp | 1 | 26 sellos de `20250714_BSG-296-00 SOP RCP 3.1.icp`; globos dibujados, calibración |
-| 3288 | `20250714_BSG-296-00 SOP RCP 3.1.pdf` | Con .icp | 1 | 26 sellos de `20250714_BSG-296-00 SOP RCP 3.1.icp`; sin globos dibujados, calco 1:1 |
-| 3288 | `BSG-296-00 SOP RCP 3.1 .pdf` | Con .icp | 2 | 29 sellos de `BSG-296-00 SOP RCP 3.1.icp`; sin globos dibujados, calco 1:1 |
-| 3288 | `BSG-296-00 SOP RCP 3.1 balonned.pdf` | Con .icp | 1 | 29 sellos de `BSG-296-00 SOP RCP 3.1.icp`; globos dibujados, calibración |
-| 3288 | `BSG-296-01-N0 BASE SOP RCP 3.1_balloned.pdf` | Con .icp | 1 | 129 sellos de `Cj20240714_BSG-296-01-N0 BASE SOP RCP 3.1.icp`; globos dibujados, calibración |
-| 3288 | `BSG-296-2 SOP RCP 3.1 balloned.pdf` | Con .icp | 1 | 112 sellos de `BSG-296-2 SOP RCP 3.1.icp`; globos dibujados, calibración |
-| 3288 | `BSG-296-2 SOP RCP 3.1.pdf` | Con .icp | 1 | 112 sellos de `BSG-296-2 SOP RCP 3.1.icp`; sin globos dibujados, calco 1:1 |
-| 3288 | `Cj20240714_BSG-296-01-N0 BASE SOP RCP 3.1.pdf` | Con .icp | 3 | 129 sellos de `Cj20240714_BSG-296-01-N0 BASE SOP RCP 3.1.icp`; sin globos dibujados, calco 1:1 |
+| 3202 | `20231129_885253-11250_insulator_motor_v1.pdf` | Con .icp | 1 | 232 sellos de `885253-11250_G.icp`; sin globos dibujados, calibración de la gemela |
+| 3202 | `20231129_885253-11250_insulator_motor_v1_ Ballooned.pdf` | Con .icp | 1 | 232 sellos de `885253-11250_G.icp`; globos dibujados, calibración |
+| 3202 | `3202.pdf` | Con .icp | 1 | 232 sellos de `3202.icp`; sin globos dibujados, calco 1:1 |
+| 3202 | `3202_DRW_ballooned.pdf` | Con .icp | 1 | 202 sellos de `insulator_240W_ballooned.icp`; globos dibujados, calibración |
+| 3202 | `3202_balloned low resolution.pdf` | Con .icp | 1 | 232 sellos de `3202.icp`; globos dibujados, calibración |
+| 3202 | `3202_balloned.pdf` | Con .icp | 1 | 232 sellos de `3202.icp`; globos dibujados, calibración |
+| 3205 | `20231129_213137-10300-B_shroud_vG_Ballooned.pdf` | Con .icp | 1 | 110 sellos de `213137-10300-  -B.icp`; globos dibujados, calibración |
+| 3205 | `20241121_213137-10300-B_balloned.pdf` | Con .icp | 1 | 109 sellos de `20241121_213137-10300-B.icp`; globos dibujados, calibración |
+| 3205 | `3205-A.pdf` | Con .icp | 1 | 108 sellos de `3205-A.icp`; sin globos dibujados, calco 1:1 |
+| 3205 | `3205-A_balloned.pdf` | Con .icp | 1 | 108 sellos de `3205-A.icp`; globos dibujados, calibración |
+| 3205 | `3205-A_balloned_1.pdf` | Con .icp | 1 | 108 sellos de `3205-A.icp`; globos dibujados, calibración |
+| 3205 | `3205.pdf` | Con .icp | 1 | 96 sellos de `3205.icp`; sin globos dibujados, calco 1:1 |
+| 3205 | `3205_DRW ballooned.pdf` | Con .icp | 1 | 75 sellos de `Shroud_150W_ballooned.icp`; globos dibujados, calibración |
+| 3205 | `3205_balloned.pdf` | Con .icp | 1 | 96 sellos de `3205.icp`; globos dibujados, calibración |
+| 3206 | `20231129_213137-10280-B_shroud_vG_Ballooned.pdf` | Con .icp | 1 | 70 sellos de `213137-10280-  -B.icp`; globos dibujados, calibración |
+| 3206 | `20241121_213137-10280-B_balloned.pdf` | Con .icp | 1 | 69 sellos de `20241121_213137-10280-B.icp`; globos dibujados, calibración |
+| 3206 | `3206-A.pdf` | Con .icp | 1 | 68 sellos de `3206-A.icp`; sin globos dibujados, calco 1:1 |
+| 3206 | `3206-A_balloned lr.pdf` | Con .icp | 1 | 68 sellos de `3206-A.icp`; globos dibujados, calibración |
+| 3206 | `3206.pdf` | Con .icp | 1 | 69 sellos de `3206.icp`; sin globos dibujados, calco 1:1 |
+| 3206 | `3206_DRW ballooned.pdf` | Con .icp | 1 | 43 sellos de `Shroud_240W_ballooned.icp`; globos dibujados, calibración |
+| 3206 | `3206_balloned.pdf` | Con .icp | 1 | 69 sellos de `3206.icp`; globos dibujados, calibración |
+| 3288 | `2. 20250714_BSG-296-00 SOP RCP 3.1 balloned.pdf` | Con .icp | 1 | 29 sellos de `20250714_BSG-296-00 SOP RCP 3.1.icp`; globos dibujados, calibración |
+| 3288 | `20250714_BSG-296-00 SOP RCP 3.1 balloned.pdf` | Con .icp | 1 | 29 sellos de `20250714_BSG-296-00 SOP RCP 3.1.icp`; globos dibujados, calibración |
+| 3288 | `20250714_BSG-296-00 SOP RCP 3.1.pdf` | Con .icp | 1 | 29 sellos de `20250714_BSG-296-00 SOP RCP 3.1.icp`; sin globos dibujados, calco 1:1 |
+| 3288 | `BSG-296-00 SOP RCP 3.1 .pdf` | Con .icp | 2 | 30 sellos de `BSG-296-00 SOP RCP 3.1.icp`; sin globos dibujados, calco 1:1 |
+| 3288 | `BSG-296-00 SOP RCP 3.1 balonned.pdf` | Con .icp | 1 | 30 sellos de `BSG-296-00 SOP RCP 3.1.icp`; globos dibujados, calibración |
+| 3288 | `BSG-296-01-N0 BASE SOP RCP 3.1_balloned.pdf` | Con .icp | 1 | 141 sellos de `Cj20240714_BSG-296-01-N0 BASE SOP RCP 3.1.icp`; globos dibujados, calibración |
+| 3288 | `BSG-296-2 SOP RCP 3.1 balloned.pdf` | Con .icp | 1 | 120 sellos de `BSG-296-2 SOP RCP 3.1.icp`; globos dibujados, calibración |
+| 3288 | `BSG-296-2 SOP RCP 3.1.pdf` | Con .icp | 1 | 120 sellos de `BSG-296-2 SOP RCP 3.1.icp`; sin globos dibujados, calco 1:1 |
+| 3288 | `Cj20240714_BSG-296-01-N0 BASE SOP RCP 3.1.pdf` | Con .icp | 3 | 141 sellos de `Cj20240714_BSG-296-01-N0 BASE SOP RCP 3.1.icp`; sin globos dibujados, calco 1:1 |
 | 3167 | `Drawing baloneed.pdf` | Globos sin .icp | 1 | 126 leídos de 239 detectados; 68% de 150 cotas de informes |
 | 3195 | `1 - 0130S1B006-DRW-000-07-1-EN DE_ballown.pdf` | Globos sin .icp | 1 | 629 leídos de 863 detectados; 83% de 616 cotas de informes |
 | 3202 | `20241121_885253-11250-A_INSULAT balooned.pdf` | Globos sin .icp | 1 | 212 leídos de 229 detectados; 90% de 190 cotas de informes |

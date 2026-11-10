@@ -846,8 +846,15 @@ def fit_stamps(balloons, readings: list[list[str | None]], stamps: list[dict]):
     return best
 
 
+def stamps_digest(stamps) -> str:
+    """Huella de la referencia extraída de un .icp: número y puntos de cada sello, sin depender del orden."""
+    rows = sorted((s["label"], [list(p) for p in s["points"]]) for s in stamps)
+    return hashlib.sha256(json.dumps(rows).encode()).hexdigest()[:16]
+
+
 def calibrate(key: str, balloons, readings, candidates: dict, size: tuple[int, int], store: dict,
-              refresh: bool, pdf_digest: str = "", digests: dict | None = None) -> tuple[str, tuple] | None:
+              refresh: bool, pdf_digest: str = "", digests: dict | None = None,
+              stamp_digests: dict | None = None) -> tuple[str, tuple] | None:
     """Transformación .icp → píxeles de la página, calculada una vez y guardada.
 
     La primera vez se ajusta con RANSAC usando como emparejamientos tentativos las lecturas de
@@ -855,7 +862,11 @@ def calibrate(key: str, balloons, readings, candidates: dict, size: tuple[int, i
     girar, con la página y las huellas SHA-256 del PDF y del .icp, y las ejecuciones siguientes la
     reutilizan solo si coinciden: la referencia ya no depende de lo que se está evaluando.
     `refresh` la vuelve a calcular. Las calibraciones guardadas antes de registrar huellas
-    (29/10/2026) las adoptan en su primera reutilización.
+    (29/10/2026) adoptan las del PDF y el .icp en su primera reutilización.
+
+    Con `stamp_digests` ({.icp: `stamps_digest`}) tampoco se reutiliza si cambian los sellos extraídos
+    del .icp aunque el fichero sea el mismo (corrección del extractor, 09/11/2026). Una calibración
+    sin esa huella es anterior y se vuelve a ajustar.
     """
     height, width = size
     digests = digests or {}
@@ -863,7 +874,8 @@ def calibrate(key: str, balloons, readings, candidates: dict, size: tuple[int, i
     if saved and not refresh and saved["icp"] in candidates:
         same_pdf = saved.get("pdf_sha256", pdf_digest) == pdf_digest
         same_icp = saved.get("icp_sha256", digests.get(saved["icp"], "")) == digests.get(saved["icp"], "")
-        if same_pdf and same_icp:
+        same_stamps = stamp_digests is None or saved.get("sellos_sha256") == stamp_digests.get(saved["icp"])
+        if same_pdf and same_icp and same_stamps:
             saved.setdefault("pdf_sha256", pdf_digest)
             saved.setdefault("icp_sha256", digests.get(saved["icp"], ""))
             matrix = np.array(saved["matriz"]) * np.array([[width], [height]])
@@ -878,7 +890,7 @@ def calibrate(key: str, balloons, readings, candidates: dict, size: tuple[int, i
     store[key] = {"icp": icp, "inliers": inliers, "tentativos": putative, "punto": which, "signo": flip,
                   "matriz": (matrix / np.array([[width], [height]])).tolist(),
                   "pdf_sha256": pdf_digest, "icp_sha256": digests.get(icp, ""),
-                  "fecha": time.strftime("%Y-%m-%d %H:%M")}
+                  "sellos_sha256": (stamp_digests or {}).get(icp, ""), "fecha": time.strftime("%Y-%m-%d %H:%M")}
     return icp, fits[icp]
 
 
