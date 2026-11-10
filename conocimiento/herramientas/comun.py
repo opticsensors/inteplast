@@ -59,6 +59,25 @@ def registrar(con: sqlite3.Connection, herramienta: str, parametros: dict) -> in
     return int(cur.lastrowid or 0)
 
 
+def sustituir_tablas(con: sqlite3.Connection, tablas: dict[str, tuple[str, list[tuple]]]) -> None:
+    """Rehace tablas derivadas en una sola transaccion: si algo falla, quedan las anteriores intactas.
+
+    `tablas`: nombre -> (CREATE TABLE, filas ya leidas y validadas). Sin el BEGIN explicito, sqlite3
+    confirmaria cada DROP al momento, porque no abre transaccion para DDL.
+    """
+    con.execute("BEGIN")
+    try:
+        for nombre, (crear, filas) in tablas.items():
+            con.execute(f"DROP TABLE IF EXISTS {nombre}")
+            con.execute(crear)
+            if filas:
+                con.executemany(f"INSERT INTO {nombre} VALUES ({','.join('?' * len(filas[0]))})", filas)
+    except BaseException:
+        con.rollback()
+        raise
+    con.commit()
+
+
 def cerrar_registro(con: sqlite3.Connection, ejecucion: int, resumen: dict) -> None:
     con.execute(
         "UPDATE ejecucion SET fin=?, resumen=? WHERE id=?",

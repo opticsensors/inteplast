@@ -177,6 +177,9 @@ $PY conocimiento/herramientas/rag.py construir          # índice RAG al final
   Esta reconstrucción lee cada XLS en un proceso de Excel aislado, con macros desactivadas,
   y solo sustituye `celda_aleatoria` cuando termina sin errores; si falla, conserva la tabla anterior
   y devuelve un código de salida de error. El resultado queda registrado en `ejecucion`.
+- `globos_icp.py` y `lector_dr.py` hacen lo mismo desde el 10/11/2026. Leen y validan todo antes
+  de tocar sus tablas y las sustituyen en una sola transacción (`comun.sustituir_tablas`). Si falla
+  un fichero, una hoja o la escritura, quedan las anteriores. Antes las borraban al empezar.
 - Subir la versión de un lector en `lectores.py` hace que esos ficheros se vuelvan a extraer.
 - `verificar.py --semilla 20261023 --n 10` conserva las coordenadas y resultados de cada
   comprobación en `auditoria`, y los parámetros y cobertura en `ejecucion`. La semilla controla

@@ -23,6 +23,7 @@ import formulas_aleatorias
 from formulas_aleatorias import ALEATORIA, xls_sospechoso
 from lectores import lector_para
 from lector_dr import leer_hoja
+import lector_dr
 import cadena_correcciones
 import perfil_correcciones
 from lector_dr import ESQUEMA as ESQUEMA_DR
@@ -796,6 +797,59 @@ class MedidasCmmTest(unittest.TestCase):
         filas = leer_puntos(b"*****\nPOSICIONS Z/Y N670 1...8\n1001;SYM-POINT;   M;4.006;10.273;12.275\n", "3197")
         self.assertEqual([(r["cota"], r["elemento_cmm"], r["marca"], r["coord_1"], r["coord_3"]) for r in filas],
                          [("670", "1001", "M", 4.006, 12.275)])
+
+
+class RegeneracionDRTest(unittest.TestCase):
+    """lector_dr rehace `lectura_dr` y `medida_dr` en una transacción: si algo falla, quedan las anteriores."""
+
+    def setUp(self):
+        self.con = sqlite3.connect(":memory:")
+        self.addCleanup(self.con.close)
+        self.con.executescript((Path(__file__).parent / "esquema.sql").read_text(encoding="utf-8"))
+        self.con.executescript(formulas_aleatorias.ESQUEMA)
+        self.con.executescript(ESQUEMA_DR)
+        cabecera = {1: "Nr", 3: "Nominal", 4: "Tol. +", 5: "Tol. -", 7: "Cav.1", 8: "Cav.2"}
+        for doc in (1, 2):
+            self.con.execute("INSERT INTO documento(id, ruta, nombre, ext, tamano, mtime_ns, inventariado_el, estado) "
+                             "VALUES (?, ?, ?, 'xlsx', 0, 0, 'test', 'extraido')", (doc, f"d{doc}.xlsx", f"d{doc}.xlsx"))
+            fila = {1: "170", 3: "4", 4: "0", 5: "-0.1", 7: "3.95", 8: "3.97"}
+            self.con.executemany("INSERT INTO celda(documento_id, hoja, fila, col, valor) VALUES (?, 'DR', ?, ?, ?)",
+                                 [(doc, 12, c, v) for c, v in cabecera.items()] + [(doc, 14, c, v) for c, v in fila.items()])
+        self.con.execute("INSERT INTO lectura_dr(documento_id, hoja, papel) VALUES (9, 'DR', 'anterior')")
+        self.con.execute("INSERT INTO medida_dr(documento_id, hoja, valor) VALUES (9, 'DR', 1.5)")
+        self.con.commit()
+
+    def anteriores(self):
+        self.assertFalse(self.con.in_transaction)
+        self.assertEqual(self.con.execute("SELECT documento_id, papel FROM lectura_dr").fetchall(), [(9, "anterior")])
+        self.assertEqual(self.con.execute("SELECT documento_id, valor FROM medida_dr").fetchall(), [(9, 1.5)])
+
+    def test_una_hoja_que_falla_deja_las_tablas_anteriores(self):
+        leidas = []
+
+        def falla_en_la_segunda(hoja, celdas, aleatorias):
+            leidas.append(hoja)
+            if len(leidas) == 2:
+                raise ValueError("hoja con una forma inesperada")
+            return leer_hoja(hoja, celdas, aleatorias)
+
+        with patch.object(lector_dr, "leer_hoja", falla_en_la_segunda), self.assertRaises(ValueError) as error:
+            lector_dr.regenerar(self.con)
+        self.assertTrue(any(n.endswith("hoja 'DR'") for n in error.exception.__notes__))
+        self.anteriores()
+
+    def test_un_fallo_al_escribir_la_segunda_tabla_deshace_tambien_la_primera(self):
+        lecturas, medidas, total = lector_dr.preparar(self.con)
+        with patch.object(lector_dr, "preparar", return_value=(lecturas, medidas + [(1, "DR")], total)):
+            with self.assertRaises(sqlite3.ProgrammingError):  # la última fila de medida_dr está incompleta
+                lector_dr.regenerar(self.con)
+        self.anteriores()
+
+    def test_si_todo_se_lee_las_dos_tablas_se_sustituyen(self):
+        lector_dr.regenerar(self.con)
+        self.assertEqual(self.con.execute("SELECT documento_id FROM lectura_dr ORDER BY 1").fetchall(), [(1,), (2,)])
+        self.assertEqual(self.con.execute("SELECT documento_id, cota, cavidad, valor FROM medida_dr ORDER BY 1, 3").fetchall(),
+                         [(1, "170", "c1", 3.95), (1, "170", "c2", 3.97), (2, "170", "c1", 3.95), (2, "170", "c2", 3.97)])
 
 
 if __name__ == "__main__":

@@ -21,7 +21,10 @@ Reglas (todas deterministas):
   - Comprobación independiente: la columna NOK que calcula el propio libro frente a la que sale de
     nominal + tolerancias + valores leídos.
 
-Guarda `lectura_dr` (una fila por hoja) y `medida_dr` (una fila por valor). Se recalculan.
+Guarda `lectura_dr` (una fila por hoja) y `medida_dr` (una fila por valor). Se recalculan: primero se
+leen todas las hojas y despues las dos tablas se sustituyen en una sola transaccion. Si falla una hoja
+o la escritura, quedan las anteriores; hasta el 10/11/2026 se borraban al empezar y se escribian
+documento a documento, y un fallo las dejaba vacias o a medias.
 
     python conocimiento/herramientas/lector_dr.py
 """
@@ -36,23 +39,22 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from comun import cerrar_registro, conectar, registrar  # noqa: E402
+from comun import cerrar_registro, conectar, registrar, sustituir_tablas  # noqa: E402
 
-ESQUEMA = """
-DROP TABLE IF EXISTS lectura_dr;
-DROP TABLE IF EXISTS medida_dr;
-CREATE TABLE lectura_dr (
+TABLAS = {
+    "lectura_dr": """CREATE TABLE lectura_dr (
   documento_id INTEGER, hoja TEXT, plantilla TEXT, papel TEXT, fila_cabecera INTEGER, columnas TEXT,
   cavidades TEXT, filas_cota INTEGER, valores INTEGER, cualitativos INTEGER, rechazadas TEXT,
   aleatorias INTEGER, ceros INTEGER, atipicos INTEGER, nok TEXT,
   ejemplos TEXT, columnas_descartadas TEXT,
   PRIMARY KEY (documento_id, hoja)
-);
-CREATE TABLE medida_dr (
+)""",
+    "medida_dr": """CREATE TABLE medida_dr (
   documento_id INTEGER, hoja TEXT, fila INTEGER, col INTEGER, cota TEXT, nominal REAL, tol_sup REAL,
   tol_inf REAL, equipo TEXT, cavidad TEXT, valor REAL, marca TEXT
-);
-"""
+)""",
+}
+ESQUEMA = "".join(f"DROP TABLE IF EXISTS {nombre};\n{crear};\n" for nombre, crear in TABLAS.items())  # tablas vacias (tests)
 ETIQUETAS = {
     "nominal": r"(nominal|target|nom\.?|valor nominal)",
     "tol_sup": r"(tol\.?\s*\+|\+\s*tol\.?|upper tol\.?|tol\.?\s*sup\.?)",
@@ -241,10 +243,10 @@ def leer_hoja(hoja: str, celdas: dict[tuple[int, int], str | None], aleatorias: 
     return res
 
 
-def main() -> None:
-    con = conectar()
-    con.executescript(ESQUEMA)
-    ejecucion = registrar(con, "lector_dr", {})
+def preparar(con) -> tuple[list[tuple], list[tuple], collections.Counter]:
+    """Lee todas las hojas candidatas sin tocar las tablas: filas de `lectura_dr`, de `medida_dr` y totales.
+
+    Una hoja que falla lo para todo, con el documento y la hoja en el error."""
     candidatas = con.execute(
         "SELECT DISTINCT c.documento_id, c.hoja FROM celda c JOIN documento d ON d.id = c.documento_id "
         "WHERE d.ext IN ('xls','xlsx','xlsm') AND d.estado = 'extraido' AND c.fila <= 40 "
@@ -253,14 +255,18 @@ def main() -> None:
     por_doc = collections.defaultdict(list)
     for d, h in candidatas:
         por_doc[d].append(h)
-    total = collections.Counter()
+    lecturas, medidas, total = [], [], collections.Counter()
     for d, hojas in por_doc.items():
         for h in hojas:
             celdas = {(f, c): v for f, c, v in con.execute(
                 "SELECT fila, col, valor FROM celda WHERE documento_id=? AND hoja=?", (d, h))}
             aleatorias = {(f, c) for f, c in con.execute(
                 "SELECT fila, col FROM celda_aleatoria WHERE documento_id=? AND hoja=?", (d, h))}
-            r = leer_hoja(h, celdas, aleatorias)
+            try:
+                r = leer_hoja(h, celdas, aleatorias)
+            except Exception as e:
+                e.add_note(f"en el documento {d}, hoja {h!r}")
+                raise
             if r is None:
                 total["hojas_sin_cabecera"] += 1
                 continue
@@ -269,18 +275,29 @@ def main() -> None:
                 r["papel"] = ("" if r["papel"] == "informe" else r["papel"] + ",") + "sospechosa"
             if any("aleatoria" in k for k in marcas):
                 r["papel"] = ("" if r["papel"] == "informe" else r["papel"] + ",") + "generada"
-            con.execute("INSERT INTO lectura_dr VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
+            lecturas.append((
                 d, h, r["plantilla"], r["papel"], r["fila_cabecera"], json.dumps(r["columnas"]),
                 json.dumps(r["cavidades"]), r["filas_cota"], len(r["medidas"]), r["cualitativos"],
                 json.dumps(dict(r["rechazadas"]), ensure_ascii=False),
                 sum(n for k, n in marcas.items() if "aleatoria" in k), marcas.get("cero", 0),
                 marcas.get("atipico", 0), json.dumps(r["nok"]), json.dumps(r["ejemplos"], ensure_ascii=False),
                 json.dumps(r["columnas_descartadas"], ensure_ascii=False)))
-            con.executemany("INSERT INTO medida_dr VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-                            [(d, h, *m) for m in r["medidas"]])
+            medidas.extend((d, h, *m) for m in r["medidas"])
             total["hojas"] += 1
             total["valores"] += len(r["medidas"])
-        con.commit()
+    return lecturas, medidas, total
+
+
+def regenerar(con) -> collections.Counter:
+    lecturas, medidas, total = preparar(con)
+    sustituir_tablas(con, {"lectura_dr": (TABLAS["lectura_dr"], lecturas), "medida_dr": (TABLAS["medida_dr"], medidas)})
+    return total
+
+
+def main() -> None:
+    con = conectar()
+    ejecucion = registrar(con, "lector_dr", {})
+    total = regenerar(con)
     cerrar_registro(con, ejecucion, dict(total))
     print(dict(total))
 

@@ -428,9 +428,11 @@ señala la cota (`x1, y1` y `x2, y2`). Por eso el visor reconstruye el globo sob
 dibujar: el número en el círculo y una línea hasta la cota. En 9 de los 10 planos limpios el `.icp`
 cae a un 0,1–0,3 % de la hoja de su sitio en la versión globada, con escala 1:1 y origen en el
 centro. La excepción es `20231129_885253-11250_insulator_motor_v1.pdf`, con la hoja a la mitad: el
-1:1 dejaba 88 de 228 puntos en la hoja. Usa la calibración de su versión globada, porque el `.icp`
-es el mismo y coinciden las formas de la hoja. Un `.icp` no garantiza todos los globos (en el 3205,
-93 sellos con número y posición de 96 globos dibujados).
+1:1 deja en la hoja 91 de sus 232 sellos (cifra recalculada el 10/11/2026 con el extractor corregido).
+Usa la calibración de su versión globada, porque el `.icp` es el mismo y coinciden las formas de la
+hoja. Un `.icp` no garantiza todos los globos: el 80 del 3113 está dibujado y no está en el `.icp` de
+REV.01. El ejemplo que había aquí, el 3205 con 93 sellos situados de 96 globos, era un fallo del
+extractor anterior; hoy sus 96 sellos tienen número y posición.
 
 **Cómo se decide el tag sin `.icp`:**
 - **Globos:** al menos 20 aros y al menos el 40 % leídos. Así salen `Drw_Marking` (125 aros, 0

@@ -38,7 +38,7 @@ import sys
 from pathlib import Path, PurePosixPath
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from comun import conectar, original  # noqa: E402
+from comun import conectar, original, sustituir_tablas  # noqa: E402
 
 VERSION = 2  # 2 (2026-11-09): nombre del sello por su longitud; numero del .icp, .prf solo para contrastar
 TABLA = """
@@ -133,15 +133,7 @@ def preparar(con) -> list[tuple[str, list[tuple], int]]:
 
 def sustituir(con, nuevas: list[tuple]) -> None:
     """Cambia la tabla `globo` entera en una sola transaccion: si algo falla, queda la anterior."""
-    con.execute("BEGIN")  # sin el, sqlite3 confirmaria el DROP al momento (no abre transaccion para DDL)
-    try:
-        con.execute("DROP TABLE IF EXISTS globo")
-        con.execute(TABLA)
-        con.executemany("INSERT INTO globo VALUES (?,?,?,?,?,?,?,?,?,?)", nuevas)
-    except BaseException:
-        con.rollback()
-        raise
-    con.commit()
+    sustituir_tablas(con, {"globo": (TABLA, nuevas)})
 
 
 def regenerar(con) -> list[tuple[str, list[tuple], int]]:
