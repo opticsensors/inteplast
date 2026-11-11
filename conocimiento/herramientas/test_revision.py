@@ -136,6 +136,68 @@ class RevisionTests(unittest.TestCase):
         self.assertEqual(r["perfil_ppap"]["campos_que_cambian"], {"nok": 1})  # ...pero un campo distinto
         self.assertEqual((r["elemento"]["distintas_actual"], r["elemento"]["distintas_nueva"]), (0, 0))
 
+    def test_contraste_m3_compara_por_cota_cavidad_y_muestra_aunque_se_desplacen_las_filas(self):
+        """P-2/P-5 (11/11/2026): la clave no depende de la fila; el número de muestra sí del orden dentro de la hoja."""
+        from contraste_m3 import claves, letra
+
+        a = claves([("DR", 14, 9, "101", "c1", 1.5, None), ("DR", 15, 9, "101", "c1", 1.6, None), ("DR", 16, 9, "102", "c1", 2.0, "cero")])
+        b = claves([("DR", 17, 9, "101", "c1", 1.5, None), ("DR", 18, 9, "101", "c1", 1.6, None)])  # tres filas más abajo
+        self.assertEqual(a[("101", "c1", 1)][:3], (15, 9, 1.6))
+        self.assertEqual({k: v[2] for k, v in a.items() if k in b}, {k: v[2] for k, v in b.items()})
+        self.assertEqual(a[("102", "c1", 0)][3], "cero")  # la marca viaja con la clave para poder excluirla
+        self.assertEqual([letra(1), letra(26), letra(27), letra(52)], ["A", "Z", "AA", "AZ"])
+
+    @staticmethod
+    def _evaluar(filas_a, filas_b):
+        """filas_*: [(fila, cavidad, valor, marca)] de la cota '1' (una muestra por fila y cavidad)."""
+        from contraste_m3 import evaluar
+
+        def hoja(filas):
+            return {(f"f{fila}", cav, 0): (fila, 8 + int(cav[1:]), v, m) for fila, cav, v, m in filas}
+
+        a, b = hoja(filas_a), hoja(filas_b)
+        valores_a = {(f, c): v for f, c, v, _ in a.values()}
+        valores_b = {(f, c): v for f, c, v, _ in b.values()}
+        return evaluar(a, b, lambda f, c: valores_a.get((f, c)), lambda f, c: valores_b.get((f, c)))
+
+    def test_contraste_m3_vale_un_bloque_que_cumple_aunque_el_mas_largo_no(self):
+        """Revisión del 11/11/2026 (3186 `intern.16`): el bloque más largo, de valores redondos, no justifica nada."""
+        redondas = [(f, c, 1.5, None) for f in range(10, 16) for c in ("c1", "c2")]  # 6 filas iguales sin decimales
+        rotura = [(16, "c1", 2.0, None)]
+        con_decimales = [(f, c, 0.1234 + f / 1000, None) for f in range(17, 22) for c in ("c1", "c2")]  # 5 filas, 10 valores
+        distintas = [(f, c, 5.0, None) for f in range(30, 35) for c in ("c1", "c2")]
+        a = redondas + rotura + con_decimales + distintas
+        b = redondas + [(16, "c1", 3.0, None)] + con_decimales + [(f, c, 6.0, m) for f, c, _, m in distintas]
+        r = self._evaluar(a, b)
+        self.assertEqual(r["clase"], "repetición confirmada (parcial)")
+        self.assertEqual((r["bloque_valido"]["desde"], r["bloque_valido"]["hasta"], r["bloque_valido"]["con_decimales"]), (17, 21, 10))
+        self.assertEqual((r["bloque_mas_largo"]["filas"], r["bloque_mas_largo"]["con_decimales"]), (6, 0))
+
+    def test_contraste_m3_una_fila_con_medidas_sin_pareja_rompe_el_bloque(self):
+        """Revisión del 11/11/2026 (3212 `intern.02`, fila 142: 4 de 8 medidas con pareja): la fila no cuenta como igual."""
+        a = [(f, c, 0.111 + f / 1000, None) for f in range(10, 17) for c in ("c1", "c2")]
+        b = [x for x in a if (x[0], x[1]) != (13, "c2")]  # la fila 13 solo tiene pareja en c1
+        r = self._evaluar(a, b)
+        self.assertEqual((r["sin_pareja"], r["comparadas"], r["iguales"]), (1, 13, 13))
+        self.assertIsNone(r["bloque_valido"])  # antes: un bloque de 7 filas
+        self.assertEqual(r["bloque_mas_largo"]["filas"], 3)
+        self.assertEqual(r["clase"], "pendiente")
+
+    def test_contraste_m3_los_decimales_se_cuentan_dentro_del_bloque(self):
+        """Revisión del 11/11/2026: coincidencias con decimales fuera del bloque no lo hacen válido."""
+        bloque = [(f, c, 2.0, None) for f in range(10, 16) for c in ("c1", "c2")]  # 6 filas, sin decimales
+        sueltas_a = [(f, "c1", 0.5 + f / 1000, None) for f in range(30, 45)] + [(f, "c2", 9.0, None) for f in range(30, 45)]
+        sueltas_b = [(f, "c1", 0.5 + f / 1000, None) for f in range(30, 45)] + [(f, "c2", 8.0, None) for f in range(30, 45)]
+        r = self._evaluar(bloque + sueltas_a, bloque + sueltas_b)
+        self.assertIsNone(r["bloque_valido"])  # antes: 15 valores con decimales en la hoja bastaban
+        self.assertEqual(r["clase"], "pendiente")
+
+    def test_contraste_m3_recuentos_separan_excluidas_sin_pareja_y_comparadas(self):
+        a = [(10, "c1", 0.0, "cero"), (10, "c2", 0.5, "aleatoria"), (11, "c1", 1.234, None), (11, "c2", 1.5, None), (12, "c1", 2.5, None)]
+        b = [(10, "c1", 0.0, "cero"), (10, "c2", 0.7, "aleatoria"), (11, "c1", 1.234, None), (11, "c2", 1.6, None)]
+        r = self._evaluar(a, b)
+        self.assertEqual([r[k] for k in ("total", "excluidas", "sin_pareja", "comparadas", "iguales")], [5, 2, 1, 2, 1])
+
     def _carpetas(self, actual: dict, nueva: dict):
         """Dos carpetas de aceptación con ficheros {nombre: [filas]}; devuelve (directorio temporal, actual, nueva)."""
         import tempfile

@@ -67,6 +67,7 @@ segunda explicación en prosa.
 | [formatos-parsing.md](formatos-parsing.md) | Formatos del 3212 columna a columna (CSV CMM, XLS PPAP, PPTX) | ✅ |
 | [valores-por-punto.md](valores-por-punto.md) | Por qué una cota en un muestreo y una cavidad tiene varios valores, con censo por pieza (`valores_por_punto.py`) | ✅ |
 | [auditoria-derivadas-2026-11-11.md](auditoria-derivadas-2026-11-11.md) | Si las tablas e informes derivados están al día con su código: regenerados en una copia aislada y comparados fila a fila. Método reutilizable y desfases pendientes | ✅ |
+| [contraste-m3.md](contraste-m3.md) | Contraste en los originales de las hojas que repiten el muestreo citado en su cabecera (P-2 y P-5): muestra fijada antes de abrir, criterios, celdas y resultado (11/11/2026) | ✅ |
 | [revision-comprobaciones.md](revision-comprobaciones.md) | Destino de cada comprobación de `revision.py` (junto al dato, Errores, interno o pendiente), con evidencia, recuentos de referencia y pendientes (11/11/2026) | ✅ |
 | [visores.md](visores.md) | Los visores de `prototypes/data-explorer/` y lo que confirmaron | ✅ |
 | `0-bolt-eye/` … `7-planitudes/` | Una carpeta por feature: `README.md` del feature y fichas de pieza (`3212/` en detalle) | ✅ |

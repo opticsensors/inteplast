@@ -113,8 +113,8 @@ del fichero, no por la cabecera. La pregunta es si la hoja también trae las med
 
   | Grupo | Hojas | Por pieza | Destino |
   |---|---|---|---|
-  | Al menos el 90 % | 47 | 3218 18, 3174 15, 3205 7, 3238 3, 3186 2, 3168 1, 3195 1 | Errores: I-001 ampliada con 3218 y 3174, contrastados en el original. Las demás piezas, pendiente P-2 |
-  | Del 30 al 90 % | 35 | 3214 12, 3218 8, 3051 3, 3233 3, 3186 2, 3237 2, 3174 1, 3205 1, 3206 1, 3212 1, 3238 1 | Pendiente P-5: probable repetición parcial, sin contrastar. Las tres del 3051 son `DR(4CAV_CMM) (2)`, la hoja copiada de I-203. Las 12 del 3214 solo tienen 8 medidas cada una, así que su porcentaje dice poco |
+  | Al menos el 90 % | 47 | 3218 18, 3174 15, 3205 7, 3238 3, 3186 2, 3168 1, 3195 1 | Errores: I-001. 3218 y 3174, contrastados primero; las otras 14 hojas (3168, 3186, 3195, 3205, 3238), todas contrastadas el 11/11/2026 y todas con repetición confirmada ([contraste](contraste-m3.md)) |
+  | Del 30 al 90 % | 35 | 3214 12, 3218 8, 3051 3, 3233 3, 3186 2, 3237 2, 3174 1, 3205 1, 3206 1, 3212 1, 3238 1 | Muestra de 11, una por pieza ([contraste](contraste-m3.md)): 3 con al menos el 90 % de las medidas comparables iguales y 5 con un bloque de 30 a 55 filas completas iguales, en I-001. Pendientes: 3212, cuyo único bloque de 5 filas completas tiene 7 valores con tres decimales; 3051, la hoja copiada de I-203, sin ninguna fila completa igual; y 3214, con 8 medidas. Las otras 24 hojas, sin contrastar (P-5) |
   | Menos del 30 % | 35 | 3195 6, 3174 5, 3205 3, 3218 4, 3233 4, 3051 3, 3186 2, 3202 2, 3237 2, 3288 2, 3206 1, 3238 1 | Interno, sin conclusión. No aparece el bloque del muestreo citado (la coincidencia más alta es del 13,8 %), pero eso no descarta que se repitan algunas cotas: no se ha buscado. La gráfica sitúa el punto por el nombre, y solo avisa si una cota repite entera un muestreo anterior |
   | Sin medidas leídas | 7 | 3205 6, 3218 1 | Interno: no hay valores que comparar y la hoja no llega a la gráfica |
 
@@ -222,8 +222,8 @@ campo a campo y fila a fila:
 | ~~V3~~ | **Hecho el 11/11/2026.** Fecha entera y clasificada: fecha, intervalo, sin fecha utilizable con el texto original, o fallo de lectura. La de la hoja del punto ([M12](#m12)) | M12 | — |
 | ~~L1~~ | **Hecho el 11/11/2026.** El lector ya no toma una etiqueta como valor, con prueba de regresión, y se compararon las tablas derivadas ([L1](#l1-lector-de-la-cabecera-ppap)). M12 queda en 27 | M12 | — |
 | P-1 | Dos nombres de P3 sin documentar: el `3237_3130589019.CATPart` del 3238 y el `…4 CAV 3206 24-1-25.step` del 3205. No afectan a medidas ni a gráficas | P3 | Aquí |
-| P-2 | Contrastar en el original las hojas de M3 con al menos el 90 % de 3168, 3186, 3195, 3205 y 3238 antes de añadirlas a I-001 | M3 | Aquí e I-001 |
+| ~~P-2~~ | **Hecho el 11/11/2026**: las 14 hojas, con repetición confirmada en el original y añadidas a I-001 ([contraste](contraste-m3.md)) | M3 | — |
 | P-3 | Contrastar las fechas de M7 del 3167 (`Int_12_Comp` frente a `Int_11`) y del 3186 (`intern.17` frente a `intern.16`) | M7 | Aquí |
 | P-4 | Clasificar por causa las 565 cotas de M13 | M13 | Aquí |
-| P-5 | Contrastar una muestra de las 35 hojas de M3 con entre el 30 y el 90 % de coincidencia (probable repetición parcial) y decidir si van a I-001 | M3 | Aquí |
+| P-5 | **Muestra hecha el 11/11/2026** (11 de 35, una por pieza, semilla 20261111): 8 con repetición confirmada, en I-001 (3 con al menos el 90 % de las medidas comparables iguales y 5 con un bloque de filas completas); 3 pendientes por falta de evidencia (3051 `intern.09`, 3212 `intern.02` y 3214 `int.05`). **Quedan 24 hojas sin contrastar**: la muestra no las cierra | M3 | [contraste-m3.md](contraste-m3.md) |
 | P-6 | Localizar la fecha de `3195-00_Int_02.xlsm`, el sexto informe de origen de M10 | M10 | Aquí |
