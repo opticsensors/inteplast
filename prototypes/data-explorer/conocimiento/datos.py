@@ -423,6 +423,30 @@ def fechas_por_hoja(c, codigo: str) -> dict:
     return salida
 
 
+_FECHA_ISO = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+@lru_cache(maxsize=64)
+def fechas_de_muestreos(codigo: str) -> dict:
+    """Fechas de cabecera de cada muestreo, por archivo y hoja (V2, 11/11/2026). Solo fechas de verdad: un texto o la fecha
+    cero no se pueden comparar. Mismos libros que la gráfica: metrología, con `intern.NN` en el nombre.
+
+    {(serie, n): [{"carpeta", "fichero", "hoja", "fecha"}]}"""
+    c = con()
+    fechas = fechas_por_hoja(c, codigo)
+    salida: dict = defaultdict(list)
+    for f in c.execute("SELECT id, nombre, ruta FROM documento WHERE codigo=? AND carpeta_norm='metrologia' ORDER BY ruta", (codigo,)):
+        m = MUESTREO.search(f["nombre"])
+        if not m:
+            continue
+        partes = f["ruta"].split("/")
+        for (doc, hoja), fecha in sorted((k, v) for k, v in fechas.items() if isinstance(k, tuple) and k[0] == f["id"]):
+            if _FECHA_ISO.fullmatch(fecha):
+                salida[(serie_de(f["nombre"]), int(m.group(1)))].append(
+                    {"carpeta": partes[-2] if len(partes) > 1 else "", "fichero": f["nombre"], "hoja": hoja, "fecha": fecha})
+    return dict(salida)
+
+
 def medidas(codigo: str) -> list[dict]:
     """Medidas de informes (medida_dr) de la pieza con su muestreo deducido del nombre del fichero."""
     with _bloqueo_medidas:

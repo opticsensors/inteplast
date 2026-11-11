@@ -697,6 +697,63 @@ def test_fecha_de_cada_hoja_y_cabecera_del_3051_bien_leida():
     assert datos.fechas_por_hoja(c, "3195")[int20] == "2026-04-28, de la hoja «DR (dry)» del mismo libro: esta no tiene fecha propia"
 
 
+def _p(v=1.0, **extra):
+    return {"v": v, "csv": None, "repite": None, "info": [], "avisos": [], **extra}
+
+
+def test_v2_otras_fechas_del_muestreo_separa_hojas_y_archivos():
+    """V2 (11/11/2026): información, no aviso. Otras hojas del mismo archivo y otros archivos del muestreo, por separado."""
+    import evolucion
+
+    p = _p(carpeta="Interns", fichero="x-intern.03.xls", hoja="DR", fecha="2024-03-14")
+    sin_fecha = _p(carpeta="Interns", fichero="x-intern.03.xls", hoja="Hoja1", fecha="sin fecha propia: las otras hojas …")
+    csv = _p(carpeta="CMM", fichero="x.csv", hoja=evolucion.HOJA_CSV, fecha=None)
+    salida = {"muestreos": [{"serie": "00", "n": 3, "etiqueta": "intern.03"}], "puntos": {"c1": [p], "c2": [sin_fecha], "c3": [csv]}}
+    fechas = {("00", 3): [
+        {"carpeta": "Interns", "fichero": "x-intern.03.xls", "hoja": "DR", "fecha": "2024-03-14"},
+        {"carpeta": "Interns", "fichero": "x-intern.03.xls", "hoja": "DR2", "fecha": "2024-04-01"},
+        {"carpeta": "Version 00", "fichero": "x-intern.03.xls", "hoja": "DR", "fecha": "2024-06-20"},
+        {"carpeta": "Customer", "fichero": "x-intern.03.xls", "hoja": "DR", "fecha": "2024-03-14"},  # misma fecha: nada
+    ]}
+    evolucion.anotar_fechas(salida, fechas, "x", None)
+    assert p["info"] == ["Otras hojas de este archivo tienen otra fecha: 2024-04-01 («DR2»).",
+                         "Otros archivos de este muestreo tienen otra fecha: 2024-06-20 (Version 00/x-intern.03.xls)."]
+    assert p["avisos"] == []
+    # Sin fecha propia: todas las fechas de verdad del muestreo son «otra fecha».
+    assert sin_fecha["info"][0] == "Otras hojas de este archivo tienen otra fecha: 2024-03-14 («DR»); 2024-04-01 («DR2»)."
+    assert csv["info"] == []  # el CSV no tiene cabecera
+    # Con datos de la biblioteca: 3218 intern.03, copia de Interns (14/03/2024) frente a la de Version 00 (20/06/2024).
+    s = evolucion.serie("3218", "101")
+    i = [m["etiqueta"] for m in s["muestreos"]].index("intern.03")
+    q = s["puntos"]["c1"][i]
+    assert (q["carpeta"], q["fecha"]) == ("Interns", "2024-03-14")
+    assert "Otros archivos de este muestreo tienen otra fecha: 2024-06-20 (Version 00/3218-00_intern.03.xls)." in q["info"]
+
+
+def test_v1_mismo_valor_en_parte_de_las_cavidades_es_solo_informacion():
+    """V1 (11/11/2026): desde 2 cavidades con el mismo valor que un muestreo anterior, sin llamarlo copia ni error."""
+    import evolucion
+
+    muestreos, etiquetas = [("00", 1), ("00", 2), ("00", 3)], ["intern.01", "intern.02", "intern.03"]
+    valores = {"c1": [1, 1, 1], "c2": [2, 2, 5], "c3": [3, 9, 6], "c4": [4, 8, 7]}
+    puntos = {c: [_p(v) for v in vs] for c, vs in valores.items()}
+    evolucion.marcar_repetidos(puntos, muestreos, etiquetas)
+    evolucion.marcar_coincidencias(puntos, muestreos, etiquetas)
+    texto = "Mismo valor que en intern.01 en 2 de 4 cavidades de este muestreo (c1, c2)."
+    assert puntos["c1"][1]["info"] == [texto] and puntos["c2"][1]["info"] == [texto]
+    assert puntos["c3"][1]["info"] == [] and puntos["c3"][1]["repite"] is None
+    assert all(not puntos[c][2]["info"] for c in valores)  # intern.03: solo c1 coincide; una no basta
+    assert all("copia" not in a and "error" not in a for c in valores for p in puntos[c] for a in p["info"])
+    # Todas iguales es `repite` (rombo), no esta información; y el CSV no cuenta.
+    puntos = {c: [_p(v), _p(v)] for c, v in (("c1", 1), ("c2", 2), ("c3", 3))}
+    evolucion.marcar_repetidos(puntos, muestreos[:2], etiquetas[:2])
+    evolucion.marcar_coincidencias(puntos, muestreos[:2], etiquetas[:2])
+    assert puntos["c1"][1]["repite"] == "intern.01" and puntos["c1"][1]["info"] == []
+    puntos = {c: [_p(v), _p(v, csv={"fichero": "x.csv"})] for c, v in (("c1", 1), ("c2", 2), ("c3", 3))}
+    evolucion.marcar_coincidencias(puntos, muestreos[:2], etiquetas[:2])
+    assert all(not puntos[c][1]["info"] for c in ("c1", "c2", "c3"))
+
+
 def test_revision_guarda_todos_los_casos_y_la_presentacion_los_recorta():
     import revision
 

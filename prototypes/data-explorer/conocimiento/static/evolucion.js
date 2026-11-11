@@ -32,7 +32,8 @@ function detallePunto(p, nombre, color) {
     : `${fichero}<br>${esc(p.hoja)}!${esc(p.celda)}${p.csv ? `<br>CSV: ${esc(p.csv.carpeta)}/${esc(p.csv.fichero)}, línea ${p.csv.linea}${p.csv.columna ? `, columna ${esc(p.csv.columna)}` : ""}` : ""}`
   return `<div class="tip-punto"><span class="punto" style="background:${color}"></span><b>${esc(nombre.toUpperCase())}: ${fmt(p.v)}${p.media ? " (media)" : ""}</b>
     <div class="tip-origen">${origen}${p.fecha ? `<br>Fecha del informe: ${esc(p.fecha)}` : ""}</div>
-    ${p.avisos.map((a) => `<div class="tip-aviso">${esc(a)}</div>`).join("")}</div>`
+    ${p.avisos.map((a) => `<div class="tip-aviso">${esc(a)}</div>`).join("")}
+    ${(p.info || []).map((a) => `<div class="tip-info">${esc(a)}</div>`).join("")}</div>`
 }
 
 function graficaLineas(el, g) {

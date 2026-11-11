@@ -138,6 +138,8 @@ button:disabled { opacity: .5; cursor: default; border-color: var(--borde); }
 #tooltip .tip-punto { margin-top: 6px; }
 #tooltip .tip-origen { color: #aab3c5; font-size: 11px; word-break: break-word; }
 #tooltip .tip-aviso { color: #ffd591; font-size: 11px; margin-top: 2px; }
+/* Información (V1, V2): no es un aviso; mismo tono que el origen del punto */
+#tooltip .tip-info { color: #aab3c5; font-size: 11px; margin-top: 2px; border-left: 2px solid #4a5468; padding-left: 5px; }
 
 /* grafo (oscuro, tipo Obsidian) */
 .grafo { position: relative; height: 100%; background: #16181d; display: grid; grid-template-columns: 1fr 420px; }

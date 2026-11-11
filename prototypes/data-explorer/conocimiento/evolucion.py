@@ -171,7 +171,7 @@ def punto(lineas: list[dict], ref: list | None, pestana: str, elementos: dict) -
     base = del_bloque[0]
     hueco = base["hoja"] != pestana
     p = {"v": round(valor, 6), **origen_de(base), "hueco": hueco, "fecha": base.get("fecha"), "media": None,
-         "repite": None, "csv": None, "lim": limites(base["elemento"][2])}
+         "repite": None, "csv": None, "lim": limites(base["elemento"][2]), "info": []}
     avisos = []
     if len(set(valores)) > 1:  # columnas idénticas son un bloque duplicado, no varias piezas
         p["media"] = len(valores)
@@ -214,7 +214,65 @@ def solo_csv(ref: list | None, posicion: int | None) -> dict | None:
     return {"v": r["valor"], "fichero": r["nombre"], "carpeta": r["carpeta"], "hoja": HOJA_CSV, "celda": celda,
             "hueco": False, "fecha": None, "media": None, "repite": None, "lim": r["lim"],
             "csv": {"fichero": r["nombre"], "carpeta": r["carpeta"], "linea": r["fila"], "columna": r.get("columna")},
-            "avisos": ["El Excel de este muestreo no trae esta fila: valor del CSV de la CMM."]}
+            "avisos": ["El Excel de este muestreo no trae esta fila: valor del CSV de la CMM."], "info": []}
+
+
+def _lista(items: list[str], n: int = 3) -> str:
+    return ", ".join(items[:n]) + (f" y {len(items) - n} más" if len(items) > n else "")
+
+
+def marcar_coincidencias(puntos: dict, muestreos: list, etiquetas: list, minimo: int = 2) -> None:
+    """V1 (11/11/2026), solo información: cavidades de un muestreo con el mismo valor que en uno anterior de su serie,
+    cuando no son todas (eso ya es `repite`). Se cita el muestreo anterior con más coincidencias, desde `minimo`
+    cavidades: una sola coincide a menudo por azar. No se interpreta como copia ni como error.
+    Igual que `marcar_repetidos`, no cuenta los valores del CSV, que es la medida de su muestreo."""
+    for i, (serie, _) in enumerate(muestreos):
+        presentes = {c: lista[i] for c, lista in puntos.items() if lista[i] and not lista[i]["csv"]}
+        if len(presentes) <= minimo or any(p["repite"] for p in presentes.values()):
+            continue
+        mejor: list = []
+        mejor_j = None
+        for j in range(i):
+            if muestreos[j][0] != serie:
+                continue
+            iguales = [c for c, p in presentes.items()
+                       if puntos[c][j] and not puntos[c][j]["csv"] and round(puntos[c][j]["v"], 6) == round(p["v"], 6)]
+            if len(iguales) >= len(mejor):  # empate: el más reciente
+                mejor, mejor_j = iguales, j
+        if mejor_j is None or len(mejor) < minimo or len(mejor) == len(presentes):
+            continue
+        texto = (f"Mismo valor que en {etiquetas[mejor_j]} en {len(mejor)} de {len(presentes)} cavidades de este muestreo "
+                 f"({_lista(mejor, 6)}).")
+        for c in mejor:
+            presentes[c]["info"].append(texto)
+
+
+def anotar_fechas(salida: dict, fechas: dict, codigo: str, componente: str | None) -> None:
+    """V2 (11/11/2026), solo información: otras fechas de cabecera del muestreo del punto, separando las de otras hojas
+    del mismo archivo y las de otros archivos (copias). `fechas` sale de `datos.fechas_de_muestreos`."""
+    for cav, lista in salida["puntos"].items():
+        for m, p in zip(salida["muestreos"], lista):
+            if not p or p["hoja"] == HOJA_CSV:
+                continue
+            propia = p["fecha"] if p["fecha"] and datos._FECHA_ISO.fullmatch(p["fecha"]) else None
+            hojas: dict = defaultdict(list)
+            archivos: dict = defaultdict(list)
+            for x in fechas.get((m["serie"], m["n"]), []):
+                if x["fecha"] == propia or (componente and datos.componente_de_nombre(codigo, x["hoja"]) not in (None, componente)):
+                    continue
+                if (x["carpeta"], x["fichero"]) == (p["carpeta"], p["fichero"]):
+                    if x["hoja"] != p["hoja"]:
+                        hojas[x["fecha"]].append(f"«{x['hoja']}»")
+                else:
+                    nombre = f"{x['carpeta']}/{x['fichero']}"
+                    if nombre not in archivos[x["fecha"]]:
+                        archivos[x["fecha"]].append(nombre)
+            if hojas:
+                p["info"].append("Otras hojas de este archivo tienen otra fecha: "
+                                 + "; ".join(f"{f} ({_lista(h)})" for f, h in sorted(hojas.items())) + ".")
+            if archivos:
+                p["info"].append("Otros archivos de este muestreo tienen otra fecha: "
+                                 + "; ".join(f"{f} ({_lista(a, 2)})" for f, a in sorted(archivos.items())) + ".")
 
 
 def marcar_repetidos(puntos: dict, muestreos: list, etiquetas: list) -> None:
@@ -321,6 +379,7 @@ def construir(filas: list[dict], csv: dict | None = None, pestana: str | None = 
 
     etiquetas = [etiqueta_muestreo(*m) for m in muestreos]
     marcar_repetidos(puntos, muestreos, etiquetas)
+    marcar_coincidencias(puntos, muestreos, etiquetas)
     todos = [p for lista in puntos.values() for p in lista if p]
     rangos = {tuple(p["lim"]) for p in todos if p["lim"]}
     if len(rangos) == 1:
@@ -531,6 +590,7 @@ def serie(codigo: str, cota: str, pestana: str | None = None, elemento: str | No
     else:
         componente = None
     salida = construir([dict(x) for x in filas], csv, pestana, elemento)
+    anotar_fechas(salida, datos.fechas_de_muestreos(codigo), codigo, componente)
     asociar_correcciones(salida, lista)
     salida["componente"] = componente
     salida["componentes"] = [{"id": k, "etiqueta": v, "valores": por_componente[k]} for k, v in nombres.items()]

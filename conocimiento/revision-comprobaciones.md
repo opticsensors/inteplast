@@ -49,10 +49,10 @@ Una comprobación puede tener varios destinos.
 | P13, P14 | Casos de referencia y auditorías de aceptación | 0 | — | Interno | Regresión |
 | M1 | Informes sin muestreo en el nombre | 47 de 480 | — | Junto al dato | La ficha de pieza los lista («N ficheros con medidas DR sin intern.NN en el nombre», `app.js:674`) y el resumen de cota los cuenta aparte (`datos.py:578`). Casi todos son entregas al cliente (`PPAP-3174-00_INF04.xls`, `PPAP_3238_INF_01.xlsm`): los `INF.NN` no son muestreos (`cadena_correcciones.py`). Hay además estudios sueltos (`3218 CT-SCAN results.xlsx`, `3195` `Results.xlsx`) |
 | M2 | Muestreo del nombre distinto del de la carpeta | 0 de 480 | — | Interno | Solo compara cuando el número está en el nombre y en la carpeta (`revision.py:198`), así que no garantiza la asignación. La gráfica toma el muestreo solo del nombre (`datos.py:395`) |
-| M3 | Muestreo del nombre distinto del de la cabecera | 124 de 1.156 | I-001 (ampliada) | Errores · Junto al dato, en parte · Interno · Pendientes P-2, P-5 y V1 | [Detalle](#m3) |
+| M3 | Muestreo del nombre distinto del de la cabecera | 124 de 1.156 | I-001 (ampliada) | Errores · Junto al dato · Interno · Pendientes P-2 y P-5 | [Detalle](#m3) |
 | M4 | Muestreos con varias versiones del informe | 82 de 324 | I-006, I-007, I-603 | Junto al dato · Errores | La gráfica elige una copia y avisa «Otra copia (…) da …» si otra trae valores distintos (`evolucion.py:186`); la cadena conserva las copias como alternativas |
 | M5 | Huecos en la numeración de muestreos | 14 de 19 | — | Interno | Un hueco no es un error: puede ser un muestreo no entregado o no medido por DR |
-| M6 | Fechas muy dispersas dentro de un muestreo | 30 de 325 | I-203 (los 2 nuevos) | Junto al dato, en parte · Pendiente V2 | La tabla «Muestreos» de la ficha de pieza da todas las fechas de cada muestreo, y la cadena avisa «copias de intern.NN con fechas distintas». Desde V3, el detalle del punto da la fecha de su hoja, pero no avisa de las otras. Eran 28: con L1, el 3051 `intern.09` y `.10` ya tienen fecha (16/03/2021) y difieren de su hoja `DR(4CAV_CMM) (2)`, la copiada del 15/01/2021 (I-203) |
+| M6 | Fechas muy dispersas dentro de un muestreo | 30 de 325 | I-203 (los 2 nuevos) | Junto al dato | La tabla «Muestreos» de la ficha de pieza da todas las fechas de cada muestreo, y la cadena avisa «copias de intern.NN con fechas distintas». El detalle del punto da la fecha de su hoja (V3) y, como información, las otras fechas del muestreo, separando otras hojas y otros archivos (V2). Eran 28: con L1, el 3051 `intern.09` y `.10` ya tienen fecha (16/03/2021) y difieren de su hoja `DR(4CAV_CMM) (2)`, la copiada del 15/01/2021 (I-203) |
 | M7 | Muestreo con fecha anterior al previo | 4 de 325 | — | Interno · Pendiente P-3 | [Detalle](#m7) |
 | M8, M9 | Cadena: muestreo del informe enlazado; validación posterior al origen | 0 de 2.062 | — | Interno | Regresión |
 | M10 | Cadena: fechas incoherentes con la corrección | 4 grupos, 128 filas de 2.062 | I-302, I-306, I-402 | Junto al dato · Errores · Pendiente P-6 | [Detalle](#m10). Nada nuevo para el visor; queda un contraste incompleto |
@@ -107,7 +107,8 @@ del fichero, no por la cabecera. La pregunta es si la hoja también trae las med
   - Los ficheros tienen SHA-256 distintos: son libros diferentes con el bloque copiado.
 - **En el visor.** La gráfica avisa por cota con «Mismos valores que intern.NN. No sabemos si se volvió a medir.» cuando
   todos los valores presentes repiten un muestreo anterior de la serie (`evolucion.py:220`). Comprobado en la cota 101 del
-  3218, `intern.02`. No avisa si solo se repiten algunas cavidades de la cota (pendiente V1).
+  3218, `intern.02`. Si solo coinciden algunas cavidades, desde 2, el detalle lo dice como información y sin
+  interpretarlo: «Mismo valor que en intern.NN en k de n cavidades de este muestreo» (V1, 11/11/2026).
 - **Destino**, por grupo:
 
   | Grupo | Hojas | Por pieza | Destino |
@@ -216,8 +217,8 @@ campo a campo y fila a fila:
 
 | Id | Qué | De | Dónde se sigue |
 |---|---|---|---|
-| V1 | Decidir si la gráfica avisa cuando una cota repite solo parte de las cavidades de un muestreo anterior | M3 | Aquí y en el [README del visor](../prototypes/data-explorer/conocimiento/README.md#pendiente-09112026) |
-| V2 | En el detalle del punto, avisar si su muestreo tiene copias con fechas distintas | M6 | Ídem |
+| ~~V1~~ | **Hecho el 11/11/2026, como información** (decisión de Eduard: sin tratar las coincidencias como errores ni como copias). El detalle del punto dice «Mismo valor que en intern.NN en k de n cavidades de este muestreo (…)», desde 2 cavidades y cuando no son todas | M3 | [README del visor](../prototypes/data-explorer/conocimiento/README.md#pendiente-09112026) |
+| ~~V2~~ | **Hecho el 11/11/2026, como información.** El detalle del punto separa otras fechas en otras hojas del mismo archivo y en otros archivos del muestreo | M6 | Ídem |
 | ~~V3~~ | **Hecho el 11/11/2026.** Fecha entera y clasificada: fecha, intervalo, sin fecha utilizable con el texto original, o fallo de lectura. La de la hoja del punto ([M12](#m12)) | M12 | — |
 | ~~L1~~ | **Hecho el 11/11/2026.** El lector ya no toma una etiqueta como valor, con prueba de regresión, y se compararon las tablas derivadas ([L1](#l1-lector-de-la-cabecera-ppap)). M12 queda en 27 | M12 | — |
 | P-1 | Dos nombres de P3 sin documentar: el `3237_3130589019.CATPart` del 3238 y el `…4 CAV 3206 24-1-25.step` del 3205. No afectan a medidas ni a gráficas | P3 | Aquí |
