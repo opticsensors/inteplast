@@ -27,6 +27,9 @@ button:hover { border-color: var(--acento); }
 .chip.azul { background: #e3ecfc; color: #2456b5; } .chip.verde { background: #def3e6; color: #1f7a45; }
 .chip.naranja { background: #fff0db; color: #a35f00; } .chip.rojo { background: #fde4e4; color: #b42318; }
 .chip.morado { background: #f0e7fd; color: #6b35b8; }
+/* Tag de datos del plano: de contorno, para no confundirlo con el de tipo, que va relleno. */
+.chip.contorno { background: #fff; border: 1px solid #c9ced8; color: var(--suave); padding: 0 6px; }
+.chip.contorno.verde { background: #fff; border-color: #7cc49a; color: #1f7a45; }
 .vacio { padding: 40px; color: var(--suave); text-align: center; }
 
 /* cuadrícula de planos */
@@ -53,13 +56,26 @@ button:hover { border-color: var(--acento); }
 .globo { position: absolute; border: 2px solid rgba(47, 111, 222, .85); border-radius: 50%; transform: translate(-50%, -50%); cursor: pointer; }
 .globo.aprox { display: flex; align-items: center; justify-content: center; border-style: dashed; border-color: rgba(199, 125, 0, .9); background: rgba(255, 255, 255, .88); color: #7a4e00; font-weight: 600; line-height: 1; white-space: nowrap; }
 .globo.lectura { border-color: rgba(31, 138, 76, .85); }
+/* «Marcar cotas con datos»: relleno verde suave, como el naranja de la búsqueda; pasar el ratón o elegir sigue en naranja. */
+.globo.con-datos { background: rgba(31, 138, 76, .32); border-color: rgba(31, 138, 76, .95); }
+.globo.aprox.con-datos { background: rgba(205, 238, 215, .94); color: #145c33; }
 .globo:hover, .globo.sel { background: rgba(255, 138, 0, .25); border-color: var(--resalte); }
 .lineas-globo { position: absolute; inset: 0; width: 100%; height: 100%; stroke: rgba(199, 125, 0, .9); pointer-events: none; }
 .marca-res { position: absolute; border: 2px solid var(--resalte); background: rgba(255, 138, 0, .18); pointer-events: none; }
 .marca-res.actual { animation: latido 1s ease-in-out 3; box-shadow: 0 0 0 6px rgba(255, 138, 0, .35); }
 @keyframes latido { 50% { box-shadow: 0 0 0 16px rgba(255, 138, 0, 0); } }
 .panel { background: var(--panel); border-left: 1px solid var(--borde); overflow: auto; padding: 14px; }
-.panel .ruta { font-size: 11.5px; color: var(--suave); word-break: break-all; }
+/* Panel del plano: buscador y ficha de la cota arriba; el aviso de lectura automática, abajo del todo. */
+.panel-plano { display: flex; flex-direction: column; }
+.panel-plano > * { flex-shrink: 0; }
+.aviso-lectura { margin-top: auto; padding-top: 10px; font-size: 12px; color: var(--suave); }
+.aviso-lectura[hidden] { display: none; }
+.datos-cotas { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 6px 0 2px; font-size: 13px; }
+.datos-cotas[hidden] { display: none; }
+.datos-cotas .nota { margin: 0; }
+.fila-cota { display: flex; justify-content: space-between; gap: 10px; margin: 4px 0; font-size: 13px; }
+.fila-cota > span { color: var(--suave); }
+.fila-cota > b { text-align: right; font-weight: 600; }
 .resultados { list-style: none; margin: 6px 0; padding: 0; max-height: 240px; overflow: auto; }
 .resultados li { padding: 4px 6px; border-radius: 4px; cursor: pointer; font-size: 12.5px; }
 .resultados li:hover { background: #f0f3fa; }
@@ -89,9 +105,6 @@ button:hover { border-color: var(--acento); }
 .cifra b { display: block; font-size: 20px; }
 .cifra span { color: var(--suave); font-size: 12px; }
 .bloque { background: var(--panel); border: 1px solid var(--borde); border-radius: 8px; padding: 12px 14px; margin: 12px 0; overflow: auto; }
-.md { font-size: 13.5px; }
-.md table { margin: 8px 0; }
-.md pre { background: #f3f4f7; padding: 8px; overflow: auto; }
 
 /* evolución de una cota */
 .cargando { opacity: .45; transition: opacity .15s; pointer-events: none; }
@@ -101,7 +114,6 @@ button:hover { border-color: var(--acento); }
 button.activo { background: #e3ecfc; border-color: var(--acento); color: #2456b5; }
 button:disabled { opacity: .5; cursor: default; border-color: var(--borde); }
 .nota { font-size: 12px; color: var(--suave); margin: 4px 0; }
-.punto { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
 .grafica-lineas { display: block; width: 100%; color: var(--texto); }
 .grafica-lineas .eje { font-size: 11px; fill: var(--suave); }
 .grafica-lineas .limite-texto { font-size: 10px; fill: #059669; }
@@ -134,15 +146,7 @@ button:disabled { opacity: .5; cursor: default; border-color: var(--borde); }
 /* grafo (oscuro, tipo Obsidian) */
 .grafo { position: relative; height: 100%; background: #16181d; display: grid; grid-template-columns: 1fr 420px; }
 .grafo #lienzo-grafo { min-width: 0; }
-.grafo .controles { position: absolute; left: 12px; top: 12px; background: rgba(30, 33, 41, .92); color: #d6dae3; border: 1px solid #2c313c; border-radius: 8px; padding: 10px 12px; font-size: 12.5px; width: 240px; z-index: 3; }
-.grafo .controles label { display: flex; align-items: center; gap: 6px; margin: 2px 0; cursor: pointer; }
-.grafo .controles .punto { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-.grafo .controles input[type=search] { width: 100%; background: #22262f; color: #e6e9ef; border-color: #39404d; margin-bottom: 6px; }
 .grafo .lateral { background: #1e2129; color: #d6dae3; border-left: 1px solid #2c313c; overflow: auto; padding: 14px 16px; }
-.grafo .lateral .md { color: #d6dae3; }
-.grafo .lateral .md a { color: #8ab4ff; }
-.grafo .lateral .md code, .grafo .lateral .md pre { background: #2a2f3a; color: #e6e9ef; }
-.grafo .lateral .md th { background: #2a2f3a; } .grafo .lateral .md td, .grafo .lateral .md th { border-color: #343a46; }
 .grafo .lateral h2 { color: #fff; }
 .grafo.grafo-piezas { grid-template-columns: 1fr 320px; }
 .grafo-piezas .lateral { font-size: 13px; }
@@ -163,7 +167,6 @@ details.comp { background: var(--panel); border: 1px solid var(--borde); border-
 details.comp summary { padding: 10px 14px; cursor: pointer; display: flex; gap: 12px; align-items: baseline; }
 details.comp summary .n { margin-left: auto; color: var(--suave); }
 details.comp .cuerpo { padding: 0 14px 12px; overflow: auto; }
-.mermaid { background: #fff; border: 1px solid var(--borde); border-radius: 8px; padding: 10px; overflow: auto; }
 
 /* Errores: una fila por pieza y una tarjeta por incidencia */
 .filas-errores { display: flex; flex-direction: column; gap: 6px; max-width: 1000px; }

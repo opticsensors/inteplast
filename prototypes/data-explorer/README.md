@@ -918,8 +918,8 @@ parte de lo ya extraído a `conocimiento/` y no de los originales. Tiene seis pe
 - **Piezas:** cuadrícula con la captura del CAD, tabla para comparar sus cifras (con los ficheros por carpeta
   de cada pieza) y ficha con cotas por muestreo y correcciones.
 - **Errores:** incidencias por pieza, con su evidencia; las generales, aparte (09/11/2026).
-- **Grafo:** de los Markdown, piezas, hallazgos y preguntas.
-- **Esquema:** de la biblioteca.
+- **Grafo:** de los Markdown, piezas, hallazgos y preguntas. *Quitada el 10/11/2026.*
+- **Esquema:** de la biblioteca. *Quitada el 10/11/2026.*
 - **Revisión:** de los enlaces pieza ↔ muestreo (`revision.py`), con los casos de referencia de los lectores.
 
 La única lectura de originales son los PDF de plano, para dibujarlos.

@@ -1,4 +1,4 @@
-"""Visor de `conocimiento/`: planos, piezas, grafo, esquema y revisión de enlaces.
+"""Visor de `conocimiento/`: planos, piezas (con su grafo), errores y revisión de enlaces.
 
 Prototipo personal, no forma parte de la aplicación web. Lee la biblioteca en solo lectura y, como
 única excepción, los PDF de plano originales para dibujarlos (comprobando antes OneDrive).
@@ -12,7 +12,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import sqlite3
 import sys
 import threading
 import webbrowser
@@ -62,7 +61,8 @@ def inicio():
 
 @app.get("/api/planos")
 def planos():
-    return {"planos": datos.planos()}
+    con_datos = evolucion.datos_de_planos()  # tag «Cotas con / sin datos»
+    return {"planos": [{**p, **con_datos.get(p["id"], {})} for p in datos.planos()]}
 
 
 @app.get("/api/plano/{doc}")
@@ -73,7 +73,8 @@ def plano(doc: int):
     c = datos.con()
     local, estado = datos.estado_onedrive(p["ruta"])
     pags = [{k: v for k, v in x.items() if k != "texto"} | {"caracteres": len(x["texto"])} for x in datos.paginas(c, doc)]
-    return {**p, "local": local, "onedrive": estado, "detalle_paginas": pags, "original": datos.original(p["ruta"])}
+    return {**p, **evolucion.datos_de_planos().get(doc, {}), "local": local, "onedrive": estado, "detalle_paginas": pags,
+            "original": datos.original(p["ruta"])}
 
 
 @app.get("/api/plano/{doc}/{pagina}/{tipo}.jpg")
@@ -98,6 +99,19 @@ def buscar_plano(doc: int, q: str = ""):
     if not datos.plano(doc):
         raise HTTPException(404)
     return datos.buscar_en_plano(doc, q)
+
+
+@app.get("/api/plano/{doc}/cotas-con-datos")
+def cotas_con_datos(doc: int):
+    """Para «Marcar cotas con datos»: qué números del plano tienen algo en su ficha (medidas o correcciones)."""
+    p = datos.plano(doc)
+    if not p:
+        raise HTTPException(404)
+    if not p["codigo"]:
+        return {"cotas": [], "pieza_con_datos": False}
+    # El plano de una pieza del libro (3288) mira esa pieza; el del conjunto, cualquiera de las dos, como su ficha.
+    componente = p["componente"] if p["componente"] in datos.COMPONENTES.get(p["codigo"], {}) else None
+    return evolucion.cotas_con_datos(p["codigo"], componente)
 
 
 # ---------------------------------------------------------------- piezas
@@ -126,7 +140,7 @@ def ficheros_de_pieza(codigo: str):
 def cota(codigo: str, c: str = Query(...), hoja: str | None = None, elemento: str | None = None, componente: str | None = None):
     # La cabecera y la gráfica tienen que ser del mismo componente.
     s = evolucion.serie(codigo, c, hoja, elemento, componente)
-    return {"info": datos.resumen_cota(codigo, c, s["componente"]), **s}
+    return {"info": {**datos.resumen_cota(codigo, c, s["componente"]), "csv": evolucion.resumen_csv(codigo, c)}, **s}
 
 
 # ---------------------------------------------------------------- errores
@@ -157,21 +171,11 @@ def api_referencias():
     return errores.tecnicos()
 
 
-# ---------------------------------------------------------------- grafo, revisión, esquema
-
-@app.get("/api/grafo")
-def api_grafo():
-    return grafo.construir()
-
+# ---------------------------------------------------------------- grafo de piezas y revisión
 
 @app.get("/api/grafo/piezas")
 def grafo_piezas():
     return grafo.piezas_y_features()
-
-
-@app.get("/api/nodo")
-def nodo(id: str):
-    return grafo.contenido(id)
 
 
 _revision: dict = {}
@@ -195,67 +199,6 @@ def api_revision(recalcular: bool = False):
     return JSONResponse(_revision)
 
 
-# Relaciones lógicas (la biblioteca no declara claves ajenas salvo en documento).
-RELACIONES = [
-    ("documento", "elemento", "documento_id"), ("documento", "celda", "documento_id"),
-    ("documento", "celda_aleatoria", "documento_id"), ("documento", "estructura", "documento_id"),
-    ("documento", "lectura_dr", "documento_id"), ("documento", "medida_dr", "documento_id"),
-    ("documento", "medida_cmm", "documento_id"), ("documento", "medida_contorno", "documento_id"),
-    ("documento", "perfil_ppap", "documento_id"), ("documento", "perfil_correccion", "documento_id"),
-    ("documento", "globo", "documento_id (.icp)"), ("documento", "auditoria", "documento_id"),
-    ("documento", "cadena_correccion", "documento_id (PPTX), origen_ y validacion_documento_id"),
-    ("documento", "documento", "duplicado_de"),
-]
-CLAVES = {"documento": ["id", "ruta", "feature", "pieza", "codigo", "carpeta_norm", "ext", "sha256", "estado", "duplicado_de"],
-          "medida_dr": ["documento_id", "hoja", "fila", "col", "cota", "cavidad", "valor", "nominal", "marca"],
-          "medida_cmm": ["documento_id", "pieza", "muestreo", "cavidad", "cota", "valor"],
-          "cadena_correccion": ["pieza", "cota", "documento_id", "origen_muestreo", "origen_documento_id",
-                                "validacion_muestreo", "validacion_documento_id", "validacion_estado"],
-          "lectura_dr": ["documento_id", "hoja", "papel", "plantilla"], "globo": ["documento_id", "sello", "etiqueta", "x1", "y1"],
-          "perfil_ppap": ["documento_id", "hoja", "pieza", "metadatos"], "perfil_correccion": ["documento_id", "diapositiva", "pieza", "cotas"],
-          "celda": ["documento_id", "hoja", "fila", "col", "valor", "formula"], "celda_aleatoria": ["documento_id", "hoja", "fila", "col", "formula"],
-          "elemento": ["id", "documento_id", "tipo", "localizador", "texto"], "estructura": ["documento_id", "clave", "valor"],
-          "medida_contorno": ["documento_id", "pieza", "muestreo", "perfil"], "auditoria": ["documento_id", "comprobacion", "ok"]}
-
-
-@app.get("/api/esquema")
-def esquema():
-    c = datos.con()
-    tablas = []
-    for (nombre,) in c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite%'"
-                               " AND name NOT LIKE '%fts%' ORDER BY name"):
-        columnas = [r[1] for r in c.execute(f"PRAGMA table_info({nombre})")]
-        filas = c.execute(f"SELECT count(*) FROM {nombre}").fetchone()[0]
-        tablas.append({"nombre": nombre, "filas": filas, "columnas": columnas})
-    er = ["erDiagram"]
-    for t in tablas:
-        cols = CLAVES.get(t["nombre"], t["columnas"][:6])
-        er.append(f"  {t['nombre']} {{")
-        er += [f"    x {col}" for col in cols if col in t["columnas"]]
-        er.append("  }")
-    for a, b, via in RELACIONES:
-        if any(t["nombre"] == b for t in tablas):
-            er.append(f'  {a} ||--o{{ {b} : "{via}"')
-    rag = []
-    indice = datos.CONOCIMIENTO / "datos" / "rag" / "indice.sqlite"
-    if indice.is_file():
-        r = sqlite3.connect(f"file:{indice.as_posix()}?mode=ro", uri=True)
-        for (nombre,) in r.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite%'"
-                                   " AND name NOT LIKE '%fts%_%' ORDER BY name"):
-            try:
-                rag.append({"nombre": nombre, "filas": r.execute(f'SELECT count(*) FROM "{nombre}"').fetchone()[0]})
-            except sqlite3.Error:
-                pass
-        r.close()  # no dejar el índice abierto: rag.py construir tiene que poder sustituirlo
-    ficheros = []
-    for patron in ("*.jsonl", "datos/aceptacion/*.jsonl", "rag/*.jsonl", "rag/*.json"):
-        for f in sorted(datos.CONOCIMIENTO.glob(patron)):
-            lineas = sum(1 for x in f.read_text(encoding="utf-8").splitlines() if x.strip()) if f.suffix == ".jsonl" else None
-            ficheros.append({"ruta": f.relative_to(datos.CONOCIMIENTO).as_posix(), "lineas": lineas, "bytes": f.stat().st_size})
-    return {"tablas": tablas, "er": "\n".join(er), "rag": rag, "ficheros": ficheros,
-            "md": len(grafo.ficheros_md())}
-
-
 def main() -> None:
     import uvicorn
 
@@ -269,6 +212,8 @@ def main() -> None:
     if not args.no_abrir:
         threading.Timer(1.5, lambda: webbrowser.open(url)).start()
     print(f"Visor de conocimiento en {url}  (Ctrl+C para parar)")
+    # El tag de datos de los 56 planos tarda unos segundos: se calcula ya, mientras se abre el navegador.
+    threading.Thread(target=evolucion.datos_de_planos, daemon=True).start()
     uvicorn.run(app, host="127.0.0.1", port=args.puerto, log_level="warning")
 
 

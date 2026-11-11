@@ -50,8 +50,7 @@ Solo hace las que faltan; `--pieza 3212` rehace una.
 | Fuente | Para qué |
 |---|---|
 | `conocimiento/datos/biblioteca.sqlite` (solo lectura) | Lista de planos, texto de cada página, globos del `.icp`, medidas DR, cadena de correcciones y revisión |
-| `hallazgos.jsonl`, `casos-referencia.jsonl`, `datos/aceptacion/*.jsonl` | Fichas de pieza, grafo y revisión |
-| Markdown de `conocimiento/`, `docs/` y la raíz | Grafo y contenido de cada nodo |
+| `hallazgos.jsonl`, `casos-referencia.jsonl`, `datos/aceptacion/*.jsonl` | Errores y revisión |
 | `out/probar-planos-calibracion.json` | Calibración `.icp` → página que dejó `probar_lector_planos.py` |
 | `out/conocimiento/lecturas/*.json` | Tag y lecturas automáticas de los planos sin `.icp` |
 | `out/conocimiento/cad/*.jpg` | Captura del CAD de cada pieza |
@@ -67,9 +66,39 @@ se abre la cuadrícula se dibujan las 56 miniaturas (unos segundos cada una).
   abre el visor: zoom con la rueda, arrastre y ◀ ▶ para pasar al siguiente plano de la lista. Dentro
   del plano, una búsqueda resalta los globos y las palabras que coinciden: con marca (`N30`, `No. 200`,
   `[]210`) busca esa cota y sus subcotas, y sin ella (`30`, texto) busca también dentro de otras palabras, como `130`.
-  Al pulsar un globo se ven las medidas de esa cota en los informes DR de la pieza.
-  - Un solo tag por plano: **Con `.icp`**, **Globos sin `.icp`**, **Numerado sin globos** o **Sin
-    globos ni numeración** (con tinte rojo). Qué lleva cada plano y por qué, en
+  - **Ficha de la cota (columna derecha, 10/11/2026).** Al buscar una cota o pulsar un globo sale su ficha, sin
+    gráfica, con tres datos:
+    - **Excel:** medidas en los informes y en cuántos.
+    - **CSV de la CMM:** los mismos puntos que dibuja la gráfica de la pieza.
+    - **Correcciones.**
+
+    Distingue «sin medidas de esta cota» de «la pieza no tiene medidas leídas». Si no hay CSV leídos de la
+    pieza (solo los hay del 3197 y del 3212), dice «no leídos». «Ver evolución completa →» abre la ficha de la
+    pieza con esa cota ya dibujada.
+  - **«Marcar cotas con datos» (10/11/2026).** Debajo del buscador. Pinta de verde suave los números de la página
+    cuya ficha tiene medidas (Excel o CSV) o alguna corrección, y dice cuántos son («72 de 76 cotas con datos»).
+    - Igual en todos los planos, también con «0 de 166» (2820, pieza sin nada leído) o «0 de 0» (sin números situados).
+    - Sale desactivada al abrir el visor, para que se vea primero todo lo que se detecta. Si se activa, se
+      mantiene al pasar de un plano a otro.
+    - Es el número de la pieza: el plano puede ser de otra revisión que los informes.
+    - Mismas fuentes que la ficha (`evolucion.cotas_con_datos`); en el 3288, las de la pieza del libro que es
+      el plano.
+  - **Tag de datos (10/11/2026).** Junto al tag de tipo, de contorno, en la cuadrícula y en la barra del plano.
+    - **«Cotas con datos»** (verde) si alguno de los números situados en el plano, en cualquier página, tiene
+      datos.
+    - **«Cotas sin datos»** (gris) si no, también con 0 números situados. Hoy son 40 y 16. Entre las 16 están el
+      3237 y el 3238: su numeración está en la capa de texto y no hay números situados, aunque sus piezas sí
+      tienen medidas.
+    - La cuadrícula filtra por él («Con y sin datos»).
+    - Se calcula una vez al arrancar el visor, en segundo plano (unos 8 s, `evolucion.datos_de_planos`).
+  - **Aviso de lectura.** Si los números del plano salen de leerlo (globos sin `.icp` o numeración), abajo del
+    todo de la columna sale «Lectura automática: puede fallar sin avisar». Con `.icp` no sale.
+  - **Panel limpio.** El panel no enseña la ruta, la tabla de páginas ni el detalle de la lectura. El aviso de
+    OneDrive solo sale si el PDF está en la nube.
+  - **Volver a la cuadrícula.** No hay botón: la pestaña «Planos» (o la flecha atrás) devuelve a la
+    cuadrícula con sus filtros. Igual con «Piezas».
+  - Un solo tag por plano, junto a su nombre en la barra de arriba: **Con `.icp`**, **Globos sin `.icp`**,
+    **Numerado sin globos** o **Sin globos ni numeración** (con tinte rojo). Qué lleva cada plano y por qué, en
     [`planos-globos.md`](../../../conocimiento/planos-globos.md#estado-de-cada-plano-05112026).
   - Círculo azul continuo: globo dibujado, con calibración del prototipo.
   - Círculo naranja discontinuo, con número y línea: plano limpio. El globo no está dibujado, así que
@@ -94,7 +123,7 @@ se abre la cuadrícula se dibujan las 56 miniaturas (unos segundos cada una).
   - identidad, que está en `conocimiento/identidad-piezas.md`;
   - el recuento de errores, que está en la pestaña Errores y en Números;
   - lo que se sabe de la pieza (lecciones, avisos, vínculos feature-cota, datos y proceso), que no son errores y
-    siguen en el Grafo y en las fichas `.md`;
+    siguen en las fichas `.md` (no se ven en el visor: ver «Errores»);
   - los ficheros por carpeta, que ahora están en Números.
   - Un solo tag por pieza: **Medidas y correcciones** (18), **Medidas sin correcciones** (2) o **Sin medidas**
     (1, con tinte rojo). Se calcula con los datos salvo 3056 y 3226, fijadas en `TAG_FIJO` (`datos.py`) con su motivo.
@@ -117,10 +146,9 @@ se abre la cuadrícula se dibujan las 56 miniaturas (unos segundos cada una).
     abre debajo el panel: gráfica de los dos muestreos, cambio por cavidad y texto de las correcciones que parten de
     él o se validan en él, con todas sus variantes, cada una con su fichero y diapositiva. Solo texto: las imágenes del
     PPTX no están en la biblioteca.
-- **Grafo:** Markdown, features, piezas, hallazgos, preguntas abiertas y casos, unidos por los
-  enlaces entre ficheros y por las menciones explícitas. Pulsar un nodo muestra su contenido y
-  resalta sus vecinos.
-- **Esquema:** flujo de los originales a las tablas y diagrama de relaciones con el número de filas.
+- **Grafo y Esquema: quitadas el 10/11/2026.** No aportaban al mirar el visor. El grafo de la pestaña
+  Piezas sigue igual. Del visor salieron también sus APIs (`/api/grafo`, `/api/nodo`, `/api/esquema`), su
+  código y las librerías mermaid y marked. De `conocimiento/` no se ha tocado nada.
 - **Errores** (09/11/2026, `errores.py`): las incidencias `I-` de `hallazgos.jsonl`, una fila por pieza con su captura y el
   contador de propias pendientes y generales («3 propias pendientes de 4 · 1 general»). Cada pieza abre sus incidencias:
   título de `incongruencias.md`, estado, texto original y «Ver evidencia» (fichero y celda o línea, y la gráfica si la
@@ -132,8 +160,11 @@ se abre la cuadrícula se dibujan las 56 miniaturas (unos segundos cada una).
   - **Generales:** las de la sección «Transversales» de `incongruencias.md`, con una sola ficha. Cada pieza las cuenta aparte
     y enlaza a la lista filtrada de las que le afectan. La fila «Generales y otras referencias» suma las que no citan
     ninguna pieza del catálogo (I-501, la plantilla 3247).
-  - **El resto de `hallazgos.jsonl` no son errores:** lecciones, advertencias, vínculos feature-cota, datos y proceso quedan
-    en el Grafo y en las fichas `.md`; estructura y formato, en Revisión. Los avisos de las gráficas siguen junto a sus puntos.
+  - **El resto de `hallazgos.jsonl` no son errores.** Estructura y formato salen en Revisión. Los otros 26
+    (lecciones, advertencias, vínculos feature-cota, datos y proceso, `errores.NO_SON_ERRORES`) **no se muestran en el
+    visor desde el 10/11/2026**, al quitar la pestaña Grafo. Siguen intactos en `conocimiento/hallazgos.jsonl` y en las
+    fichas Markdown. Cómo presentar las lecciones y los warnings útiles, ligados a piezas, features o cotas, se
+    decidirá aparte. Los avisos de las gráficas siguen junto a sus puntos.
 - **Revisión:** comprobaciones de los enlaces pieza ↔ documento ↔ muestreo (`revision.py`).
   Solo informan; no corrigen la biblioteca. La pestaña enseña los 25 primeros casos de cada una; `revision.json`
   los guarda todos. Al final, los casos de referencia de los lectores (`casos-referencia.jsonl`) y las observaciones de

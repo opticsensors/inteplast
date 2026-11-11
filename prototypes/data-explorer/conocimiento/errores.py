@@ -24,7 +24,9 @@ import datos
 ESTADOS = {"abierta": "Pendiente de aclarar", "explicable": "Explicación posible · sin confirmar", "resuelta": "Resuelta",
            "corregida": "Corregida"}
 PENDIENTES = {"abierta": 0, "explicable": 1}  # sin confirmar; el número es el orden en la lista
-EN_EL_GRAFO = {"leccion", "warning", "vinculo_feature_cota", "dato", "proceso"}  # no son errores
+# No son errores. Desde el 10/11/2026 no se muestran en el visor (estaban en la pestaña Grafo, que se quitó):
+# siguen en conocimiento/hallazgos.jsonl y en las fichas Markdown.
+NO_SON_ERRORES = {"leccion", "warning", "vinculo_feature_cota", "dato", "proceso"}
 TECNICOS = {"estructura": "Estructura", "formato": "Formato"}
 RELEVANCIA = {"alta": 0, "media": 1, "baja": 2}
 

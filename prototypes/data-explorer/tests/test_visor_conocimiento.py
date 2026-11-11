@@ -136,15 +136,6 @@ def test_tolerancias_redondeadas_agrupan_ruido_de_coma_flotante():
     assert datos.tolerancia({"nominal": 0.8, "tol_sup": 0.0499999999999999, "tol_inf": -0.05}) == (0.8, 0.05, -0.05)
 
 
-def test_grafo_sin_aristas_colgantes():
-    import grafo
-
-    g = grafo.construir()
-    ids = {n["id"] for n in g["nodos"]}
-    assert all(a["source"] in ids and a["target"] in ids for a in g["aristas"])
-    assert {"pieza", "hallazgo", "pregunta", "feature"} <= {n["tipo"] for n in g["nodos"]}
-
-
 def test_grafo_de_piezas_une_por_feature_y_por_ficheros_con_sentido():
     import grafo
 
@@ -366,6 +357,52 @@ def test_parrafos_quitan_la_plantilla_de_la_diapositiva():
     texto = "Tool correction nº1 – P3212\t\t24/01/2024\n1/37\nLongitud 70mm\nTool correction 1.1 (DIM. Nr.214) Ø16\nCurrent situation:\nFer creixer el plastic en Ø0,23mm"
     assert evolucion.parrafos(texto) == ["Fer creixer el plastic en Ø0,23mm"]
     assert evolucion.parrafos("9\nHacer algo") == ["Hacer algo"]  # el número de página suelto tampoco es texto
+
+
+def test_la_ficha_de_cota_del_plano_distingue_pieza_sin_medidas_de_cota_sin_medidas():
+    """En el plano: «la pieza no tiene medidas leídas» (2820) no es «sin medidas de esta cota» (3212, 99999)."""
+    sin_informes = datos.resumen_cota("2820", "260")
+    assert not sin_informes["pieza_con_medidas"] and sin_informes["en_informes"]["medidas"] == 0
+    otra_cota = datos.resumen_cota("3212", "99999")
+    assert otra_cota["pieza_con_medidas"] and otra_cota["en_informes"]["medidas"] == 0
+    con_medidas = datos.resumen_cota("3212", "113")
+    # En el plano cuentan todas las medidas de los informes, también las de ficheros sin intern.NN.
+    assert con_medidas["en_informes"]["medidas"] == con_medidas["medidas"] + con_medidas["sin_muestreo"] > 0
+
+
+def test_las_medidas_csv_de_la_ficha_son_las_de_la_grafica():
+    import evolucion
+
+    assert evolucion.resumen_csv("2820", "260") is None  # sin CSV leídos de la pieza: «no leídos», no «sin medidas»
+    csv = evolucion.resumen_csv("3212", "113")
+    puntos = [p for lista in evolucion.csv_de(datos.con(), "3212", "113").values() for p in lista]
+    assert csv == {"medidas": len(puntos), "ficheros": len({p["nombre"] for p in puntos})} and csv["medidas"] > 0
+    assert evolucion.resumen_csv("3212", "99999") == {"medidas": 0, "ficheros": 0}
+
+
+def test_marcar_cotas_con_datos_coincide_con_la_ficha():
+    """Una cota sale en verde si y solo si su ficha tiene medidas (Excel o CSV) o alguna corrección."""
+    import evolucion
+
+    assert evolucion.cotas_con_datos("2820") == {"cotas": [], "pieza_con_datos": False}
+    marcadas = set(evolucion.cotas_con_datos("3212")["cotas"])
+    etiquetas = sorted({b["etiqueta"] for b in datos.globos(329, 1)["globos"]}, key=datos.clave_cota)
+    for cota in etiquetas[::8] + ["99999"]:  # una de cada ocho del plano, y una que no existe
+        ficha = datos.resumen_cota("3212", cota)["en_informes"]["medidas"] or evolucion.resumen_csv("3212", cota)["medidas"] \
+            or len(evolucion._datos_cota("3212", cota)[2])
+        assert (cota in marcadas) == bool(ficha), cota
+
+
+def test_tag_de_datos_de_cada_plano():
+    """«Cotas con datos» si alguno de sus números situados tiene datos; si no, «sin», también con 0 de 0."""
+    import evolucion
+
+    tags = evolucion.datos_de_planos()
+    assert set(tags) == {p["id"] for p in datos.planos()}
+    assert all((t["datos"] == "con") == (t["numeros_con_datos"] > 0) for t in tags.values())
+    assert tags[1] == {"datos": "sin", "numeros_con_datos": 0, "numeros": 166}  # 2820: pieza sin nada leído
+    assert tags[2507] == {"datos": "sin", "numeros_con_datos": 0, "numeros": 0}  # 3237: numeración en la capa de texto
+    assert tags[329]["datos"] == "con"  # 3212 rev. 07
 
 
 def test_3212_cota_113_con_datos_reales():
@@ -745,16 +782,17 @@ def test_calificadores_de_excel_y_csv():
 
 # ---------------------------------------------------------------- pestaña Errores
 
-def test_cada_hallazgo_tiene_un_sitio_y_ninguno_se_pierde():
+def test_cada_hallazgo_esta_clasificado_y_ninguna_incidencia_se_pierde():
+    """Todo hallazgo es una incidencia (I-xxx), una nota técnica (pestaña Revisión) o de un tipo que no es error.
+
+    Los que no son errores no se muestran en el visor desde el 10/11/2026: siguen en conocimiento/. Un tipo nuevo
+    sin clasificar hace fallar el test, para decidir dónde va.
+    """
     import errores
 
-    import grafo
-
-    sitio = {**{t: "grafo" for t in errores.EN_EL_GRAFO}, **{t: "revision" for t in errores.TECNICOS}}
+    clasificados = errores.NO_SON_ERRORES | set(errores.TECNICOS)
     for x in datos.hallazgos():
-        assert x["id"].startswith("I-") or x["tipo"] in sitio, x["id"]
-    en_el_grafo = {n["id"] for n in grafo.construir()["nodos"]}
-    assert {x["id"] for x in datos.hallazgos() if x["tipo"] in errores.EN_EL_GRAFO} <= en_el_grafo
+        assert x["id"].startswith("I-") or x["tipo"] in clasificados, x["id"]
     inc = errores.incidencias()
     assert len(inc) == sum(x["id"].startswith("I-") for x in datos.hallazgos())
     vistas = {i["id"] for c in errores.catalogo() for i in errores.propias(c)} | {i["id"] for i in errores.generales()["incidencias"]}

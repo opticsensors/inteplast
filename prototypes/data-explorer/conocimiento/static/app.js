@@ -11,7 +11,6 @@ const api = async (url) => {
 }
 const una = async (url) => (cache[url] ??= api(url))
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c])
-const md = (t) => (window.marked ? marked.parse(t || "") : `<pre>${esc(t)}</pre>`)
 const num = (n) => (n ?? 0).toLocaleString("es-ES")
 const h = (html) => { const d = document.createElement("div"); d.innerHTML = html.trim(); return d.firstElementChild }
 
@@ -37,13 +36,14 @@ async function render() {
     else if (tab === "errores" && partes[1] === "generales") await vistaGenerales(q)
     else if (tab === "errores" && partes[1]) await vistaErroresPieza(partes[1], q)
     else if (tab === "errores") await vistaErrores()
-    else if (tab === "grafo") await vistaGrafo(q)
-    else if (tab === "esquema") await vistaEsquema()
     else if (tab === "revision") await vistaRevision()
   } catch (e) {
     vista.innerHTML = `<div class="vacio">Error: ${esc(e.message)}</div>`
     console.error(e)
   }
+  // Las pestañas Planos y Piezas devuelven a su cuadrícula tal como se dejó (filtros y búsqueda).
+  document.querySelector('header nav a[data-tab="planos"]').href = ultimaRejilla
+  document.querySelector('header nav a[data-tab="piezas"]').href = ultimasPiezas
 }
 
 const CASOS_VISIBLES = 25 // en la pestaña Revisión; revision.json los guarda todos
@@ -69,22 +69,32 @@ function tagPlano(p) {
   return t ? `<span class="chip ${t.clase}">${t.texto}</span>` : ""
 }
 
+// Segundo tag, de contorno: si alguno de los números situados en el plano tiene datos en su ficha (medidas o correcciones).
+const TAGS_DATOS = { con: { texto: "Cotas con datos", clase: "contorno verde" }, sin: { texto: "Cotas sin datos", clase: "contorno" } }
+
+function tagDatos(p) {
+  const t = TAGS_DATOS[p.datos]
+  return t ? `<span class="chip ${t.clase}" title="${p.numeros_con_datos} de ${p.numeros} números situados en el plano tienen medidas o correcciones">${t.texto}</span>` : ""
+}
+
 async function vistaPlanos(q) {
   ultimaRejilla = location.hash || "#/planos"
   const { planos } = await una("/api/planos")
   const texto = q.get("q") || ""
   const feature = q.get("f") || ""
   const tag = q.get("t") || ""
+  const conDatos = q.get("d") || ""
   const features = [...new Set(planos.map((p) => p.feature))].sort()
   vista.innerHTML = `
     <div class="barra">
       <input type="search" id="q" placeholder="Pieza, nombre, feature…" value="${esc(texto)}" style="width:320px">
       <select id="f"><option value="">Todos los features</option>${features.map((f) => `<option ${f === feature ? "selected" : ""}>${esc(f)}</option>`).join("")}</select>
       <select id="t"><option value="">Todos los tags</option>${Object.entries(TAGS).map(([k, v]) => `<option value="${k}" ${k === tag ? "selected" : ""}>${v.texto} (${planos.filter((p) => p.tag === k).length})</option>`).join("")}</select>
+      <select id="d"><option value="">Con y sin datos</option>${Object.entries(TAGS_DATOS).map(([k, v]) => `<option value="${k}" ${k === conDatos ? "selected" : ""}>${v.texto} (${planos.filter((p) => p.datos === k).length})</option>`).join("")}</select>
     </div>
     <div class="rejilla" id="rejilla"></div>`
   const t = texto.toLowerCase()
-  let lista = planos.filter((p) => (!feature || p.feature === feature) && (!tag || p.tag === tag))
+  let lista = planos.filter((p) => (!feature || p.feature === feature) && (!tag || p.tag === tag) && (!conDatos || p.datos === conDatos))
   if (texto) lista = lista.filter((p) => `${p.codigo} ${p.nombre} ${p.feature} ${p.ruta}`.toLowerCase().includes(t))
   ordenPlanos = lista.map((p) => p.id)
   const rejilla = document.getElementById("rejilla")
@@ -94,7 +104,7 @@ async function vistaPlanos(q) {
       <div class="mini"><img loading="lazy" alt="" src="${imagenPlano(p, 1, "mini")}"></div>
       <div class="pie"><b>${esc(p.codigo)}</b> · ${esc(p.feature)}
         <div class="nombre">${esc(p.nombre)}</div>
-        ${tagPlano(p)}
+        ${tagPlano(p)}${tagDatos(p)}
       </div></div>`)
     const img = card.querySelector("img")
     img.onerror = () => { img.replaceWith(h(`<span>sin imagen (¿en la nube?)</span>`)) }
@@ -107,15 +117,18 @@ async function vistaPlanos(q) {
     if (v) p.set("q", v)
     if (document.getElementById("f").value) p.set("f", document.getElementById("f").value)
     if (document.getElementById("t").value) p.set("t", document.getElementById("t").value)
+    if (document.getElementById("d").value) p.set("d", document.getElementById("d").value)
     ir(`#/planos${p.toString() ? "?" + p : ""}`)
   }
   const qin = document.getElementById("q")
   qin.onkeydown = (e) => { if (e.key === "Enter") actualiza() }
   qin.focus(); qin.setSelectionRange(qin.value.length, qin.value.length)
-  for (const id of ["f", "t"]) document.getElementById(id).onchange = actualiza
+  for (const id of ["f", "t", "d"]) document.getElementById(id).onchange = actualiza
 }
 
 /* ------------------------------------------------------------ planos: visor */
+
+let marcarDatos = false // «Marcar cotas con datos»: siempre desactivada al abrir el visor
 
 async function vistaPlano(id, q) {
   const p = await api(`/api/plano/${id}`)
@@ -129,10 +142,9 @@ async function vistaPlano(id, q) {
     <div class="plano">
       <div class="izq">
         <div class="barra">
-          <button id="volver" title="Volver a la cuadrícula">▦ Cuadrícula</button>
           <button id="ant" ${anterior ? "" : "disabled"}>◀</button>
           <button id="sig" ${siguiente ? "" : "disabled"}>▶</button>
-          <b>${esc(p.codigo)}</b> <span style="color:var(--suave)">${esc(p.nombre)}</span>
+          <b>${esc(p.codigo)}</b> <span style="color:var(--suave)">${esc(p.nombre)}</span> ${tagPlano(p)}${tagDatos(p)}
           <span style="margin-left:auto"></span>
           ${p.paginas > 1 ? `<select id="pag">${Array.from({ length: p.paginas }, (_, i) => `<option value="${i + 1}" ${i + 1 === pagina ? "selected" : ""}>página ${i + 1}</option>`).join("")}</select>` : ""}
           <button id="menos">−</button><button id="ajustar">Ajustar</button><button id="mas">+</button>
@@ -140,25 +152,21 @@ async function vistaPlano(id, q) {
         </div>
         <div class="visor" id="visor"><div class="lienzo" id="lienzo"><img id="img" alt=""><div class="capa" id="capa"></div></div></div>
       </div>
-      <aside class="panel">
+      <aside class="panel panel-plano">
         <input type="search" id="buscar" placeholder="Buscar: cota (N170) o texto" value="${esc(busqueda)}" style="width:100%">
+        <div id="datosCotas" class="datos-cotas">
+          <label title="En verde, los números del plano que tienen medidas (Excel o CSV) o correcciones en la pieza. Es el número de la pieza: el plano puede ser de otra revisión que los informes.">
+            <input type="checkbox" id="verDatos" ${marcarDatos ? "checked" : ""}> Marcar cotas con datos</label>
+          <span id="cuentaDatos" class="nota"></span>
+        </div>
         <div id="estadoBusqueda" style="font-size:12px;color:var(--suave);margin:4px 0"></div>
         <ul class="resultados" id="resultados"></ul>
         <div id="cota"></div>
-        <h3>Plano</h3>
-        <div class="ruta">${esc(p.ruta)}</div>
-        <p>${tagPlano(p)}</p>
-        <div id="infoGlobos" style="font-size:12.5px"></div>
         ${p.local ? "" : `<div class="alerta">${esc(p.onedrive)}</div>`}
-        <p><a href="#/piezas/${esc(p.codigo)}">Ver la ficha de la pieza ${esc(p.codigo)} →</a></p>
-        <details><summary>Páginas (biblioteca)</summary>
-          <table><tr><th>Pág.</th><th>Tamaño (pt)</th><th>Imágenes</th><th>Caracteres</th></tr>
-          ${p.detalle_paginas.map((x) => `<tr><td>${x.pagina}</td><td>${Math.round(x.ancho_pt || 0)}×${Math.round(x.alto_pt || 0)}</td><td>${x.imagenes ?? ""}</td><td>${x.caracteres}</td></tr>`).join("")}</table>
-        </details>
+        <div id="avisoLectura" class="aviso-lectura" hidden>Lectura automática: puede fallar sin avisar.</div>
       </aside>
     </div>`
   const navega = (otro, extra = "") => ir(`#/planos/${otro}${extra}`)
-  document.getElementById("volver").onclick = () => ir(ultimaRejilla)
   if (anterior) document.getElementById("ant").onclick = () => navega(anterior)
   if (siguiente) document.getElementById("sig").onclick = () => navega(siguiente)
   const selPag = document.getElementById("pag")
@@ -204,20 +212,18 @@ async function vistaPlano(id, q) {
   img.src = imagenPlano(p, pagina, "grande")
 
   // Globos: del .icp o, sin él, de las lecturas automáticas
+  const conDatosPedido = api(`/api/plano/${id}/cotas-con-datos`)
   const g = await api(`/api/plano/${id}/${pagina}/globos`)
-  const info = document.getElementById("infoGlobos")
-  const detalleGlobos = g.detalle ? `<span style="color:var(--suave)">${esc(g.detalle)}</span>` : ""
-  info.innerHTML = g.metodo === "lectura"
-    ? `<b>${g.globos.length} números leídos</b><br>${detalleGlobos}`
-    : g.metodo
-      ? `<b>${g.globos.length} globos</b> del <code>${esc(g.icp)}</code><br>${detalleGlobos}`
-      : detalleGlobos || "Sin globos ni números leídos en esta página."
+  // Solo cuando lo que se ve en el plano sale de leerlo (globos sin .icp o numeración): el .icp no se lee.
+  const aviso = document.getElementById("avisoLectura")
+  if (aviso) aviso.hidden = g.metodo !== "lectura"
   await listo
   const radio = Math.min(est.w, est.h) * 0.0085
   // En los planos limpios el globo no está dibujado: se reconstruye con su número y una línea hasta la cota.
   const sinDibujar = g.metodo === "aproximada" || g.metodo === "gemela"
   const claseGlobo = sinDibujar ? "aprox" : g.metodo === "lectura" ? "lectura" : ""
   const marcadores = []
+  const numeros = [] // los globos o números del plano, con su etiqueta, para «Marcar cotas con datos»
   if (sinDibujar) {
     const lineas = g.globos.filter((b) => b.px != null).map((b) => `<line x1="${b.x * est.w}" y1="${b.y * est.h}" x2="${b.px * est.w}" y2="${b.py * est.h}"/>`).join("")
     const svg = h(`<svg class="lineas-globo" viewBox="0 0 ${est.w} ${est.h}" stroke-width="${radio * 0.14}">${lineas}</svg>`)
@@ -233,9 +239,24 @@ async function vistaPlano(id, q) {
     }
     d.onmousedown = (e) => e.stopPropagation()
     d.onclick = () => { marcadores.forEach((m) => m.classList.remove("sel")); d.classList.add("sel"); mostrarCota(p.codigo, b.etiqueta, p.componente) }
-    capa.append(d); marcadores.push(d)
+    capa.append(d); marcadores.push(d); numeros.push({ d, etiqueta: b.etiqueta })
   }
   document.getElementById("verGlobos").onchange = (e) => marcadores.forEach((m) => { m.style.display = e.target.checked ? "" : "none" })
+
+  // «Marcar cotas con datos»: en verde, los números de esta página cuya ficha tiene medidas o correcciones.
+  // Igual en todos los planos, también «0 de 0». Desactivada al abrir el visor, para que se vea primero todo lo
+  // que se detecta; se recuerda al pasar de un plano a otro.
+  conDatosPedido.then((datosCotas) => {
+    const cuenta = document.getElementById("cuentaDatos")
+    if (!cuenta) return // se ha cambiado de pantalla
+    const conjunto = new Set(datosCotas.cotas)
+    const con = numeros.filter((x) => conjunto.has(x.etiqueta))
+    cuenta.textContent = `${con.length} de ${numeros.length} cotas con datos`
+    const ver = document.getElementById("verDatos")
+    const pinta = () => con.forEach((x) => x.d.classList.toggle("con-datos", ver.checked))
+    ver.onchange = () => { marcarDatos = ver.checked; pinta() }
+    pinta()
+  }).catch((e) => console.error(e))
 
   // Búsqueda dentro del plano
   const caja = document.getElementById("buscar")
@@ -269,7 +290,9 @@ async function vistaPlano(id, q) {
       Object.assign(m.style, { left: x.x * 100 + "%", top: x.y * 100 + "%", width: Math.max(x.w, minimo) * 100 + "%", height: Math.max(x.h, minimo * est.w / est.h) * 100 + "%" })
       capa.append(m); return m
     })
-    if (r.cota && r.cota.medidas) mostrarCota(p.codigo, r.cota.cota, p.componente)
+    // La ficha es siempre la de lo buscado: con o sin medidas, nunca la de la cota anterior.
+    if (r.cota && ES_COTA.test(texto)) mostrarCota(p.codigo, r.cota.cota, p.componente)
+    else limpiaCota()
     if (aqui.length) { const x = aqui[0]; marcasRes[r.resultados.indexOf(x)]?.classList.add("actual"); centra(x.x + x.w / 2, x.y + x.h / 2) }
   }
   caja.onkeydown = (e) => { if (e.key === "Enter") buscar() }
@@ -284,6 +307,29 @@ function motivoSinResultados(p) {
   return "Este plano aún no se ha leído (leer_planos.py)."
 }
 
+// Una búsqueda que es un número de cota (170, N170, No.170, []170, 45.1); lo demás es texto del plano.
+const ES_COTA = /^(?:n|no\.?|\[\]|□)?\s*\d+(?:\.\d+)?$/i
+
+function limpiaCota() {
+  const div = document.getElementById("cota")
+  if (!div) return
+  div.dataset.pedido = String(+(div.dataset.pedido || 0) + 1) // descarta una ficha que aún estuviera cargando
+  div.innerHTML = ""
+}
+
+const filaCota = (etiqueta, valor) => `<div class="fila-cota"><span>${etiqueta}</span><b>${valor}</b></div>`
+
+// Lo que interesa de una cota al mirarla en el plano: si tiene medidas en los Excel y en los CSV, cuántas, y correcciones.
+function resumenCota(r) {
+  const info = r.info, dr = info.en_informes
+  const excel = dr.medidas
+    ? `${num(dr.medidas)} medidas en ${dr.documentos} informes${dr.excluidas ? ` <span class="nota" title="RAND, ceros y atípicos">(${num(dr.excluidas)} excluidas)</span>` : ""}`
+    : info.pieza_con_medidas ? "sin medidas de esta cota" : "la pieza no tiene medidas leídas"
+  const csv = info.csv == null ? "no leídos" : info.csv.medidas ? `${num(info.csv.medidas)} medidas en ${info.csv.ficheros} ficheros` : "sin medidas de esta cota"
+  return filaCota("Excel (informes)", excel) + filaCota("CSV (CMM)", csv) +
+    filaCota("Correcciones", r.correcciones.length ? cuantasCorrecciones(r.correcciones.length) : "ninguna")
+}
+
 // `componentePlano` dice de qué pieza es el plano en un libro con dos (3288). El del conjunto no es de ninguna: se elige.
 async function mostrarCota(codigo, cota, componentePlano) {
   const div = document.getElementById("cota")
@@ -293,27 +339,27 @@ async function mostrarCota(codigo, cota, componentePlano) {
     div.innerHTML = `<div class="bloque">Cargando cota ${esc(cota)}…</div>`
     const consulta = new URLSearchParams({ c: cota })
     if (componente) consulta.set("componente", componente)
-    const r = await api(`/api/pieza/${codigo}/cota?${consulta}`)
+    let r
+    try {
+      r = await api(`/api/pieza/${codigo}/cota?${consulta}`)
+      // Un servidor arrancado antes de cambiar el código devuelve la ficha sin estos campos.
+      if (!r.info || !r.info.en_informes || !("csv" in r.info)) throw new Error("el servidor del visor es de una versión anterior: reinícialo (app.py)")
+    } catch (e) {
+      if (div.isConnected && div.dataset.pedido === pedido) {
+        div.innerHTML = `<div class="bloque"><b>Cota ${esc(cota)}</b><div class="alerta">No se ha podido cargar: ${esc(e.message)}</div></div>`
+      }
+      return
+    }
     if (!div.isConnected || div.dataset.pedido !== pedido) return // se ha cambiado de pantalla o de globo mientras cargaba
     const titulo = `<b>Cota ${esc(cota)} · pieza ${esc(codigo)}${componente ? ` · ${esc(r.componentes.find((x) => x.id === componente)?.etiqueta)}` : ""}</b>`
     const botones = conjunto ? `<div class="selectores">${r.componentes.map((x) => `<button data-componente="${esc(x.id)}" class="${x.id === componente ? "activo" : ""}">${esc(x.etiqueta)} · ${num(x.valores)} valores</button>`).join("")}</div>` : ""
     if (conjunto && !componente) {
       div.innerHTML = `<div class="bloque">${titulo}<div class="nota">Este plano es el conjunto, y en cada pieza este número es otra cota. Elige cuál mirar:</div>${botones}</div>`
     } else {
-      const info = r.info
-      const nom = info.nominal[0]
-      const enlace = `<a href="#/piezas/${esc(codigo)}?c=${encodeURIComponent(cota)}${r.componente ? `&componente=${esc(r.componente)}` : ""}">Ver evolución completa →</a>`
-      div.innerHTML = `<div class="bloque">${titulo}${botones}
-        ${info.medidas ? `<div>${num(info.medidas)} medidas en ${info.documentos} informes · ${cuantasCorrecciones(r.correcciones.length)}
-          ${nom ? `<br>Nominal ${nom[0]} (${nom[1] >= 0 ? "+" : ""}${nom[1]} / ${nom[2]})` : ""}
-          ${info.excluidas ? `<br><span class="chip naranja">${info.excluidas} excluidas (RAND, ceros, atípicos)</span>` : ""}</div>
-          <div id="graficaCota"></div>
-          ${r.elemento ? `<div class="nota">Pestaña ${esc(r.hoja)} · ${esc(r.elementos.find((x) => x.id === r.elemento)?.etiqueta)}</div>` : `<div class="nota">${r.excluidos.length ? `Todos sus valores están excluidos: no hay ninguno que dibujar.` : "Sin valores con muestreo identificable."}</div>`}
-          ${enlace}`
-          : `<div style="color:var(--suave)">Sin medidas con ese número en ${r.componente ? "esta pieza" : "los informes DR de la pieza"}. Los números de globo son locales a cada plano: puede ser otra hoja del plano.</div>`}</div>`
-      if (info.medidas && r.elemento) {
-        graficaLineas(document.getElementById("graficaCota"), { ...datosGrafica(r, r.cavidades.slice(0, MAX_CAVIDADES_VISIBLES)), alto: 220, margen: 56 })
-      }
+      // La evolución está en la ficha de la pieza, con esta cota ya dibujada; solo se enlaza si hay algo que dibujar.
+      const enlace = r.info.en_informes.medidas || r.info.csv?.medidas
+        ? `<a href="#/piezas/${esc(codigo)}?c=${encodeURIComponent(cota)}${r.componente ? `&componente=${esc(r.componente)}` : ""}">Ver evolución completa →</a>` : ""
+      div.innerHTML = `<div class="bloque">${titulo}${botones}${resumenCota(r)}${enlace}</div>`
     }
     div.querySelectorAll("[data-componente]").forEach((b) => { b.onclick = () => dibuja(b.dataset.componente) })
   }
@@ -609,11 +655,10 @@ async function vistaPieza(codigo, q) {
       return `<option value="${esc(x.cota)}" ${x.cota === elegida ? "selected" : ""}>${esc(x.cota)} — ${num(n.medidas)} medidas, ${n.muestreos} muestreos</option>`
     }).join("")
   c.innerHTML = `
-    <p><button id="volver" title="Volver a la cuadrícula">▦ Cuadrícula</button></p>
     <h2>Pieza ${esc(codigo)}</h2>
     <div>${tagPieza(d.resumen, tags)}${familiaPieza(d.resumen, familias)}${d.resumen.features.map((f) => `<span class="chip azul">${esc(f)}</span>`).join("")} ${d.resumen.carpetas.map((f) => `<span class="chip">${esc(f)}</span>`).join("")}</div>
     ${d.resumen.tag_motivo ? `<div class="nota">${esc(d.resumen.tag_motivo)}</div>` : ""}
-    <div class="bloque">
+    <div class="bloque" id="bloqueEvolucion">
       <b>Evolución de una cota</b> <span class="chip">informes intern.NN · un valor por cavidad y muestreo</span>
       <div class="selectores">
         <label>Cota <select id="selCota">${opcionesCota(null, cotaIni)}</select></label>
@@ -631,7 +676,8 @@ async function vistaPieza(codigo, q) {
       </table></div>
       ${d.sin_muestreo.length ? `<details><summary>${d.sin_muestreo.length} ficheros con medidas DR sin intern.NN en el nombre</summary>${d.sin_muestreo.map(esc).join("<br>")}</details>` : ""}
     </div>`
-  document.getElementById("volver").onclick = () => ir(ultimasPiezas)
+  // Desde un plano («Ver evolución completa»): directamente a la gráfica de esa cota.
+  if (q.get("c")) document.getElementById("bloqueEvolucion").scrollIntoView({ block: "start" })
 
   let componenteActual = null
   const cadenasActuales = () => d.cadenas.filter((x) => !componenteActual || !x.componente || x.componente === componenteActual)
@@ -777,196 +823,6 @@ async function vistaGenerales(q) {
   casillaTodas(q)
 }
 
-
-/* ------------------------------------------------------------ grafo */
-
-const COLORES = {
-  feature: "#f5a524", pieza: "#ef5350", hallazgo: "#b07cf7", pregunta: "#3ecf8e", caso: "#7b8496",
-  "ficha-pieza": "#4f8ff7", "ficha-feature": "#ff8f4d", docs: "#2ec4c4", conocimiento: "#f2d24b",
-  ingesta: "#8bc34a", rag: "#e57bd5", raiz: "#c8ccd6",
-}
-const NOMBRES = {
-  feature: "Feature", pieza: "Pieza", hallazgo: "Hallazgo / incongruencia (I-xxx)", pregunta: "Pregunta abierta (A-xx)",
-  caso: "Caso de referencia (CR-xxx)", "ficha-pieza": "Ficha de pieza (.md)", "ficha-feature": "Ficha de feature (.md)",
-  docs: "docs/ (.md)", conocimiento: "conocimiento/ (.md)", ingesta: "conocimiento/ingesta", rag: "conocimiento/rag", raiz: "Raíz del repo",
-}
-let grafoVivo = null
-const radioNodo = (n) => 2.5 + Math.sqrt(n.grado || 0) * 0.9
-
-async function vistaGrafo(q) {
-  const datos = await una("/api/grafo")
-  vista.innerHTML = `<div class="grafo"><div id="lienzo-grafo"></div>
-    <div class="controles">
-      <input type="search" id="buscaNodo" placeholder="Buscar nodo (3212, I-003, A10, trampas…)">
-      <div id="tipos"></div>
-      <div style="margin-top:6px">Menciones con peso ≥ <b id="vPeso">2</b><input type="range" id="peso" min="1" max="10" value="2" style="width:100%"></div>
-      <label><input type="checkbox" id="etiquetas" checked> nombres</label>
-      <div style="color:#8d96ab;margin-top:4px" id="cuentaGrafo"></div>
-    </div>
-    <aside class="lateral" id="lateral"><h2>Grafo del conocimiento</h2>
-      <p>Cada punto es un fichero Markdown, una pieza, un feature, un hallazgo (I-xxx), una pregunta abierta (A-xx) o un caso de referencia.
-      Las líneas salen de enlaces entre ficheros y de menciones explícitas en el texto o en los JSONL.</p>
-      <p>Pasa el ratón para ver el nombre; pulsa un nodo para ver su contenido y resaltar sus vecinos. Rueda para hacer zoom, arrastra para moverte.</p></aside></div>`
-  const activos = new Set(Object.keys(COLORES).filter((t) => t !== "caso"))
-  const tipos = document.getElementById("tipos")
-  const cuenta = {}
-  datos.nodos.forEach((n) => { cuenta[n.tipo] = (cuenta[n.tipo] || 0) + 1 })
-  for (const t of Object.keys(COLORES)) {
-    if (!cuenta[t]) continue
-    const l = h(`<label><input type="checkbox" ${activos.has(t) ? "checked" : ""}><span class="punto" style="background:${COLORES[t]}"></span>${NOMBRES[t]} <span style="color:#7d8699">${cuenta[t]}</span></label>`)
-    l.querySelector("input").onchange = (e) => { e.target.checked ? activos.add(t) : activos.delete(t); actualiza() }
-    tipos.append(l)
-  }
-  const el = document.getElementById("lienzo-grafo")
-  const ancho = () => el.clientWidth || vista.clientWidth - 420
-  let seleccion = null, vecinos = new Set(), enlacesSel = new Set(), hover = null, encuadrado = false
-  const g = ForceGraph()(el).width(ancho()).height(vista.clientHeight).backgroundColor("#16181d")
-    .nodeId("id").nodeVal((n) => 1 + Math.sqrt(n.grado || 0) * 1.6)
-    .nodeLabel(() => "")
-    .linkColor((l) => (enlacesSel.has(l) ? COLOR_SELECCION : COLOR_LINEA))
-    .linkWidth((l) => (enlacesSel.has(l) ? 1.8 : 0.6))
-    .linkDirectionalParticles((l) => (enlacesSel.has(l) ? 2 : 0)).linkDirectionalParticleWidth(2)
-    .d3VelocityDecay(0.3).cooldownTicks(400)
-    .onEngineStop(() => { if (!encuadrado) { encuadrado = true; g.zoomToFit(500, 40) } })
-    .nodeCanvasObject((n, ctx, escala) => {
-      const r = radioNodo(n)
-      const apagado = seleccion && !vecinos.has(n.id) && n.id !== seleccion
-      ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 2 * Math.PI)
-      ctx.fillStyle = apagado ? "rgba(90,95,110,.35)" : COLORES[n.tipo] || "#ccc"
-      if (!apagado) { ctx.shadowColor = COLORES[n.tipo]; ctx.shadowBlur = n.id === seleccion || n === hover ? 18 : 6 }
-      ctx.fill(); ctx.shadowBlur = 0
-      if (n.id === seleccion) { ctx.lineWidth = 2 / escala; ctx.strokeStyle = "#fff"; ctx.stroke() }
-      const mostrar = document.getElementById("etiquetas")?.checked && (escala > 1.6 || n.grado > 45 || n.id === seleccion || (seleccion && vecinos.has(n.id)) || n === hover)
-      if (mostrar && !apagado) {
-        const t = n.tipo === "pieza" || n.tipo === "hallazgo" || n.tipo === "pregunta" || n.tipo === "caso" ? n.etiqueta : (n.ruta || n.etiqueta).split("/").pop()
-        ctx.font = `${Math.max(11 / escala, 1.8)}px system-ui`; ctx.textAlign = "center"; ctx.textBaseline = "top"
-        ctx.fillStyle = "rgba(230,233,240,.92)"; ctx.fillText(t, n.x, n.y + r + 1.5)
-      }
-    })
-    .nodePointerAreaPaint((n, color, ctx) => { const r = radioNodo(n) + 1.5; ctx.fillStyle = color; ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 2 * Math.PI); ctx.fill() })
-    .onNodeHover((n) => {
-      hover = n; el.style.cursor = n ? "pointer" : ""
-      if (!n) { tooltip.style.display = "none"; return }
-      tooltip.innerHTML = `<b>${esc(n.etiqueta)}</b><br><span style="color:${COLORES[n.tipo]}">${esc(NOMBRES[n.tipo] || n.tipo)}</span>
-        ${n.ruta ? `<br><span style="color:#9aa">${esc(n.ruta)}</span>` : ""}${n.titulo ? `<br>${esc(n.titulo)}` : ""}
-        ${n.estado ? `<br>estado: ${esc(n.estado)}${n.relevancia ? ` · relevancia: ${esc(n.relevancia)}` : ""}` : ""}
-        ${n.etiquetas?.length ? `<br>${n.etiquetas.map((e) => `<span class="chip">${esc(e)}</span>`).join("")}` : ""}
-        ${n.resumen ? `<br><span style="color:#bbc">${esc(n.resumen)}</span>` : ""}<br><span style="color:#889">${n.grado} conexiones</span>`
-      tooltip.style.display = "block"
-    })
-    .onNodeClick((n) => selecciona(n.id, false))
-    .onBackgroundClick(() => { seleccion = null; vecinos = new Set(); enlacesSel = new Set() })
-  grafoVivo = g
-  g.d3Force("charge").strength(-90).distanceMax(400)
-  g.d3Force("link").distance((l) => (l.tipo === "enlace" ? 45 : 70)).strength(0.15)
-  el.onmousemove = (e) => { tooltip.style.left = e.clientX + 14 + "px"; tooltip.style.top = e.clientY + 14 + "px" }
-  window.onresize = () => { if (grafoVivo === g) g.width(ancho()).height(vista.clientHeight) }
-
-  let enlacesActuales = []
-  function actualiza() {
-    const peso = +document.getElementById("peso").value
-    document.getElementById("vPeso").textContent = peso
-    const nodos = datos.nodos.filter((n) => activos.has(n.tipo)).map((n) => ({ ...n }))
-    const ids = new Set(nodos.map((n) => n.id))
-    enlacesActuales = datos.aristas.filter((a) => ids.has(a.source) && ids.has(a.target) && (a.tipo !== "menciona" || a.peso >= peso)).map((a) => ({ ...a }))
-    const previos = new Map(g.graphData().nodes.map((n) => [n.id, n]))
-    nodos.forEach((n) => { const p = previos.get(n.id); if (p) { n.x = p.x; n.y = p.y } })
-    g.graphData({ nodes: nodos, links: enlacesActuales })
-    document.getElementById("cuentaGrafo").textContent = `${nodos.length} nodos · ${enlacesActuales.length} conexiones`
-  }
-  document.getElementById("peso").oninput = actualiza
-  document.getElementById("etiquetas").onchange = () => g.nodeColor(g.nodeColor())
-
-  async function selecciona(id, centrar = true) {
-    const nodo = g.graphData().nodes.find((n) => n.id === id)
-    seleccion = id; vecinos = new Set(); enlacesSel = new Set()
-    for (const l of g.graphData().links) {
-      const a = l.source.id ?? l.source, b = l.target.id ?? l.target
-      if (a === id || b === id) { vecinos.add(a); vecinos.add(b); enlacesSel.add(l) }
-    }
-    if (nodo && centrar) { encuadrado = true; g.centerAt(nodo.x, nodo.y, 600); g.zoom(2.5, 600) }
-    const lat = document.getElementById("lateral")
-    lat.innerHTML = `<div class="vacio">Cargando…</div>`
-    const r = await api(`/api/nodo?id=${encodeURIComponent(id)}`)
-    const n = r.nodo
-    const listaVecinos = [...vecinos].filter((v) => v !== id).map((v) => datos.nodos.find((x) => x.id === v)).filter(Boolean)
-      .sort((a, b) => a.tipo.localeCompare(b.tipo) || a.etiqueta.localeCompare(b.etiqueta))
-    lat.innerHTML = `<h2>${esc(n.etiqueta)}</h2>
-      <div><span class="chip" style="background:${COLORES[n.tipo]};color:#111">${esc(NOMBRES[n.tipo] || n.tipo)}</span> ${n.ruta ? `<code>${esc(n.ruta)}</code>` : ""}</div>
-      ${n.tipo === "pieza" ? `<p><a href="#/piezas/${esc(n.etiqueta)}">Abrir la ficha de la pieza →</a></p>` : ""}
-      <details ${listaVecinos.length < 25 ? "open" : ""}><summary>${listaVecinos.length} vecinos</summary>
-        ${listaVecinos.map((v) => `<a href="#" data-nodo="${esc(v.id)}" class="chip" style="border-left:4px solid ${COLORES[v.tipo]};background:#2a2f3a;color:#dde;text-decoration:none">${esc(v.tipo === "pieza" || v.tipo === "hallazgo" || v.tipo === "pregunta" ? v.etiqueta : (v.ruta || v.etiqueta).split("/").pop())}</a>`).join("")}
-      </details>
-      <div class="md">${r.markdown != null ? md(r.markdown) : r.datos ? `<table>${Object.entries(r.datos).map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(typeof v === "object" ? JSON.stringify(v) : v)}</td></tr>`).join("")}</table>` : ""}</div>`
-    lat.querySelectorAll("a[data-nodo]").forEach((a) => { a.onclick = (e) => { e.preventDefault(); selecciona(a.dataset.nodo) } })
-    lat.querySelectorAll(".md a[href]").forEach((a) => {
-      const href = a.getAttribute("href")
-      if (!href || /^(https?:|#|mailto:)/.test(href) || !r.ruta) return
-      const destino = decodeURIComponent(new URL(href, "http://x/" + r.ruta).pathname.slice(1))
-      if (datos.nodos.some((x) => x.id === destino)) a.onclick = (e) => { e.preventDefault(); selecciona(destino) }
-    })
-  }
-  const busca = document.getElementById("buscaNodo")
-  busca.onkeydown = (e) => {
-    if (e.key !== "Enter") return
-    const t = busca.value.trim().toLowerCase()
-    const n = g.graphData().nodes.find((x) => x.etiqueta.toLowerCase() === t || x.id.toLowerCase() === t)
-      || g.graphData().nodes.find((x) => `${x.id} ${x.etiqueta}`.toLowerCase().includes(t))
-    if (n) selecciona(n.id)
-  }
-  actualiza()
-  const inicial = q.get("n")
-  if (inicial) setTimeout(() => {
-    const nodo = datos.nodos.find((x) => x.id === inicial)
-    if (nodo && !activos.has(nodo.tipo)) { activos.add(nodo.tipo); actualiza() }
-    selecciona(inicial)
-  }, 1500)
-}
-
-/* ------------------------------------------------------------ esquema */
-
-const FLUJO = `flowchart LR
-  E[("Exemples<br>originales del cliente<br>OneDrive")] -->|inventariar.py| D[documento]
-  E -->|extraer.py, lectores.py| C[elemento · celda · estructura]
-  C -->|formulas_aleatorias.py| R[celda_aleatoria]
-  C -->|lector_dr.py| L[lectura_dr · medida_dr]
-  E -->|medidas_cmm.py| M[medida_cmm · medida_contorno]
-  C -->|perfil_ppap.py| P[perfil_ppap]
-  C -->|perfil_correcciones.py| PC[perfil_correccion]
-  L & PC -->|cadena_correcciones.py| CC[cadena_correccion]
-  E -->|globos_icp.py| G[globo]
-  D -->|auditar_ingesta.py| A[auditoria · datos/aceptacion/*.jsonl]
-  D & L & CC -. lectura humana y revisión .-> F["Fichas .md · incongruencias.md<br>hallazgos.jsonl · casos-referencia.jsonl"]
-  F & D & L -->|rag.py construir| I[("datos/rag/indice.sqlite")]
-  F -->|este visor| V{{Visor}}
-  CC -->|este visor| V
-  E -. los PDF de plano .-> V
-  E -->|miniaturas_cad.py| MC[capturas de los STEP]
-  MC --> V`
-
-async function vistaEsquema() {
-  const d = await una("/api/esquema")
-  vista.innerHTML = `<section class="contenido">
-    <h2>Esquema de lo que hay en conocimiento/</h2>
-    <p>De dónde sale cada tabla y cómo se relacionan. La biblioteca se regenera desde los originales y <b>no es fuente de verdad</b>:
-    las conclusiones revisadas viven en los Markdown y en <code>hallazgos.jsonl</code>. ${d.md} ficheros Markdown entran en el grafo.</p>
-    <h3>Flujo</h3><div class="mermaid" id="flujo"></div>
-    <h3>Tablas de la biblioteca y relaciones</h3>
-    <p style="color:var(--suave)">Todas las tablas cuelgan de <code>documento</code> por <code>documento_id</code> (relación lógica; SQLite no la impone salvo en <code>elemento</code>/<code>celda</code>/<code>estructura</code>).
-    <code>cadena_correccion</code> apunta a tres documentos: el PPTX de la corrección, el informe de origen y el de validación. La pieza y el muestreo <b>no son columnas</b> de <code>medida_dr</code>: se deducen de la carpeta (<code>documento.codigo</code>) y del nombre del fichero (<code>intern.NN</code>), y por eso se revisan en la pestaña Revisión.</p>
-    <div class="mermaid" id="er"></div>
-    <h3>Tamaño</h3>
-    <table><tr><th>Tabla</th><th>Filas</th><th>Columnas</th></tr>
-    ${d.tablas.map((t) => `<tr><td><code>${esc(t.nombre)}</code></td><td style="text-align:right">${num(t.filas)}</td><td style="font-size:11.5px">${t.columnas.map(esc).join(", ")}</td></tr>`).join("")}</table>
-    <h3>Índice RAG (<code>datos/rag/indice.sqlite</code>)</h3>
-    <table><tr><th>Tabla</th><th>Filas</th></tr>${d.rag.map((t) => `<tr><td><code>${esc(t.nombre)}</code></td><td>${num(t.filas)}</td></tr>`).join("")}</table>
-    <h3>Registros en texto</h3>
-    <table><tr><th>Fichero</th><th>Líneas</th><th>Tamaño</th></tr>${d.ficheros.map((f) => `<tr><td><code>${esc(f.ruta)}</code></td><td>${f.lineas ?? ""}</td><td>${num(Math.round(f.bytes / 1024))} KB</td></tr>`).join("")}</table>
-  </section>`
-  mermaid.initialize({ startOnLoad: false, theme: "default", er: { useMaxWidth: false }, flowchart: { useMaxWidth: true } })
-  document.getElementById("flujo").innerHTML = (await mermaid.render("m-flujo", FLUJO)).svg
-  document.getElementById("er").innerHTML = (await mermaid.render("m-er", d.er)).svg
-}
 
 /* ------------------------------------------------------------ revisión */
 

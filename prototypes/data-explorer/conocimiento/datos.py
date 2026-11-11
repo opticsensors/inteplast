@@ -574,5 +574,10 @@ def pieza(codigo: str) -> dict:
 
 def resumen_cota(codigo: str, cota: str, componente: str | None = None) -> dict:
     info = info_cota(codigo, cota, solo_con_muestreo=True, componente=componente)
-    info["sin_muestreo"] = info_cota(codigo, cota, componente=componente)["medidas"] - info["medidas"]
+    todas = info_cota(codigo, cota, componente=componente)
+    info["sin_muestreo"] = todas["medidas"] - info["medidas"]
+    # Para el plano: todas las medidas de los informes, también las de ficheros sin intern.NN en el nombre.
+    info["en_informes"] = {k: todas[k] for k in ("medidas", "documentos", "excluidas")}
+    # «Sin medidas de esta cota» frente a «la pieza no tiene medidas leídas»: no es lo mismo.
+    info["pieza_con_medidas"] = bool(medidas(codigo))
     return info

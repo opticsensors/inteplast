@@ -22,6 +22,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+import threading
 from collections import Counter, defaultdict
 from functools import lru_cache
 
@@ -450,6 +451,76 @@ def _datos_cota(codigo: str, cota: str) -> tuple:
     for x in filas:
         x["fecha"] = fechas.get(x["doc"])
     return tuple(filas), csv_de(c, codigo, cota), tuple(correcciones(c, codigo, cota))
+
+
+def resumen_csv(codigo: str, cota: str) -> dict | None:
+    """Evaluaciones de la CMM de la cota que entran en la gráfica (las de `csv_de`), y en cuántos ficheros.
+
+    None si de la pieza no hay ningún CSV leído: «no leídos» no es lo mismo que «sin medidas de esta cota».
+    """
+    c = datos.con()
+    if not columnas(c, "medida_cmm") or not c.execute("SELECT 1 FROM medida_cmm WHERE pieza = ? LIMIT 1", (codigo,)).fetchone():
+        return None
+    puntos = [p for lista in _datos_cota(codigo, cota)[1].values() for p in lista]
+    return {"medidas": len(puntos), "ficheros": len({p["nombre"] for p in puntos})}
+
+
+def cotas_csv(c, codigo: str) -> set:
+    """Cotas con evaluaciones de la CMM que entran en la gráfica: el mismo criterio que `csv_de`, por cota."""
+    if not columnas(c, "medida_cmm"):
+        return set()
+    sin_condicion = " AND variante IS NULL" if "variante" in columnas(c, "medida_cmm") else ""
+    cotas = {f[0] for f in c.execute("SELECT DISTINCT cota FROM medida_cmm WHERE pieza = ? AND valor IS NOT NULL" + sin_condicion, (codigo,))}
+    if columnas(c, "medida_cmm_comparativa"):
+        individuales = {(m, (cav or "").casefold()) for m, cav in c.execute(
+            "SELECT DISTINCT muestreo, cavidad FROM medida_cmm WHERE pieza = ?" + sin_condicion, (codigo,))}
+        cotas |= {cota for cota, m, cav in c.execute(
+            "SELECT DISTINCT cota, muestreo, cavidad FROM medida_cmm_comparativa WHERE pieza = ? AND valor IS NOT NULL AND variante IS NULL",
+            (codigo,)) if (m, (cav or "").casefold()) not in individuales}
+    cotas.discard(None)
+    return cotas
+
+
+@lru_cache(maxsize=64)
+def cotas_con_datos(codigo: str, componente: str | None = None) -> dict:
+    """Cotas de la pieza con algo en su ficha del plano: medidas de los informes, del CSV de la CMM o corrección.
+
+    Las mismas fuentes que las tres líneas de la ficha; con `componente` (3288), solo las de esa pieza del libro.
+    """
+    c = datos.con()
+    medidas = datos.medidas(codigo)
+    excel = {f["cota"] for f in medidas if componente is None or datos.componente_de_nombre(codigo, f["hoja"]) == componente}
+    csv = cotas_csv(c, codigo)
+    corregidas = {f["cota"] for f in c.execute(
+        "SELECT ca.cota, d.nombre FROM cadena_correccion ca JOIN documento d ON d.id = ca.documento_id WHERE ca.pieza = ?", (codigo,))
+        if componente is None or datos.componente_de_nombre(codigo, f["nombre"]) in (None, componente)}
+    todas = (excel | csv | corregidas) - {None}
+    return {"cotas": sorted(todas, key=datos.clave_cota), "pieza_con_datos": bool(medidas or csv or corregidas)}
+
+
+_datos_planos: dict | None = None
+_bloqueo_planos = threading.Lock()
+
+
+def datos_de_planos() -> dict[int, dict]:
+    """Tag de datos de cada plano: de sus números situados (todas las páginas), cuántos tienen datos en su ficha.
+
+    «con» si alguno los tiene; si no, «sin», también con 0 números situados (mismo criterio que la casilla del
+    plano). Se calcula una vez (unos segundos: hay que situar los globos de los 56 planos); `app.py` lo
+    lanza al arrancar, en segundo plano.
+    """
+    global _datos_planos
+    with _bloqueo_planos:
+        if _datos_planos is None:
+            salida = {}
+            for p in datos.planos():
+                componente = p["componente"] if p["componente"] in datos.COMPONENTES.get(p["codigo"], {}) else None
+                marcadas = set(cotas_con_datos(p["codigo"], componente)["cotas"]) if p["codigo"] else set()
+                etiquetas = [b["etiqueta"] for pag in range(1, p["paginas"] + 1) for b in datos.globos(p["id"], pag)["globos"]]
+                con = sum(e in marcadas for e in etiquetas)
+                salida[p["id"]] = {"datos": "con" if con else "sin", "numeros_con_datos": con, "numeros": len(etiquetas)}
+            _datos_planos = salida
+        return _datos_planos
 
 
 def serie(codigo: str, cota: str, pestana: str | None = None, elemento: str | None = None, componente: str | None = None) -> dict:
