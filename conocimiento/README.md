@@ -66,6 +66,8 @@ segunda explicación en prosa.
 | [hallazgos.jsonl](hallazgos.jsonl) | Un registro por hallazgo o incongruencia: afirmación, fuentes (ruta, SHA-256, localizador), estado | ✅ |
 | [formatos-parsing.md](formatos-parsing.md) | Formatos del 3212 columna a columna (CSV CMM, XLS PPAP, PPTX) | ✅ |
 | [valores-por-punto.md](valores-por-punto.md) | Por qué una cota en un muestreo y una cavidad tiene varios valores, con censo por pieza (`valores_por_punto.py`) | ✅ |
+| [auditoria-derivadas-2026-11-11.md](auditoria-derivadas-2026-11-11.md) | Si las tablas e informes derivados están al día con su código: regenerados en una copia aislada y comparados fila a fila. Método reutilizable y desfases pendientes | ✅ |
+| [revision-comprobaciones.md](revision-comprobaciones.md) | Destino de cada comprobación de `revision.py` (junto al dato, Errores, interno o pendiente), con evidencia, recuentos de referencia y pendientes (11/11/2026) | ✅ |
 | [visores.md](visores.md) | Los visores de `prototypes/data-explorer/` y lo que confirmaron | ✅ |
 | `0-bolt-eye/` … `7-planitudes/` | Una carpeta por feature: `README.md` del feature y fichas de pieza (`3212/` en detalle) | ✅ |
 | `herramientas/` | Inventario, extracción, perfiles y consultas (Python) | ✅ |

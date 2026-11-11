@@ -2,7 +2,9 @@
 import argparse
 import contextlib
 import io
+import json
 import sqlite3
+import sys
 import unittest
 
 from consultar import cmd_buscar
@@ -109,6 +111,85 @@ class RevisionTests(unittest.TestCase):
             with contextlib.redirect_stdout(out):
                 cmd_buscar(con, argparse.Namespace(consulta="venting*", feature="Otra", n=30))
             self.assertIn("0 de 0", out.getvalue())
+
+    def test_comparar_derivadas_detecta_campos_y_no_el_id_de_elemento(self):
+        """Auditoría del 11/11/2026: comparar filas y campos, no recuentos; `elemento.id` se renumera al reextraer."""
+        import tempfile
+        from pathlib import Path
+
+        from comparar_derivadas import tablas
+
+        with tempfile.TemporaryDirectory() as d:
+            rutas = []
+            for nombre, valor, ident in (("a.sqlite", 1.5, 10), ("b.sqlite", 1.6, 99)):
+                ruta = str(Path(d) / nombre)
+                con = sqlite3.connect(ruta)
+                con.executescript("CREATE TABLE perfil_ppap (documento_id INTEGER, hoja TEXT, nok INTEGER);"
+                                  "CREATE TABLE elemento (id INTEGER PRIMARY KEY, documento_id INTEGER, texto TEXT);")
+                con.execute("INSERT INTO perfil_ppap VALUES (1, 'DR', ?)", (valor,))
+                con.execute("INSERT INTO elemento VALUES (?, 1, 'igual')", (ident,))
+                con.commit()
+                con.close()
+                rutas.append(ruta)
+            r = tablas(*rutas, ["perfil_ppap", "elemento"])
+        self.assertEqual(r["perfil_ppap"]["filas_actual"], r["perfil_ppap"]["filas_nueva"])  # mismo recuento...
+        self.assertEqual(r["perfil_ppap"]["campos_que_cambian"], {"nok": 1})  # ...pero un campo distinto
+        self.assertEqual((r["elemento"]["distintas_actual"], r["elemento"]["distintas_nueva"]), (0, 0))
+
+    def _carpetas(self, actual: dict, nueva: dict):
+        """Dos carpetas de aceptación con ficheros {nombre: [filas]}; devuelve (directorio temporal, actual, nueva)."""
+        import tempfile
+        from pathlib import Path
+
+        d = tempfile.TemporaryDirectory()
+        rutas = []
+        for nombre, ficheros in (("actual", actual), ("nueva", nueva)):
+            carpeta = Path(d.name) / nombre
+            carpeta.mkdir()
+            for f, filas in ficheros.items():
+                (carpeta / f).write_text("".join(json.dumps(x) + "\n" for x in filas), encoding="utf-8")
+            rutas.append(str(carpeta))
+        return d, *rutas
+
+    def _comparar(self, actual: dict, nueva: dict):
+        """Detección (`aceptacion`) y resultado del comando (`main`, código de salida)."""
+        from comparar_derivadas import aceptacion, main
+
+        d, a, b = self._carpetas(actual, nueva)
+        with d, contextlib.redirect_stdout(io.StringIO()):
+            return aceptacion(a, b), main(["aceptacion", a, b])
+
+    def test_comparar_aceptacion_ve_ficheros_de_una_sola_carpeta(self):
+        """11/11/2026: solo recorría los ficheros de la carpeta actual; uno añadido en la nueva no se veía."""
+        base = {"p.jsonl": [{"id": 1, "x": 1}]}
+        r, rc = self._comparar(base, base)
+        self.assertEqual(rc, 0)
+        self.assertEqual((r["ficheros_solo_actual"], r["ficheros_solo_nueva"]), ([], []))
+        r, rc = self._comparar(base, {**base, "vacio.jsonl": []})  # aunque esté vacío
+        self.assertEqual((r["ficheros_solo_nueva"], rc), (["vacio.jsonl"], 1))
+        r, rc = self._comparar({**base, "q.jsonl": [{"id": 9}]}, base)
+        self.assertEqual((r["ficheros_solo_actual"], r["solo_actual"], rc), (["q.jsonl"], 1, 1))
+
+    def test_comparar_aceptacion_ve_ids_duplicados(self):
+        """11/11/2026: un diccionario por `id` ocultaba las filas repetidas, en un fichero o entre ficheros."""
+        base = {"p.jsonl": [{"id": 1, "x": 1}, {"id": 2, "x": 2}]}
+        r, rc = self._comparar(base, {"p.jsonl": base["p.jsonl"] + [{"id": 2, "x": 2}]})  # en el mismo fichero
+        self.assertEqual((r["duplicados_nueva"], r["duplicados_actual"], rc), ({"2": 2}, {}, 1))
+        entre = {"p.jsonl": [{"id": 1}], "q.jsonl": [{"id": 1}]}  # entre ficheros, igual en las dos carpetas
+        r, rc = self._comparar(entre, entre)
+        self.assertEqual((r["con_cambios"], r["solo_nueva"]), (0, 0))  # fichero a fichero no cambia nada...
+        self.assertEqual((r["duplicados_actual"], r["duplicados_nueva"], rc), ({"1": 2}, {"1": 2}, 1))  # ...pero se ve
+
+    def test_comparar_aceptacion_codigo_de_salida_del_proceso(self):
+        import subprocess
+        from pathlib import Path
+
+        script = str(Path(__file__).with_name("comparar_derivadas.py"))
+        for nueva, esperado in (({"p.jsonl": [{"id": 1}]}, 0), ({"p.jsonl": [{"id": 1}], "n.jsonl": []}, 1)):
+            d, a, b = self._carpetas({"p.jsonl": [{"id": 1}]}, nueva)
+            with d:
+                proceso = subprocess.run([sys.executable, "-B", script, "aceptacion", a, b], capture_output=True)
+            self.assertEqual(proceso.returncode, esperado, proceso.stderr)
 
 
 if __name__ == "__main__":
