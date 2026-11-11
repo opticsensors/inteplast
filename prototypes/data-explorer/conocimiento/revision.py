@@ -2,8 +2,9 @@
 
 Solo lee: la biblioteca (solo lectura), hallazgos.jsonl, casos-referencia.jsonl y las auditorías
 de aceptación. No corrige nada. Cada comprobación dice qué mira y cuántos casos encuentra; un aviso
-es algo que mirar, no un error demostrado. El JSON guarda todos los casos; el Markdown y la pestaña
-Revisión solo enseñan los primeros.
+es algo que mirar, no un error demostrado. El JSON guarda todos los casos; el Markdown solo enseña los
+primeros. Desde el 11/11/2026 no tiene pestaña en el visor: el destino de cada comprobación (junto al dato, Errores,
+interno o pendiente) y los recuentos de referencia están en `conocimiento/revision-comprobaciones.md`.
 
     python revision.py            # escribe out/conocimiento/revision.json y revision.md
 """
@@ -295,9 +296,9 @@ def revisar() -> dict:
     agrupado = Counter((x["pieza"], x["problema"]) for x in cad_f)
     res.append(comprobacion("M10", "muestreo", "cadena_correccion: fechas incoherentes con la corrección",
                             f"Origen más de {MARGEN_DIAS} días después de la fecha de la corrección, o validación antes de ella. "
-                            "Por pieza (cada cota cuenta una vez):",
-                            [{"pieza": p, "problema": pr, "cotas": n} for (p, pr), n in sorted(agrupado.items())], len(filas),
-                            nota=f"{len(cad_f)} cotas en total. Ejemplos por cota en revision.json."))
+                            "Por pieza (filas de la cadena; una cota puede tener varias):",
+                            [{"pieza": p, "problema": pr, "filas": n} for (p, pr), n in sorted(agrupado.items())], len(filas),
+                            nota=f"{len(cad_f)} filas en total. Ejemplos por fila en revision.json."))
     res[-1]["detalle"] = cad_f[:200]
 
     cmm = c.execute("SELECT DISTINCT m.documento_id, m.muestreo, d.nombre, d.ruta FROM medida_cmm m JOIN documento d ON d.id=m.documento_id").fetchall()

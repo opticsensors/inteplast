@@ -1,4 +1,7 @@
-"""Visor de `conocimiento/`: planos, piezas (con su grafo), errores y revisión de enlaces.
+"""Visor de `conocimiento/`: planos, piezas (con su grafo) y errores.
+
+La revisión de enlaces pieza ↔ muestreo (`revision.py`) se ejecuta desde la consola; su pestaña se quitó el 11/11/2026
+(destino de cada comprobación en `conocimiento/revision-comprobaciones.md`).
 
 Prototipo personal, no forma parte de la aplicación web. Lee la biblioteca en solo lectura y, como
 única excepción, los PDF de plano originales para dibujarlos (comprobando antes OneDrive).
@@ -10,7 +13,6 @@ Prototipo personal, no forma parte de la aplicación web. Lee la biblioteca en s
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import sys
 import threading
@@ -18,7 +20,7 @@ import webbrowser
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -26,7 +28,6 @@ import datos  # noqa: E402
 import errores  # noqa: E402
 import evolucion  # noqa: E402
 import grafo  # noqa: E402
-import revision  # noqa: E402
 
 AQUI = Path(__file__).resolve().parent
 app = FastAPI(title="Visor de conocimiento")
@@ -165,38 +166,11 @@ def api_errores_pieza(codigo: str):
     return errores.de_pieza(codigo)
 
 
-@app.get("/api/revision/referencias")
-def api_referencias():
-    """Casos de referencia de los lectores y observaciones de estructura y formato."""
-    return errores.tecnicos()
-
-
-# ---------------------------------------------------------------- grafo de piezas y revisión
+# ---------------------------------------------------------------- grafo de piezas
 
 @app.get("/api/grafo/piezas")
 def grafo_piezas():
     return grafo.piezas_y_features()
-
-
-_revision: dict = {}
-
-
-@app.get("/api/revision")
-def api_revision(recalcular: bool = False):
-    fichero = datos.OUT / "revision.json"
-    if recalcular or not _revision:
-        guardado = json.loads(fichero.read_text(encoding="utf-8")) if fichero.is_file() and not recalcular else None
-        # Un fichero anterior solo tiene una muestra de los casos: se rehace.
-        if guardado and all("casos" in x for x in guardado["comprobaciones"]):
-            _revision.update(guardado)
-        else:
-            r = revision.revisar()
-            datos.OUT.mkdir(parents=True, exist_ok=True)
-            fichero.write_text(json.dumps(r, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
-            (datos.OUT / "revision.md").write_text(revision.markdown(r), encoding="utf-8")
-            _revision.clear()
-            _revision.update(json.loads(json.dumps(r, default=str)))
-    return JSONResponse(_revision)
 
 
 def main() -> None:

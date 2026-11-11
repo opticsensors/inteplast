@@ -662,6 +662,41 @@ def test_plano_3237_con_marca_encuentra_la_cota_y_sus_subcotas():
         assert sorted(x["texto"] for x in datos.buscar_en_plano(plano["id"], consulta)["resultados"]) == ["30", "30", "30", "30.1", "30.3"]
 
 
+def test_fecha_del_informe_distingue_fecha_intervalo_texto_y_fallo_de_lectura():
+    """V3 (11/11/2026): la fecha se enseña entera; lo que no es una fecha única se dice, con el texto del informe."""
+    f = datos.fecha_informe
+    assert f("2021-03-16T00:00:00") == "2021-03-16"
+    assert f("1899-12-31T00:00:00") == "sin fecha utilizable: fecha cero de Excel (1899-12-31), I-304"
+    assert f("xx") == "sin fecha utilizable: el informe dice «xx» (I-304)"
+    assert f("TM April 2025") == "sin fecha utilizable: el informe dice «TM April 2025» (I-304)"  # antes, «TM April 2»
+    assert f("29.08.2024-4.9.2024") == "intervalo «29.08.2024-4.9.2024»: no es una fecha única (I-304)"  # antes, «29.08.2024»
+    assert f("29.08.2024") == "29.08.2024 (escrita como texto)"
+    assert "fallo de lectura, no del informe" in f("Report date:")
+    assert f(None) is None and f("  ") is None
+
+
+def test_fecha_de_cada_hoja_y_cabecera_del_3051_bien_leida():
+    """L1: 3051 `intern.09` lleva 'Report date:' en K8 y O8 y la fecha en P8; perfil_ppap regenerado el 11/11/2026.
+    Cada hoja con su fecha: 3167 `Int_09` tiene una distinta en `DR-TM-COND._1.2%`."""
+    c = datos.con()
+    doc = c.execute("SELECT id FROM documento WHERE ruta LIKE '%/3051-00_intern.09.xls'").fetchone()[0]
+    assert datos.fechas_por_hoja(c, "3051")[(doc, "DR(4CAV_CMM)")] == "2021-03-16"
+    int09 = c.execute("SELECT id FROM documento WHERE ruta = '6- Pockets/3167/4- Metrologia/Customer/3167-00 Int_09.xls'").fetchone()[0]
+    fechas = datos.fechas_por_hoja(c, "3167")
+    assert fechas[(int09, "DR-ITP-DRY")] == "2025-06-26"
+    assert fechas[int09] == "sin fecha propia: las otras hojas del libro tienen 3 fechas distintas"
+    assert fechas[(int09, "DR-TM-COND._1.2%")] == "sin fecha utilizable: el informe dice «TM April 2025» (I-304)"
+    # Hoja sin fecha propia: no se elige entre varias fechas del libro; si solo hay una, se dice de qué hoja sale.
+    int33 = c.execute("SELECT id FROM documento WHERE ruta LIKE '%/Interns/3218-00_intern.33.xls'").fetchone()[0]
+    fechas = datos.fechas_por_hoja(c, "3218")
+    assert (int33, "3rd test 21-5-2026 deformation") not in fechas  # antes: 2026-05-05, de otra hoja
+    assert fechas[int33] == "sin fecha propia: las otras hojas del libro tienen 3 fechas distintas"
+    filas = [x for x in datos.medidas("3218") if x["documento_id"] == int33 and x["hoja"] == "3rd test 21-5-2026 deformation"]
+    assert filas and {x["fecha"] for x in filas} == {fechas[int33]}
+    int20 = c.execute("SELECT id FROM documento WHERE ruta LIKE '%/3195-00_int_20.xls'").fetchone()[0]
+    assert datos.fechas_por_hoja(c, "3195")[int20] == "2026-04-28, de la hoja «DR (dry)» del mismo libro: esta no tiene fecha propia"
+
+
 def test_revision_guarda_todos_los_casos_y_la_presentacion_los_recorta():
     import revision
 
@@ -783,16 +818,15 @@ def test_calificadores_de_excel_y_csv():
 # ---------------------------------------------------------------- pestaña Errores
 
 def test_cada_hallazgo_esta_clasificado_y_ninguna_incidencia_se_pierde():
-    """Todo hallazgo es una incidencia (I-xxx), una nota técnica (pestaña Revisión) o de un tipo que no es error.
+    """Todo hallazgo es una incidencia (I-xxx) o de un tipo que no es error.
 
-    Los que no son errores no se muestran en el visor desde el 10/11/2026: siguen en conocimiento/. Un tipo nuevo
-    sin clasificar hace fallar el test, para decidir dónde va.
+    Los que no son errores no se muestran en el visor (las notas de estructura y formato, desde que se quitó la pestaña
+    Revisión el 11/11/2026): siguen en conocimiento/. Un tipo nuevo sin clasificar hace fallar el test, para decidir dónde va.
     """
     import errores
 
-    clasificados = errores.NO_SON_ERRORES | set(errores.TECNICOS)
     for x in datos.hallazgos():
-        assert x["id"].startswith("I-") or x["tipo"] in clasificados, x["id"]
+        assert x["id"].startswith("I-") or x["tipo"] in errores.NO_SON_ERRORES, x["id"]
     inc = errores.incidencias()
     assert len(inc) == sum(x["id"].startswith("I-") for x in datos.hallazgos())
     vistas = {i["id"] for c in errores.catalogo() for i in errores.propias(c)} | {i["id"] for i in errores.generales()["incidencias"]}
@@ -829,14 +863,6 @@ def test_las_generales_de_una_pieza_son_solo_las_que_le_afectan():
     assert [i["id"] for i in errores.generales("3197")["incidencias"]] == ["I-008"]
 
 
-def test_revision_recibe_los_casos_y_las_notas_tecnicas():
-    import errores
-
-    t = errores.tecnicos()
-    assert len(t["casos"]) == len(datos.casos())
-    assert {x["tipo"] for x in t["notas"]} <= set(errores.TECNICOS.values())
-
-
 def test_api_de_errores():
     pytest.importorskip("httpx")
     from fastapi.testclient import TestClient
@@ -850,7 +876,9 @@ def test_api_de_errores():
                                                                         and "3197" in datos.piezas_de(x["pieza"]) and x["id"] not in {f"I-00{n}" for n in range(1, 9)}])
     assert c.get("/api/errores/pieza/9999").status_code == 404
     assert [i["id"] for i in c.get("/api/errores/generales?pieza=3197").json()["incidencias"]] == ["I-008"]
-    assert len(c.get("/api/revision/referencias").json()["casos"]) == len(datos.casos())
+    # La pestaña Revisión se quitó el 11/11/2026 con sus rutas: revision.py se ejecuta desde la consola.
+    assert c.get("/api/revision").status_code == 404 and c.get("/api/revision/referencias").status_code == 404
+    assert 'data-tab="revision"' not in c.get("/").text
     # Tras cambiar la API, el navegador no puede quedarse con el app.js viejo.
     assert c.get("/static/app.js").headers["cache-control"] == "no-cache"
     assert c.get("/api/pieza/3051/ficheros").json()["total"]["n"] > 0 and c.get("/api/pieza/9999/ficheros").status_code == 404

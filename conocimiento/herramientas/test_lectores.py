@@ -178,6 +178,19 @@ class LectoresTest(unittest.TestCase):
         self.assertEqual(lectura["medidas"][0][8], 3.95)
         self.assertEqual(lectura["cualitativos"], 0)
 
+    def test_cabecera_ppap_no_toma_una_etiqueta_como_valor(self):
+        """L1 (11/11/2026): celdas de la biblioteca de 3051 `intern.09`, `DR(4CAV_CMM)` fila 8, y de 3205 `loop 10`, `DR` fila 6."""
+        cabecera = {1: "Nr", 3: "Nominal", 4: "Tol. +", 5: "Tol. -", 6: "Equipment", 7: "Cav.1", 8: "NOK"}
+        celdas = [(12, col, v, None) for col, v in cabecera.items()]
+        celdas += [(14, 1, "170", None), (14, 3, "4", 4.0), (14, 7, "3.95", 3.95)]
+        celdas += [(8, 2, "CP", None), (8, 11, "Report date:", None), (8, 15, "Report date:", None),
+                   (8, 16, "2021-03-16T00:00:00", None),
+                   (6, 1, "PPAP Ref.:", None), (6, 8, "Nº Plano:", None), (6, 9, "213137-10300", None)]
+        meta = perfilar(celdas)["metadatos"]
+        self.assertEqual(meta["report_date"], "2021-03-16T00:00:00")  # antes: 'Report date:'
+        self.assertEqual(meta["ppap_ref"], "")  # antes: 'Nº Plano:'
+        self.assertEqual(meta["drawing_no"], "213137-10300")
+
     def test_citas_dim_de_las_plantillas_reales(self):
         """Formas de citar cotas encontradas en los PPTX (27/10/2026); los textos son reales."""
         casos = {

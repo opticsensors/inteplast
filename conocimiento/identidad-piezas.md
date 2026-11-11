@@ -24,7 +24,7 @@
 | **3197** | 0- Bolt Eye | `Pot PCE2.0` (21) | `0140S00363` (21) | `313051601B` (21) | `731970000` (21) | `Robert Bosch` (15 de 15) | 8 (18), 12 (2), 4 (1) | 21 · 203 |
 | **3202** | 6- Pockets | `INSULATOR, MOTOR, WATER PUMP` (29) | `885253-11250` (30) | `885253-11250` (1) | `732020000` (30) | `Aisin` (2 de 15) ⚠ minoría · `XXX` en 13 | 4 (20), 8 (5), 9 (3) | 30 · 207 |
 | **3205** | 2- Nervios de Soldadura | `SHROUD, WATER PUMP` (129) | `213137-10300` (123) | `213137-10300` (111) | `732050000` (127) | no consta (49 libros) · `XXX` en 49 | 8 (118), 9 (3), 10 (2) | 130 · 370 |
-| **3206** | 2- Nervios de Soldadura | `SHROUD, WATER PUMP` (116) | `213137-10280-A` (64) | `213137-10280-A` (55) | `732060000` (116) | `B. Braun` (1 de 44) ⚠ minoría · `XXX` en 43 | 4 (113), 16 (2), 9 (1) | 118 · 234 |
+| **3206** | 2- Nervios de Soldadura | `SHROUD, WATER PUMP` (117) | `213137-10280-A` (64) | `213137-10280-A` (55) | `732060000` (117) | `B. Braun` (1 de 44) ⚠ minoría · `XXX` en 43 | 4 (113), 16 (2), 8 (1) | 118 · 234 |
 | **3212** | 0- Bolt Eye | `Pump Housing PAD2 FL` (22) | `0140S00237` (22) | `3130517012` (22) | `732120000` (23) | `Robert Bosch` (12 de 12) | 4 (20), 8 (2), 12 (1) | 23 · 253 |
 | **3214** | 2- Nervios de Soldadura, 4- Tetones | `Bottom pencil part` (40) | `11206` (31) | `R-2718` (21) | `732140000` (40) | `Lina Medical` (19 de 19) | 4 (39), 8 (1) | 40 · 136 |
 | **3218** | 1- Clips en Piezas | `Bearing Plate R230 P2 SAMS` (262) | `6494730` (259) | `654695200B` (262) | `732180000` (262) | `Autoliv` (77 de 79) | 8 (221), 16 (37), 6 (1) | 273 · 346 |
@@ -60,7 +60,7 @@ Revisar antes de usar un campo para identificar la pieza. Un valor de otra pieza
 - **3205** · ITP Ref.: `732051000` (2)
 - **3206** · Plano: `213137-10280-B` (52)
 - **3206** · Nº pieza cliente: `213137-10280-B` (52)
-- **3206** · Valores no válidos en cabeceras: `0` (9)
+- **3206** · Valores no válidos en cabeceras: `0` (9); `(vacío)` (2)
 - **3212** · Valores no válidos en cabeceras: `#REF!` (3)
 - **3214** · Plano: `C 11692` (9)
 - **3214** · Nº pieza cliente: `R-2971` (15)
@@ -132,9 +132,8 @@ Las hojas propias con aviso participan en el agregado. Heredadas, desplazadas y 
 
 - `2- Nervios de Soldadura/3205/5- Retoques molde/5th loop of correction GPF/3205-00_intern10_corr.xls!Diameter`: **conflicto**. identidad insuficiente; requiere comprobacion del original.
 
-### 3206: 116 propias de 118 hojas
+### 3206: 117 propias de 118 hojas
 
-- `2- Nervios de Soldadura/3206/4- Metrologia/Interns/3206-00_intern.07.xls!DR_fm`: **desplazada**. part_no incompatible: Part nº Level:. itp_ref=732060000; part_no=Part nº Level:; ppap_ref=3206-00_int.07
 - `2- Nervios de Soldadura/3206/5- Retoques molde/20250709_correction after ribs inserts/DR_17.xls!DR(base)`: **heredada**. ITP y PPAP identifican 3247. itp_ref=732470000; part_no=509131; ppap_ref=3247-00_int.01
 
 ### 3212: 23 propias de 23 hojas

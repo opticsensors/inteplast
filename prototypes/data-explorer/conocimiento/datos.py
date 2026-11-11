@@ -43,6 +43,7 @@ TAGS ={"icp": "Con .icp", "globos": "Globos sin .icp", "numerado": "Numerado sin
 sys.path.insert(0, str(CONOCIMIENTO / "herramientas"))
 from cadena_correcciones import MUESTREO, serie_de  # noqa: E402
 from comun import COMPONENTES, EXEMPLES, componente_de_nombre, original  # noqa: E402, F401
+from perfil_ppap import es_etiqueta  # noqa: E402
 
 RECALL = 0x400000 | 0x40000 | 0x1000  # atributos de OneDrive: el fichero no está en local
 EXCLUIDAS = {"aleatoria": "generada con RAND() (I-003)", "cero": "cero (I-002)", "atipico": "atípico"}
@@ -372,18 +373,63 @@ _medidas: dict[str, list[dict]] = {}
 _bloqueo_medidas = threading.Lock()
 
 
+_FECHA_EN_TEXTO = re.compile(r"\d{1,2}[./-]\d{1,2}[./-]\d{2,4}")
+
+
+def fecha_informe(valor) -> str | None:
+    """Fecha de la cabecera del informe (`report_date`) tal como se enseña (V3, 11/11/2026). Nunca se recorta.
+
+    - Fecha de Excel: la fecha. La fecha cero (1899-12-31: celda de fecha vacía) no es una fecha utilizable.
+    - Dos fechas en el texto: el intervalo entero, avisando de que no es una fecha única (3174 `intern.19`, 3237).
+    - Una etiqueta de la plantilla ('Report date:'): fallo de nuestro lector, no del informe (L1).
+    - Otro texto ('xx', 'TM April 2025'): sin fecha utilizable, con el texto del informe (I-304)."""
+    texto = str(valor or "").strip()
+    if not texto:
+        return None
+    m = re.fullmatch(r"(\d{4}-\d{2}-\d{2})(?:[T ]00:00:00)?", texto)
+    if m:
+        return m[1] if m[1] >= "1950" else f"sin fecha utilizable: fecha cero de Excel ({m[1]}), I-304"
+    if es_etiqueta(texto):
+        return f"fecha no leída: el lector tomó la etiqueta «{texto}» (fallo de lectura, no del informe)"
+    fechas = _FECHA_EN_TEXTO.findall(texto)
+    if len(fechas) >= 2:
+        return f"intervalo «{texto}»: no es una fecha única (I-304)"
+    if fechas and fechas[0] == texto:
+        return f"{texto} (escrita como texto)"
+    return f"sin fecha utilizable: el informe dice «{texto}» (I-304)"
+
+
+def fechas_por_hoja(c, codigo: str) -> dict:
+    """`fecha_informe` de cada hoja con fecha (clave `(documento, hoja)`) y, con clave `documento`, lo que se enseña en
+    las hojas del libro que no tienen fecha propia. Un libro puede tener fechas distintas por hoja (3167 `Int_09`:
+    26/06/2025, «TM April 2025» y 08/07/2025), así que no se elige entre ellas:
+
+    - una sola fecha en el libro: esa, diciendo de qué hoja sale;
+    - varias: «sin fecha propia», con cuántas hay (3218 `intern.33`, hoja `3rd test 21-5-2026 deformation`)."""
+    salida: dict = {}
+    por_libro: dict = defaultdict(dict)  # documento -> fecha -> primera hoja que la tiene
+    for f in c.execute("SELECT p.documento_id, p.hoja, p.metadatos FROM perfil_ppap p JOIN documento d ON d.id=p.documento_id"
+                       " WHERE d.codigo=? ORDER BY p.documento_id, p.hoja", (codigo,)):
+        fecha = fecha_informe((json.loads(f["metadatos"] or "{}") or {}).get("report_date"))
+        if fecha:
+            salida[(f["documento_id"], f["hoja"])] = fecha
+            por_libro[f["documento_id"]].setdefault(fecha, f["hoja"])
+    for doc, fechas in por_libro.items():
+        if len(fechas) == 1:
+            (fecha, hoja), = fechas.items()
+            salida[doc] = f"{fecha}, de la hoja «{hoja}» del mismo libro: esta no tiene fecha propia"
+        else:
+            salida[doc] = f"sin fecha propia: las otras hojas del libro tienen {len(fechas)} fechas distintas"
+    return salida
+
+
 def medidas(codigo: str) -> list[dict]:
     """Medidas de informes (medida_dr) de la pieza con su muestreo deducido del nombre del fichero."""
     with _bloqueo_medidas:
         if codigo in _medidas:
             return _medidas[codigo]
         c = con()
-        fechas = {}
-        for f in c.execute("SELECT p.documento_id, p.metadatos FROM perfil_ppap p JOIN documento d ON d.id=p.documento_id"
-                           " WHERE d.codigo=?", (codigo,)):
-            fecha = (json.loads(f["metadatos"] or "{}") or {}).get("report_date")
-            if fecha:
-                fechas.setdefault(f["documento_id"], str(fecha)[:10])
+        fechas = fechas_por_hoja(c, codigo)
         docs = {f["id"]: f for f in c.execute("SELECT id, nombre, ruta FROM documento WHERE codigo=? AND carpeta_norm='metrologia'", (codigo,))}
         papeles = {(f["documento_id"], f["hoja"]): f["papel"] for f in c.execute(
             "SELECT documento_id, hoja, papel FROM lectura_dr WHERE documento_id IN (%s)" % ",".join(map(str, docs) or ["0"]))}
@@ -396,7 +442,8 @@ def medidas(codigo: str) -> list[dict]:
                 filas.append({**dict(f), "nombre": d["nombre"], "ruta": d["ruta"],
                               "papel": papeles.get((f["documento_id"], f["hoja"])),
                               "serie": serie_de(d["nombre"]) if m else None,
-                              "muestreo": int(m.group(1)) if m else None, "fecha": fechas.get(f["documento_id"])})
+                              "muestreo": int(m.group(1)) if m else None,
+                              "fecha": fechas.get((f["documento_id"], f["hoja"]), fechas.get(f["documento_id"]))})
         _medidas[codigo] = filas
         return filas
 
@@ -567,7 +614,7 @@ def pieza(codigo: str) -> dict:
         "cotas": [{"cota": k, "medidas": v["medidas"], "muestreos": len(v["muestreos"]),
                    "por_componente": {n: {"medidas": x["medidas"], "muestreos": len(x["muestreos"])} for n, x in por_componente[k].items()}}
                   for k, v in sorted(cotas.items(), key=lambda kv: clave_cota(kv[0]))],
-        # Errores, en su pestaña; casos de referencia, en Revisión; ficheros por carpeta, en Números (`ficheros`).
+        # Errores, en su pestaña; casos de referencia, solo en revision.py; ficheros por carpeta, en Números (`ficheros`).
         "cadenas": cadenas,
     }
 

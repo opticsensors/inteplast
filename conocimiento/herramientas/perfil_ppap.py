@@ -33,6 +33,29 @@ ETIQUETAS = {  # la plantilla existe en ingles y en castellano
 }
 CAVIDAD = re.compile(r"^(?:cav(?:ity|idad)?\.?\s*|c)(\d+)\b", re.I)
 
+
+def es_etiqueta(texto: str) -> bool:
+    """Rotulo de la cabecera ('Report date:', 'Nº Plano:'): acaba en ':' y es uno de los campos conocidos."""
+    t = texto.strip()
+    return t.endswith(":") and any(re.search(p, t, re.I) for p in ETIQUETAS.values())
+
+
+def valor_de_campo(patron: str, siguientes: list[str]) -> str:
+    """Primera celda no vacia tras la etiqueta que no sea otro rotulo (L1, 11/11/2026).
+
+    La misma etiqueta repetida se salta: 3051 `intern.09`/`.10`, `DR(4CAV_CMM)` lleva 'Report date:' en K8 y O8 y la
+    fecha en P8. Otra etiqueta significa que el campo esta vacio: 3205 `loop 10`, 'PPAP Ref.:' seguido de 'Nº Plano:'.
+    Antes se guardaba la etiqueta como valor."""
+    for x in siguientes:
+        if not x.strip():
+            continue
+        if es_etiqueta(x):
+            if re.search(patron, x.strip(), re.I):
+                continue
+            return ""
+        return x
+    return ""
+
 ESQUEMA = """
 CREATE TABLE IF NOT EXISTS perfil_ppap (
   documento_id INTEGER, hoja TEXT, feature TEXT, pieza TEXT, ruta TEXT,
@@ -75,8 +98,7 @@ def perfilar(celdas: list[tuple[int, int, str | None, float | None]]) -> dict | 
         for i, (c, (v, _)) in enumerate(items):
             for clave, patron in ETIQUETAS.items():
                 if clave not in metadatos and re.search(patron, v.strip(), re.I):
-                    siguiente = next((x for cc, (x, _) in items[i + 1:] if x.strip()), "")
-                    metadatos[clave] = siguiente
+                    metadatos[clave] = valor_de_campo(patron, [x for _, (x, _) in items[i + 1:]])
     equipos: Counter = Counter()
     items_vistos = []
     nok = ceros = vacias = filas_cota = 0

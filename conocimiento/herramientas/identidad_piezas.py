@@ -21,7 +21,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from comun import BD, CONOCIMIENTO  # noqa: E402
-from perfil_ppap import ETIQUETAS
+from perfil_ppap import ETIQUETAS, valor_de_campo
 
 SALIDA = CONOCIMIENTO / "identidad-piezas.md"
 CAMPOS = (("part_name", "Nombre (cabecera DR)"), ("drawing_no", "Plano"), ("part_no", "Nº pieza cliente"),
@@ -108,7 +108,7 @@ def recoger(con: sqlite3.Connection) -> dict:
             for idx, (_, value) in enumerate(items):
                 for campo, patron in ETIQUETAS.items():
                     if campo not in m and re.search(patron, value.strip(), re.I):
-                        m[campo] = next((v.strip() for _, v in items[idx + 1:] if v.strip()), "")
+                        m[campo] = valor_de_campo(patron, [v for _, v in items[idx + 1:]]).strip()
         hojas.append((codigo, m, cav, ruta, hoja))
     candidatas = defaultdict(lambda: defaultdict(Counter))
     for codigo, meta, _, _, _ in hojas:

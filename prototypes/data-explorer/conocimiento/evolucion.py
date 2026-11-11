@@ -434,22 +434,13 @@ def asociar_correcciones(salida: dict, lista: list[dict]) -> None:
     salida["correcciones_sin_tramo"] = len(lista) - len(enlazadas)
 
 
-def fechas_de(c, codigo: str) -> dict:
-    fechas: dict = {}
-    for f in c.execute("SELECT p.documento_id, p.metadatos FROM perfil_ppap p JOIN documento d ON d.id = p.documento_id WHERE d.codigo = ?", (codigo,)):
-        fecha = (json.loads(f["metadatos"] or "{}") or {}).get("report_date")
-        if fecha:
-            fechas.setdefault(f["documento_id"], str(fecha)[:10])
-    return fechas
-
-
 @lru_cache(maxsize=64)
 def _datos_cota(codigo: str, cota: str) -> tuple:
     c = datos.con()
-    fechas = fechas_de(c, codigo)
+    fechas = datos.fechas_por_hoja(c, codigo)  # la de su hoja, sin recortar (V3, 11/11/2026)
     filas = cargar(c, codigo, cota, excluidas=True)
     for x in filas:
-        x["fecha"] = fechas.get(x["doc"])
+        x["fecha"] = fechas.get((x["doc"], x["hoja"]), fechas.get(x["doc"]))
     return tuple(filas), csv_de(c, codigo, cota), tuple(correcciones(c, codigo, cota))
 
 

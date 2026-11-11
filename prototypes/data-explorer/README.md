@@ -921,6 +921,8 @@ parte de lo ya extraído a `conocimiento/` y no de los originales. Tiene seis pe
 - **Grafo:** de los Markdown, piezas, hallazgos y preguntas. *Quitada el 10/11/2026.*
 - **Esquema:** de la biblioteca. *Quitada el 10/11/2026.*
 - **Revisión:** de los enlaces pieza ↔ muestreo (`revision.py`), con los casos de referencia de los lectores.
+  *Quitada el 11/11/2026*: `revision.py` se ejecuta desde la consola y el destino de cada comprobación está en
+  [revision-comprobaciones.md](../../conocimiento/revision-comprobaciones.md).
 
 La única lectura de originales son los PDF de plano, para dibujarlos.
 

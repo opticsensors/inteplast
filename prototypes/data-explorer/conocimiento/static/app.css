@@ -100,10 +100,6 @@ button:hover { border-color: var(--acento); }
 .numeros .desglose th.tipo { white-space: nowrap; font-weight: 500; color: var(--suave); }
 .numeros .desglose .tipo { background: #f8f9fb; }.numeros .desglose tr.total td { font-weight: 600; border-top: 2px solid var(--borde); }
 .contenido { overflow: auto; padding: 16px 22px 40px; }
-.tarjetas { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 14px; }
-.cifra { background: var(--panel); border: 1px solid var(--borde); border-radius: 8px; padding: 8px 14px; min-width: 110px; }
-.cifra b { display: block; font-size: 20px; }
-.cifra span { color: var(--suave); font-size: 12px; }
 .bloque { background: var(--panel); border: 1px solid var(--borde); border-radius: 8px; padding: 12px 14px; margin: 12px 0; overflow: auto; }
 
 /* evolución de una cota */
@@ -159,14 +155,6 @@ button:disabled { opacity: .5; cursor: default; border-color: var(--borde); }
 .muestra-linea.identicos { border-top: 3px dashed #3ecf8e; }
 .muestra-linea.familia { border-top: 2px dotted #b07cf7; }
 #tooltip { position: fixed; pointer-events: none; background: rgba(20, 22, 28, .95); color: #eef; padding: 6px 9px; border-radius: 6px; font-size: 12px; max-width: 360px; display: none; z-index: 50; border: 1px solid #3a4150; }
-
-/* revisión */
-.nivel { font-weight: 600; text-transform: uppercase; font-size: 11px; }
-.nivel.ok { color: var(--ok); } .nivel.aviso { color: var(--aviso); } .nivel.info { color: var(--info); }
-details.comp { background: var(--panel); border: 1px solid var(--borde); border-radius: 8px; margin: 8px 0; }
-details.comp summary { padding: 10px 14px; cursor: pointer; display: flex; gap: 12px; align-items: baseline; }
-details.comp summary .n { margin-left: auto; color: var(--suave); }
-details.comp .cuerpo { padding: 0 14px 12px; overflow: auto; }
 
 /* Errores: una fila por pieza y una tarjeta por incidencia */
 .filas-errores { display: flex; flex-direction: column; gap: 6px; max-width: 1000px; }

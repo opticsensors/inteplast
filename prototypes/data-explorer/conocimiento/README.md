@@ -11,7 +11,7 @@ Cuando Eduard habla de «la app de conocimiento» se refiere a este visor.
 ```powershell
 $py = "C:\Users\eduard.almar\AppData\Local\Programs\Python\Python311\python.exe"
 & $py "prototypes\data-explorer\conocimiento\app.py"      # abre http://127.0.0.1:8765
-& $py "prototypes\data-explorer\conocimiento\revision.py" # solo la revisión, a out/conocimiento/revision.md
+& $py "prototypes\data-explorer\conocimiento\revision.py" # comprobaciones internas, a out/conocimiento/revision.md (sin pestaña desde el 11/11/2026)
 & $py "prototypes\data-explorer\conocimiento\leer_planos.py"         # lee una vez los planos sin .icp (hecho el 05/11/2026)
 & $py "prototypes\data-explorer\conocimiento\leer_planos.py" --tabla # tabla de conocimiento/planos-globos.md
 ```
@@ -49,8 +49,8 @@ Solo hace las que faltan; `--pieza 3212` rehace una.
 
 | Fuente | Para qué |
 |---|---|
-| `conocimiento/datos/biblioteca.sqlite` (solo lectura) | Lista de planos, texto de cada página, globos del `.icp`, medidas DR, cadena de correcciones y revisión |
-| `hallazgos.jsonl`, `casos-referencia.jsonl`, `datos/aceptacion/*.jsonl` | Errores y revisión |
+| `conocimiento/datos/biblioteca.sqlite` (solo lectura) | Lista de planos, texto de cada página, globos del `.icp`, medidas DR y cadena de correcciones |
+| `hallazgos.jsonl` | Errores |
 | `out/probar-planos-calibracion.json` | Calibración `.icp` → página que dejó `probar_lector_planos.py` |
 | `out/conocimiento/lecturas/*.json` | Tag y lecturas automáticas de los planos sin `.icp` |
 | `out/conocimiento/cad/*.jpg` | Captura del CAD de cada pieza |
@@ -160,15 +160,16 @@ se abre la cuadrícula se dibujan las 56 miniaturas (unos segundos cada una).
   - **Generales:** las de la sección «Transversales» de `incongruencias.md`, con una sola ficha. Cada pieza las cuenta aparte
     y enlaza a la lista filtrada de las que le afectan. La fila «Generales y otras referencias» suma las que no citan
     ninguna pieza del catálogo (I-501, la plantilla 3247).
-  - **El resto de `hallazgos.jsonl` no son errores.** Estructura y formato salen en Revisión. Los otros 26
-    (lecciones, advertencias, vínculos feature-cota, datos y proceso, `errores.NO_SON_ERRORES`) **no se muestran en el
-    visor desde el 10/11/2026**, al quitar la pestaña Grafo. Siguen intactos en `conocimiento/hallazgos.jsonl` y en las
-    fichas Markdown. Cómo presentar las lecciones y los warnings útiles, ligados a piezas, features o cotas, se
-    decidirá aparte. Los avisos de las gráficas siguen junto a sus puntos.
-- **Revisión:** comprobaciones de los enlaces pieza ↔ documento ↔ muestreo (`revision.py`).
-  Solo informan; no corrigen la biblioteca. La pestaña enseña los 25 primeros casos de cada una; `revision.json`
-  los guarda todos. Al final, los casos de referencia de los lectores (`casos-referencia.jsonl`) y las observaciones de
-  estructura y formato de los ficheros.
+  - **El resto de `hallazgos.jsonl` no son errores** (`errores.NO_SON_ERRORES`) y no se muestran en el visor: lecciones,
+    advertencias, vínculos feature-cota, datos y proceso desde el 10/11/2026, al quitar la pestaña Grafo; estructura y
+    formato desde el 11/11/2026, al quitar Revisión. Siguen intactos en `conocimiento/hallazgos.jsonl` y en las fichas
+    Markdown. Cómo presentar las lecciones y los warnings útiles, ligados a piezas, features o cotas, se decidirá aparte.
+    Los avisos de las gráficas siguen junto a sus puntos.
+- **Revisión: quitada el 11/11/2026.** Era el control de calidad de nuestra extracción, no un resultado para INTEPLAST.
+  Antes de quitarla se decidió el destino de cada comprobación (junto al dato, Errores, interno o pendiente), con
+  evidencia y recuentos de referencia, en [revision-comprobaciones.md](../../../conocimiento/revision-comprobaciones.md).
+  Con ella salieron sus rutas (`/api/revision`, `/api/revision/referencias`) y su código. `revision.py` sigue
+  funcionando desde la consola, con sus tests.
 
 ## Pendiente (09/11/2026)
 
@@ -189,3 +190,4 @@ Recogido de las fichas enlazadas el 09/11/2026; las cifras son las de esas ficha
 | Varios valores por punto | Las reglas de dibujo son convenciones. El significado de hojas y bloques es interpretación hasta que respondan A17 y A24 | [valores-por-punto.md](../../../conocimiento/valores-por-punto.md#límites) |
 | Correcciones *(aparcado)* | Solo texto: las imágenes del PPTX no están en la biblioteca | [Pestañas](#pestañas) |
 | Familias *(aparcado)* | Isomask es una suposición | [Pestañas](#pestañas) |
+| Avisos junto al punto (11/11/2026) | Salieron al decidir el destino de las comprobaciones de Revisión. **V1:** decidir si la gráfica avisa cuando una cota repite solo parte de las cavidades de un muestreo anterior (hoy solo avisa si las repite todas). **V2:** en el detalle del punto, avisar si su muestreo tiene copias con fechas distintas (30 muestreos). ~~V3~~ **hecho el 11/11/2026:** la fecha del informe se enseña entera y es la de la hoja del punto. Se distingue fecha, intervalo («29.08.2024-4.9.2024: no es una fecha única»), sin fecha utilizable con el texto original («xx», fecha cero) y fallo de lectura (`datos.fecha_informe`) | [revision-comprobaciones.md](../../../conocimiento/revision-comprobaciones.md#pendientes) |

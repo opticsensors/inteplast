@@ -9,9 +9,9 @@
 - **Título:** la frase en negrita con la que abre su fila en `incongruencias.md`. El texto es el original, sin separar
   hechos y causas.
 
-El resto de `hallazgos.jsonl` no son errores: lecciones, advertencias, vínculos feature-cota, datos y proceso quedan en el
-Grafo y en las fichas `.md` (09/11/2026: salieron de la ficha de pieza; tal como se veían, no aportaban). Estructura y
-formato, con los casos de referencia, van en Revisión (`tecnicos`).
+El resto de `hallazgos.jsonl` no son errores (`NO_SON_ERRORES`) y no se muestran en el visor: siguen en
+`hallazgos.jsonl` y en las fichas `.md`. Las notas de estructura y formato y los casos de referencia salían en la pestaña
+Revisión, quitada el 11/11/2026 (`conocimiento/revision-comprobaciones.md`).
 """
 
 from __future__ import annotations
@@ -24,10 +24,9 @@ import datos
 ESTADOS = {"abierta": "Pendiente de aclarar", "explicable": "Explicación posible · sin confirmar", "resuelta": "Resuelta",
            "corregida": "Corregida"}
 PENDIENTES = {"abierta": 0, "explicable": 1}  # sin confirmar; el número es el orden en la lista
-# No son errores. Desde el 10/11/2026 no se muestran en el visor (estaban en la pestaña Grafo, que se quitó):
-# siguen en conocimiento/hallazgos.jsonl y en las fichas Markdown.
-NO_SON_ERRORES = {"leccion", "warning", "vinculo_feature_cota", "dato", "proceso"}
-TECNICOS = {"estructura": "Estructura", "formato": "Formato"}
+# No son errores y no se muestran en el visor: siguen en conocimiento/hallazgos.jsonl y en las fichas Markdown.
+# Los cinco primeros estaban en la pestaña Grafo (quitada el 10/11/2026); estructura y formato, en Revisión (11/11/2026).
+NO_SON_ERRORES = {"leccion", "warning", "vinculo_feature_cota", "dato", "proceso", "estructura", "formato"}
 RELEVANCIA = {"alta": 0, "media": 1, "baja": 2}
 
 
@@ -128,14 +127,3 @@ def generales(pieza: str | None = None) -> dict:
     return {"pieza": pieza, "incidencias": generales_de(pieza) if pieza else [i for i in incidencias() if _otra(i)]}
 
 
-def _entrada(x: dict, tipos: dict) -> dict:
-    return {"id": x["id"], "tipo": tipos[x["tipo"]], "titulo": x.get("titulo"), "texto": x.get("afirmacion") or "",
-            "piezas": sorted(datos.piezas_de(x.get("pieza"))), "evidencia": _evidencia(x)}
-
-
-def tecnicos() -> dict:
-    """Para Revisión: casos de referencia de los lectores y observaciones de estructura y formato de los ficheros."""
-    return {"notas": [_entrada(x, TECNICOS) for x in datos.hallazgos() if x.get("tipo") in TECNICOS],
-            "casos": [{"id": x.get("id"), "pieza": x.get("pieza"), "fichero": (x.get("ruta") or "").rsplit("/", 1)[-1],
-                       "celda": f"{x.get('hoja') or ''}!{x.get('celda') or ''}".strip("!"), "tratamiento": x.get("tratamiento_esperado"),
-                       "motivo": x.get("motivo")} for x in datos.casos()]}

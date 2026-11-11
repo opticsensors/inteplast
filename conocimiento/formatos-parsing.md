@@ -171,6 +171,19 @@ mantienen en [Metrología: cabecera del informe](0-bolt-eye/3212/4-metrologia.md
 Seleccionar la hoja por contenido, combinar con `HISTORY` y conservar hoja/celda de cada
 dato. No imponer el esquema del 3212 a las otras plantillas PPAP.
 
+**Valor de un campo: no basta con «la siguiente celda no vacía»** (L1, 11/11/2026). En las 1.364 hojas con cabecera
+de la biblioteca aparecieron dos casos:
+
+- **La etiqueta se repite.** 3051 `intern.09`/`.10`, `DR(4CAV_CMM)` fila 8: «Report date:» en `K8` y en `O8`, y la fecha
+  en `P8`. Hay que saltar la repetición.
+- **El campo está vacío y le sigue otra etiqueta.** «PPAP Ref.:» seguido de «Nº Plano:» (3205 `loop 10`, 3233); «Part nº:»
+  seguido de «Part nº Level:» (3206 `intern.07`, `DR_fm`). El campo queda vacío: no hay que guardar la etiqueta ni
+  adivinar el valor.
+
+`perfil_ppap.valor_de_campo` aplica las dos reglas. Solo cuenta como etiqueta un texto acabado en «:» que coincide con
+un campo conocido. Hay más detalle en [revision-comprobaciones.md](revision-comprobaciones.md#l1-lector-de-la-cabecera-ppap).
+Un lector de la cabecera en la app tiene que aplicar las mismas reglas.
+
 ### 🆕 La hoja `HISTORY` — log acumulativo de metadatos
 
 `HISTORY` **no repite la cabecera: acumula una entrada por informe**, y cada muestreo hereda el

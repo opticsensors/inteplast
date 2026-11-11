@@ -36,7 +36,6 @@ async function render() {
     else if (tab === "errores" && partes[1] === "generales") await vistaGenerales(q)
     else if (tab === "errores" && partes[1]) await vistaErroresPieza(partes[1], q)
     else if (tab === "errores") await vistaErrores()
-    else if (tab === "revision") await vistaRevision()
   } catch (e) {
     vista.innerHTML = `<div class="vacio">Error: ${esc(e.message)}</div>`
     console.error(e)
@@ -45,8 +44,6 @@ async function render() {
   document.querySelector('header nav a[data-tab="planos"]').href = ultimaRejilla
   document.querySelector('header nav a[data-tab="piezas"]').href = ultimasPiezas
 }
-
-const CASOS_VISIBLES = 25 // en la pestaña Revisión; revision.json los guarda todos
 
 /* ------------------------------------------------------------ planos: cuadrícula */
 
@@ -821,39 +818,6 @@ async function vistaGenerales(q) {
   </section>`
   document.getElementById("volver").onclick = () => ir(pieza ? `#/errores/${pieza}` : "#/errores")
   casillaTodas(q)
-}
-
-
-/* ------------------------------------------------------------ revisión */
-
-async function vistaRevision(recalcular = false) {
-  vista.innerHTML = `<div class="vacio">${recalcular ? "Recalculando (tarda unos segundos)…" : "Cargando…"}</div>`
-  const [r, ref] = await Promise.all([api(`/api/revision${recalcular ? "?recalcular=true" : ""}`), una("/api/revision/referencias")])
-  const grupos = { pieza: "Pieza: ¿cada dato está en la pieza correcta?", muestreo: "Muestreo: ¿cada medida está en el muestreo correcto?" }
-  vista.innerHTML = `<section class="contenido">
-    <h2>Revisión de enlaces pieza y muestreo</h2>
-    <p>Comprobaciones automáticas sobre la biblioteca y los JSONL (solo lectura). <span class="nivel aviso">aviso</span> = algo que mirar;
-    <span class="nivel info">info</span> = esperado o ya documentado; <span class="nivel ok">ok</span> = sin casos.
-    Resultado también en <code>prototypes/data-explorer/out/conocimiento/revision.md</code>. <button id="recalc">Recalcular</button></p>
-    <div class="tarjetas">${Object.entries(r.resumen).map(([k, v]) => `<div class="cifra"><b class="nivel ${k}">${v}</b><span>${k}</span></div>`).join("")}</div>
-    ${Object.entries(grupos).map(([g, titulo]) => `<h3>${titulo}</h3>` + r.comprobaciones.filter((x) => x.grupo === g).map((x) => `
-      <details class="comp" ${x.nivel === "aviso" ? "" : ""}>
-        <summary><span class="nivel ${x.nivel}">${x.nivel}</span><b>${esc(x.id)}</b> ${esc(x.titulo)}<span class="n">${num(x.n)}${x.total != null ? ` de ${num(x.total)}` : ""}</span></summary>
-        <div class="cuerpo"><p>${esc(x.que)} ${x.nota ? `<i>${esc(x.nota)}</i>` : ""}</p>
-        ${x.casos.length ? tabla(x.casos.slice(0, CASOS_VISIBLES)) + (x.n > CASOS_VISIBLES ? `<p style="color:var(--suave)">Se muestran ${CASOS_VISIBLES} de ${num(x.n)}; la lista completa está en <code>revision.json</code>.</p>` : "") : "<p>Sin casos.</p>"}
-        </div></details>`).join("")).join("")}
-    <h3>Pruebas de los lectores y observaciones de los ficheros</h3>
-    <details class="comp"><summary><span class="nivel info">info</span><b>Casos de referencia</b> comprobados en los originales<span class="n">${num(ref.casos.length)}</span></summary>
-      <div class="cuerpo">${ref.casos.length ? tabla(ref.casos) : "<p>Sin casos.</p>"}</div></details>
-    <details class="comp"><summary><span class="nivel info">info</span><b>Estructura y formato</b> de los ficheros<span class="n">${num(ref.notas.length)}</span></summary>
-      <div class="cuerpo">${ref.notas.map((x) => `<p><span class="chip">${esc(x.tipo)}</span> <b>${esc(x.id)}</b> · ${esc(x.piezas.join(", "))}<br>${esc(x.texto)}</p>`).join("")}</div></details>
-  </section>`
-  document.getElementById("recalc").onclick = () => vistaRevision(true)
-}
-
-function tabla(filas) {
-  const claves = Object.keys(filas[0])
-  return `<table><tr>${claves.map((k) => `<th>${esc(k)}</th>`).join("")}</tr>${filas.map((f) => `<tr>${claves.map((k) => `<td>${esc(f[k])}</td>`).join("")}</tr>`).join("")}</table>`
 }
 
 // Arranque al final: las variables de módulo (let) ya existen.
