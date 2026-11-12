@@ -4,6 +4,22 @@
 
 Registro de trabajo para poder retomar entre sesiones. Actualizar al terminar cada paso.
 
+## Planos y revisiones · 12/11/2026
+
+Por qué una pieza tiene varios PDF de plano y qué revisión citan sus informes, revisado con un revisor externo:
+[planos.md](planos.md) y catálogo [planos.jsonl](planos.jsonl) (62 PDF, 6 copias idénticas, evidencia por registro),
+con tablas generadas por `planos_catalogo.py` (solo lectura de la biblioteca). Nuevos I-009 (la cabecera no basta para
+saber la revisión aplicada), I-313 (3195, cota 2360), I-604 (3202, tolerancias de la A), I-801 (3237/3238, falta el
+índice 04) y H-010, H-405, H-406, H-504; pregunta A26. Corregidos 3195.md (no es «conjunto frente a pieza»), 3202.md
+(la `G` es el tipo de plano) y A19 (sí tenemos el plano del conjunto del 3288). El visor no usa todavía el catálogo.
+Tras la segunda revisión: `--detalle` conserva la fecha de cabecera literal y la normaliza aparte; la validación cubre
+páginas, fechas de calendario, procedencia por campo (`procedencia`) y coherencia entre copias idénticas, con
+`test_planos_catalogo.py` (18 pruebas); el 6494730 queda asignado al 3174 en sus tres copias. Corregidos el pendiente
+del 3202, I-313 (el `09` ya está en `intern.01`), I-604 (`A15:G16`), la leyenda del 3233 (Cpk ≥ 1,33) y A26.4 (pide el
+índice 01 de DP/TD 000). Índice RAG reconstruido; `rag.py estado --verificar` confirma frescura `ok` y ningún
+texto sin vector. Comprobadas las búsquedas de la revisión A del 3202, el plano ausente del 3233 y la tolerancia
+de la cota 2360 del 3195; el aviso de esta última abre el primer extracto y mantiene pendiente qué revisión aplica.
+
 ## CSV del 3197 · 09/11/2026
 
 Cargados en la biblioteca los 118 CSV del 3197, leídos de los originales con `medidas_cmm.py` ampliado. Tablas nuevas

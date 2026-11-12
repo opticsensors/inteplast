@@ -48,6 +48,7 @@ segunda explicación en prosa.
 | Cronología y comparación antes/después | [Historial del molde](0-bolt-eye/3212/historial-molde.md) (3212, a mano); otras piezas: tabla `cadena_correccion` (`rag.py exacto cadena`) |
 | Varios valores para una cota, muestreo y cavidad | [Valores por punto](valores-por-punto.md): causas y censo de todas las piezas (I-008) |
 | Cliente, plano, nº de cliente e ITP de cada pieza | [Identidad de las piezas](identidad-piezas.md) (generada); cliente poco fiable: [I-005](incongruencias.md) |
+| Qué es cada PDF de plano, sus revisiones y la revisión que citan los informes | [Planos](planos.md), con el catálogo [planos.jsonl](planos.jsonl); globos y lectores: [planos-globos.md](planos-globos.md) |
 | Vocabulario metrológico y ensayos | [Método de medida](0-bolt-eye/3212/6-metodo-medida.md) |
 | Fórmulas aleatorias, procedencia y recuentos I-003 | [Incongruencias I-003](incongruencias.md#i-003-en-detalle) |
 | Cómo regenerar y comprobar la biblioteca | [Cómo se actualiza](#cómo-se-actualiza); resultados fechados en [AVANCE](AVANCE.md) |
@@ -59,6 +60,8 @@ segunda explicación en prosa.
 |---|---|---|
 | [AVANCE.md](AVANCE.md) | Estado de la lectura de Exemples y qué queda pendiente | ✅ |
 | [comparativa.md](comparativa.md) | Diferencias entre features y piezas: esqueleto, formatos, plantillas | ✅ |
+| [planos.md](planos.md) | Qué dibujo y qué revisión es cada PDF de plano, por qué una pieza tiene varios y qué revisión citan las cabeceras de los informes, hoja a hoja (12/11/2026). Tablas generadas por `planos_catalogo.py` | ✅ |
+| [planos.jsonl](planos.jsonl) | Catálogo de los 62 PDF de plano: plano(s) que contiene cada uno, revisión, fechas, globos, pieza y evidencia. Se edita a mano | ✅ |
 | [planos-globos.md](planos-globos.md) | Qué planos llevan globos, de qué color y estilo, cuáles traen `.icp` con su calibración, y el [estado de los 56](planos-globos.md#estado-de-cada-plano-05112026) | ✅ |
 | [identidad-piezas.md](identidad-piezas.md) | Nombre, plano, nº de cliente, ITP, cliente y columnas de cavidad por pieza, con recuentos y valores anómalos. **Generado** por `identidad_piezas.py` | ✅ |
 | [rag/](rag/README.md) | Investigación de arquitectura (27/10/2026), glosario multilingüe y preguntas de evaluación del RAG. No se indexa | ✅ |
@@ -160,6 +163,7 @@ $PY conocimiento/herramientas/perfil_ppap.py
 $PY conocimiento/herramientas/perfil_correcciones.py
 $PY conocimiento/herramientas/globos_icp.py
 $PY conocimiento/herramientas/identidad_piezas.py      # reescribe identidad-piezas.md
+$PY conocimiento/herramientas/planos_catalogo.py       # comprueba planos.jsonl y reescribe las tablas de planos.md
 $PY conocimiento/herramientas/formulas_aleatorias.py   # abre con Excel los xls con token RAND
 $PY conocimiento/herramientas/verificar.py --n 10       # muestra al azar contra los originales
 $PY conocimiento/herramientas/lector_dr.py              # medidas PPAP con reglas deterministas

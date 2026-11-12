@@ -4,8 +4,8 @@
 > han resuelto leyendo los datos, sin necesidad de consultar.
 >
 > Última revisión documental: **2026-10-26**. El **2026-11-04** se añadieron las preguntas de la
-> entrega ampliada (A17–A23), cerradas el mismo día, el **2026-11-06** la [A24](#a24-csv-cmm) y el **2026-11-08** la
-> [A25](#a25-3288-tapa). Los análisis y localizadores
+> entrega ampliada (A17–A23), cerradas el mismo día, el **2026-11-06** la [A24](#a24-csv-cmm), el **2026-11-08** la
+> [A25](#a25-3288-tapa) y el **2026-11-12** la [A26](#a26-revisiones-plano). Los análisis y localizadores
 > viven en las fichas enlazadas; aquí se mantiene la pregunta o la resolución.
 
 ---
@@ -470,19 +470,23 @@ ya excluye esos valores sin necesidad de respuesta.
 - El único plano del **3051** se llama `…0140S00275-DRW_pendent acceptació.pdf`.
 - En el **3288**, el método `MM732880000_rev00.pdf` (p. 6) identifica la **DIM. Nº 80** del
   **conjunto** BSG-296-00, nivel 2; la versión anterior lo describe como item 8 sin número de
-  cota. No tenemos el plano de ese conjunto.
+  cota. Tenemos el plano del conjunto en nivel 1 y en nivel 2, con el globo 80
+  (`6- Método de medición/balloned/REV.01` y `REV.02`), pero no cómo se corresponde con los planos
+  de base y tapa.
 
 **Preguntas:**
 
 1. **¿Nos podéis pasar los planos propios del 3186 (STEP 6541691) y del 3218 (STEP 6546952)?**
 2. **¿El plano del 3051 es el vigente o hay una versión aceptada posterior?**
-3. **¿Nos podéis pasar el plano del conjunto BSG-296-00 del 3288, donde está la DIM. 80, y
-   decirnos cómo se corresponden sus cotas con las de los planos de componente y los informes?**
+3. **En el 3288, ¿cómo se corresponden las cotas del plano del conjunto BSG-296-00 (la DIM. 80)
+   con las de los planos de base y tapa y con los informes?**
 
 <details><summary>Contexto interno (no enviar)</summary>
 
 I-301, I-205 e I-106. Complementa A4 (plano del 3212). No equiparar la DIM. 80 con la cota de
-BASE rev1 de nominal 14,45.
+BASE rev1 de nominal 14,45. Corregido el 12/11/2026: la pregunta 3 pedía el plano del conjunto,
+que sí está en Exemples ([planos.md](../conocimiento/planos.md#3288--b-braun)). En el 3186 y el 3218,
+las cabeceras de los informes citan `6494730`: la respuesta debe decir también si ese plano les aplica.
 </details>
 
 <a id="a20-planes-correccion"></a>
@@ -650,6 +654,47 @@ La 1 cambia poco: todas las demás fuentes dicen ±0,3 y ±0,1. Las 3 y 4 son la
 La 5 se solapa con [A17](#a17-versiones-informes): si se envía A17, basta con añadir allí estos dos casos.
 </details>
 
+<a id="a26-revisiones-plano"></a>
+### A26 · Revisión del plano que corresponde a cada informe
+
+*Añadida el 12/11/2026, después de leer los cajetines de los 62 PDF de plano y las cabeceras de los informes. Distingue
+la revisión publicada de la aplicable: que exista un plano posterior no significa que debiera aplicarse a todos los lotes.*
+
+**Recordatorio.** Cada informe dimensional indica en su cabecera el plano y su revisión (*Drawing nº* y *Drawing nº
+Level*). Los planos que nos pasasteis están en `1- 2D y 3D pieza` y en `6- Método de medición` de cada pieza.
+
+**Qué no nos cuadra.**
+
+| Pieza | Situación |
+|---|---|
+| 3237 y 3238 | Los informes de 11/2024 a 07–08/2026 citan el índice **04** (03/12/2024). Tenemos el 03 con globos y el `2D 05`, pero no el 04 |
+| 3195 | Los informes citan `0130S1B006` índice **09/3E1008859560**, del que no tenemos plano (tenemos el 07, de 2021). Además, `0130S0002K` índice 01 (16/09/2024) indica la cota 2360 como 5 +0,22/**−0,13**; el 07 y todos los informes, 5 +0,22/**+0,13** |
+| 3202 | El plano `885253-11250-A` (28/10/2024) cambia tolerancias: Ø38,65 pasa de ±0,10 a +0,45/−0,10 y Ø56,1, de ±0,15 a +0,15/−0,35. `intern.07` (23/05/2025) ya usa las nuevas, pero su cabecera sigue indicando la revisión «-» |
+| 3233 | Los informes citan el índice **01/0196E0000J04** (plano DP/TD 003 del 04/07/2023) hasta 08/2026, pero desde `intern.02` (08/2024) usan nominales distintos de ese plano (por ejemplo 3,41 en lugar de 3,35). El índice 02 (11/03/2025) clasifica además esas cotas como MOC. Solo una hoja de `intern.16` cita el 02. La tabla del índice 02 lista un índice 01 de DP/TD 000 (21/05/2024) cuyo plano no tenemos |
+| 3288 | La cabecera de `DR(base)` y `DR(tapa)` indica `BSG-296-00` nivel 1, y la fila 14, `BSG-296-01 rev1` y `BSG-296-02 rev1` (21/05/2025). El conjunto `BSG-296-00` está en nivel 2 desde el 26/08/2026 y `intern.04` es del 23/09/2026 |
+
+**Preguntas:**
+
+1. **3237 y 3238: ¿nos podéis pasar el plano del índice 04?**
+2. **3195: ¿qué plano y qué tolerancia de la cota 2360 corresponden a los informes? ¿Existe un índice 09 de
+   `0130S1B006`?**
+3. **3202: ¿desde qué informe o lote se aplica la revisión A, y con qué aprobación?**
+4. **3233: ¿nos podéis pasar el plano del índice 01 de DP/TD 000 (21/05/2024, cambio 3E1012588060)? ¿Qué revisión
+   del plano corresponde a los informes de 2024 a 2026, y la cabecera «01/0196E0000J04» quedó copiada de un informe
+   anterior?**
+5. **3288: el nivel de la cabecera, ¿se refiere al conjunto o a la base y la tapa? ¿Qué nivel correspondía a
+   `intern.04`?**
+
+<details><summary>Contexto interno (no enviar)</summary>
+
+I-009, I-313, I-604 e I-801; detalle y celdas en [planos.md](../conocimiento/planos.md). No presentar un desfase de la
+cabecera como incumplimiento: se pregunta qué revisión correspondía. En el 3233 los nominales nuevos pueden venir del
+índice 01 de DP/TD 000 (21/05/2024), que no tenemos; con ese plano se resolvería. En el 3288, los informes del molde
+anterior 3247 (04–05/2025) dicen nivel 0, coherente con base y tapa (nivel 1 el 21/05/2025) y no con el conjunto
+(nivel 1 el 19/02/2025). Se solapa con [A17](#a17-versiones-informes) (copias con tolerancias distintas) y con
+[A19](#a19-planos) (planos que faltan): si se envían juntas, basta con añadir aquí los casos.
+</details>
+
 ### Correspondencia con las incongruencias abiertas
 
 Las 31 entradas `abierta` de [incongruencias.md](../conocimiento/incongruencias.md) a
@@ -671,6 +716,7 @@ Las 31 entradas `abierta` de [incongruencias.md](../conocimiento/incongruencias.
 | I-501 Anclajes sin datos | [A23](#a23-anclajes) |
 | I-008 varios valores por cota, muestreo y cavidad (añadida el 06/11/2026) | [A24](#a24-csv-cmm) |
 | I-109 a I-113 tolerancias y rebabas de la tapa del 3288 (añadidas el 08/11/2026) | [A25](#a25-3288-tapa) |
+| I-009, I-313, I-604, I-801 revisión del plano en los informes (añadidas el 12/11/2026) | [A26](#a26-revisiones-plano) |
 | I-602 planes del 3056 solo en imagen | No se pregunta: es un límite de nuestra lectura (OCR o lectura visual); pedir texto solo si se prioriza el 3056 |
 | I-701 carpeta del 3168 fechada en 2027 | No se pregunta: la fecha de carpeta no se usa como fecha de ejecución; no cambia la lectura |
 

@@ -15,7 +15,8 @@
 Qué planos de `Exemples` llevan globos (la numeración de cotas dibujada sobre el plano), de qué
 color y estilo son, y cuáles traen el `.icp` de infra-CONVERT con el número y la posición de cada
 globo. Base: los 56 PDF de plano únicos de la biblioteca (`1- 2D y 3D pieza`, carpetas de globos y
-nombres con «drw»; los duplicados exactos cuentan una vez).
+nombres con «drw»; los duplicados exactos cuentan una vez). Qué dibujo y qué revisión es cada PDF, y
+qué revisión citan los informes: [planos.md](planos.md).
 
 **Cómo se midió.** Primera página de cada PDF a 150 ppp: recuento de píxeles verdes, azules y
 rojos, y el detector de `prototypes/data-explorer/buscar_en_plano.py`, que busca círculos verdes
@@ -574,9 +575,9 @@ barrido del 10/11/2026, como recuadro: siguen pendientes. Buscar en el 3237 o el
 texto (`30` y `30°`). Los lectores de `[]`, `No.` y recuadros son prototipo: solo se han probado en
 estos 4 planos y no están en la aplicación.
 
-`20231129_213137-10300-B.pdf` y `3206.pdf` (2003) parecen el mismo dibujo que versiones globadas de
-otra carpeta, pero el detector no encuentra globos y su carpeta no tiene `.icp`: van como «Sin globos
-ni numeración».
+`20231129_213137-10300-B.pdf` y `3206.pdf` (2003) son la rev. B de 10/2023 (ECI 211G23-066 y -067),
+el mismo dibujo que las versiones globadas de `…-B_231011/` ([planos.md](planos.md#3205-y-3206--aisin-shroud-150-w-y-240-w)),
+pero el detector no encuentra globos y su carpeta no tiene `.icp`: van como «Sin globos ni numeración».
 
 Generada con `leer_planos.py --tabla`; no editar a mano.
 

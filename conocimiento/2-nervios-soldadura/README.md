@@ -8,8 +8,8 @@
 
 | Pieza | Qué es | Plano / nº pieza | Cavidades / columnas documentadas | Correcciones |
 |---|---|---|---|---|
-| **3205** | SHROUD, WATER PUMP | `213137-10300` (y variante `-B`) | 8 (algunas hojas 2–38 columnas) | Carpetas numeradas hasta el loop 11 (09/2023 → 09/2026); no acredita 11 ejecuciones |
-| **3206** | SHROUD, WATER PUMP | `213137-10280-A` y `-B` | 4 | unas 9 entregas (09/2023 → 07/2025) |
+| **3205** | SHROUD, WATER PUMP | `213137-10300`: sin letra y `A` (03/2023), `B` (10/2023 y 10/2024); estudio `213137-01030-10` ([planos](../planos.md#3205-y-3206--aisin-shroud-150-w-y-240-w)) | 8 (algunas hojas 2–38 columnas) | Carpetas numeradas hasta el loop 11 (09/2023 → 09/2026); no acredita 11 ejecuciones |
+| **3206** | SHROUD, WATER PUMP | `213137-10280`: sin letra y `A` (03/2023), `B` (10/2023 y 10/2024); estudio `213137-01028-10` | 4 | unas 9 entregas (09/2023 → 07/2025) |
 | **3214** | Bottom pencil part | plano `11206` / `C 11692`; refs. `R-2971`, `R-2718` | 4–8 | 2 planes (10/2023, 11/2023) |
 
 3205 y 3206 son **la misma familia de pieza en dos moldes** (8 y 4 cavidades) y comparten útiles de medida
