@@ -36,6 +36,8 @@ async function render() {
     else if (tab === "errores" && partes[1] === "generales") await vistaGenerales(q)
     else if (tab === "errores" && partes[1]) await vistaErroresPieza(partes[1], q)
     else if (tab === "errores") await vistaErrores()
+    // Pestañas de módulos aparte (asistente/): se registran solas en window.vistasExtra
+    else if (window.vistasExtra?.[tab]) await window.vistasExtra[tab](vista, partes, q)
   } catch (e) {
     vista.innerHTML = `<div class="vacio">Error: ${esc(e.message)}</div>`
     console.error(e)
@@ -371,7 +373,41 @@ const featuresDe = (p) => [...new Set(p.features)]
 
 // Las cifras que se comparan entre piezas: [campo, título de la columna].
 const CIFRAS = [["documentos", "Ficheros"], ["planos", "Planos"], ["muestreos", "Muestreos"], ["cotas", "Cotas medidas"],
-  ["correcciones", "Pasos de corrección"], ["errores", "Errores propios pendientes"], ["generales", "Errores generales pendientes"]]
+  ["pptx", "PPTX de corrección"], ["correcciones", "Pasos de corrección"]]
+// Qué es cada columna de Números: sale en la «i» junto al título. Mismas definiciones que `datos.piezas()`.
+const AYUDA_NUMEROS = {
+  codigo: "Código de cuatro dígitos que identifica la pieza y su molde; prefija casi todos sus ficheros. Pulsarlo en la fila abre la ficha de la pieza.",
+  feature: "Carpeta de Exemples en la que está la pieza (0- Bolt Eye, 4- Tetones…). Si la pieza aparece en varios features, salen todos separados por «|».",
+  tag: "Qué datos tiene la pieza: medidas y correcciones, medidas sin correcciones o sin medidas. Sale de «Cotas medidas» y «Pasos de corrección», salvo 3056 y 3226, fijadas a mano con su motivo.",
+  familia: "Agrupación nuestra de piezas del mismo producto, por el nombre en cabeceras o carpetas o por compartir plano. No viene de los ficheros; Isomask es una suposición sin confirmar.",
+  documentos: "Número total de ficheros de la pieza en Exemples, en todas sus carpetas, contando también las copias idénticas. No cuentan los Thumbs.db (miniaturas que crea Windows).",
+  planos: "PDF de plano: los de «1- 2D y 3D pieza» y los que llevan ballo, balon o drw en la ruta. Las copias idénticas cuentan una vez, pero un mismo plano limpio, con globos o en otra revisión cuenta varias.",
+  muestreos: "Número de muestreos distintos (intern.NN) con medidas leídas en los Excel de 4- Metrologia. Una serie distinta de la misma pieza, como 3168-10 frente a 3168-00, cuenta aparte.",
+  cotas: "Es el número de cotas distintas que aparecen con algún valor en los informes de medida, cada una contada una sola vez aunque salga en muchos muestreos.",
+  pptx: "Presentaciones PPTX de las reuniones de corrección: las de «5- Retoques molde» y las de otra carpeta que citan cotas. Una diapositiva por cota con la acción sobre el molde; las que no citan ninguna no dan pasos.",
+  correcciones: "Cotas citadas en las diapositivas de corrección del molde (PPTX), contando cada cota en cada diapositiva. Cada paso enlaza la corrección con su muestreo de origen y el de validación.",
+}
+const iconoAyuda = (clave) => `<span class="info" data-ayuda="${clave}" tabindex="0" title="" aria-label="${esc(AYUDA_NUMEROS[clave])}">i</span>`
+
+// Muestra el texto de la «i» encima del icono (debajo si no cabe) y lo quita al salir el ratón.
+function activaAyudas(raiz) {
+  raiz.querySelectorAll(".info[data-ayuda]").forEach((icono) => {
+    const muestra = () => {
+      tooltip.textContent = AYUDA_NUMEROS[icono.dataset.ayuda]
+      tooltip.style.display = "block"
+      const r = icono.getBoundingClientRect()
+      const arriba = r.top - tooltip.offsetHeight - 6
+      tooltip.style.left = `${Math.max(8, Math.min(r.left + r.width / 2 - tooltip.offsetWidth / 2, innerWidth - tooltip.offsetWidth - 8))}px`
+      tooltip.style.top = `${arriba >= 8 ? arriba : r.bottom + 6}px`
+    }
+    const oculta = () => { tooltip.style.display = "none" }
+    icono.onmouseenter = muestra
+    icono.onfocus = muestra
+    icono.onmouseleave = oculta
+    icono.onblur = oculta
+    icono.onclick = (e) => { e.stopPropagation(); muestra() } // sin ordenar la columna
+  })
+}
 let ordenNumeros = { campo: "codigo", sentido: 1 }
 const SUBPESTANAS = { "": "Cuadrícula", numeros: "Números", grafo: "Grafo" }
 // Un solo tag por pieza: qué datos tiene. En rojo, las que no tienen medidas.
@@ -445,31 +481,112 @@ function rejillaPiezas(cuerpo, lista, tags, familias) {
   cuerpo.append(rejilla)
 }
 
-// Desglose de la columna «Ficheros»: se despliega bajo la fila al pulsarla. Sigue abierto al reordenar.
+// Desglose de una pieza (12/11/2026): sus planos, sus muestreos y sus cotas. Se despliega bajo la fila al pulsarla y
+// sigue abierto al reordenar. Sustituye al de ficheros por carpeta, que daba demasiada información.
 const desplegadasNumeros = new Set()
-const AYUDA_TIPO = {
-  "pdf": "PDF con capa de texto: se puede buscar en él.",
-  "pdf escaneado": "PDF sin capa de texto: casi siempre un escaneo; alguno puede ser un PDF exportado como imagen. Para buscar en él haría falta OCR.",
-  "vacíos": "Ficheros de 0 bytes o con solo saltos de línea. No cuentan en su tipo.",
-  "otros sin texto extraíble": "Ficheros no PDF cuyo contenido no se puede consultar como texto; pueden contener imágenes o gráficos. Excluye los vacíos. No cuentan en su tipo (xls, docx…).",
+const plural = (n, uno, varios) => `${num(n)} ${n === 1 ? uno : varios}`
+const enCarpeta = (carpeta) => `<span class="ruta">${esc(carpeta || "(raíz de la pieza)")}</span>`
+// Planos sin .icp ni números situados: por qué no hay cifra.
+const SIN_NUMEROS = {
+  texto: "La numeración está en el texto del PDF: se encuentra con el buscador del plano.",
+  nada: "El lector no encontró globos ni numeración en este plano.",
+  sin_leer: "Este plano todavía no se ha pasado por el lector (leer_planos.py).",
 }
 
-async function desgloseFicheros(codigo) {
-  const d = await una(`/api/pieza/${encodeURIComponent(codigo)}/ficheros`)
-  // Una columna por tipo, de más a menos ficheros en la pieza, junto a «Ficheros», que es su suma. Vacía si no hay.
-  const exts = d.total.tipos.map((t) => t.ext)
-  const cifra = (n, clase = "") => `<td class="cifra-col ${clase} ${n ? "" : "cero"}">${num(n)}</td>`
-  const tipo = (n) => n ? cifra(n, "tipo") : `<td class="tipo"></td>`
-  const fila = (x, nombre, clase = "") => {
-    const porTipo = Object.fromEntries(x.tipos.map((t) => [t.ext, t.n]))
-    return `<tr class="${clase}"><td>${nombre}</td>${cifra(x.n)}${exts.map((e) => tipo(porTipo[e])).join("")}</tr>`
+function tablaPlanos(d) {
+  if (!d.planos.length) return `<p class="nota">Sin planos.</p>`
+  const conComponente = Object.keys(d.componentes).length > 0
+  const carpetas = new Set(d.planos.map((p) => p.carpeta))
+  const filas = d.planos.map((p, i) => {
+    // La carpeta, una vez por grupo de planos seguidos en ella (vienen ordenados por ruta).
+    let carpeta = ""
+    if (i === 0 || d.planos[i - 1].carpeta !== p.carpeta) {
+      let n = 1
+      while (d.planos[i + n]?.carpeta === p.carpeta) n++
+      carpeta = `<td rowspan="${n}" class="carpeta">${enCarpeta(p.carpeta)}</td>`
+    }
+    let numeros
+    if (p.fuente === "icp") {
+      numeros = `<td class="cifra-col" title="${esc(p.icp)}">${num(p.en_plano)}</td><td class="cifra-col cero" title="Con .icp no hace falta el lector">—</td><td class="cifra-col cero">—</td>`
+    } else if (p.detectados !== null) {
+      numeros = `<td class="cifra-col cero" title="Sin .icp no se sabe el total">no se sabe</td><td class="cifra-col">${num(p.detectados)}</td>
+        <td class="cifra-col ${p.sin_leer ? "" : "cero"}">${p.sin_leer === null ? "—" : num(p.sin_leer)}</td>`
+    } else {
+      numeros = `<td class="cifra-col cero" title="Sin .icp no se sabe el total">no se sabe</td><td colspan="2" class="cero">${esc(SIN_NUMEROS[p.fuente] ?? "")}</td>`
+    }
+    return `<tr>${carpeta}<td><a href="#/planos/${p.id}" title="${esc(p.ruta)}">${esc(p.nombre)}</a></td>
+      ${conComponente ? `<td>${esc(d.componentes[p.componente] ?? p.componente ?? "")}</td>` : ""}<td class="cifra-col">${num(p.paginas)}</td>${numeros}</tr>`
+  })
+  return `<h4>Planos · ${plural(d.planos.length, "plano", "planos")} en ${plural(carpetas.size, "carpeta", "carpetas")}</h4>
+    <table class="desglose"><tr><th>Carpeta</th><th>Plano</th>${conComponente ? "<th>Componente</th>" : ""}<th class="cifra-col">Págs.</th>
+      <th class="cifra-col" title="Números de cota del .icp, el fichero del programa de globos: el total exacto">En el plano (.icp)</th>
+      <th class="cifra-col" title="Números distintos que el lector leyó y situó en el plano. Sin verificar: puede fallar sin avisar">Detectados (lector)</th>
+      <th class="cifra-col" title="Globos de color que el lector encontró sin poder leer su número">Globos sin leer</th></tr>
+    ${filas.join("")}</table>`
+}
+
+function tablaMuestreos(d) {
+  if (!d.muestreos.length) return `<h4>Muestreos</h4><p class="nota">Sin Excel con medidas ni CSV de la CMM.</p>`
+  const lista = (ficheros) => ficheros.map((f) => `<div title="${esc(f.ruta)}">${esc(f.nombre)} ${enCarpeta(f.carpeta)}</div>`).join("")
+  const csv = (ficheros) => {
+    if (!ficheros.length) return `<span class="cero">0</span>`
+    const porCarpeta = {}
+    for (const f of ficheros) (porCarpeta[f.carpeta] ??= []).push(f.nombre)
+    return `<b>${num(ficheros.length)}</b>${Object.entries(porCarpeta).map(([c, nombres]) =>
+      `<div title="${esc(nombres.join("\n"))}">${enCarpeta(c)} (${num(nombres.length)})</div>`).join("")}`
   }
-  return `<div class="desglose-caja"><table class="desglose"><tr><th>Carpeta</th><th class="cifra-col">Ficheros</th>
-    ${exts.map((e) => `<th class="cifra-col tipo" ${AYUDA_TIPO[e] ? `title="${esc(AYUDA_TIPO[e])}"` : ""}>${esc(e || "sin ext.")}</th>`).join("")}</tr>
-    ${d.carpetas.map((x) => fila(x, esc(x.carpeta_norm ?? "—"))).join("")}${fila(d.total, "Total", "total")}</table></div>`
+  const conMuestreo = d.muestreos.filter((m) => m.clave)
+  const conCsv = conMuestreo.filter((m) => m.csv.length).length
+  return `<h4>Muestreos · ${plural(conMuestreo.length, "muestreo", "muestreos")}${conCsv ? `, ${num(conCsv)} con CSV de la CMM` : ""}</h4>
+    <table class="desglose"><tr><th>Muestreo</th><th>Excel con medidas</th><th>CSV de la CMM</th></tr>
+    ${d.muestreos.map((m) => `<tr><td>${m.clave ? esc(m.etiqueta) : `<span class="cero" title="Excel sin intern.NN en el nombre (entregas PPAP, estudios) y CSV sin muestreo en la ruta">Sin muestreo en el nombre</span>`}</td>
+      <td>${m.excel.length ? lista(m.excel) : `<span class="cero">0</span>`}</td><td>${csv(m.csv)}</td></tr>`).join("")}</table>
+    <p class="nota">CSV de la CMM: solo los de cotas (una cavidad por fichero, «totes» con una columna por cavidad y puntos). Los TXT no
+      cuentan: son nubes de puntos, perfiles o exportes <code>#P#</code> para el cliente. Pasa el cursor por una carpeta para ver sus ficheros.</p>`
 }
 
-function despliegaFicheros(tr, ancho) {
+function tablaCotas(d) {
+  const c = d.cotas
+  const porComponente = Object.entries(c.por_componente).map(([k, n]) => `${esc(d.componentes[k] ?? k)} ${num(n)}`).join(" · ")
+  return `<h4>Cotas con medidas</h4>
+    <table class="desglose"><tr><th class="cifra-col">En Excel</th><th class="cifra-col">En CSV de la CMM</th><th class="cifra-col">En Excel o CSV</th></tr>
+      <tr><td class="cifra-col">${num(c.excel)}${porComponente ? ` <span class="ruta">(${porComponente})</span>` : ""}</td>
+        <td class="cifra-col ${c.csv ? "" : "cero"}">${num(c.csv)}</td><td class="cifra-col">${num(c.total)}</td></tr></table>
+    <p class="nota">Independiente del plano: cotas distintas con algún valor, una vez cada una. «En Excel» es la columna «Cotas medidas».
+      Las del plano están arriba, en Planos.</p>`
+}
+
+function tablaCorrecciones(d) {
+  if (!d.correcciones.length) return `<h4>Correcciones (PPTX)</h4><p class="nota">Sin PPTX de corrección.</p>`
+  const conComponente = Object.keys(d.componentes).length > 0
+  const carpetas = new Set(d.correcciones.map((x) => x.carpeta))
+  const pasos = d.correcciones.reduce((s, x) => s + x.pasos, 0)
+  const filas = d.correcciones.map((x, i) => {
+    let carpeta = ""
+    if (i === 0 || d.correcciones[i - 1].carpeta !== x.carpeta) {
+      let n = 1
+      while (d.correcciones[i + n]?.carpeta === x.carpeta) n++
+      carpeta = `<td rowspan="${n}" class="carpeta">${enCarpeta(x.carpeta)}</td>`
+    }
+    return `<tr>${carpeta}<td title="${esc(x.ruta)}">${esc(x.nombre)}${x.archivada ? ` <span class="chip" title="Está en una carpeta Old u obsoleta">archivada</span>` : ""}</td>
+      ${conComponente ? `<td>${esc(d.componentes[x.componente] ?? x.componente ?? "")}</td>` : ""}
+      <td class="cifra-col">${num(x.diapositivas)}</td><td class="cifra-col ${x.pasos ? "" : "cero"}">${num(x.pasos)}</td></tr>`
+  })
+  return `<h4>Correcciones (PPTX) · ${plural(d.correcciones.length, "PPTX", "PPTX")} en ${plural(carpetas.size, "carpeta", "carpetas")}, ${plural(pasos, "paso", "pasos")}</h4>
+    <table class="desglose"><tr><th>Carpeta</th><th>PPTX</th>${conComponente ? "<th>Componente</th>" : ""}
+      <th class="cifra-col" title="Diapositivas de la presentación">Diapositivas</th>
+      <th class="cifra-col" title="Cotas citadas en sus diapositivas, cada cota en cada diapositiva: la columna «Pasos de corrección»">Pasos</th></tr>
+    ${filas.join("")}</table>
+    <p class="nota">Con 0 pasos: la presentación no cita ninguna cota en el texto (suele ser solo imágenes). Las acciones de cada paso
+      están en la ficha de la pieza, en la cadena de correcciones.</p>`
+}
+
+async function desglosePieza(codigo) {
+  const d = await una(`/api/pieza/${encodeURIComponent(codigo)}/desglose`)
+  return `<div class="desglose-caja">${tablaPlanos(d)}${tablaMuestreos(d)}${tablaCotas(d)}${tablaCorrecciones(d)}</div>`
+}
+
+function despliegaDesglose(tr, ancho) {
   const codigo = tr.dataset.codigo
   if (tr.nextElementSibling?.classList.contains("detalle")) {
     tr.nextElementSibling.remove(); tr.classList.remove("abierta"); desplegadasNumeros.delete(codigo); return
@@ -479,19 +596,21 @@ function despliegaFicheros(tr, ancho) {
   detalle.className = "detalle"
   detalle.innerHTML = `<td colspan="${ancho}"><span class="nota">Cargando…</span></td>`
   tr.after(detalle)
-  desgloseFicheros(codigo).then((html) => { detalle.firstElementChild.innerHTML = html })
+  desglosePieza(codigo).then((html) => { detalle.firstElementChild.innerHTML = html })
     .catch((e) => { detalle.firstElementChild.textContent = `Error: ${e.message}` })
 }
 
 function tablaNumeros(cuerpo, lista, tags, familias) {
   const { campo, sentido } = ordenNumeros
   const orden = [...lista].sort((a, b) => sentido * (campo === "codigo" ? a.codigo.localeCompare(b.codigo) : a[campo] - b[campo]) || a.codigo.localeCompare(b.codigo))
-  const titulo = (c, texto, clase = "") => `<th class="${clase}" data-campo="${c}" title="Ordenar">${texto}${c === campo ? (sentido > 0 ? " ▲" : " ▼") : ""}</th>`
+  const titulo = (c, texto, clase = "") => `<th class="${clase}" data-campo="${c}" title="Ordenar">${texto}${iconoAyuda(c)}${c === campo ? (sentido > 0 ? " ▲" : " ▼") : ""}</th>`
+  const fijo = (c, texto) => `<th class="fijo">${texto}${iconoAyuda(c)}</th>`
   const ancho = 4 + CIFRAS.length
-  cuerpo.innerHTML = `<div class="numeros"><p class="nota">Pulsa una fila para ver sus ficheros por carpeta; el número de la pieza abre su ficha.</p><table>
-    <tr>${titulo("codigo", "Pieza")}<th class="fijo">Feature</th><th class="fijo">Tag</th><th class="fijo">Familia</th>${CIFRAS.map(([c, t]) => titulo(c, t, "cifra-col")).join("")}</tr>
+  cuerpo.innerHTML = `<div class="numeros"><p class="nota">Pulsa una fila para ver sus planos, muestreos y cotas; el número de la pieza abre su ficha.</p><table>
+    <tr>${titulo("codigo", "Pieza")}${fijo("feature", "Feature")}${fijo("tag", "Tag")}${fijo("familia", "Familia")}${CIFRAS.map(([c, t]) => titulo(c, t, "cifra-col")).join("")}</tr>
     ${orden.map((p) => `<tr data-codigo="${esc(p.codigo)}"><td><a href="#/piezas/${esc(p.codigo)}" title="Abrir la ficha"><b>${esc(p.codigo)}</b></a></td><td>${esc(featuresDe(p).join(" | "))}</td><td>${tagPieza(p, tags)}</td><td>${familiaPieza(p, familias)}</td>${CIFRAS.map(([c]) => `<td class="cifra-col ${p[c] ? "" : "cero"}">${num(p[c])}</td>`).join("")}</tr>`).join("")}
   </table></div>`
+  activaAyudas(cuerpo)
   cuerpo.querySelectorAll("th[data-campo]").forEach((th) => {
     th.onclick = () => {
       const c = th.dataset.campo
@@ -501,8 +620,8 @@ function tablaNumeros(cuerpo, lista, tags, familias) {
     }
   })
   cuerpo.querySelectorAll("tr[data-codigo]").forEach((tr) => {
-    tr.onclick = (e) => { if (!e.target.closest("a")) despliegaFicheros(tr, ancho) }
-    if (desplegadasNumeros.has(tr.dataset.codigo)) { desplegadasNumeros.delete(tr.dataset.codigo); despliegaFicheros(tr, ancho) }
+    tr.onclick = (e) => { if (!e.target.closest("a")) despliegaDesglose(tr, ancho) }
+    if (desplegadasNumeros.has(tr.dataset.codigo)) { desplegadasNumeros.delete(tr.dataset.codigo); despliegaDesglose(tr, ancho) }
   })
 }
 

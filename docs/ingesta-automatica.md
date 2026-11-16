@@ -9,6 +9,34 @@
 
 ## La respuesta corta
 
+**Actualización del 13/11/2026, sin IA:** `automatic-tables-v6` deja de descartar
+los informes Excel de metrología del 3212. El adaptador específico de ese piloto
+se ocupa de casos de corrección, no sustituye todos sus informes dimensionales.
+Los CSV con marcador `#P#` se reconocen como exportaciones SPC pendientes de
+interpretación; no se leen con las columnas de un CSV CMM ni detienen la lectura
+de los demás archivos compatibles. No se convierten sus cifras en mediciones.
+La web conserva el estado parcial cuando hay archivos de mediciones pendientes,
+incluso si termina el procesamiento separado de correcciones.
+
+### Qué es automático y qué se introduce a mano
+
+| Contenido | Comportamiento actual |
+|---|---|
+| Nombre y código de pieza | Propuesta desde la carpeta, editable por el usuario |
+| Descripción y cliente | Edición manual; no se rellenan fiablemente a partir de todas las cabeceras de los informes |
+| Archivos, CAD y planos | Descubrimiento y propuesta automáticos; el usuario revisa tipos, archivos y principal. Vistas derivadas automáticas cuando el formato está soportado |
+| Cotas y observaciones | Lectura automática de formatos compatibles, con origen y exclusiones; no cobertura universal ni validación humana implícita |
+| Features, categoría, tags y vínculos pieza/feature/cota | Edición y selección manuales |
+| Advertencias y lecciones | Contenido editado/validado por usuarios; el chat de consulta no las publica automáticamente |
+| Correcciones y previsiones | Adaptador específico del 3212. Fuera del piloto falta un lector general productivo; no afirmar que ya existe una importación automática o un formulario completo para todos los casos |
+| Base/tapa y otros componentes | Falta identidad de componente en el modelo; no se soluciona solo leyendo más columnas |
+
+El paquete de aclaraciones y las convenciones mínimas propuestas están en
+[Preguntas abiertas: extracción sin IA](preguntas-abiertas.md#extraccion-sin-ia).
+Se pide significado y trazabilidad donde faltan, no reorganizar las carpetas para
+compensar fallos del lector. Los planes y cifras históricos que siguen debajo
+no son una nueva medición de cobertura de las correcciones.
+
 **Actualización del 02/11/2026:** el lector productivo audita firmas OLE/ZIP/PDF y
 fórmulas BIFF8/OOXML antes de leer cachés. Admite tablas reconocidas DR (incluidas
 100%), CAV_n y 100% de XLS/XLSX/XLSM. Usa Calamine si xlrd no abre el XLS y
@@ -169,6 +197,30 @@ cavidad en el 3218, 13.9). Para generalizar las previsiones se propone localizar
 columnas por etiqueta (§1.2): el 3212 tiene `Retoc` en O y el 3197 en T. El adaptador
 productivo del piloto todavía usa correspondencias de filas y columnas concretas
 en `pilot_3212/measurements.py`.
+
+### 1.5 Diferencias con el piloto 3212 (12/11/2026)
+
+Comparación de datos en [comparativa § Respecto al 3212](../conocimiento/comparativa.md#respecto-al-3212-la-referencia-de-la-app).
+Consecuencias para la app, comprobadas en el código el 12/11/2026:
+
+1. **La ficha general se reutiliza tal cual**: pieza, archivos, features, warnings y lessons.
+   El seed ya separa el feature de sus cotas (N170, N117, N178 y N288 en `backend/app/seed_features.py`).
+2. **Las correcciones siguen siendo solo del 3212.** El adaptador se elige por código y carpeta
+   ([cotas y evidencia](cotas-y-evidencia-web.md#datos-y-alcance)). Cada formato de previsión
+   y de plan necesita su propia interpretación.
+3. **Falta el componente en el modelo.** `PartCharacteristic` es único por (pieza, código,
+   revisión) (`backend/app/knowledge_models.py:15`). El 3288 tiene BASE y TAPA con
+   numeraciones de cota propias en hojas distintas. **Pendiente de decidir:** un campo de
+   componente o tratar cada componente como pieza. Cavidad, método, condición de montaje
+   (clipada o libre) y versión del documento también cambian el significado de una medida.
+4. **No dar por hecha la estructura del 3212 en los lectores:**
+   - la cavidad no está en la ruta;
+   - el número de carpeta no fija el contenido;
+   - las carpetas pueden estar vacías;
+   - la fuente habitual es el libro PPAP, no el CSV de la CMM.
+5. **Rellenar fichas exige seleccionar.** Los archivos describen la pieza entera, no solo el
+   feature de su carpeta. Propuesta, previsión y medición posterior van por separado.
+   Hay copias, valores `RAND()` y decisiones de no corregir.
 
 ## 2. Interpretación propuesta con ayuda opcional de un LLM
 
@@ -334,3 +386,10 @@ $PY conocimiento/herramientas/consultar.py sql "SELECT papel, count(*), sum(valo
 
 La concordancia NOK está en `lectura_dr.nok`: `[no marcado y dentro, no marcado y fuera, marcado
 y dentro, marcado y fuera]`.
+
+La prueba del lector productivo sobre carpetas completas, autorizada el 13/11/2026,
+se ejecuta con `prototypes/data-explorer/probar_ingesta_web.py`. Los ajustes de
+selección de referencias, varios planos y límites de 32/256 MiB, el comando de
+repetición y sus resultados están en
+[Prueba de extracción de la web](../conocimiento/prueba-ingesta-web.md).
+Esta prueba no importa correcciones ni datos en la base de datos.

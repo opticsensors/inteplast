@@ -52,6 +52,26 @@ def register_piece(client, headers, folder):
     return response.json()["part"], data
 
 
+def test_refresh_keeps_spc_pending_and_imports_supported_files(
+    client: TestClient, normal_user_token_headers, source
+):
+    folder, root = source
+    write(root, "4- Metrologia/Cav_1.csv", b"#P#;500;3;1.4;1.45;1.35;mm;1.423;1.423\n")
+    write(root, "4- Metrologia/intern.01/c1/measurement.csv", csv())
+    headers = normal_user_token_headers
+    part, _ = register_piece(client, headers, folder)
+    url = f"{API}/{part['id']}/refresh"
+    first = client.post(url, headers=headers)
+    assert first.status_code == 200, first.text
+    result = first.json()
+    assert result["state"] == "partial"
+    assert result["imported"] == 1
+    pending = next(f for f in result["files"] if f["path"].endswith("Cav_1.csv"))
+    assert "Pendiente:" in pending["status"] and "SPC #P#" in pending["status"]
+    again = client.post(url, headers=headers).json()
+    assert again["state"] == "partial" and again["imported"] == 0
+
+
 def test_edit_references_saves_with_header_without_importing_or_changing_features(
     client: TestClient,
     db: Session,

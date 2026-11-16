@@ -36,6 +36,12 @@ Flujo recomendado para un agente: `buscar --json` → citar `ruta` + `localizado
 `ver <id>` si hace falta contexto → `exacto …` para cualquier cifra, con los filtros que muestra
 `alcance`. El top-k **no es un inventario**: `completo` es siempre `false`.
 
+**Desde un chat (12/11/2026).** La pestaña Asistente del visor usa estas mismas funciones dentro de un proceso que se
+mantiene vivo, como servidor MCP
+([`asistente/herramientas_mcp.py`](../prototypes/data-explorer/conocimiento/asistente/README.md)). Cada búsqueda tarda
+0,5–0,8 s, frente a los 30–150 s de lanzar la CLI desde la consola Bash de Claude Code en este equipo. `rag.py` no
+cambia.
+
 ## Arquitectura
 
 | Pieza | Qué hace |

@@ -1,4 +1,4 @@
-"""Visor de `conocimiento/`: planos, piezas (con su grafo) y errores.
+"""Visor de `conocimiento/`: planos, piezas (con su grafo), errores y asistente.
 
 La revisión de enlaces pieza ↔ muestreo (`revision.py`) se ejecuta desde la consola; su pestaña se quitó el 11/11/2026
 (destino de cada comprobación en `conocimiento/revision-comprobaciones.md`).
@@ -46,6 +46,11 @@ class SinCache(StaticFiles):
 app.mount("/static", SinCache(directory=AQUI / "static"), name="static")
 # Capturas ya hechas por miniaturas_cad.py: el visor no lee STEP.
 app.mount("/cad", StaticFiles(directory=datos.MINIATURAS, check_dir=False), name="cad")
+
+# Pestaña «Asistente» (12/11/2026): módulo autocontenido en asistente/. Para quitarla, borrar estas dos líneas,
+# la carpeta y su <script> en static/index.html.
+import asistente  # noqa: E402
+asistente.instalar(app)
 
 
 @app.get("/")
@@ -129,12 +134,12 @@ def pieza(codigo: str):
     return datos.pieza(codigo)
 
 
-@app.get("/api/pieza/{codigo}/ficheros")
-def ficheros_de_pieza(codigo: str):
-    """Desglose por carpeta de la columna «Ficheros» de Números."""
+@app.get("/api/pieza/{codigo}/desglose")
+def desglose_de_pieza(codigo: str):
+    """Lo que se despliega al pulsar una fila de Números: planos, muestreos y cotas (12/11/2026)."""
     if not any(p["codigo"] == codigo for p in datos.piezas()):
         raise HTTPException(404)
-    return datos.ficheros(codigo)
+    return datos.desglose(codigo)
 
 
 @app.get("/api/pieza/{codigo}/cota")

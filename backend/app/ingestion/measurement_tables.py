@@ -297,11 +297,24 @@ def report_rows(
     sheets: list[tuple[str, list[list[Any]]]],
     *,
     part_code: str = "",
+    diagnostics: list[dict[str, Any]] | None = None,
 ) -> tuple[str, list[dict[str, Any]]]:
     revisions = set()
-    output = []
+    output: list[dict[str, Any]] = []
     structures = {}
     for sheet, grid in sheets:
+        diagnostic: dict[str, Any] = {
+            "sheet": sheet,
+            "status": "skipped",
+            "reason": "sheet_name_not_supported",
+        }
+        if diagnostics is not None:
+            diagnostic["nominal_header_rows"] = [
+                i + 1
+                for i, row in enumerate(grid[:30])
+                if any(header_label(v) == "nominal" for v in row)
+            ]
+            diagnostics.append(diagnostic)
         identity, identity_warnings = identity_flags(grid, part_code)
         for row in grid[:12]:
             for c, value in enumerate(row):
@@ -339,6 +352,7 @@ def report_rows(
             None,
         )
         if header is None:
+            diagnostic["reason"] = "no_recognized_header_or_cavities"
             continue
         labels = [header_label(v) for v in grid[header]]
         # Later blocks can repeat Nominal/Tol headers for forecasts or customer
@@ -366,7 +380,12 @@ def report_rows(
                     )
                 ]
         if not cavities:
+            diagnostic["reason"] = "no_recognized_cavities"
             continue
+        diagnostic.update(
+            status="read", reason=None, header_row=header + 1, rejected_rows=[]
+        )
+        output_start = len(output)
         audit = getattr(sheets, "audit", FormulaAudit())
         code_column = columns.get("number", 0)
 
@@ -444,9 +463,25 @@ def report_rows(
                 ncode = "N" + match[1].removesuffix(".0") if match else ""
             nominal = number(cell("nominal"))
             if not ncode or nominal is None:
+                if diagnostics is not None and nominal is not None and raw_code:
+                    diagnostic["rejected_rows"].append(
+                        {
+                            "row": r + 1,
+                            "code": raw_code,
+                            "reason": "unsupported_characteristic_code",
+                        }
+                    )
                 continue
             high, low = number(cell("tol +")), number(cell("tol-"))
             if low is not None and high is not None and low > high:
+                if diagnostics is not None:
+                    diagnostic["rejected_rows"].append(
+                        {
+                            "row": r + 1,
+                            "code": raw_code,
+                            "reason": "reversed_tolerances",
+                        }
+                    )
                 continue
             evaluation = str(cell("type") or "")
             counts[ncode] += 1
@@ -534,6 +569,7 @@ def report_rows(
                         "_report": True,
                     }
                 )
+        diagnostic["observations"] = len(output) - output_start
     mark_copied_cells(output, structures)
     return (next(iter(revisions)) if len(revisions) == 1 else ""), output
 

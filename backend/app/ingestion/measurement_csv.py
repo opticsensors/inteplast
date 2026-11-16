@@ -6,7 +6,11 @@ import math
 import re
 from typing import Any
 
-READER = "cmm-blocks-v1"
+READER = "cmm-blocks-v2"
+
+
+class UnsupportedMeasurementCsv(ValueError):
+    """Recognized export family whose measurement semantics are not supported."""
 
 
 def dimension_numbers(block: str) -> list[str]:
@@ -46,6 +50,12 @@ def parse(
     for line, cells in enumerate(csv.reader(text.splitlines(), delimiter=";"), 1):
         if not cells or not any(c.strip() for c in cells):
             continue
+        if cells[0].strip().upper() == "#P#":
+            # SPC is not a CMM block export: e.g. column 7 is a unit, not a
+            # measured number. Do not guess what its repeated values represent.
+            raise UnsupportedMeasurementCsv(
+                "exportación SPC #P# (significado de campos y procedencia sin confirmar)"
+            )
         heading = ";".join(cells).strip("; \t")
         if any(re.fullmatch(r"c\d+", c.strip(), re.I) for c in cells[3:]):
             raise ValueError(

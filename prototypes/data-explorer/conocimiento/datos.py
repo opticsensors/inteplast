@@ -41,7 +41,7 @@ TAGS ={"icp": "Con .icp", "globos": "Globos sin .icp", "numerado": "Numerado sin
         "nada": "Sin globos ni numeración"}
 
 sys.path.insert(0, str(CONOCIMIENTO / "herramientas"))
-from cadena_correcciones import MUESTREO, serie_de  # noqa: E402
+from cadena_correcciones import ARCHIVADA, MUESTREO, etiqueta, serie_de  # noqa: E402
 from comun import COMPONENTES, EXEMPLES, componente_de_nombre, original  # noqa: E402, F401
 from perfil_ppap import es_etiqueta  # noqa: E402
 
@@ -524,14 +524,12 @@ def cad_de(codigo: str) -> list[sqlite3.Row]:
 @lru_cache(maxsize=1)
 def piezas() -> list[dict]:
     """Una fila por pieza con sus cifras, para poder compararlas. Mismas definiciones que `pieza()`."""
-    import errores  # importa este módulo: aquí dentro para no hacerlo en círculo
-
     c = con()
     salida = {}
     for f in c.execute("SELECT codigo, feature, pieza, count(*) n, sum(tamano) b FROM documento WHERE codigo IS NOT NULL"
                        f" AND {SIN_THUMBS} GROUP BY codigo, feature, pieza"):
         p = salida.setdefault(f["codigo"], {"codigo": f["codigo"], "features": [], "carpetas": [], "documentos": 0, "bytes": 0,
-                                            "planos": 0, "correcciones": 0})
+                                            "planos": 0, "pptx": 0, "correcciones": 0})
         p["features"].append(f["feature"])
         p["carpetas"].append(f["pieza"])
         p["documentos"] += f["n"]
@@ -539,23 +537,25 @@ def piezas() -> list[dict]:
     for f in c.execute("SELECT pieza, count(*) FROM cadena_correccion GROUP BY pieza"):
         if f[0] in salida:
             salida[f[0]]["correcciones"] = f[1]
+    for f in c.execute(f"SELECT d.codigo, count(*) FROM documento d WHERE d.codigo IS NOT NULL AND {PPTX_CORRECCION} GROUP BY 1"):
+        salida[f[0]]["pptx"] = f[1]
     for p in planos():
         if p["codigo"] in salida:
             salida[p["codigo"]]["planos"] += 1
     muestreos, cotas = defaultdict(set), defaultdict(set)
-    for f in c.execute("SELECT d.codigo, d.nombre, m.cota FROM medida_dr m JOIN documento d ON d.id=m.documento_id"
-                       " WHERE d.carpeta_norm='metrologia' AND d.codigo IS NOT NULL GROUP BY d.id, m.cota"):
+    for f in c.execute("SELECT d.codigo, d.nombre, m.hoja, m.cota FROM medida_dr m JOIN documento d ON d.id=m.documento_id"
+                       " WHERE d.carpeta_norm='metrologia' AND d.codigo IS NOT NULL GROUP BY d.id, m.hoja, m.cota"):
         m = MUESTREO.search(f["nombre"])
         if m:
             muestreos[f["codigo"]].add((serie_de(f["nombre"]), int(m.group(1))))
-            cotas[f["codigo"]].add(f["cota"])
+            # Una cota es número + componente: en el 3288 la «1» de DR(base) y la de DR(tapa) son cotas distintas, de
+            # planos distintos (99 de los 108 números comunes tienen otro nominal). Sin componentes, solo el número.
+            cotas[f["codigo"]].add((componente_de_nombre(f["codigo"], f["hoja"]), f["cota"]))
     for codigo, p in salida.items():
         p["muestreos"], p["cotas"] = len(muestreos[codigo]), len(cotas[codigo])
         p["cad"] = [f["nombre"] for f in cad_de(codigo)]
         p["tag"], p["tag_motivo"] = TAG_FIJO.get(codigo) or (tag_de_pieza(p), None)
         p["familia"] = FAMILIA_DE.get(codigo)
-        e = errores.resumen_pieza(codigo)  # pestaña Errores: propias y generales pendientes
-        p["errores"], p["generales"] = e["propias_pendientes"], e["generales_pendientes"]
     return sorted(salida.values(), key=lambda p: p["codigo"])
 
 
@@ -563,40 +563,104 @@ def tag_de_pieza(p: dict) -> str:
     return "nada" if not p["cotas"] else "correcciones" if p["correcciones"] else "medidas"
 
 
-ESCANEADO, VACIOS, OTROS_SIN_TEXTO = "pdf escaneado", "vacíos", "otros sin texto extraíble"
-# Tipo de cada fichero en el desglose. Cada fichero cae en uno solo, así que los tipos suman «Ficheros». Una copia
-# idéntica (`duplicado`) no se vuelve a leer: cuenta como su original. Revisión del 09/11/2026:
-# - vacíos: 0 bytes, o texto sin nada más que saltos de línea (cav_1.txt del 3237); salen de su tipo;
-# - pdf escaneado: PDF sin capa de texto (casi siempre un escaneo; alguno puede ser un PDF exportado como imagen);
-# - otros sin texto extraíble: el resto sin texto (Excel, ODS y Word hechos de imágenes o gráficos); salen de su tipo.
-TIPO_FICHERO = f"""CASE WHEN tamano = 0 OR (estado_real = 'sin_texto' AND lector_real = 'texto') THEN '{VACIOS}'
-    WHEN estado_real = 'sin_texto' AND lower(ext) = 'pdf' THEN '{ESCANEADO}'
-    WHEN estado_real = 'sin_texto' THEN '{OTROS_SIN_TEXTO}' ELSE lower(ext) END"""
-CON_ORIGINAL = """(SELECT d.*, coalesce(o.estado, d.estado) AS estado_real, coalesce(o.lector, d.lector) AS lector_real
-    FROM documento d LEFT JOIN documento o ON o.id = d.duplicado_de AND d.estado = 'duplicado')"""
+def carpeta_en_pieza(ruta: str, pieza: str | None) -> str:
+    """Carpeta del fichero dentro de la de su pieza: `4- Tetones/3288/6- Método…/REV.01/x.pdf` → `6- Método…/REV.01`.
+
+    La de la pieza no siempre es la segunda: `1- Clips en Piezas/Tipo B/3195/…`. Se busca por su nombre (`documento.pieza`).
+    """
+    partes = ruta.split("/")
+    desde = partes.index(pieza) + 1 if pieza in partes[:-1] else 2
+    return "/".join(partes[desde:-1])
 
 
-def ficheros(codigo: str) -> dict:
-    """Desglose de la columna «Ficheros» de Números: por carpeta y tipo de fichero, con total.
+# CSV de la CMM con cotas, de las tres tablas del lector de la biblioteca (`medidas_cmm.py`): export individual por
+# cavidad, «totes» (una columna por cavidad) y puntos `SYM-POINT`. Los TXT no entran: en el 3212 y el 3197 son nubes
+# de puntos, en el 3051 perfiles, y los `#P#` son exportes para eISIR del cliente, con valores generados en algunos
+# (3-paredes-delgadas/README.md). Decisión de Eduard, 12/11/2026: solo los ficheros de cotas de la CMM.
+TABLAS_CSV_CMM = ("medida_cmm", "medida_cmm_comparativa", "punto_cmm")
+# Presentaciones de las reuniones de corrección del molde, sin copias idénticas: los PPTX de «5- Retoques molde» y los
+# de otra carpeta con algún paso (3195: `4- Metrologia/Customer/…Mold correction_1_P3195_Toolmaker_comments_rev3.pptx`).
+PPTX_CORRECCION = ("lower(d.ext)='pptx' AND d.duplicado_de IS NULL"
+                   " AND (d.carpeta_norm='retoques' OR d.id IN (SELECT documento_id FROM cadena_correccion))")
 
-    «pdf escaneado» va junto a «pdf»; «vacíos» y «otros sin texto extraíble», al final. Ver `TIPO_FICHERO`.
+
+def desglose(codigo: str) -> dict:
+    """Lo que se despliega al pulsar una pieza en Números (12/11/2026): sus planos, sus muestreos y sus cotas.
+
+    - planos: los de la columna «Planos», con su carpeta y cuántos números tienen. Con .icp, los del .icp (exactos:
+      salen del programa de globos); sin él, los que situó el lector (sin verificar) y, en planos de globos de color,
+      los globos que encontró sin poder leer su número.
+    - muestreos: los Excel con medidas de cada intern.NN (los de la columna «Muestreos») y los CSV de la CMM. Lo que
+      no lleva muestreo en el nombre o la ruta va en una fila aparte, para que no se pierda.
+    - cotas: con medidas en Excel (la columna «Cotas medidas»), en CSV y en cualquiera de los dos.
     """
     c = con()
-    carpetas = {f["carpeta_norm"]: {**dict(f), "tipos": []} for f in c.execute(
-        f"SELECT carpeta_norm, count(*) n FROM documento WHERE codigo=? AND {SIN_THUMBS} GROUP BY 1 ORDER BY 2 DESC, 1", (codigo,))}
-    tipos: Counter = Counter()
-    for f in c.execute(f"SELECT carpeta_norm, {TIPO_FICHERO} ext, count(*) n FROM {CON_ORIGINAL} WHERE codigo=? AND {SIN_THUMBS}"
-                       " GROUP BY 1, 2 ORDER BY 3 DESC, 2", (codigo,)):
-        carpetas[f["carpeta_norm"]]["tipos"].append({"ext": f["ext"], "n": f["n"]})
-        tipos[f["ext"]] += f["n"]
-    orden = sorted((e for e in tipos if e not in (VACIOS, OTROS_SIN_TEXTO)), key=lambda e: (-tipos[e], e or ""))
-    if ESCANEADO in orden and "pdf" in orden:  # junto a «pdf»
-        orden.remove(ESCANEADO)
-        orden.insert(orden.index("pdf") + 1, ESCANEADO)
-    orden += [e for e in (VACIOS, OTROS_SIN_TEXTO) if e in tipos]
-    filas = list(carpetas.values())
-    total = {"n": sum(x["n"] for x in filas), "tipos": [{"ext": e, "n": tipos[e]} for e in orden]}
-    return {"codigo": codigo, "carpetas": filas, "total": total}
+    salida_planos = []
+    for p in (x for x in planos() if x["codigo"] == codigo):
+        fila = {"id": p["id"], "nombre": p["nombre"], "ruta": p["ruta"], "carpeta": carpeta_en_pieza(p["ruta"], p["pieza"]),
+                "componente": p["componente"], "paginas": p["paginas"], "fuente": None, "en_plano": None,
+                "detectados": None, "sin_leer": None}
+        icps = icps_de_carpeta(c, p["ruta"])
+        if icps:
+            raiz = Path(p["nombre"]).stem.lower()  # el mismo .icp que usa globos() para este PDF
+            icp = next((i for i in icps if Path(i["nombre"]).stem.lower() == raiz), None) or max(icps, key=lambda i: i["situados"] or 0)
+            fila["fuente"], fila["icp"] = "icp", icp["nombre"]
+            fila["en_plano"] = c.execute("SELECT count(DISTINCT etiqueta) FROM globo WHERE documento_id=? AND etiqueta IS NOT NULL",
+                                         (icp["id"],)).fetchone()[0]
+        else:
+            r = lectura(p["id"])
+            if r is None:
+                fila["fuente"] = "sin_leer"
+            elif r["tag"] in ("globos", "numerado") and r["lecturas"]:
+                fila["fuente"] = r["tag"]
+                fila["detectados"] = len({x["t"] for x in r["lecturas"]})
+                if r["tag"] == "globos":
+                    fila["sin_leer"] = r["detectados"] - r["leidos"]
+            else:
+                fila["fuente"] = "texto" if r["tag"] == "numerado" else "nada"
+        salida_planos.append(fila)
+
+    # Una sola pasada por medida_dr (no tiene índice por documento: un EXISTS por fichero tardaba 45 s en el 3212).
+    excel: dict = defaultdict(set)  # cotas por componente (None si la pieza no tiene): como la columna «Cotas medidas»
+    libros: dict = {}
+    for f in c.execute("SELECT DISTINCT d.id, d.nombre, d.ruta, d.pieza, m.hoja, m.cota FROM medida_dr m JOIN documento d ON d.id=m.documento_id"
+                       " WHERE d.codigo=? AND d.carpeta_norm='metrologia'", (codigo,)):
+        libros[f["id"]] = f
+        if f["cota"] is not None and MUESTREO.search(f["nombre"]):
+            excel[componente_de_nombre(codigo, f["hoja"])].add(f["cota"])
+    muestreos: dict = defaultdict(lambda: {"excel": [], "csv": []})
+    for f in sorted(libros.values(), key=lambda f: f["ruta"]):
+        m = MUESTREO.search(f["nombre"])
+        clave = (serie_de(f["nombre"]), int(m.group(1))) if m else None
+        muestreos[clave]["excel"].append({"nombre": f["nombre"], "ruta": f["ruta"], "carpeta": carpeta_en_pieza(f["ruta"], f["pieza"])})
+    csv_docs = " UNION ".join(f"SELECT documento_id, muestreo FROM {t} WHERE pieza=?" for t in TABLAS_CSV_CMM)
+    for f in c.execute(f"SELECT DISTINCT d.nombre, d.ruta, d.pieza, t.muestreo FROM ({csv_docs}) t JOIN documento d ON d.id=t.documento_id"
+                       " ORDER BY d.ruta", (codigo,) * len(TABLAS_CSV_CMM)):
+        # El lector de CSV saca el muestreo de la carpeta (`support intern.01`), sin serie: son de la serie 00.
+        clave = ("00", int(f["muestreo"])) if f["muestreo"] else None
+        muestreos[clave]["csv"].append({"nombre": f["nombre"], "ruta": f["ruta"], "carpeta": carpeta_en_pieza(f["ruta"], f["pieza"])})
+    filas_muestreo = [{"clave": f"{k[0]}/{k[1]:02d}", "etiqueta": etiqueta(k), **v} for k, v in sorted(
+        ((k, v) for k, v in muestreos.items() if k), key=lambda kv: kv[0])]
+    if None in muestreos:
+        filas_muestreo.append({"clave": None, "etiqueta": None, **muestreos[None]})
+
+    csv = {f[0] for f in c.execute(
+        "SELECT cota FROM medida_cmm WHERE pieza=? AND valor IS NOT NULL UNION SELECT cota FROM medida_cmm_comparativa"
+        " WHERE pieza=? AND valor IS NOT NULL UNION SELECT cota FROM punto_cmm WHERE pieza=?", (codigo,) * 3)} - {None}
+    claves_excel = {(comp, cota) for comp, cotas in excel.items() for cota in cotas}
+    # Los CSV no dicen el componente: solo hay CSV en piezas sin componentes (3212, 3197), donde la clave es el número.
+    union = claves_excel | {(None, cota) for cota in csv}
+    cotas = {"excel": len(claves_excel), "csv": len(csv), "total": len(union),
+             "por_componente": {comp: len(v) for comp, v in excel.items() if comp}}
+
+    # Las presentaciones de corrección (columna «PPTX de corrección»), con sus diapositivas y sus pasos.
+    correcciones = [{**dict(f), "carpeta": carpeta_en_pieza(f["ruta"], f["pieza"]), "componente": componente_de_nombre(codigo, f["nombre"]),
+                     "archivada": bool(ARCHIVADA.search(f["ruta"]))} for f in c.execute(
+        f"SELECT d.id, d.nombre, d.ruta, d.pieza, (SELECT count(*) FROM perfil_correccion p WHERE p.documento_id=d.id) AS diapositivas,"
+        " (SELECT count(*) FROM cadena_correccion k WHERE k.documento_id=d.id) AS pasos"
+        f" FROM documento d WHERE d.codigo=? AND {PPTX_CORRECCION} ORDER BY d.ruta", (codigo,))]
+    return {"codigo": codigo, "componentes": COMPONENTES.get(codigo, {}), "planos": salida_planos,
+            "muestreos": filas_muestreo, "cotas": cotas, "correcciones": correcciones}
 
 
 def pieza(codigo: str) -> dict:

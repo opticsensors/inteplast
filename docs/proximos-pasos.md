@@ -9,6 +9,12 @@ La implementación de protecciones y criterios de aceptación para todas las pie
 > pendientes; el contrato y las limitaciones de cada tema viven en el documento enlazado.
 > Las pruebas de una fecha anterior no se presentan como validaciones de esta revisión.
 
+**Abierto el 12/11/2026:** antes de cargar el 3288, decidir cómo se representan BASE y TAPA.
+`PartCharacteristic` no tiene campo de componente
+([ingesta automática §1.5](ingesta-automatica.md#15-diferencias-con-el-piloto-3212-12112026)).
+Las diferencias de todas las piezas respecto al 3212 están en
+[comparativa](../conocimiento/comparativa.md#respecto-al-3212-la-referencia-de-la-app).
+
 ## Login de Microsoft sin copiar y pegar: hecho (09/11/2026)
 
 Era la tarea acordada el 30/10/2026. **Eduard confirma el 09/11/2026** que la dirección de
@@ -19,9 +25,20 @@ El `.env` local tiene `MICROSOFT_REDIRECT_URI` con esa dirección y `SHAREPOINT_
 La URI de `localhost` sirve para la instalación de desarrollo; en el servidor habrá que
 registrar su URL HTTPS.
 
-Esto cierra el login, **no** la lectura de archivos reales por Graph, que sigue pendiente.
+**Lectura de archivos reales por Graph: comprobada el 12/11/2026** sobre el OneDrive de Eduard.
+El backend en marcha tenía `SHAREPOINT_ENABLED=true` en su entorno, y sus registros muestran
+peticiones a `graph.microsoft.com` respondidas con `200 OK`: el listado de `4- Tetones/3288`
+y los metadatos del plano, la pieza, el molde, el escaneo y el Moldflow del 3212, entre otros.
+La caché de descargas (`/app/uploads/sharepoint`) guarda dos STEP descargados el 30/10/2026.
+Sus tamaños coinciden byte a byte con los originales:
+`3212…/20200204_3 130 516 987_AllCATPart.stp` (10.549.640 B) y
+`3197 Pot/…/20230404_0140S00363_SPT_001.stp` (6.343.383 B). El recorrido de carpetas al crear
+una pieza (`POST /parts/discover`) también pasa por Graph: el código usa `sharepoint.walk`
+cuando el interruptor está activo.
 `SHAREPOINT_DRIVE_ID` está vacío: las pruebas apuntan al OneDrive de quien inicia sesión, no a
-una biblioteca compartida de INTEPLAST.
+una biblioteca compartida. Para la fase 2 hay que rellenarlo junto con `SHAREPOINT_ROOT_PATH`.
+Las rutas guardadas en la BD son relativas a esa raíz, así que `Exemples` debe conservar la
+misma estructura bajo la raíz nueva.
 
 ## Próxima sesión de la app final: usuarios y prueba real de archivos
 

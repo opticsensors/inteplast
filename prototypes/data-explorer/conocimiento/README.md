@@ -110,21 +110,45 @@ se abre la cuadrícula se dibujan las 56 miniaturas (unos segundos cada una).
     globos.
 - **Piezas:** cuadrícula con la captura del CAD de cada pieza, filtrable por pieza, feature, tag, familia o
   fichero CAD. Cada tarjeta dice cuántos muestreos tiene. La subpestaña **Números** pone las cifras de todas las
-  piezas en una tabla para compararlas; se ordena pulsando la columna. Pulsar una fila despliega debajo sus ficheros
-  por carpeta, con total. Junto a «Ficheros», una columna por tipo; cada fichero cae en una sola, así que suman
-  «Ficheros». Los PDF se reparten entre «pdf» (con texto) y «pdf escaneado» (sin capa de texto). Al final, si los hay,
-  «vacíos» (0 bytes o solo saltos de línea) y «otros sin texto extraíble» (Excel, ODS o Word hechos de imágenes o
-  gráficos); esos salen de su tipo. Una copia idéntica cuenta como su original. No cuentan los Thumbs.db (miniaturas
-  de Windows). El número de la pieza abre su ficha. La subpestaña **Grafo** muestra piezas,
+  piezas en una tabla para compararlas; se ordena pulsando la columna. Cada título lleva una «i»: al pasar el cursor
+  o pulsarla sale encima qué cuenta esa columna (`AYUDA_NUMEROS` en `app.js`), y se va al quitar el ratón. El
+  12/11/2026 salieron de esta tabla las columnas de errores propios y generales pendientes; siguen en la pestaña
+  Errores. **«Cotas medidas»** cuenta las cotas distintas con algún valor en los Excel de `4- Metrologia` con
+  `intern.NN` en el nombre, una vez cada una. No cuentan los CSV de la CMM ni se cruza con el plano. En el 3288 una
+  cota es número + componente (12/11/2026): `DR(base)` y `DR(tapa)` siguen planos distintos (`BSG-296-01` y `-02`) con
+  numeración propia, y 99 de los 108 números que salen en las dos hojas tienen otro nominal (la «1»: 14,7 en la base,
+  11,65 en la tapa). Da 138 + 117 = 255; antes, juntando los números, 147. **«PPTX de corrección»** (12/11/2026): las
+  presentaciones de las reuniones de corrección, sin copias: las de `5- Retoques molde` y las de otra carpeta con algún
+  paso (3195: `4- Metrologia/Customer/…Toolmaker_comments_rev3.pptx`, 103 pasos). Algunas no citan cotas y no dan
+  pasos: todas las del 3056, el 3226 y el 3233, y 7 de las 8 del 3168, entre otras. No cuentan los Thumbs.db (miniaturas de Windows). El número de la
+  pieza abre su ficha.
+  - **Desglose al pulsar una fila (12/11/2026, `datos.desglose`, `/api/pieza/{codigo}/desglose`).** Sustituye al de
+    ficheros por carpeta y tipo, que daba demasiada información (Eduard). Cuatro tablas, con las carpetas relativas a
+    la de la pieza (la ruta entera, al pasar el cursor) y agrupadas cuando se repiten:
+    - **Planos:** cada PDF de la columna «Planos», con su carpeta, componente (3288) y páginas. «En el plano (.icp)» es
+      el total exacto de números del `.icp` que usa el visor para ese PDF; sin `.icp`, «no se sabe». «Detectados
+      (lector)» son los números distintos que leyó y situó el lector, sin verificar, y «Globos sin leer», los globos de
+      color que encontró sin leer el número. En el 3288: base 141, tapa 120, conjunto 29 (REV.01) y 30 (REV.02); el
+      plano con globos de la tapa de `5- Retoques molde` no tiene `.icp` y el lector sitúa 118.
+    - **Muestreos:** por `intern.NN`, los Excel con medidas y los CSV de la CMM (número, carpetas y, al pasar el
+      cursor, sus nombres), y una fila para lo que no lleva muestreo. **Solo CSV de cotas de la CMM** (Eduard): los de
+      `medida_cmm`, `medida_cmm_comparativa` y `punto_cmm`, que solo hay en el 3212 (19) y el 3197 (118). Los TXT no
+      cuentan: nubes de puntos (3212, 3197), perfiles (3051) y exportes `#P#` para eISIR, algunos con valores generados.
+    - **Cotas con medidas:** en Excel (la columna «Cotas medidas»), en CSV y en cualquiera de los dos, independiente
+      del plano. 3212: 134, 33 y 134; 3197: 163, 55 y 165.
+    - **Correcciones (PPTX):** cada PPTX con sus diapositivas y sus pasos; suman «Pasos de corrección».
+    El desglose de las 21 piezas tarda unos 9 s en total: `medida_dr` no tiene índice por documento y se lee de una
+    pasada (un `EXISTS` por fichero tardaba 45 s en el 3212). La subpestaña **Grafo** muestra piezas,
   features y familias: una pieza se une a sus features, a su familia y a otra pieza si comparten ficheros
   idénticos (mismo SHA-256). No cuentan los README de remisión, la caché del navegador ni los ficheros vacíos.
   Al pulsar una pieza se abre su ficha: evolución de una cota, cadena de correcciones (todos los pasos de la pieza;
   pulsar una cota la dibuja) y muestreos. El 09/11/2026 salieron de la ficha, porque no aportaban al mirarla:
   - identidad, que está en `conocimiento/identidad-piezas.md`;
-  - el recuento de errores, que está en la pestaña Errores y en Números;
+  - el recuento de errores, que está en la pestaña Errores (en Números estuvo hasta el 12/11/2026);
   - lo que se sabe de la pieza (lecciones, avisos, vínculos feature-cota, datos y proceso), que no son errores y
     siguen en las fichas `.md` (no se ven en el visor: ver «Errores»);
-  - los ficheros por carpeta, que ahora están en Números.
+  - los ficheros por carpeta, que pasaron a Números y el 12/11/2026 dejaron sitio al desglose de planos, muestreos,
+    cotas y correcciones.
   - Un solo tag por pieza: **Medidas y correcciones** (18), **Medidas sin correcciones** (2) o **Sin medidas**
     (1, con tinte rojo). Se calcula con los datos salvo 3056 y 3226, fijadas en `TAG_FIJO` (`datos.py`) con su motivo.
   - **Familias:** Bearing Plate, Pump Housing, Shroud e Isomask (`FAMILIAS` en `datos.py`). No son un campo de los
@@ -165,6 +189,11 @@ se abre la cuadrícula se dibujan las 56 miniaturas (unos segundos cada una).
     formato desde el 11/11/2026, al quitar Revisión. Siguen intactos en `conocimiento/hallazgos.jsonl` y en las fichas
     Markdown. Cómo presentar las lecciones y los warnings útiles, ligados a piezas, features o cotas, se decidirá aparte.
     Los avisos de las gráficas siguen junto a sus puntos.
+- **Asistente** (12/11/2026, módulo aparte en [`asistente/`](asistente/README.md)): chat con Claude Haiku 5.5 que
+  responde solo con `conocimiento/` y `docs/`, y enseña sus pasos (búsquedas y lecturas, con tiempo) y sus fuentes.
+  Es una demo para que la lleve Eduard en su portátil. Usa la sesión de Claude Code de este equipo (suscripción, uso
+  personal) y las funciones de `rag.py` como herramientas de solo lectura. Para quitarlo, basta con borrar la carpeta
+  y dos enganches (ver su README).
 - **Revisión: quitada el 11/11/2026.** Era el control de calidad de nuestra extracción, no un resultado para INTEPLAST.
   Antes de quitarla se decidió el destino de cada comprobación (junto al dato, Errores, interno o pendiente), con
   evidencia y recuentos de referencia, en [revision-comprobaciones.md](../../../conocimiento/revision-comprobaciones.md).
@@ -183,7 +212,7 @@ Recogido de las fichas enlazadas el 09/11/2026; las cifras son las de esas ficha
 |---|---|---|
 | ~~Extractor de `.icp` (`globos_icp.py`)~~ | **Corregido el 09/11/2026.** Ponía el número del `.prf` y no el dibujado (45 en el globo 70 del 3205), situaba 20 sellos donde no hay globo por un byte de desfase y dejaba fuera los sellos sin fila en el `.prf`. En las 30 páginas con `.icp` del visor: 40 sellos cambian de sitio y 163 aparecen; los planos sin `.icp` no cambian | [planos-globos.md](../../../conocimiento/planos-globos.md#referencia-el-extractor-de-icp-corregido-el-09112026) |
 | ~~Un solo código de lectura de planos~~ | **Hecho el 09/11/2026**: el visor y los scripts de medida usan `lectores_planos.py`, sin depender del backend; las 26 lecturas y lo que enseña el visor en los 56 planos no cambian | [README del prototipo](../README.md#un-solo-código-de-lectura-de-planos-09112026) |
-| Lectores `[]`, `No.` y recuadros | **Medidos el 10/11/2026** en los 4 planos conocidos (2820, 3174, 3186 y 3214), con muestra al azar reproducible. Los 165 números de la muestra están bien leídos y 149 bien situados; los otros 16 están en tablas de vistas o desplazados. Hay 24 omisiones confirmadas, casi todas marcas giradas, y los recuadros dan falsos positivos en planos sin numeración. **Falta:** validarlos en planos nuevos, apartados antes de mirarlos, y las 11 cotas con letra del 3214 | [planos-globos.md](../../../conocimiento/planos-globos.md#lectores-de-planos-numerados-10112026) |
+| Lectores `[]`, `No.` y recuadros | **Medidos el 10/11/2026** en los 4 planos conocidos (2820, 3174, 3186 y 3214), con muestra al azar reproducible. Los 165 números de la muestra están bien leídos y 149 bien situados; los otros 16 están en tablas de vistas o desplazados. Hay 24 omisiones confirmadas, casi todas marcas giradas, y los recuadros dan falsos positivos en planos sin numeración. **Falta:** validarlos en planos nuevos, apartados antes de mirarlos. Las 11 cotas con letra del 3214 **son zonas de la cuadrícula del plano** (13/11/2026), no marcas: el visor no las sitúa. **Posible mejora, no prevista (13/11/2026):** un lector de zonas que resalte la casilla («zona del plano, no la cota exacta»). Validable a ciegas en el 3233, del que solo se ha mirado el borde | [planos-globos.md](../../../conocimiento/planos-globos.md#lectores-de-planos-numerados-10112026) |
 | Globos sin leer *(aparcado)* | 614 globos de color sin lectura (234 del 3195, 148 del 3212, 113 del 3167). Las 11 cotas con letra del 3214 no salen en el OCR. 13 planos sin globos ni numeración | ídem |
 | `.icp` | 30 de los 56 planos dan número y posición sin leer nada. En la app final, la lectura directa de `.icp` sigue abierta | [próximos pasos](../../../docs/proximos-pasos.md#prioridad-a-corto-plazo-28102026) |
 | ~~CSV del 3197~~ | **Hecho el 09/11/2026**: 118 CSV en la biblioteca y en la gráfica | [3197](../../../conocimiento/0-bolt-eye/3197.md#csv-de-la-cmm-en-la-biblioteca-09112026) |

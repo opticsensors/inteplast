@@ -241,6 +241,16 @@ Las carpetas de `6- Método de medición/DRW ballooned/` siguen la historia del 
   (15/07/2026), con una fila 06 (10/06/2025). Las cabeceras dicen `0130S000338` (sic) y no traen revisión.
 - 3168 `0130S00337`: `DRAFT_V02`, índice 02 (16/07/2026). Sus cabeceras citan `01` hasta 04/2026, anterior al 02.
 - Los dos borradores llevan el mismo nº de cambio (3E1019023760) y su última fila no tiene *Checked* ni *Releas.*
+- **3167: tercer PDF fuera del catálogo (13/11/2026).**
+  `5- Retoques molde/5th loop correction (change of the xamfra)/20251001_0130S00338_D_07_DRAFT.pdf` (id 3958) no es
+  copia del `DRAFT_V07` de `1- 2D y 3D pieza` (id 3294).
+  - En su capa de texto, los números de cambio llegan a `3E1014840660` y las fechas, a `20251001`. El de
+    `1- 2D y 3D pieza` añade `3E1019023760` y `20260715`.
+  - Parece un borrador anterior del mismo índice 07, pero solo se ha comparado la capa de texto, no el dibujo.
+  - El catálogo y el visor no lo ven porque su ruta no cumple la regla de planos: no está en `1- 2D y 3D pieza` ni
+    lleva «ballo», «balon» o «drw».
+  - Al 3288 le pasa lo mismo con el plano de la tapa de `20260622_3rd loop of correction`
+    ([3288](4-tetones/3288.md)).
 
 ### 3288 — B. Braun
 
@@ -388,3 +398,5 @@ entran en el rango.
 - 3202: comparar el resto de cotas de la A con el plano `−`. 3195: comparar el resto del plano. 3233: comparación
   completa de nominales y clases (aquí solo la capa de texto en la misma posición).
 - Visor: decidir qué cuenta la columna «Planos» antes de usar el catálogo.
+- Regla de planos (catálogo y visor): deja fuera dos PDF de plano que están en `5- Retoques molde`, el `D_07_DRAFT`
+  del 3167 y la tapa del 3288 ([arriba](#3167-y-3168--bosch)).

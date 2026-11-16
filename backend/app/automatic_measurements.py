@@ -5,6 +5,7 @@ import hashlib
 import json
 import logging
 import re
+import unicodedata
 import uuid
 from collections import defaultdict
 from pathlib import Path, PurePosixPath
@@ -24,6 +25,7 @@ from app.file_sources import (
     with_metadata,
 )
 from app.ingestion.formula_flags import UnsupportedWorkbook
+from app.ingestion.measurement_csv import UnsupportedMeasurementCsv
 from app.ingestion.measurement_provenance import usable_measurement
 from app.ingestion.measurement_tables import (
     cavity_label,
@@ -37,9 +39,23 @@ from app.measurement_models import MeasurementImport
 from app.models import Part
 from app.pilot import is_pilot
 
-READER = "automatic-tables-v4"
+READER = "automatic-tables-v6"
 logger = logging.getLogger(__name__)
 Context = tuple[str, str, str]
+
+
+def measurement_skip_reason(relative: str) -> str | None:
+    """Classify files before reading them or counting them towards size limits."""
+    path = PurePosixPath(relative)
+    if path.suffix.lower() not in {".csv", ".xls", ".xlsx", ".xlsm"}:
+        return "unsupported_extension"
+    if re.search(r"retoqu|correction", relative, re.I):
+        return "correction_folder"
+    directories = unicodedata.normalize("NFKD", path.parent.as_posix())
+    directories = directories.encode("ascii", "ignore").decode().lower()
+    if re.search(r"(?:metod[eo]|method)[^/]*(?:medic|mesur|measur)", directories):
+        return "measurement_method"
+    return None
 
 
 def digest(value: Any) -> str:
@@ -78,6 +94,7 @@ def collect(
     *,
     pilot: bool = False,
     file_issues: dict[str, str] | None = None,
+    diagnostics: list[dict[str, Any]] | None = None,
 ) -> dict[Context, list[dict[str, Any]]]:
     sources = []
     revisions: dict[str, set[str]] = defaultdict(set)
@@ -85,15 +102,26 @@ def collect(
     part_code = re.match(r"\d+", PurePosixPath(folder).name)
     for item in sorted(items, key=lambda item: PurePosixPath(item.path)):
         relative = item.relative_to(folder)
-        if item.suffix not in {".csv", ".xls", ".xlsx", ".xlsm"} or re.search(
-            r"retoqu|correction", relative, re.I
-        ):
+        reason = measurement_skip_reason(relative)
+        if reason:
+            if diagnostics is not None:
+                diagnostics.append(
+                    {"path": relative, "status": "skipped", "reason": reason}
+                )
             continue
+        diagnostic: dict[str, Any] = {"path": relative, "status": "reading"}
+        if diagnostics is not None:
+            diagnostics.append(diagnostic)
         item = with_metadata(item)
         size = item.size or 0
         version = item.version or ""
         total += size
-        if size > 16 * 1024 * 1024 or total > 128 * 1024 * 1024:
+        diagnostic.update(size=size, version=version)
+        if (
+            size > settings.AUTO_MEASUREMENT_MAX_FILE_MB * 1024 * 1024
+            or total > settings.AUTO_MEASUREMENT_MAX_TOTAL_MB * 1024 * 1024
+        ):
+            diagnostic.update(status="error", reason="size_limit")
             raise HTTPException(
                 422, "Los archivos de mediciones superan el tamaño admitido."
             )
@@ -104,14 +132,27 @@ def collect(
                 rows = csv_rows(path.read_bytes(), pilot=pilot)
                 revision = context["revision"]
             else:
-                revision, rows = report_rows(
-                    workbook(path), part_code=part_code[0] if part_code else ""
+                sheets = workbook(path)
+                sheet_diagnostics: list[dict[str, Any]] | None = (
+                    [] if diagnostics is not None else None
                 )
+                revision, rows = report_rows(
+                    sheets,
+                    part_code=part_code[0] if part_code else "",
+                    diagnostics=sheet_diagnostics,
+                )
+                if sheet_diagnostics is not None:
+                    diagnostic["sheets"] = sheet_diagnostics
                 revision = context["revision"] or revision
-                if pilot:
-                    # The pilot adapter already supplies XLS evaluations and forecasts.
-                    rows = []
-        except UnsupportedWorkbook as error:
+                # The pilot's dedicated adapter reads correction workbooks, not
+                # these metrology reports. Keep their ordinary table readings.
+        except (UnsupportedWorkbook, UnsupportedMeasurementCsv) as error:
+            if item_changed(item):
+                raise HTTPException(
+                    409,
+                    f"{item.name} ha cambiado durante la lectura. Vuelve a actualizar.",
+                ) from error
+            diagnostic.update(status="unsupported", reason=str(error))
             if file_issues is not None:
                 file_issues[relative] = (
                     f"Pendiente: {error}; conservado como documento, sin medidas tabulares"
@@ -124,7 +165,9 @@ def collect(
             if item.suffix == ".csv" and "No se reconoce un CSV CMM" in str(error):
                 # Point clouds have coordinates, not measured drawing characteristics.
                 logger.info("No dimensional table in %s", relative)
+                diagnostic.update(status="skipped", reason="not_dimensional_csv")
                 continue
+            diagnostic.update(status="error", reason=str(error))
             raise HTTPException(
                 422, f"No se ha podido leer {item.name}: {error}"
             ) from error
@@ -132,13 +175,14 @@ def collect(
             raise HTTPException(
                 409, f"{item.name} ha cambiado durante la lectura. Vuelve a actualizar."
             )
-        if not rows and not pilot and file_issues is not None:
+        if not rows and file_issues is not None:
             file_issues[relative] = (
                 "Pendiente: no se ha reconocido una tabla dimensional; requiere revisión"
             )
         if revision:
             revisions[context["sample"]].add(revision)
         sources.append((relative, context, revision, rows, version))
+        diagnostic.update(status="read" if rows else "empty", observations=len(rows))
     all_revisions = set().union(*revisions.values()) if revisions else set()
     groups: dict[Context, list[dict[str, Any]]] = defaultdict(list)
     for relative, context, revision, rows, version in sources:

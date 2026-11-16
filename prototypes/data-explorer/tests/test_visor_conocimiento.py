@@ -85,45 +85,34 @@ def test_los_numeros_de_cada_pieza_son_los_de_su_ficha():
             continue
         ficha = datos.pieza(fila["codigo"])
         assert fila["muestreos"] == len(ficha["muestreos"])
-        assert fila["cotas"] == len(ficha["cotas"])
+        # En una pieza con componentes (3288) cada número cuenta una vez por componente, como al elegirlo en la ficha.
+        assert fila["cotas"] == sum(len(c["por_componente"]) or 1 for c in ficha["cotas"])
+        if fila["codigo"] == "3288":
+            assert fila["cotas"] > len(ficha["cotas"])  # la «1» de la base y la de la tapa no se juntan
         assert fila["correcciones"] == len(ficha["cadenas"])
-        # Los errores, con lo que enseña la pestaña Errores (la ficha ya no los cuenta).
-        import errores
-
-        assert fila["errores"] == sum(i["pendiente"] for i in errores.de_pieza(fila["codigo"])["incidencias"])
-        assert fila["generales"] == sum(i["pendiente"] for i in errores.generales(fila["codigo"])["incidencias"])
 
 
-def test_el_desglose_de_ficheros_suma_la_columna_de_numeros():
+def test_el_desglose_de_cada_pieza_cuadra_con_su_fila_de_numeros():
+    """Lo que se despliega al pulsar una fila (12/11/2026) son las mismas cifras que la fila, detalladas."""
     for fila in datos.piezas():
-        d = datos.ficheros(fila["codigo"])
-    from collections import Counter
-
-    especiales = Counter()
-    for fila in datos.piezas():
-        d = datos.ficheros(fila["codigo"])
-        assert d["total"]["n"] == fila["documentos"] == sum(x["n"] for x in d["carpetas"])
-        assert "db" not in {t["ext"] for t in d["total"]["tipos"]}  # sin Thumbs.db: no son ficheros del proyecto
-        exts = [t["ext"] for t in d["total"]["tipos"]]
-        if "pdf" in exts and datos.ESCANEADO in exts:
-            assert exts.index(datos.ESCANEADO) == exts.index("pdf") + 1  # juntos
-        finales = [e for e in exts if e in (datos.VACIOS, datos.OTROS_SIN_TEXTO)]
-        assert exts[len(exts) - len(finales):] == finales  # al final
-        for x in d["carpetas"] + [d["total"]]:
-            assert sum(t["n"] for t in x["tipos"]) == x["n"]  # cada fichero, en un solo tipo: no se cuenta dos veces
-        for t in d["total"]["tipos"]:
-            especiales[t["ext"]] += t["n"]
-    # Los 4 PDF de 0 bytes y cav_1..4.txt del 3237 (solo saltos de línea); 3 Excel/ODS y 2 Word hechos de imágenes.
-    assert (especiales[datos.VACIOS], especiales[datos.OTROS_SIN_TEXTO]) == (8, 5)
-    # Las copias cuentan como su original: 3205-C.pdf y 3205-D.pdf del 3206 son escaneos del 3205.
-    n3206 = {t["ext"]: t["n"] for t in datos.ficheros("3206")["total"]["tipos"]}
-    assert n3206[datos.ESCANEADO] == 18
-    c = datos.con()
-    for codigo in ("3205", "3206", "3212"):
-        pdf = c.execute(f"SELECT count(*), sum(estado_real='sin_texto') FROM {datos.CON_ORIGINAL} WHERE codigo=? AND lower(ext)='pdf'"
-                        " AND tamano > 0", (codigo,)).fetchone()
-        n = {t["ext"]: t["n"] for t in datos.ficheros(codigo)["total"]["tipos"]}
-        assert (n.get("pdf", 0) + n.get(datos.ESCANEADO, 0), n.get(datos.ESCANEADO, 0)) == (pdf[0], pdf[1] or 0)
+        d = datos.desglose(fila["codigo"])
+        assert len(d["planos"]) == fila["planos"]
+        assert len([m for m in d["muestreos"] if m["clave"]]) == fila["muestreos"]
+        assert d["cotas"]["excel"] == fila["cotas"]
+        assert max(d["cotas"]["excel"], d["cotas"]["csv"]) <= d["cotas"]["total"] <= d["cotas"]["excel"] + d["cotas"]["csv"]
+        assert len(d["correcciones"]) == fila["pptx"]
+        assert sum(x["pasos"] for x in d["correcciones"]) == fila["correcciones"]  # cada paso sale de un PPTX de corrección
+        for p in d["planos"]:  # el total exacto solo con .icp; sin él, lo que leyó el lector
+            assert (p["en_plano"] is not None) == (p["fuente"] == "icp")
+    # Solo CSV de cotas de la CMM: ningún TXT (nubes de puntos, perfiles ni exportes #P#).
+    for codigo, n in (("3212", 19), ("3197", 118)):
+        csv = [f["nombre"] for m in datos.desglose(codigo)["muestreos"] for f in m["csv"]]
+        assert len(csv) == n and all(x.lower().endswith(".csv") for x in csv)
+    d = datos.desglose("3288")
+    assert d["cotas"]["por_componente"] == {"base": 138, "tapa": 117}
+    assert {p["en_plano"] for p in d["planos"] if p["componente"] == "base"} == {141}  # el .icp de BSG-296-01
+    # 3195: el PPTX de corrección de 4- Metrologia/Customer también cuenta (comentarios del molde, con pasos).
+    assert any(x["carpeta"].startswith("4- Metrologia") and x["pasos"] for x in datos.desglose("3195")["correcciones"])
 
 
 def test_cada_pieza_tiene_su_cad():
@@ -893,7 +882,7 @@ def test_cada_hallazgo_esta_clasificado_y_ninguna_incidencia_se_pierde():
 def test_titulos_de_incongruencias_y_estados_sin_dar_nada_por_comprobado():
     import errores
 
-    assert errores.transversales() == {f"I-00{n}" for n in range(1, 9)}  # la sección «Transversales», no un umbral
+    assert errores.transversales() == {f"I-00{n}" for n in range(1, 10)}  # la sección «Transversales», no un umbral
     for i in errores.incidencias():
         assert i["id"] in errores.titulos() and i["titulo"] == errores.titulos()[i["id"]]
         assert i["estado"] in ("Duda", "Pendiente de aclarar", "Explicación posible · sin confirmar", "Resuelta", "Corregida")
@@ -938,6 +927,7 @@ def test_api_de_errores():
     assert 'data-tab="revision"' not in c.get("/").text
     # Tras cambiar la API, el navegador no puede quedarse con el app.js viejo.
     assert c.get("/static/app.js").headers["cache-control"] == "no-cache"
-    assert c.get("/api/pieza/3051/ficheros").json()["total"]["n"] > 0 and c.get("/api/pieza/9999/ficheros").status_code == 404
+    assert c.get("/api/pieza/3051/desglose").json()["muestreos"] and c.get("/api/pieza/9999/desglose").status_code == 404
+    assert c.get("/api/pieza/3051/ficheros").status_code == 404  # el desglose por carpeta se quitó el 12/11/2026
     inicio = c.get("/").text
     assert '"/static/app.js?v=' in inicio and '"/static/app.css?v=' in inicio and '"/static/app.js"' not in inicio

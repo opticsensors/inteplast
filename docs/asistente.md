@@ -99,6 +99,14 @@ máquina. No hay tiempos medidos que permitan cuantificarlo.
 | **Modelo en la nube** como motor de este chat | Implementar otro `ChatProvider` (hoy solo existe Ollama), con su autenticación, coste y cuotas. Sigue haciendo falta un límite, ajustado a las cuotas en vez de a la máquina. Los embeddings seguirían usando Ollama, salvo que se añada otro proveedor o se use solo la búsqueda por palabras. |
 | **Agente de Copilot Studio** | Trabajo distinto: el agente puede vivir en Teams, en Microsoft 365 o integrarse en esta web, y consultaría nuestras lecturas expuestas como API con autenticación de Microsoft (Entra ID). Hay que concretarlo antes de estimarlo. |
 
+**Demo en el visor (12/11/2026).** La pestaña Asistente del visor de `conocimiento/`
+([README](../prototypes/data-explorer/conocimiento/asistente/README.md)) usa Claude Code con Haiku 5.5 y la suscripción
+personal de Eduard. Sirve para enseñar en su portátil cómo respondería un asistente con ese contexto, pero **no se puede
+trasladar tal cual a esta app**, porque aquí la usan otras personas. En Docker haría falta un modelo en la nube con
+clave de API, de pago por uso (la fila «Modelo en la nube»), o el agente de Copilot. Lo que sí se puede llevar es el
+diseño: funciones de lectura con citas como herramientas, el proceso o la sesión mantenidos entre preguntas, y los
+pasos visibles. Los tiempos medidos allí son de Claude Code, no de esta app.
+
 ## Límites del módulo
 
 | Capa | Ubicación | Responsabilidad |

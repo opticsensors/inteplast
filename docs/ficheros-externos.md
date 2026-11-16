@@ -256,8 +256,11 @@ usuario activo de la app, sin rol de administrador. La instalación está en mod
 **El 09/11/2026 Eduard confirma el retorno automático**: la URI Web de `localhost` está
 registrada en Entra y en `MICROSOFT_REDIRECT_URI`, y entró en la app con su cuenta de Eurecat
 sin Postman ni copiar y pegar ([próximos pasos](proximos-pasos.md#login-de-microsoft-sin-copiar-y-pegar-hecho-09112026)).
-La lectura de archivos reales mediante Graph sigue sin comprobarse; con `SHAREPOINT_DRIVE_ID`
-vacío, la prueba usa el OneDrive de quien inicia sesión, no una biblioteca de INTEPLAST.
+**La lectura de archivos reales mediante Graph quedó comprobada el 12/11/2026.** Se vieron
+metadatos y listados con `200 OK` en los registros, y dos STEP descargados en la caché con el
+mismo tamaño que los originales ([evidencia](proximos-pasos.md#login-de-microsoft-sin-copiar-y-pegar-hecho-09112026)).
+Con `SHAREPOINT_DRIVE_ID` vacío, la prueba usa el OneDrive de quien inicia sesión, no una
+biblioteca de INTEPLAST.
 
 El mismo conjunto de datos se puede leer desde la carpeta local o desde OneDrive/SharePoint.
 Se elige con **una sola variable**, `SHAREPOINT_ENABLED` (`false` por defecto). Las dos

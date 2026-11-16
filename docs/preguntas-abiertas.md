@@ -4,9 +4,71 @@
 > han resuelto leyendo los datos, sin necesidad de consultar.
 >
 > Última revisión documental: **2026-10-26**. El **2026-11-04** se añadieron las preguntas de la
-> entrega ampliada (A17–A23), cerradas el mismo día, el **2026-11-06** la [A24](#a24-csv-cmm), el **2026-11-08** la
+> entrega ampliada (A17–A23), con su redacción cerrada el mismo día (no sus respuestas), el **2026-11-06** la [A24](#a24-csv-cmm), el **2026-11-08** la
 > [A25](#a25-3288-tapa) y el **2026-11-12** la [A26](#a26-revisiones-plano). Los análisis y localizadores
 > viven en las fichas enlazadas; aquí se mantiene la pregunta o la resolución.
+> El **13/11/2026** se añade [A27: exportaciones SPC](#a27-export-spc) y se prioriza
+> el paquete de aclaraciones para la extracción sin IA que sigue a continuación.
+
+<a id="extraccion-sin-ia"></a>
+## Para validar la extracción sin IA · 13/11/2026
+
+**Preparación interna; no enviado a INTEPLAST.** La prueba de carpetas mide
+selección de archivos y mediciones; no demuestra cobertura de correcciones. Los
+planes de otras piezas todavía no tienen lector general productivo. Esta lista
+combina el resultado de esa prueba con las limitaciones documentadas de los planes.
+
+No se pide reorganizar el histórico ni renombrar todas las carpetas. Los errores
+de reconocimiento de tablas, la exclusión de Excel del piloto y la falta de
+lector `.icp` son trabajo nuestro. BASE/TAPA ya se identifica en las hojas del
+3288: falta conservar esa identidad en el modelo, no pedir que el cliente nos
+vuelva a clasificar esas hojas.
+
+**La app ya separa cavidad y muestreo en los formatos compatibles.** No hay que
+volver a preguntar cómo se distinguen en general. Las dudas siguientes son
+contradicciones o campos sin significado confirmado en archivos concretos.
+Tampoco son la explicación de las 18 lecturas parciales: esa etiqueta se activa
+con cualquier archivo, hoja o fila pendiente y no mide el porcentaje de cobertura.
+
+| Prioridad | Archivo o caso comprobado | Pregunta concreta | Detalle existente |
+|---|---|---|---|
+| 1 | 3288: método «16+16 (de 1 a 16)»; informes con 20 columnas y planes que citan cavidades 17–20 | ¿El molde tiene 16 o 20 cavidades por componente? | [A22](#a22-3288) |
+| 1 | 3212, `intern.08.xls`, `DR!H25` y `H52`: cota 113, cavidad 13, valores 3,297 y 3,074; el CSV de ese muestreo contiene 3,074 | ¿Qué representa el bloque con 3,297 y cómo se indica en la plantilla su origen? El valor del CSV ya está identificado; falta explicar el otro bloque. | [A14](#a14--cómo-se-elaboran-los-xls-de-metrología-y-de-retoques), [A24](#a24-csv-cmm) |
+| 1 | 3167, `Cav_1.csv` del PPAP `int02.1`: `#P#;500;3;1.4;1.45;1.35;mm;1.423;1.423` | ¿Qué representa el campo `3` y cada uno de los dos valores finales? ¿Con qué celdas del informe se corresponde esta línea? | [A27](#a27-export-spc) |
+| 1 | 3212, plan de corrección nº2 del 18/03/2024, diapositiva 2.16: N161 propone reducir Ø −0,305 mm desde 45,731; después c13 mide 45,393, por debajo del mínimo | ¿Qué magnitud se ejecutó realmente en esa acción, en qué fecha y qué informe corresponde a la primera medición posterior? | [A1](#a1--se-cerró-el-molde-con-3-cotas-fuera-de-tolerancia--por-qué), [A16](#a11--uso-exacto-de-punts_nous-y-trazabilidad-de-ejecución) |
+| 2 | 3237 y 3238: los informes citan el plano índice 04; tenemos el 03 con globos y el `2D 05` | ¿Nos podéis facilitar el índice 04 que citan esos informes? | [A26](#a26-revisiones-plano) |
+| 2 | 2820: en la entrega solo aparecen plano y CAD | ¿Existe un informe de mediciones de esta pieza y nos lo podéis facilitar? | [A7](#a7--del-2820-pump-housing-solo-tenemos-2-ficheros) |
+
+Los demás casos de revisión se conservan, individualizados por pieza, en A26.
+La petición de exports CMM de las piezas que carecen de ellos sigue en A24;
+no significa que el lector haya perdido la capacidad de identificar muestreos.
+
+Las preguntas son aclaraciones, no requisitos ya acordados. La A18 conserva su
+condición de envío; esta priorización no la envía ni da por aprobada.
+
+### Convenciones mínimas propuestas para futuras entregas
+
+Para acordar con quien prepara los informes; aprovechar campos ya presentes en
+sus plantillas o un índice sencillo, sin exigir rehacer los documentos antiguos:
+
+- **Identidad:** pieza, componente cuando exista, plano/revisión aplicable e
+  identificador del informe o muestreo. Una zona del plano, como D7, no sustituye
+  a una identidad única de cota si contiene varias.
+- **Resultados:** identificar cavidad y muestra/repetición por separado, conservar
+  unidad, nominal y límites; distinguir medición, previsión y valor calculado.
+  Mantener el original del equipo y su vínculo con el informe cuando exista.
+- **Correcciones:** identificador de plan/acción, pieza/componente/cotas afectadas,
+  magnitud y unidad, y si se expresa total, por lado o en radio cuando aplique.
+  Conservar la imagen, pero escribir también la instrucción si hoy solo está dibujada.
+- **Ejecución:** separar propuesto, aprobado y ejecutado; vincular la versión
+  ejecutada y su fecha a los informes antes/después. Un OK sin significado
+  acordado queda como texto, no como confirmación automática.
+- **Validación:** elegir un responsable y un ejemplo de cada formato para
+  contrastar el resultado de la app. Las lagunas quedan visibles; no se rellenan
+  por analogía con otras piezas.
+
+Las convenciones ayudan a entregas futuras. Su ausencia en el histórico no
+convierte automáticamente toda la lectura en imposible ni obliga a usar IA.
 
 ---
 
@@ -693,6 +755,37 @@ cabecera como incumplimiento: se pregunta qué revisión correspondía. En el 32
 anterior 3247 (04–05/2025) dicen nivel 0, coherente con base y tapa (nivel 1 el 21/05/2025) y no con el conjunto
 (nivel 1 el 19/02/2025). Se solapa con [A17](#a17-versiones-informes) (copias con tolerancias distintas) y con
 [A19](#a19-planos) (planos que faltan): si se envían juntas, basta con añadir aquí los casos.
+</details>
+
+<a id="a27-export-spc"></a>
+### A27 · Significado de los campos del export SPC `#P#`
+
+**Recordatorio.** En `3167/4- Metrologia/Customer/PPAP-3167-00_2/PPAP 3167-00_int02.1/Cav_1.csv`,
+la primera línea es:
+
+```text
+#P#;500;3;1.4;1.45;1.35;mm;1.423;1.423
+```
+
+**Qué no nos cuadra.** El fichero no trae cabecera. No sabemos qué representa el
+campo `3` ni por qué hay dos valores finales iguales en esta línea; tampoco
+podemos atribuir a cada columna una muestra o evaluación sin documentación.
+No es el formato CSV por bloques de la CMM que ya reconoce la app.
+
+**Pregunta: ¿podéis indicarnos qué significa cada campo de este export y mostrar
+cómo se corresponde esta línea con su informe, identificando cuáles son valores
+del equipo y cuáles son cálculos, límites o resúmenes?**
+
+<details><summary>Contexto interno (no enviar)</summary>
+
+La lectura automática anterior trataba la unidad `mm` como valor numérico y
+abortaba toda la carpeta. El lector v6 reconoce la familia por `#P#`, la deja
+pendiente y sigue con los informes compatibles. Esto arregla el bloqueo, no
+valida ni incorpora las cifras SPC. El significado del campo 3 y la procedencia
+ya figuraban pendientes en el estudio de ingesta; esta pregunta los concreta con
+un archivo y una línea. No atribuir a estos CSV conclusiones de otros SPC por
+compartir extensión o marcador. Complementa A14/A24; no sustituye la decisión de
+Eduard sobre el envío de A18.
 </details>
 
 ### Correspondencia con las incongruencias abiertas

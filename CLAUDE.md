@@ -170,7 +170,9 @@ docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bo
   entra con su cuenta de Microsoft (MSAL, login delegado). `false` deja todo como en local.
   Login real de Eduard confirmado el **30/10/2026**. **Desde el 09/11/2026 el retorno es automático**
   (sin Postman ni copiar y pegar): URI Web de `localhost` registrada en Entra y en `.env`, y Eduard
-  entró en la app con su cuenta de Eurecat. Sigue pendiente probar archivos con Graph real.
+  entró en la app con su cuenta de Eurecat. **La lectura de archivos reales por Graph quedó comprobada el 12/11/2026**, sobre su OneDrive
+  (`SHAREPOINT_DRIVE_ID` vacío). Para la biblioteca compartida de la fase 2 hay que rellenarlo
+  junto con `SHAREPOINT_ROOT_PATH`.
   **Fases (Eduard, 09/11/2026):** 1) pruebas con cuentas de Eurecat; 2) servidor de Eurecat + cuentas de Eurecat +
   SharePoint de Eurecat; 3) traslado a los servidores de INTEPLAST ([despliegue](docs/despliegue-servidor.md)).
   Su cuenta sigue siendo usuario normal; configurar el primer administrador corporativo está pendiente:
@@ -178,6 +180,9 @@ docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bo
   activación en [docs/ficheros-externos.md](docs/ficheros-externos.md#sharepoint-microsoft-graph).
 - **Asistente:** preferencia de Eduard (09/11/2026): a poder ser, **Copilot de empresa mediante un agente**.
   Es trabajo futuro, junto con el servidor; mientras tanto sigue el chat con Ollama ([docs/asistente.md](docs/asistente.md#concurrencia-y-despliegue)).
+  **Demo aparte (12/11/2026):** pestaña Asistente del visor de `conocimiento/`, con Claude Code y Haiku 5.5 sobre la
+  suscripción de Eduard. Es solo para uso personal en su portátil, no para la app
+  ([README](prototypes/data-explorer/conocimiento/asistente/README.md)).
 - **Portadas CAD:** pulsar la cabecera abre la ampliación de imagen/3D; en edición abre una
   modal para pegar/arrastrar/elegir imágenes o crear una portada desde el STEP vinculado de
   la pieza, con caras rojas y encuadre guardados. `Feature.cover_3d`

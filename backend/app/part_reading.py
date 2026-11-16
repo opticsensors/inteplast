@@ -32,6 +32,14 @@ def read_report(session: Session, part: Part) -> PartRefreshResult | None:
                 if file.group == "corrections":
                     file.status = "used" if job.state == "ready" else job.state
             if job.state == "ready":
+                # A completed correction job must not hide pending measurement
+                # files reported by the independent table reader.
+                if any(
+                    file.group == "measurements"
+                    and file.status.startswith("Pendiente:")
+                    for file in report.files
+                ):
+                    report.state = "partial"
                 known = {file.path for file in report.files}
                 report.files.extend(
                     ReadFileReport(

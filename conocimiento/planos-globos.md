@@ -512,11 +512,83 @@ La página 5 del 3174 y del 3186 no ofrece ninguna lectura (es la tabla de cotas
   globos ni numeración» es la regla del tag: hacen falta 15 recuadros que cubran la mitad de las cotas
   de los informes.
 
-**Pendiente:**
-- **Las 11 cotas con letra del 3214** (`A4`, `D5`, `F3`…). En el barrido no aparecen como recuadro.
-  Las letras A–F y las cifras 1–8 del marco son la cuadrícula de zonas del plano; podrían ser
-  referencias de zona, pero no está comprobado.
-- **Validación independiente:** necesita planos numerados nuevos.
+**Las 11 cotas con letra del 3214 son zonas del plano (comprobado el 13/11/2026).** No son marcas: son
+la casilla de la cuadrícula del marco (filas A–F, columnas 1–8) donde está una cota **sin recuadro**.
+- **En el informe**, `3214-00_int.02_customer.xls!DR`, columna A:
+  - Las mismas claves sirven de encabezado de vista: `C3` (fila 14, antes de las cotas 1…), `E3 | A-A`
+    (fila 25), `F3 | J` (35), `A8 | C-C` (48), `F5 | H-H` (89) y `A1 | INJECTION POINT…` (95, visual).
+    Cada vista está en esa casilla del plano.
+  - Las cotas con letra vienen en las filas 36, 49, 83–91 y 96.
+- **En el plano** (`R-2718, R-2971_C11692_rev.B.pdf`, p1, visto ampliado a 200 ppp), las 11 están en su casilla:
+
+| Clave | Informe | En el plano |
+|---|---|---|
+| A4 | Ra 0,8 (+0/−0,8), SURFTEST | Símbolo de acabado con «18» sin recuadro; probablemente grado VDI 3400 18 ≈ Ra 0,8 µm. No es la cota 18, que tiene recuadro en el detalle J |
+| A8 | 4,077 ±0,1, vídeo | `4.077±0.1` sobre C-C |
+| F3 | 90° ±1, vídeo | `90°±1°` en el detalle J |
+| F4 | 0,3 ±0,1, CT | `3x R0.3` en el detalle J (pentágono) |
+| F5, F6 | 120° ±0,5, vídeo | Los dos `120°` de H-H; el segundo cae en el límite entre F5 y F6 |
+| D5, E5 | 2,15 y 2,11, CT | `2.15` arriba y `2.11` abajo, a la izquierda de la vista K |
+| D6, E6 | 2 y 1,94, CT | `2` vertical en el centro de K y `1.94` debajo. Ojo: el `2 (Measuring depth)` horizontal también cae entre D5 y D6 |
+| D7 | **dos cotas**: 2 y 3,89, CT (filas 87 y 88) | `2` y `3.89` arriba a la derecha de K |
+
+- **Consecuencias:**
+  - Una clave de zona **no es única**: D7 nombra dos cotas.
+  - Lo que se puede situar es la casilla, no la cota exacta.
+  - El lector de recuadros no las encontrará nunca, porque no hay marca que leer.
+- **Otras piezas con claves de este tipo** (comprobado el 13/11/2026):
+  - **3056: no son zonas.** `A1`–`A9` tienen todas el mismo nominal, 16,35 +0,2/−0,05 CMM, en
+    `DR(P1_P4)` (filas 14, 22… 78): son repeticiones de un mismo elemento.
+  - **3233: sí son zonas, según el informe.** En `3233-00_inf.06_OPL_81A.xls!100%`, columna A:
+    - una clave agrupa cotas distintas: `B3` → 8, 0,6 y 1,7 (filas 18–20); `C6` → 18,5, 1,3, 3,66
+      y 6,5 (33–38); `B12` → 0,79, 3,66, 2 y 45° (44, 57–60);
+    - las notas llevan clave: `A1` «SPECIFICATIONS FOR MATERIALS…» (16), `C4` «PARTING LINE
+      BURR…» (21), `E4` «MOULD CAVITY NUMBER» (62), `G4` «MOULDING TOOL NUMBER» (70);
+    - hay un encabezado de sección, `D - D` (fila 40).
+
+    Las claves van de A a I y de 1 a 14. Además de las 41 de `medida_dr`, hay `I1` (filas 71–72).
+  - **El plano `20250316_DRW_0196S0000K_D_02.pdf`** (1 página, con capa de texto) tiene una
+    cuadrícula de **filas A–L y columnas 1–16**, que cubre todas las claves. **Solo se ha mirado el
+    borde**, para que el interior sirva de validación a ciegas de un lector de zonas.
+    - En la franja del borde se ve la nota de materiales arriba a la izquierda, que es la `A1`.
+    - Queda por ver qué revisión del plano (`D_01` de 2023, en `6- Método de medición/Support MM/`,
+      o `D_02` de 2025) corresponde a cada informe: las zonas pueden cambiar entre revisiones.
+
+**Validación en planos nuevos (13/11/2026).** Los mismos lectores y la misma decisión de tag del visor
+(`leer_planos.lee_plano`), sin tocar nada, en los **30 PDF** de pieza o de método que el visor no incluye.
+Son escaneos de tamaño plano, de 10 páginas o menos, fuera de `3- Molde`. Ninguno se había mirado antes.
+Script: [`validar_numerados_nuevos.py`](../prototypes/data-explorer/validar_numerados_nuevos.py); lecturas y
+hojas en `out/validar-numerados-2026-11-13/`.
+- **Solo 3 de los 30 están numerados, los tres del 3186** (Autoliv, `6- Método de medición/`):
+  - **`E1133806_000_000.CATDrawing.pdf`**: tag «numerado», 36 marcas `No.`.
+    - **Número:** 36 de 36 bien leídos.
+    - **Situación:** 35 sobre su cota; la segunda `No.500` cae en la tabla de vistas.
+    - **Omisión vista en los recortes:** `No.118`, girada unos 50°.
+  - **`E507287_008.pdf`**: tag «numerado», 44 marcas `No.`. Muestra de 40 (semilla 20261113):
+    - **Número:** 40 de 40 bien leídos, también giradas (`No.118`, `No.104`).
+    - **Situación:** 33 sobre su cota; 1 en la tabla de vistas (`No.500`); 6 en la **lista de notas
+      generales** (`No.002`–`No.007`). Esas notas son características numeradas del plano, no cotas;
+      el visor las ofrece igual que una cota.
+    - **Falta `No.103`.** Por los recortes, probablemente girada (no se ha barrido el plano entero).
+  - **`E040215_06.pdf`: numerado con otro estilo, `N° 324`** (N con signo de grado). **No lo lee ningún
+    lector**: `MARCA_NO` exige punto o coma tras «No». Solo saca las notas `No.001`–`No.005` y 20 recuadros
+    falsos (cotas básicas enmarcadas, la referencia «B» como «8»). Tag «nada»: el visor no ofrecería nada,
+    ni lo falso ni lo bueno.
+- **Controles negativos: los otros 27** (útiles, galgas, núcleos del cliente, planos marcados). Ninguno
+  numerado. 23 recuadros en 10 PDF, **ninguno ofrecido**: la regla del tag los frena. Revisados los de 6 PDF,
+  todos falsos:
+  - cotas básicas (34.1, 6.5);
+  - celdas de tolerancia («0;1» → «01»);
+  - referencias y secciones leídas como cifra (B → 8, `B-B` → 8);
+  - rectángulos de la geometría (→ 0).
+
+  `Shroud_240W_marked.pdf` (3206) sale como plano con globos, que no es lo que se mide aquí.
+- **Conclusión:**
+  - Con el estilo `No.`, la lectura del número aguanta en planos nuevos: 76 de 76.
+  - Los fallos son de **situación**: tabla de vistas y lista de notas.
+  - Los fallos de **omisión** son marcas giradas.
+  - **Un estilo no previsto, `N°`, se pierde entero.**
+  - `[]` y recuadros siguen sin validar: en Exemples no hay más planos con esas marcas.
 
 **Reproducir.** Con [`probar_lectores_numerados.py`](../prototypes/data-explorer/probar_lectores_numerados.py),
 en tres fases: `leer`, `muestra` e `informe`. Todo queda en
@@ -570,8 +642,8 @@ Detalle en [Lectores de planos numerados](#lectores-de-planos-numerados-10112026
 anteriores (36 y 24) no guardaron su selección; las del 10/11 son reproducibles.
 
 Límites: 614 globos quedan sin leer (234 del 3195, 148 del 3212, 113 del 3167), y buscarlos no da
-resultado. Las 11 cotas con letra del 3214 (`A4`, `D5`, `F3`…) no aparecen en el OCR ni, en el
-barrido del 10/11/2026, como recuadro: siguen pendientes. Buscar en el 3237 o el 3238 también encuentra otras cifras de su
+resultado. Las 11 cotas con letra del 3214 (`A4`, `D5`, `F3`…) son zonas de la cuadrícula del plano, no marcas
+([comprobado el 13/11/2026](#lectores-de-planos-numerados-10112026)). Buscar en el 3237 o el 3238 también encuentra otras cifras de su
 texto (`30` y `30°`). Los lectores de `[]`, `No.` y recuadros son prototipo: solo se han probado en
 estos 4 planos y no están en la aplicación.
 

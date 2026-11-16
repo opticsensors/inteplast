@@ -121,9 +121,18 @@ def folder_files(folder_path: str) -> list[SourceItem]:
 
 def reference_kind(relative: str) -> ReferenceKind | None:
     text = relative.casefold()
-    suffix = PurePosixPath(text).suffix
+    path = PurePosixPath(text)
+    suffix = path.suffix
     # Metrology geometry, presentations and reports are not reference CAD/drawings.
-    if re.search(r"metrolog|retoqu|correction|mesura|measurement|support|suport", text):
+    # SUPPORT can also be the product name: only exclude support directories.
+    if re.search(r"metrolog|retoqu|correction", text) or re.search(
+        r"support|suport", path.parent.as_posix()
+    ):
+        return None
+    ballooned = bool(re.search(r"bal{1,2}o{1,2}n{1,2}ed", text))
+    if suffix == ".pdf" and ballooned:
+        return "drawing"
+    if re.search(r"mesura|measurement", text):
         return None
     if suffix in {".stl", ".ply", ".obj", ".glb", ".gltf"}:
         return "mold" if re.search(r"molde|mould|mold(?!flow)", text) else "scan"
@@ -163,14 +172,12 @@ def references(session: Session, part_id: uuid.UUID) -> dict[str, StoredFile]:
     return result
 
 
-def discover(session: Session, folder_path: str) -> FolderDiscovery:
-    if not folder_path:
-        raise HTTPException(
-            422, "Selecciona la carpeta de una pieza dentro del origen."
-        )
-    root = source_item(folder_path, directory=True)
+def reference_candidates(
+    folder_path: str,
+) -> tuple[dict[str, list[ReferenceCandidate]], list[str]]:
+    """Read-only discovery, also used by the offline ingestion check."""
     candidates: dict[str, list[ReferenceCandidate]] = defaultdict(list)
-    notices = []
+    notices: list[str] = []
     for item in folder_files(folder_path):
         kind = reference_kind(item.relative_to(folder_path))
         if not kind:
@@ -188,6 +195,18 @@ def discover(session: Session, folder_path: str) -> FolderDiscovery:
             )
         except SourceError:
             notices.append(f"No se puede vincular todavía: {relative}.")
+    for choices in candidates.values():
+        choices.sort(key=lambda item: item.path.casefold())
+    return candidates, notices
+
+
+def discover(session: Session, folder_path: str) -> FolderDiscovery:
+    if not folder_path:
+        raise HTTPException(
+            422, "Selecciona la carpeta de una pieza dentro del origen."
+        )
+    root = source_item(folder_path, directory=True)
+    candidates, notices = reference_candidates(folder_path)
     part = session.exec(select(Part).where(Part.folder_path == folder_path)).first()
     current = references(session, part.id) if part else {}
     chosen = reference_choices(session, part.id) if part else {}
@@ -431,6 +450,7 @@ def refresh(session: Session, part: Part, user_id: uuid.UUID) -> PartRefreshResu
         if corrections_state in {"queued", "processing"}
         else "partial"
         if corrections_state in {"needs_review", "error"}
+        or any(status.startswith("Pendiente:") for status in used_files.values())
         else "ready",
         corrections_key=corrections_key,
     )

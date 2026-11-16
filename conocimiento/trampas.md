@@ -46,7 +46,10 @@ No confundir el orden físico de diapositivas con el número de acción impreso.
 9. **Fecha de PDF y revisión de plano son cosas distintas.** No asignar la revisión del
    PDF disponible a todos los informes. [Contraste del 3212](0-bolt-eye/3212/1-pieza-2d-3d.md#-este-plano-no-es-el-de-los-informes).
 10. **La numeración de carpetas es una convención.** Una carpeta ausente puede tener su
-    contenido en otra posición. [Estructuras encontradas](comparativa.md#lo-que-cambia-entre-piezas-lo-que-un-lector-genérico-tiene-que-admitir).
+    contenido en otra posición. La 7 es Moldflow en el 3212 y el escaneo en el esqueleto nuevo.
+    [Estructuras encontradas](comparativa.md#esqueleto-del-3212-frente-al-nuevo).
+    **La biblioteca no registra carpetas vacías:** que no aparezca una carpeta no prueba que
+    no exista. Mirar el disco antes de afirmarlo (error del 12/11/2026 con 3186, 3218 y 3226).
 11. **El nombre `DR*` no garantiza función ni columnas.** Distinguir medición, previsión,
     croquis y comparación por su contenido. [Esquemas](formatos-parsing.md#2-xls-ppap--informe-dimensional-interno).
 12. **Combinar cabeceras e HISTORY con su procedencia.** Una hoja vacía no demuestra que

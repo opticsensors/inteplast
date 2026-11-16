@@ -77,6 +77,8 @@ class Settings(BaseSettings):
     # Docker explicitly sets /app/uploads; local execution defaults to backend/uploads.
     UPLOADS_DIR: str = "uploads"
     MAX_UPLOAD_SIZE_MB: int = 50
+    AUTO_MEASUREMENT_MAX_FILE_MB: int = Field(default=32, gt=0)
+    AUTO_MEASUREMENT_MAX_TOTAL_MB: int = Field(default=256, gt=0)
     FILE_ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     EVIDENCE_WORKER_ENABLED: bool = True
     PREVIEW_WORKER_ENABLED: bool = True

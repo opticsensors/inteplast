@@ -70,19 +70,29 @@ export function savedFiles(data?: PartDetailPublic): FileDraft[] {
 }
 
 export function discoveredFiles(folder: FolderDiscovery): FileDraft[] {
-  return folder.references.flatMap(({ kind, path, source_version }) =>
-    path
-      ? [
-          {
-            key: newFileKey(),
-            kind,
-            path,
-            source_version,
-            name: path.split("/").pop()!,
-            primary: true,
-          },
-        ]
-      : [],
+  return folder.references.flatMap(
+    ({ kind, path, source_version, candidates }) => {
+      // Keep all drawing candidates; the chosen reference remains the primary.
+      // A null choice is an explicit removal and must not be restored.
+      if (!path) return []
+      const choices =
+        kind === "drawing"
+          ? [
+              { path, source_version },
+              ...(candidates ?? []).filter(
+                (candidate) => candidate.path !== path,
+              ),
+            ]
+          : [{ path, source_version }]
+      return choices.map((choice) => ({
+        key: newFileKey(),
+        kind,
+        path: choice.path,
+        source_version: choice.source_version,
+        name: choice.path.split("/").pop()!,
+        primary: choice.path === path,
+      }))
+    },
   )
 }
 
