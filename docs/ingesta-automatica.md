@@ -29,13 +29,34 @@ incluso si termina el procesamiento separado de correcciones.
 | Features, categoría, tags y vínculos pieza/feature/cota | Edición y selección manuales |
 | Advertencias y lecciones | Contenido editado/validado por usuarios; el chat de consulta no las publica automáticamente |
 | Correcciones y previsiones | Adaptador específico del 3212. Fuera del piloto falta un lector general productivo; no afirmar que ya existe una importación automática o un formulario completo para todos los casos |
-| Base/tapa y otros componentes | Falta identidad de componente en el modelo; no se soluciona solo leyendo más columnas |
+| Base/tapa y otros componentes | Desde el 16/11/2026: identidad separada y asignación de hojas/archivos, reutilizada al actualizar. Desde el 17/11/2026 el usuario nombra los componentes y la app propone archivos y hojas por ese nombre. Sin componentes, la pieza se lee como una sola |
 
 El paquete de aclaraciones y las convenciones mínimas propuestas están en
 [Preguntas abiertas: extracción sin IA](preguntas-abiertas.md#extraccion-sin-ia).
 Se pide significado y trazabilidad donde faltan, no reorganizar las carpetas para
 compensar fallos del lector. Los planes y cifras históricos que siguen debajo
 no son una nueva medición de cobertura de las correcciones.
+
+**Criterio de Eduard del 16/11/2026:** las incidencias del importador se conservan en el
+registro técnico, fuera de la ficha de pieza. Tras optimizar y generalizar la lectura de
+carpetas, preparar con INTEPLAST unas convenciones de entrega para evitar los fallos
+recurrentes: identificación de componentes, correspondencia entre informes y revisiones
+de planos, numeración de cotas/cavidades y tolerancias. Es un trabajo pendiente apoyado en
+las incidencias reales, no un requisito de reorganización ya acordado con el cliente.
+Desde el 17/11/2026 la propuesta del plano principal prefiere un PDF con `.icp` en su
+carpeta (el primero por ruta entre ellos); sin ninguno, sigue siendo el primero por ruta.
+Sobre las 21 carpetas cambia la propuesta en 4 (3202, 3205, 3206 y 3288), las únicas con
+algún plano candidato junto a un `.icp`. Corregir manualmente el 3288 no generalizaba la
+selección; esta regla sí, pero no distingue componentes ni revisiones: en el 3288 propone
+`REV.01/BSG-296-00/2. 20250714_BSG-296-00 SOP RCP 3.1 balloned.pdf`, el primero de 9 con `.icp`.
+Las asignaciones confirmadas se reutilizan.
+
+**Rectificación expresa de Eduard, 16/11/2026:** el agente no debe efectuar esas
+correcciones manuales en las fichas. Se mantiene la salida del algoritmo, se registra
+su fallo y se mejora la regla general. Si falta información, se concreta con INTEPLAST
+cómo proporcionarla o se deja al usuario una selección manual en la aplicación.
+No presentar la configuración manual del 3288 como validación automática desde carpeta.
+El cambio de estrella hecho por el agente se ha revertido. Instrucción en `AGENTS.md`.
 
 **Actualización del 02/11/2026:** el lector productivo audita firmas OLE/ZIP/PDF y
 fórmulas BIFF8/OOXML antes de leer cachés. Admite tablas reconocidas DR (incluidas
@@ -393,3 +414,81 @@ selección de referencias, varios planos y límites de 32/256 MiB, el comando de
 repetición y sus resultados están en
 [Prueba de extracción de la web](../conocimiento/prueba-ingesta-web.md).
 Esta prueba no importa correcciones ni datos en la base de datos.
+
+## Componentes de una pieza (16/11/2026)
+
+La migración `m84b70daef52` añade `Part.components` y `PartCharacteristic.component`.
+La clave única es `(part_id, component, code, revision)`; los registros existentes conservan
+componente vacío, identificador y vínculos. `code` almacena el número original. La API publica
+`number` y `component`, y utiliza `code=BASE:N16` como selector inequívoco para consultas,
+series, catálogo y asistente. Las piezas simples siguen publicando `N16`.
+
+La organización se guarda desde la ficha: clave estable, nombre visible, nombres exactos de
+hoja (compartidos por los informes), archivos relativos a la carpeta y revisión de cada plano.
+Una asignación por archivo y otra por hoja que discrepan dejan las medidas pendientes. Las
+cavidades rotuladas solo con números se leen únicamente en hojas asignadas a un componente.
+Cada hoja conserva su revisión, incluso si BASE y TAPA declaran revisiones distintas.
+No hay reglas de lectura exclusivas del 3288.
+
+Actualizar datos mantiene ambos componentes dentro del historial de la pieza y separa sus
+series. La importación manual antigua de CSV no admite piezas organizadas: deben usar las
+fuentes asignadas y «Actualizar datos». No se retiran claves ni asignaciones de mediciones
+ya importadas sin una migración explícita. Cambiar de carpeta conserva las identidades y
+vacía las asignaciones para que el usuario confirme las nuevas fuentes.
+
+### Propuesta por nombre (17/11/2026)
+
+El usuario define los componentes (BASE, TAPA, CUERPO, TAPÓN…) y la app propone qué archivos
+y hojas corresponden a cada uno. **Si no define ninguno, la pieza se lee como una sola**,
+igual que antes de existir los componentes; guardar una organización vacía equivale a eso.
+
+- **Examen previo:** `GET /parts/{id}/components` lista los archivos y, de cada Excel de
+  medición, los nombres de sus hojas (`workbooks`), leídos del índice del libro con Calamine
+  sin importar medidas. Funciona desde la primera selección de carpeta. Los métodos de
+  medición y las carpetas de correcciones se excluyen como en la lectura. Un libro ilegible
+  no ofrece hojas.
+- **Coincidencia** (`frontend/.../componentProposals.ts`): palabras completas, sin
+  mayúsculas, acentos ni separadores. «BASE» propone `20240508_BASE_RCP31.stp`, `DR(base)` y
+  un PDF con BASE en el nombre; no `BASE2.pdf`. Si coinciden varios componentes o ninguno,
+  queda sin asignar. Se mira el nombre del archivo, no sus carpetas.
+- **Excel:** se proponen sus hojas una a una; nunca el libro entero por su nombre. La
+  convención `DR(base)` sigue sugiriendo componentes («Usar propuesta»), pero no es necesaria.
+- **Decisiones:** lo asignado y todo lo que se guarda «Sin asignar» se guarda
+  (`Part.component_unassigned`, migración `n95c81ebf063`) y no se vuelve a proponer, aunque no
+  se haya tocado su selector (porque no coincidía o era ambiguo) y aunque luego cambien los
+  nombres de los componentes. Los
+  archivos nuevos que aparecen tras «Actualizar datos» reciben propuesta con la misma regla.
+  Las medidas de lo que queda sin asignar no se incorporan ni se mezclan.
+- **Lo que no hace:** asignar un PDF a BASE no fija su revisión ni lo hace principal, tampoco
+  en una pieza que aún no tiene plano principal (`save_files(..., promote=False)`). No hay
+  reglas por código de pieza ni equivalencias inventadas entre códigos y componentes.
+- **Comprobado** en pruebas: backend (examen de hojas, exclusión de métodos, libro ilegible,
+  decisiones guardadas, lectura normal sin componentes) y navegador (`piece-editor.test.cjs`).
+  No se ha probado todavía con las carpetas reales en la web.
+
+La prueba real del 3288 incorpora 20.189 observaciones de BASE y conserva las 12.659 de TAPA
+sin cambios de valor, nominal, tolerancias o procedencia. Esto valida separación y regresión;
+no convierte en verificadas las celdas marcadas como copia, fórmula o procedencia dudosa.
+
+## Identificadores con letras (16/11/2026)
+
+Inventario de literales distintos en `medida_dr`, con ruta, hoja, fila y columna de ejemplo
+por literal. Su alcance es la biblioteca completa de cada pieza (incluye documentos que
+la app excluye, como métodos y correcciones); los recuentos **no** equivalen a filas rechazadas
+en v6 ni a cotas independientes. Evidencias completas: `out/plan-2026-11-16/omisiones.json`.
+
+| Pieza | Literales | Clasificación y decisión |
+|---|---:|---|
+| 3056 | 94 | 59 con sufijos compatibles con evaluaciones/repeticiones (`1480.X`, `650.PHI`, `2150.L/R`), 34 por clasificar y 1 auxiliar. No son todos repeticiones; no quitar letras sin interpretar el bloque. |
+| 3167 | 120 | 71 descriptores auxiliares (`~TASCHE 1`, `~Distance`) y 49 sufijos (`1220.T`, `1220.T1`, `1220.T2`…). Distinguir evaluación y repetición antes de unirlos a una cota. |
+| 3195 | 17 | 9 auxiliares (`~Point`, `~Plane`…) y 8 por clasificar, incluidos códigos de útiles, un identificador `B-0580-991.0` y números con puntuación final. No convertirlos todos a N-número. |
+| 3214 | 11 | Zonas de cuadrícula (`A4`, `A8`, `D5`…). Una zona puede contener varias cotas; mantener como pendiente, fuera de localización por cota. |
+| 3233 | 67 | 53 zonas, 11 sufijos de evaluación/repetición, 1 auxiliar y 2 pendientes. No hay una regla única para toda la pieza. |
+
+Ejemplos reproducibles: 3056 `intern.1_100%.xls!DR (3D)!fila 67` (`0.PHI`),
+3167 `PPAP-3167-00_Inf_03.xlsm!100%!fila 200` (`1220.T`),
+3195 `3195-00_Int_02.xlsm!DR_100%!fila 920` (`B-0580-991.0`),
+3214 `3214-00_int.02_customer.xls!DR!fila 96` (`A4`),
+3233 `3233-00_inf.06_OPL_81A.xls!100% BOSCH PORTAL!fila 31` (`130.T`).
+Los sufijos sugieren una interpretación, pero no bastan para decidir una identidad.
+No se ha ampliado la admisión automática de letras; las filas rechazadas son visibles en la web.

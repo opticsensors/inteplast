@@ -15,6 +15,7 @@ import json
 import logging
 import os
 import shutil
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -24,7 +25,10 @@ import numpy as np
 from numpy.typing import NDArray
 from PIL import Image
 
+from app.ingestion import icp as icp_project
+from app.ingestion import numbered_marks
 from app.ingestion.balloon_reader import (  # noqa: F401  (public names of this module)
+    label_of,
     normalize_number,
     ocr_number,
     own_reader,
@@ -39,12 +43,21 @@ Image.MAX_IMAGE_PIXELS = None  # 300–800 dpi rasters of up to 14,000 px per si
 
 
 def build_index(
-    pdf: Path, destination: Path, *, use_ocr: bool = True
+    pdf: Path,
+    destination: Path,
+    *,
+    use_ocr: bool = True,
+    icp: Mapping[str, Path] | None = None,
 ) -> dict[str, Any]:
     """Read one PDF version. EvidenceJob owns caching and human reviews.
 
     Coordinates are normalised to the page and candidate IDs are derived from them, as in the
     existing web contract. OCR readings are proposals, never verified characteristic identities.
+
+    `icp`: infra-CONVERT projects found next to the drawing, as original name → readable file
+    (a cached copy can have another name). When one of them can be placed on a page, the
+    number of its balloons comes from the project instead of from OCR. Without them the
+    index is exactly the one built before this option existed.
     """
     assets = destination / "assets"
     assets.mkdir(parents=True, exist_ok=True)
@@ -70,6 +83,24 @@ def build_index(
             notices.append(
                 "Sin Tesseract: no se ha extraído el texto general de páginas escaneadas."
             )
+    projects: dict[str, list[icp_project.Stamp]] = {}
+    project_files = []
+    for name, path in sorted((icp or {}).items()):
+        raw = path.read_bytes()
+        try:
+            stamps = icp_project.read_stamps(raw)
+        except icp_project.IcpFormatError as error:
+            notices.append(f"{name}: .icp no reconocido ({error}); no se ha usado.")
+            continue
+        if stamps:
+            projects[name] = stamps
+        project_files.append(
+            {
+                "name": name,
+                "sha256": hashlib.sha256(raw).hexdigest(),
+                "stamps": len(stamps),
+            }
+        )
     data: dict[str, Any] = {
         "signature": {
             "sha256": hashlib.sha256(pdf.read_bytes()).hexdigest(),
@@ -85,6 +116,9 @@ def build_index(
         "balloons": [],
         "notices": notices,
     }
+    if project_files:
+        data["signature"]["icp"] = project_files
+    numbered = []
     with fitz.open(pdf) as document:
         if document.needs_pass:
             raise ValueError("El PDF está protegido por contraseña.")
@@ -120,11 +154,27 @@ def build_index(
                     rotate(work, balloons, turns) if turns else (work, balloons)
                 )
                 read_balloons_combined(image_, moved, engine, reader)
+                tentative = [set(read.pop("tentative", ())) for read in moved]
                 for balloon, read in zip(balloons, moved, strict=True):
                     balloon["candidates"] = read["candidates"]
             else:
+                tentative = [set() for _ in balloons]
                 for balloon in balloons:
                     balloon["candidates"] = []
+            placement = (
+                place_project(
+                    projects,
+                    balloons,
+                    tentative,
+                    (work.shape[1], work.shape[0]),
+                    page,
+                    single_page=len(document) == 1,
+                    stem=pdf.stem,
+                    notices=notices,
+                )
+                if projects
+                else None
+            )
             if use_ocr and tesseract and len(words) < 20:
                 try:
                     data["words"].extend(read_scan_words(rgb, number, tesseract))
@@ -147,7 +197,124 @@ def build_index(
                     "balloon_source": source,
                 }
             )
+            if placement:
+                data["pages"][-1]["icp"] = placement
+            elif engine is not None and len(balloons) < 20 and len(words) < 50:
+                numbered.extend(numbered_marks.read_page(page, engine))
+    if len(numbered) >= numbered_marks.MIN_MARKS:
+        data["balloons"].extend(numbered)
+    elif numbered:
+        notices.append(
+            "Marcas No./N° insuficientes para confirmar el estilo de numeración; no se ofrecen posiciones automáticas."
+        )
     return data
+
+
+ICP_BALLOON_RADIUS_MM = (
+    3.5  # drawn size of a stamp when the page has no balloon to measure
+)
+
+
+def place_project(
+    projects: dict[str, list[icp_project.Stamp]],
+    balloons: list[dict[str, Any]],
+    tentative: list[set[str]],
+    size: tuple[int, int],
+    page: Any,
+    *,
+    single_page: bool,
+    stem: str,
+    notices: list[str],
+) -> dict[str, Any] | None:
+    """Number the balloons of a page from its `.icp` and add the stamps that are not drawn.
+
+    A drawn balloon keeps its identity and box, so earlier human reviews still apply; its OCR
+    proposal is kept aside under `ocr`. Returns what was done, for the page record.
+    """
+    number = page.number + 1
+    circles = [(b["circle"][0], b["circle"][1], b["circle"][2]) for b in balloons]
+    placement, notice = icp_project.choose(
+        projects,
+        circles,
+        tentative,
+        label_of,
+        size,
+        (page.rect.width, page.rect.height),
+        single_page=single_page,
+        stem=stem,
+    )
+    if placement is None:
+        if notice:
+            notices.append(f"Página {number}: {notice}.")
+        return None
+    width, height = size
+    if circles:
+        radius = float(np.median([c[2] for c in circles]))
+        rx, ry = radius / width, radius / height
+    else:
+        points = ICP_BALLOON_RADIUS_MM / icp_project.MM_PER_POINT
+        rx, ry = points / page.rect.width, points / page.rect.height
+    match = icp_project.match_balloons(placement.stamps, circles, size)
+    agree = differ = 0
+    used = set()
+    for balloon, j in zip(balloons, match, strict=True):
+        if j is None:
+            continue
+        used.add(j)
+        stamp = placement.stamps[j]
+        label = label_of(stamp["text"]) or stamp["text"]
+        offered = [c["label"] for c in balloon["candidates"]]
+        agree += offered == [label]
+        differ += bool(offered) and offered != [label]
+        balloon["ocr"] = balloon["candidates"]
+        balloon["candidates"] = [
+            {
+                "label": label,
+                "readings": [{"method": ".icp", "text": stamp["text"], "score": 1.0}],
+            }
+        ]
+        balloon.update(method="icp", tip=stamp["tip"])
+    extra = 0
+    for j, stamp in enumerate(placement.stamps):
+        if j in used or not (0 <= stamp["x"] <= 1 and 0 <= stamp["y"] <= 1):
+            continue
+        extra += 1
+        label = label_of(stamp["text"]) or stamp["text"]
+        entry: dict[str, Any] = {
+            "id": f"p{number}-i{stamp['number']}",
+            "page": number,
+            "box": normalized_box(
+                (stamp["x"] - rx, stamp["y"] - ry, stamp["x"] + rx, stamp["y"] + ry),
+                1,
+                1,
+            ),
+            "candidates": [
+                {
+                    "label": label,
+                    "readings": [
+                        {"method": ".icp", "text": stamp["text"], "score": 1.0}
+                    ],
+                }
+            ],
+            "method": "icp",
+            "tip": stamp["tip"],
+            "drawn": False,
+        }
+        if placement.approximate:
+            entry["approximate"] = True
+        balloons.append(entry)
+    return {
+        "file": placement.file,
+        "method": placement.fit.method,
+        "approximate": placement.approximate,
+        "inliers": placement.fit.inliers,
+        "tentative": placement.fit.tentative,
+        "stamps": len(placement.stamps),
+        "on_balloons": len(used),
+        "not_drawn": extra,
+        "ocr_agree": agree,
+        "ocr_differ": differ,
+    }
 
 
 def normalized_box(rect: Any, width: float, height: float) -> list[float]:

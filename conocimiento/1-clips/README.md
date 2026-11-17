@@ -59,6 +59,15 @@ acording Anita 26/01/2024»*; la propuesta de 0,04 mm no acredita un retoque eje
 de los loops 10–15) hay hojas con muestras calculadas con `RANDBETWEEN` a partir de las medidas (en
 `3218-00_intern.23.xls` en las propias hojas `CAV_n`). Consultar `celda_aleatoria` antes de usar un valor.
 
+**3226: el informe no numera las cotas (16/11/2026).** En `4- Metrologia/Interns/3226-00_intern.01.xls!DR`
+la columna `Nr` está vacía en las 47 filas con nominal (14–60). Hay una sola columna de valores (la I), sin
+rótulo de cavidad; la K lleva `left`, `right` o `aprox` en algunas filas. La copia de `5- Retoques molde/1st
+loop of corrections/` es la misma hoja. El plano tampoco lleva numeración
+([planos-globos](../planos-globos.md#estado-de-cada-plano-05112026)). Por eso la app no saca ninguna cota del
+3226: no hay identificador que leer y no se inventa uno por la fila. Pregunta a INTEPLAST:
+[A28](../../docs/preguntas-abiertas.md#a28-3226-sin-numeracion). El informe cita el plano `DW-UMED-18` (`DR!H6`);
+el que tenemos es `DW-UMED-2-2`.
+
 Moldflow: `.mfr` solo en 3174 y 3309 (con `debug.log` y una caché de GPU del visor); 3195 y 3226 tienen
 un `README.txt`.
 

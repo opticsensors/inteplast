@@ -7,6 +7,7 @@ from sqlmodel import col, select
 from app import measurement_imports
 from app.api.deps import CurrentUser, SessionDep
 from app.api.routes.parts import get_part_or_404
+from app.component_models import ComponentDefinition, qualified, split_code
 from app.evidence import drawing_key, job_id, queue, study_key
 from app.file_sources import SourceError, document_check
 from app.knowledge_models import (
@@ -110,6 +111,7 @@ def read_part_evidence(
         .order_by(StoredFile.filename)
     ).all()
     return PartEvidencePublic(
+        components=[ComponentDefinition.model_validate(c) for c in part.components],
         part=PartPublic.model_validate(part),
         features=part_features(session, [part_id])[part_id],
         documents=[
@@ -174,7 +176,7 @@ def read_feature_evidence(
         .order_by(PartCharacteristic.code)
     ).all()
     job = session.get(EvidenceJob, job_id("study", part_id))
-    codes = {c.code for c, _ in rows}
+    codes = {qualified(c.code, c.component) for c, _ in rows}
     return FeatureEvidencePublic(
         characteristics=[characteristic_public(c, role) for c, role in rows],
         pending=[
@@ -206,7 +208,12 @@ def assign_characteristic(
     part_id: uuid.UUID,
     body: CharacteristicAssignment,
 ) -> Any:
-    get_part_or_404(session, part_id)
+    part = get_part_or_404(session, part_id)
+    component, number = split_code(body.code)
+    if part.components and component not in {c["key"] for c in part.components}:
+        raise HTTPException(422, "Selecciona el componente de la cota.")
+    if component and not part.components:
+        raise HTTPException(422, "Configura primero los componentes de la pieza.")
     # Two features may concurrently select the same previously unseen cota.
     session.exec(select(Part).where(Part.id == part_id).with_for_update()).one()
     if session.get(Feature, feature_id) is None:
@@ -218,13 +225,14 @@ def assign_characteristic(
     characteristic = session.exec(
         select(PartCharacteristic).where(
             PartCharacteristic.part_id == part_id,
-            PartCharacteristic.code == body.code,
+            PartCharacteristic.code == number,
+            PartCharacteristic.component == component,
             PartCharacteristic.revision == body.revision,
         )
     ).first()
     if characteristic is None:
         characteristic = PartCharacteristic(
-            part_id=part_id, code=body.code, revision=body.revision
+            part_id=part_id, code=number, component=component, revision=body.revision
         )
         session.add(characteristic)
         session.flush()

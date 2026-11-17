@@ -15,6 +15,11 @@ navegadores. No depende de `prototypes/`, rutas personales ni scripts externos a
   dos y un número por plano. Solo se ofrece la lectura que llega al umbral de la fuente del globo.
   Si el modelo o sus metadatos faltan o no son válidos, los globos quedan localizados sin lectura
   automática y se muestra un aviso; la búsqueda en el texto del plano sigue disponible.
+- `icp.py`: globos del proyecto de infra-CONVERT (`.icp`) que acompaña a un plano. Lee los sellos
+  (número y dos puntos), los sitúa sobre la página con los globos dibujados o, en un plano
+  limpio de una página, a escala 1:1, y elige el proyecto que corresponde. Si no puede
+  situarlos con fiabilidad, no los sitúa y lo avisa. `drawing.py` lo usa cuando el trabajador
+  le pasa los `.icp` de la carpeta del plano; sin ellos, el índice es el de siempre.
 - `drawing_version.py`: identidad del lector (versión, huellas del ONNX y del JSON, y umbrales). Entra en la
   clave de caché del índice: cambiarla obliga a preparar de nuevo la búsqueda.
 - `models/lector_globos.onnx`: el lector propio, una CRNN de 0,24 M parámetros entrenada solo con

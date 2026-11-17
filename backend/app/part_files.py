@@ -83,7 +83,13 @@ def save_files(
     choices: list[PartFileInput],
     *,
     folder_path: str | None,
+    promote: bool = True,
 ) -> None:
+    """Replace the piece's files.
+
+    With `promote`, the first file of a kind without principal becomes the principal.
+    Assigning files to components passes False: it never chooses the principal.
+    """
     session.exec(select(Part).where(Part.id == part.id).with_for_update()).one()
     existing = {item.file.id for item in read_files(session, part)}
     changed_folder = folder_path != part.folder_path
@@ -203,7 +209,11 @@ def save_files(
     for position, (choice, file) in enumerate(resolved):
         primary = choice.kind in KINDS and (
             choice.primary
-            or (choice.kind not in primary_kinds and choice.kind not in principals)
+            or (
+                promote
+                and choice.kind not in primary_kinds
+                and choice.kind not in principals
+            )
         )
         session.add(
             PartFile(
@@ -231,5 +241,10 @@ def save_files(
     part.files_managed = True
     if changed_folder:
         part.last_read = None
+        # Keep identities/history, but never reuse assignments against another folder.
+        part.components = [
+            {**component, "files": [], "sheets": []} for component in part.components
+        ]
+        part.component_unassigned = []
     part.folder_path = folder_path
     session.add(part)

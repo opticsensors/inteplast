@@ -11,12 +11,16 @@ STUDY_SUFFIXES = {".csv", ".xls", ".pptx", ".pdf", ".txt"}
 
 
 def main() -> None:
-    kind, source, destination = sys.argv[1:]
+    kind, source, destination, *extra = sys.argv[1:]
     output = Path(destination)
     if kind == "drawing":
         from app.ingestion.drawing import build_index
 
-        data = build_index(Path(source), output, use_ocr=True)
+        # Optional: infra-CONVERT projects of the drawing's folder, as [name, file] pairs.
+        projects = (
+            {name: Path(file) for name, file in json.loads(extra[0])} if extra else {}
+        )
+        data = build_index(Path(source), output, use_ocr=True, icp=projects)
     elif kind == "study":
         from app.ingestion.pilot_3212.study import build_data
 

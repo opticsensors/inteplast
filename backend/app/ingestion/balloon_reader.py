@@ -367,3 +367,7 @@ def read_balloons_combined(
     )
     choices = unique_assignment(merge([rapid, own]))
     offer_readings(balloons, choices, rapid, own, thresholds)
+    # Best reading of each reader, offered or not. It is only used as a tentative pair to
+    # place the stamps of an .icp: the caller removes it, it is not part of the index.
+    for balloon, *options in zip(balloons, rapid, own, choices, strict=True):
+        balloon["tentative"] = sorted({option[0][0] for option in options if option})

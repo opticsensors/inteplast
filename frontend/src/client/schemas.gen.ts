@@ -226,7 +226,7 @@ export const CharacteristicAssignmentSchema = {
         code: {
             type: 'string',
             maxLength: 64,
-            pattern: '^N\\d{1,6}(?:\\.\\d{1,3})?$',
+            pattern: '^(?:[A-Z][A-Z0-9_-]{0,23}:)?N\\d{1,6}(?:\\.\\d{1,3})?$',
             title: 'Code'
         },
         revision: {
@@ -262,6 +262,16 @@ export const CharacteristicPublicSchema = {
         code: {
             type: 'string',
             title: 'Code'
+        },
+        component: {
+            type: 'string',
+            title: 'Component',
+            default: ''
+        },
+        number: {
+            type: 'string',
+            title: 'Number',
+            default: ''
         },
         revision: {
             type: 'string',
@@ -326,6 +336,183 @@ export const ChatRequestSchema = {
     title: 'ChatRequest'
 } as const;
 
+export const ComponentDefinitionSchema = {
+    properties: {
+        key: {
+            type: 'string',
+            pattern: '^[A-Z][A-Z0-9_-]{0,23}$',
+            title: 'Key'
+        },
+        name: {
+            type: 'string',
+            maxLength: 80,
+            minLength: 1,
+            title: 'Name'
+        },
+        sheets: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            maxItems: 200,
+            title: 'Sheets'
+        },
+        files: {
+            items: {
+                '$ref': '#/components/schemas/ComponentFile'
+            },
+            type: 'array',
+            maxItems: 200,
+            title: 'Files'
+        }
+    },
+    type: 'object',
+    required: ['key', 'name'],
+    title: 'ComponentDefinition'
+} as const;
+
+export const ComponentFileSchema = {
+    properties: {
+        path: {
+            type: 'string',
+            maxLength: 2048,
+            minLength: 1,
+            title: 'Path'
+        },
+        revision: {
+            type: 'string',
+            maxLength: 64,
+            title: 'Revision',
+            default: ''
+        }
+    },
+    type: 'object',
+    required: ['path'],
+    title: 'ComponentFile'
+} as const;
+
+export const ComponentOptionsSchema = {
+    properties: {
+        components: {
+            items: {
+                '$ref': '#/components/schemas/ComponentDefinition'
+            },
+            type: 'array',
+            maxItems: 20,
+            title: 'Components'
+        },
+        unassigned: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            maxItems: 5000,
+            title: 'Unassigned'
+        },
+        sources: {
+            items: {
+                '$ref': '#/components/schemas/ComponentSource'
+            },
+            type: 'array',
+            title: 'Sources',
+            default: []
+        },
+        sheet_names: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Sheet Names',
+            default: []
+        },
+        workbooks: {
+            items: {
+                '$ref': '#/components/schemas/WorkbookSheets'
+            },
+            type: 'array',
+            title: 'Workbooks',
+            default: []
+        },
+        suggestions: {
+            items: {
+                '$ref': '#/components/schemas/ComponentDefinition'
+            },
+            type: 'array',
+            title: 'Suggestions',
+            default: []
+        },
+        unassigned_characteristics: {
+            type: 'integer',
+            title: 'Unassigned Characteristics',
+            default: 0
+        }
+    },
+    type: 'object',
+    title: 'ComponentOptions'
+} as const;
+
+export const ComponentOrganization_InputSchema = {
+    properties: {
+        components: {
+            items: {
+                '$ref': '#/components/schemas/ComponentDefinition'
+            },
+            type: 'array',
+            maxItems: 20,
+            title: 'Components'
+        },
+        unassigned: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            maxItems: 5000,
+            title: 'Unassigned'
+        }
+    },
+    type: 'object',
+    title: 'ComponentOrganization'
+} as const;
+
+export const ComponentOrganization_OutputSchema = {
+    properties: {
+        components: {
+            items: {
+                '$ref': '#/components/schemas/ComponentDefinition'
+            },
+            type: 'array',
+            maxItems: 20,
+            title: 'Components'
+        },
+        unassigned: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            maxItems: 5000,
+            title: 'Unassigned'
+        }
+    },
+    type: 'object',
+    title: 'ComponentOrganization'
+} as const;
+
+export const ComponentSourceSchema = {
+    properties: {
+        path: {
+            type: 'string',
+            title: 'Path'
+        },
+        kind: {
+            type: 'string',
+            title: 'Kind'
+        }
+    },
+    type: 'object',
+    required: ['path', 'kind'],
+    title: 'ComponentSource'
+} as const;
+
 export const CotaSearchResultSchema = {
     properties: {
         id: {
@@ -352,6 +539,23 @@ export const CotaSearchResultSchema = {
     type: 'object',
     required: ['id', 'code', 'title', 'revision', 'part'],
     title: 'CotaSearchResult'
+} as const;
+
+export const DeletionFeatureSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        }
+    },
+    type: 'object',
+    required: ['id', 'name'],
+    title: 'DeletionFeature'
 } as const;
 
 export const DrawingPublicSchema = {
@@ -2680,6 +2884,123 @@ export const PartCreateSchema = {
     title: 'PartCreate'
 } as const;
 
+export const PartDeletionResultSchema = {
+    properties: {
+        message: {
+            type: 'string',
+            title: 'Message'
+        },
+        scope: {
+            '$ref': '#/components/schemas/PartDeletionScope'
+        }
+    },
+    type: 'object',
+    required: ['message', 'scope'],
+    title: 'PartDeletionResult'
+} as const;
+
+export const PartDeletionScopeSchema = {
+    properties: {
+        part_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Part Id'
+        },
+        code: {
+            type: 'string',
+            title: 'Code'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        folder_path: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Folder Path'
+        },
+        features: {
+            items: {
+                '$ref': '#/components/schemas/DeletionFeature'
+            },
+            type: 'array',
+            title: 'Features',
+            default: []
+        },
+        characteristics: {
+            type: 'integer',
+            title: 'Characteristics',
+            default: 0
+        },
+        feature_characteristic_links: {
+            type: 'integer',
+            title: 'Feature Characteristic Links',
+            default: 0
+        },
+        measurement_imports: {
+            type: 'integer',
+            title: 'Measurement Imports',
+            default: 0
+        },
+        feature_assets: {
+            type: 'integer',
+            title: 'Feature Assets',
+            default: 0
+        },
+        covers_reset: {
+            type: 'integer',
+            title: 'Covers Reset',
+            default: 0
+        },
+        files_removed: {
+            type: 'integer',
+            title: 'Files Removed',
+            default: 0
+        },
+        uploads_removed: {
+            type: 'integer',
+            title: 'Uploads Removed',
+            default: 0
+        },
+        files_kept: {
+            type: 'integer',
+            title: 'Files Kept',
+            default: 0
+        },
+        reviewed_locations: {
+            type: 'integer',
+            title: 'Reviewed Locations',
+            default: 0
+        },
+        jobs: {
+            type: 'integer',
+            title: 'Jobs',
+            default: 0
+        },
+        key: {
+            type: 'string',
+            title: 'Key'
+        }
+    },
+    type: 'object',
+    required: ['part_id', 'code', 'key'],
+    title: 'PartDeletionScope',
+    description: 'What deleting the piece removes and what it keeps.'
+} as const;
+
 export const PartDetailPublicSchema = {
     properties: {
         part: {
@@ -2715,6 +3036,14 @@ export const PartDetailPublicSchema = {
 
 export const PartEvidencePublicSchema = {
     properties: {
+        components: {
+            items: {
+                '$ref': '#/components/schemas/ComponentDefinition'
+            },
+            type: 'array',
+            title: 'Components',
+            default: []
+        },
         part: {
             '$ref': '#/components/schemas/PartPublic'
         },
@@ -3299,6 +3628,17 @@ export const ReadFileReportSchema = {
         status: {
             type: 'string',
             title: 'Status'
+        },
+        sheet: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Sheet'
         }
     },
     type: 'object',
@@ -3820,4 +4160,24 @@ export const ValidationErrorSchema = {
     type: 'object',
     required: ['loc', 'msg', 'type'],
     title: 'ValidationError'
+} as const;
+
+export const WorkbookSheetsSchema = {
+    properties: {
+        path: {
+            type: 'string',
+            title: 'Path'
+        },
+        sheets: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Sheets',
+            default: []
+        }
+    },
+    type: 'object',
+    required: ['path'],
+    title: 'WorkbookSheets'
 } as const;

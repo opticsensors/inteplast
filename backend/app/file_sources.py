@@ -12,6 +12,7 @@ import json
 import mimetypes
 import os
 import stat
+from collections.abc import Sequence
 from pathlib import Path, PurePosixPath
 
 from fastapi import HTTPException
@@ -213,6 +214,144 @@ def document_cache_key(document: StoredFile) -> str:
             ]
         ).encode()
     ).hexdigest()
+
+
+def drawing_projects(
+    document: StoredFile, piece_folders: Sequence[str] = ()
+) -> list[SourceItem]:
+    """infra-CONVERT projects (`.icp`) for a linked drawing, with their version.
+
+    1. The drawing's own folder. Only originals linked from the dataset have one: an
+       uploaded file has no folder.
+    2. Only if that folder has none: the projects next to a byte-identical copy of the
+       drawing inside its piece folder (`piece_folders`, the folders of the pieces that
+       use the document). The copy is the same drawing, so its projects are too.
+
+    Being a candidate does not make a project belong to the drawing: the reader decides.
+    """
+    if document.source != "local" or not document.source_path:
+        return []
+    connected(document)
+    folder = parent_folder(document.source_path)
+    own = sorted(
+        (
+            with_metadata(item)
+            for item in folder_entries(folder)
+            if item.suffix == ".icp"
+        ),
+        key=lambda item: item.path,
+    )
+    if own or PurePosixPath(document.source_path).suffix.lower() != ".pdf":
+        return own
+    return twin_projects(document.source_path, piece_folders)
+
+
+def parent_folder(relative: str) -> str:
+    folder = PurePosixPath(relative).parent.as_posix()
+    return "" if folder == "." else folder
+
+
+def folder_entries(folder: str) -> list[SourceItem]:
+    """Files directly inside a folder of the active source."""
+    if sharepoint.enabled():
+        return [item for item in sharepoint.children(folder) if not item.directory]
+    return [
+        SourceItem(path="/".join(filter(None, [folder, path.name])), local=path)
+        for path in sorted(local_path(folder, directory=True).iterdir())
+        if path.is_file() and not path.name.startswith(".")
+    ]
+
+
+def walk_folder(folder: str, limit: int = 20000) -> list[SourceItem]:
+    """Files under a folder of the active source, without hidden files or links."""
+    too_wide = "Selecciona la carpeta concreta de la pieza."
+    if sharepoint.enabled():
+        return sharepoint.walk(folder, too_wide=too_wide, limit=limit)
+    root = local_path(folder, directory=True)
+    items: list[SourceItem] = []
+    visited = 0
+    for directory, folders, filenames in os.walk(root, followlinks=False):
+        folders[:] = sorted(
+            name
+            for name in folders
+            if not name.startswith(".") and not Path(directory, name).is_symlink()
+        )
+        visited += len(folders) + len(filenames)
+        if visited > limit:
+            raise SourceError("unavailable", too_wide, 422)
+        for name in sorted(filenames):
+            path = Path(directory, name)
+            if name.startswith((".", "~$")) or path.is_symlink():
+                continue
+            relative = path.relative_to(root).as_posix()
+            items.append(
+                SourceItem(path="/".join(filter(None, [folder, relative])), local=path)
+            )
+    return items
+
+
+# Content hash of a file version, so repeated index checks do not read it again.
+_CONTENT_HASHES: dict[tuple[str, str, str], str] = {}
+
+
+def content_hash(item: SourceItem) -> str:
+    item = with_metadata(item)
+    source = "sharepoint" if sharepoint.enabled() else "local"
+    key = (source, item.path, item.version or "")
+    if key not in _CONTENT_HASHES:
+        digest = hashlib.sha256()
+        with item_file(item).open("rb") as handle:
+            for block in iter(lambda: handle.read(1 << 20), b""):
+                digest.update(block)
+        if len(_CONTENT_HASHES) > 4096:
+            _CONTENT_HASHES.clear()
+        _CONTENT_HASHES[key] = digest.hexdigest()
+    return _CONTENT_HASHES[key]
+
+
+def twin_projects(drawing: str, piece_folders: Sequence[str]) -> list[SourceItem]:
+    """Projects next to byte-identical copies of the drawing within its piece folder.
+
+    Only PDFs of the same size that sit next to a project are compared, so a drawing
+    without copies costs one folder listing. All copies count: if several carry
+    projects, the reader chooses among them as it does within one folder.
+    """
+    pieces = [
+        folder
+        for folder in piece_folders
+        if folder and PurePosixPath(drawing).is_relative_to(folder)
+    ]
+    if not pieces:
+        return []
+    # The most specific piece folder: a piece registered inside another one.
+    piece = max(pieces, key=lambda folder: len(PurePosixPath(folder).parts))
+    files = walk_folder(piece)
+    projects: dict[str, list[SourceItem]] = {}
+    for item in files:
+        if item.suffix == ".icp":
+            projects.setdefault(parent_folder(item.path), []).append(item)
+    own = next((item for item in files if item.path == drawing), None)
+    if own is None or not projects:
+        return []
+    own = with_metadata(own)
+    copies = [
+        with_metadata(item)
+        for item in files
+        if item.suffix == ".pdf"
+        and item.path != drawing
+        and parent_folder(item.path) in projects
+    ]
+    copies = [item for item in copies if item.size == own.size]
+    if not copies:
+        return []
+    signature = content_hash(own)
+    folders = {
+        parent_folder(item.path) for item in copies if content_hash(item) == signature
+    }
+    return sorted(
+        (with_metadata(item) for folder in folders for item in projects[folder]),
+        key=lambda item: item.path,
+    )
 
 
 def source_item(relative: str, *, directory: bool = False) -> SourceItem:

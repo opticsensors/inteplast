@@ -352,6 +352,7 @@ EvidenceService.readDrawingIndex = async () => ({
         box: [360, 380, 380, 400],
         candidates: [{ label: "N113" }],
       },
+      ...(window.evidenceDrawingBalloons ?? []),
     ],
     words: window.evidenceDrawingWords ?? [],
     notices: [],

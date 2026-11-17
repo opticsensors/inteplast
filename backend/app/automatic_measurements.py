@@ -15,6 +15,7 @@ from fastapi import HTTPException
 from sqlmodel import Session, select
 
 from app import measurement_imports
+from app.component_models import assigned_component, qualified, split_code
 from app.core.config import settings
 from app.evidence import register_document
 from app.file_sources import (
@@ -39,9 +40,28 @@ from app.measurement_models import MeasurementImport
 from app.models import Part
 from app.pilot import is_pilot
 
-READER = "automatic-tables-v6"
+READER = "automatic-tables-v8"
 logger = logging.getLogger(__name__)
 Context = tuple[str, str, str]
+# Report sheets with a Nominal header whose measurement columns cannot be identified.
+UNREAD_SHEET = {
+    "cavities_numbered_only": "las columnas de cavidad solo llevan un número",
+    "no_cavity_label_and_no_characteristic_code": (
+        "la columna de valores no rotula la cavidad y las filas no tienen número de cota"
+    ),
+    "no_cavity_label": "no se reconocen las columnas de cavidad",
+}
+SHEET_SEPARATOR = "\x1f"
+
+
+def sheet_key(relative: str, sheet: str) -> str:
+    """Key of a sheet-level entry in the per-file status mapping."""
+    return f"{relative}{SHEET_SEPARATOR}{sheet}"
+
+
+def split_sheet_key(key: str) -> tuple[str, str | None]:
+    relative, separator, sheet = key.partition(SHEET_SEPARATOR)
+    return relative, sheet if separator else None
 
 
 def measurement_skip_reason(relative: str) -> str | None:
@@ -95,6 +115,7 @@ def collect(
     pilot: bool = False,
     file_issues: dict[str, str] | None = None,
     diagnostics: list[dict[str, Any]] | None = None,
+    components: list[dict[str, Any]] | None = None,
 ) -> dict[Context, list[dict[str, Any]]]:
     sources = []
     revisions: dict[str, set[str]] = defaultdict(set)
@@ -127,22 +148,72 @@ def collect(
             )
         context = path_context(relative, part_code[0] if part_code else "")
         path = item_file(item)
+        unread: dict[str, str] = {}
+        only_empty_templates = False
         try:
             if item.suffix == ".csv":
                 rows = csv_rows(path.read_bytes(), pilot=pilot)
                 revision = context["revision"]
             else:
                 sheets = workbook(path)
-                sheet_diagnostics: list[dict[str, Any]] | None = (
-                    [] if diagnostics is not None else None
-                )
+                sheet_diagnostics: list[dict[str, Any]] = []
                 revision, rows = report_rows(
                     sheets,
                     part_code=part_code[0] if part_code else "",
                     diagnostics=sheet_diagnostics,
+                    component_sheets={
+                        s
+                        for s, _ in sheets
+                        if assigned_component(components or [], relative, s)
+                    },
                 )
-                if sheet_diagnostics is not None:
-                    diagnostic["sheets"] = sheet_diagnostics
+                diagnostic["sheets"] = sheet_diagnostics
+                only_empty_templates = (
+                    bool(sheet_diagnostics)
+                    and any(
+                        s.get("review") == "empty_dimensional_template"
+                        for s in sheet_diagnostics
+                    )
+                    and all(
+                        s.get("review") == "empty_dimensional_template"
+                        or (
+                            not s.get("nominal_header_rows")
+                            and s.get("reason") == "sheet_name_not_supported"
+                        )
+                        for s in sheet_diagnostics
+                    )
+                )
+                unread = {
+                    sheet["sheet"]: UNREAD_SHEET[sheet["detail"]]
+                    for sheet in sheet_diagnostics
+                    if sheet.get("detail")
+                }
+                for sheet_info in sheet_diagnostics:
+                    review = sheet_info.get("review")
+                    if review == "unclassified_dimensional_table":
+                        unread[sheet_info["sheet"]] = (
+                            "tabla con nominales; falta clasificar su función y formato"
+                        )
+                    rejected = sheet_info.get("rejected_rows", [])
+                    if rejected and file_issues is not None:
+                        locations = ", ".join(str(row["row"]) for row in rejected[:8])
+                        reasons = {row["reason"] for row in rejected}
+                        labels = []
+                        if "unsupported_characteristic_code" in reasons:
+                            labels.append("identificadores no admitidos")
+                        if "reversed_tolerances" in reasons:
+                            labels.append("tolerancias invertidas")
+                        file_issues[sheet_key(relative, sheet_info["sheet"])] = (
+                            f"Pendiente: {len(rejected)} filas descartadas ({', '.join(labels)}); filas {locations}"
+                            + ("…" if len(rejected) > 8 else "")
+                        )
+                    if (
+                        review == "empty_dimensional_template"
+                        and file_issues is not None
+                    ):
+                        file_issues[sheet_key(relative, sheet_info["sheet"])] = (
+                            "Excluida: plantilla dimensional sin nominales en las filas de datos"
+                        )
                 revision = context["revision"] or revision
                 # The pilot's dedicated adapter reads correction workbooks, not
                 # these metrology reports. Keep their ordinary table readings.
@@ -175,10 +246,42 @@ def collect(
             raise HTTPException(
                 409, f"{item.name} ha cambiado durante la lectura. Vuelve a actualizar."
             )
-        if not rows and file_issues is not None:
-            file_issues[relative] = (
-                "Pendiente: no se ha reconocido una tabla dimensional; requiere revisión"
-            )
+        if components:
+            assigned = []
+            for row in rows:
+                component = assigned_component(
+                    components, relative, row.get("_sheet", "")
+                )
+                if not component:
+                    if file_issues is not None:
+                        issue_key = (
+                            sheet_key(relative, row["_sheet"])
+                            if row.get("_sheet")
+                            else relative
+                        )
+                        file_issues[issue_key] = (
+                            "Pendiente: asigna esta fuente a un componente; medidas sin incorporar"
+                        )
+                    continue
+                row["component"] = component
+                row["original_numbers"] = row["numbers"].copy()
+                row["numbers"] = [qualified(n, component) for n in row["numbers"]]
+                row["series_id"] = component + ":" + row["series_id"]
+                row["label"] = component + " · " + row["label"]
+                assigned.append(row)
+            rows = assigned
+        if file_issues is not None:
+            if not rows and not unread and not only_empty_templates:
+                file_issues.setdefault(
+                    relative,
+                    "Pendiente: no se ha reconocido una tabla dimensional; requiere revisión",
+                )
+            # A sheet that holds a table but was not read stays visible on its own,
+            # also when other sheets of the same file were read.
+            for sheet, reason in unread.items():
+                file_issues[sheet_key(relative, sheet)] = (
+                    f"Pendiente: {reason}; hoja sin leer"
+                )
         if revision:
             revisions[context["sample"]].add(revision)
         sources.append((relative, context, revision, rows, version))
@@ -207,7 +310,10 @@ def collect(
                 if row.get("_report")
                 else f"Línea {row['line']} · {row['title']}",
             }
-            groups[revision, sample, cavity].append(row)
+            row_revision = (
+                (row.get("_revision") or revision) if components else revision
+            )
+            groups[row_revision, sample, cavity].append(row)
     for key, rows in groups.items():
         limits: dict[tuple[tuple[str, ...], float], list[dict[str, Any]]] = defaultdict(
             list
@@ -288,7 +394,13 @@ def refresh(
     session.exec(select(Part).where(Part.id == part.id).with_for_update()).one()
     folder = part.folder_path or ""
     source_item(folder, directory=True)
-    groups = collect(folder, paths, pilot=is_pilot(part), file_issues=used_files)
+    groups = collect(
+        folder,
+        paths,
+        pilot=is_pilot(part),
+        file_issues=used_files,
+        components=part.components,
+    )
     history = measurement_imports.imported(session, part.id)
     active = {(b.revision, b.sample, b.cavity): b for b in history if not b.baseline}
     # Empty snapshots retire observations removed from the current source files.
@@ -297,7 +409,7 @@ def refresh(
             groups.setdefault(key, [])
     documents = {}
     known = {
-        (c.revision, c.code)
+        (c.revision, qualified(c.code, c.component))
         for c in session.exec(
             select(PartCharacteristic).where(PartCharacteristic.part_id == part.id)
         ).all()
@@ -340,11 +452,13 @@ def refresh(
                 source["file_id"] = str(documents[relative].id)
             for code in row["numbers"]:
                 if (revision, code) not in known:
+                    component, number = split_code(code)
                     session.add(
                         PartCharacteristic(
                             part_id=part.id,
                             revision=revision,
-                            code=code,
+                            code=number,
+                            component=component,
                             title=row["title"][:255],
                         )
                     )

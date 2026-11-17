@@ -29,6 +29,7 @@ import {
   FeatureSection,
 } from "@/components/Features/FeatureLayout"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -41,12 +42,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
+import useAuth from "@/hooks/useAuth"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
 import { pickSourcePath } from "@/lib/sourcePicker"
 import { AddFeatureButton } from "./AddFeatureButton"
+import { DeletePart } from "./DeletePart"
 import { FeaturePartEvidence } from "./FeaturePartEvidence"
 import { MetrologyPage } from "./MetrologyPage"
 import type { PartSearch } from "./measurementSelection"
+import { PartComponents } from "./PartComponents"
 import { PartCover } from "./PartCover"
 import { PartFiles } from "./PartFiles"
 import {
@@ -102,6 +106,7 @@ function PartPage({
   const editing = !part || Boolean(search.editar)
   const client = useQueryClient()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const initial = useRef({
     name: part?.name ?? "",
     description: part?.description ?? "",
@@ -115,6 +120,7 @@ function PartPage({
   const [code, setCode] = useState(initial.code)
   const [customer, setCustomer] = useState(initial.customer)
   const [folder, setFolder] = useState(initial.folder)
+  const [organizeBeforeReading, setOrganizeBeforeReading] = useState(false)
   const [files, setFiles] = useState(initial.files)
   const [selectedFeatures, setSelectedFeatures] = useState<
     { id: string; name: string }[]
@@ -185,12 +191,14 @@ function PartPage({
     onSuccess: async (saved) => {
       bypass.current = true
       await invalidate()
-      if (!part || folder !== initial.folder) read.mutate(saved.id)
+      if ((!part || folder !== initial.folder) && !organizeBeforeReading)
+        read.mutate(saved.id)
       if (part) setEditing(false)
       else
         void navigate({
           to: "/parts/$partId",
           params: { partId: saved.id },
+          search: organizeBeforeReading ? { componentes: true } : {},
           replace: true,
         })
     },
@@ -309,14 +317,29 @@ function PartPage({
               </Button>
             </>
           ) : (
-            <Button
-              variant="outline"
-              className="border-primary text-primary hover:text-primary"
-              onClick={() => setEditing(true)}
-            >
-              <Pencil />
-              Editar pieza
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                className="border-primary text-primary hover:text-primary"
+                onClick={() => setEditing(true)}
+              >
+                <Pencil />
+                Editar pieza
+              </Button>
+              {part && user?.is_superuser && (
+                <DeletePart
+                  partId={part.id}
+                  onDeleted={() => {
+                    bypass.current = true
+                    void navigate({
+                      to: "/features",
+                      search: { kind: "part" },
+                      replace: true,
+                    })
+                  }}
+                />
+              )}
+            </>
           )}
         </div>
       </div>
@@ -443,6 +466,24 @@ function PartPage({
           >
             {folder ? folder.split("/").pop() : "Sin carpeta seleccionada"}
           </p>
+          {part && !editing && part.folder_path && (
+            <PartComponents
+              partId={part.id}
+              defaultOpen={Boolean(search.componentes)}
+              onClosed={() => {
+                if (!search.componentes) return
+                // With or without components: without them it reads as one piece.
+                read.mutate(part.id)
+                void navigate({
+                  to: "/parts/$partId",
+                  params: { partId: part.id },
+                  search: { ...search, componentes: undefined },
+                  replace: true,
+                  resetScroll: false,
+                })
+              }}
+            />
+          )}
           {editing && (
             <>
               <Button
@@ -493,6 +534,20 @@ function PartPage({
             Al guardar se vinculará esta carpeta y se leerán sus datos.
           </p>
         )}
+        {!part && folder && (
+          <div className="mt-3 space-y-2">
+            <Label className="flex items-center gap-2">
+              <Checkbox
+                disabled={busy}
+                checked={organizeBeforeReading}
+                onCheckedChange={(value) =>
+                  setOrganizeBeforeReading(value === true)
+                }
+              />
+              Varios componentes
+            </Label>
+          </div>
+        )}
         {notices.map((notice) => (
           <p key={notice} className="mt-2 text-sm text-muted-foreground">
             {notice}
@@ -541,9 +596,11 @@ function PartPage({
               </>
             ) : (
               <p className="text-sm text-muted-foreground">
-                {folder
-                  ? "Las cotas se extraerán automáticamente al crear la pieza. Aquí podrás consultar sus mediciones y correcciones."
-                  : "Selecciona la carpeta de la pieza. Las cotas se leerán de sus ficheros al crearla."}
+                {organizeBeforeReading
+                  ? "Al crear la pieza podrás nombrar sus componentes y revisar qué archivos y hojas corresponden a cada uno. Después se leerán sus datos; sin componentes, como una pieza normal."
+                  : folder
+                    ? "Las cotas se extraerán automáticamente al crear la pieza. Aquí podrás consultar sus mediciones y correcciones."
+                    : "Selecciona la carpeta de la pieza. Las cotas se leerán de sus ficheros al crearla."}
               </p>
             )}
           </FeatureSection>

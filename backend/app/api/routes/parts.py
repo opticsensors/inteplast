@@ -8,14 +8,13 @@ from fastapi import APIRouter, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, func, select
 
-from app import crud
+from app import crud, part_deletion
 from app.api.deps import CurrentUser, SessionDep
 from app.core.config import settings
 from app.file_sources import SourceError, source_item
 from app.models import (
     FeatureAsset,
     FeaturePartLink,
-    Message,
     Part,
     PartCatalogPublic,
     PartCreate,
@@ -24,6 +23,7 @@ from app.models import (
     PartsPublic,
     PartUpdate,
 )
+from app.part_deletion import PartDeletionResult, PartDeletionScope
 
 router = APIRouter(prefix="/parts", tags=["parts"])
 
@@ -241,45 +241,74 @@ def update_part(
     return PartPublic.model_validate(part)
 
 
-@router.delete("/{part_id}")
-def delete_part(
+@router.get("/{part_id}/deletion", response_model=PartDeletionScope)
+def read_part_deletion(
     session: SessionDep, current_user: CurrentUser, part_id: uuid.UUID
-) -> Message:
+) -> Any:
     """
-    Borrar una pieza sin uso. Solo superusuario. Nunca borra documentos ni carpetas.
+    Alcance del borrado de una pieza: lo que se elimina y lo que se conserva.
+    Solo superusuario. La clave devuelta confirma el borrado de estos datos.
+    """
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    return part_deletion.scope(session, get_part_or_404(session, part_id))
+
+
+@router.delete("/{part_id}", response_model=PartDeletionResult)
+def delete_part(
+    session: SessionDep,
+    current_user: CurrentUser,
+    part_id: uuid.UUID,
+    confirm: str | None = None,
+) -> Any:
+    """
+    Borrar una pieza. Solo superusuario. Nunca borra originales ni carpetas.
+
+    Sin `confirm` solo se borra una pieza sin uso. Con la clave que devuelve
+    `GET /parts/{part_id}/deletion` se borran también sus cotas, mediciones,
+    documentos propios y vínculos con features; los features se conservan.
     """
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     # FOR UPDATE also blocks new FK references until the deletion commits.
-    part = session.exec(
-        select(Part).where(Part.id == part_id).with_for_update()
-    ).first()
-    if not part:
-        raise HTTPException(status_code=404, detail="Part not found")
-    count = feature_counts(session, [part_id]).get(part_id, 0)
-    if count:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Pieza usada en {count} feature{'s' if count != 1 else ''}. "
-            "Desvinculala antes de eliminarla del catalogo.",
-        )
-    from app.knowledge_models import PartCharacteristic, PartDocument
-    from app.measurement_models import MeasurementImport
+    part = part_deletion.lock_part(session, part_id)
+    if confirm is None:
+        count = feature_counts(session, [part_id]).get(part_id, 0)
+        if count:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Pieza usada en {count} feature{'s' if count != 1 else ''}. "
+                "Desvinculala antes de eliminarla del catalogo.",
+            )
+        current = part_deletion.scope(session, part)
+        if (
+            current.characteristics
+            or current.measurement_imports
+            or has_evidence(session, part_id)
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="La pieza conserva cotas o documentos de evidencia",
+            )
+        confirm = current.key
+    deleted, removed = part_deletion.delete(session, part, confirm)
+    session.commit()
+    from app.api.routes.files import storage_path
+    from app.previews import delete_preview
 
-    if (
+    for document in removed:
+        if document.source == "upload":
+            storage_path(document.id).unlink(missing_ok=True)
+        delete_preview(document.id)
+    return PartDeletionResult(message="Part deleted successfully", scope=deleted)
+
+
+def has_evidence(session: SessionDep, part_id: uuid.UUID) -> bool:
+    from app.knowledge_models import PartDocument
+
+    return (
         session.exec(
-            select(MeasurementImport).where(MeasurementImport.part_id == part_id)
-        ).first()
-        or session.exec(
-            select(PartCharacteristic).where(PartCharacteristic.part_id == part_id)
-        ).first()
-        or session.exec(
             select(PartDocument).where(PartDocument.part_id == part_id)
         ).first()
-    ):
-        raise HTTPException(
-            status_code=409, detail="La pieza conserva cotas o documentos de evidencia"
-        )
-    session.delete(part)
-    session.commit()
-    return Message(message="Part deleted successfully")
+        is not None
+    )

@@ -14,7 +14,7 @@ from sqlmodel import Session, select
 from app import microsoft_auth, sharepoint
 from app.core.config import settings
 from app.core.db import engine
-from app.evidence import drawing_key, job_id
+from app.evidence import drawing_key, drawing_project_files, job_id
 from app.file_sources import reference_key
 from app.knowledge_models import EvidenceJob
 from app.measurement_models import MeasurementImport
@@ -210,6 +210,59 @@ def test_links_made_through_sharepoint_stay_readable_locally(
     )
     # A local link keeps its change detection.
     assert client.get(f"{API}/files/{rows[1].id}", headers=headers).status_code == 409
+
+
+def test_drawing_index_follows_the_icp_projects_of_its_own_folder(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+    graph: FakeGraph,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    relative = f"{PIECE}/plan #1.pdf"
+    response = client.post(
+        f"{API}/files/reference",
+        headers=superuser_token_headers,
+        json={"path": relative},
+    )
+    assert response.status_code == 200
+    document = db.get(StoredFile, uuid.UUID(response.json()["id"]))
+    assert document is not None
+    project = f"{PIECE}/Plan.ICP"
+    with sharepoint.acting_as(uuid.uuid4()):
+        alone = drawing_key(document)
+        # A project in another folder is not a candidate for this drawing.
+        graph.files[f"{PIECE}/4- Metrologia/other.icp"] = b"icp"
+        graph.versions[f"{PIECE}/4- Metrologia/other.icp"] = 1
+        assert drawing_key(document) == alone
+        graph.files[project], graph.versions[project] = b"icp v1", 1
+        with_project = drawing_key(document)
+        graph.versions[project] = 2
+        changed = drawing_key(document)
+        assert graph.downloads == 0  # The key only needs the folder listing.
+        ((name, cached),) = drawing_project_files(document)
+        assert name == "Plan.ICP" and Path(cached).read_bytes() == b"icp v1"
+        assert Path(cached).name != name  # Cached by version: the name travels apart.
+    assert len({alone, with_project, changed}) == 3
+
+    folder = tmp_path / PIECE
+    folder.mkdir(parents=True)
+    (folder / "plan #1.pdf").write_bytes(b"%PDF local copy")
+    monkeypatch.setattr(settings, "ASSETS_ROOT", str(tmp_path))
+    monkeypatch.setattr(settings, "SHAREPOINT_ENABLED", False)
+    local_alone = drawing_key(document)
+    (folder / "plan.icp").write_bytes(b"icp local")
+    local_with_project = drawing_key(document)
+    assert local_with_project != local_alone
+    ((local_name, local_file),) = drawing_project_files(document)
+    assert local_name == "plan.icp"
+    assert Path(local_file).resolve() == (folder / "plan.icp").resolve()
+    (folder / "plan.icp").write_bytes(b"icp local, another export")
+    assert drawing_key(document) != local_with_project
+    # An uploaded drawing has no folder to look into.
+    upload = StoredFile(filename="up.pdf", content_type="application/pdf", size=4)
+    assert drawing_project_files(upload) == []
 
 
 def test_drawing_index_follows_the_active_source_and_local_changes(

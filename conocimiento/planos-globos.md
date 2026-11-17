@@ -418,6 +418,81 @@ el número del `.prf` (45, 115, 17) pasa al globo que de verdad lo lleva. Copias
 `prototypes/data-explorer/out/referencia-icp-2026-11-09/antes/` (tabla `globo`, calibraciones y lo
 que enseñaba el visor), fuera de Git.
 
+## `.icp` automático en la app (16/11/2026)
+
+**Qué se mide.** El índice del plano de la aplicación (`backend/app/ingestion/drawing.py` con
+`icp.py`), tal como lo construye la web, en los 30 PDF del visor con `.icp`. A cada PDF se le dan
+solo los `.icp` **de su propia carpeta**, que es lo que la app puede ver. Cada sello situado se
+compara con el del visor: mismo número y distancia entre posiciones. Script y resultados fuera de
+Git; el lector de la app no usa SQLite ni las calibraciones del prototipo.
+
+**Resultado: 25 de 30 planos situados, 2.521 sellos.**
+
+| | Planos | Sellos | Mismo número que el visor | A más de un radio de su sitio |
+|---|---:|---:|---:|---:|
+| Con globos dibujados (ajuste) | 18 | 1.799 | 1.799 | 0 |
+| Limpios, a escala 1:1 | 7 | 722 | 722 | 0 |
+| **Total** | **25** | **2.521** | **2.521** | **0** |
+
+- **Posición:** en los 18 con globos, la distancia máxima al sello del visor es de 0,4 radios de
+  globo (0,2 % del ancho de la página). En los 7 limpios coincide con el visor porque los dos
+  aplican la misma regla 1:1; no es una comprobación independiente.
+- **Sellos sin globo detectado:** 17 en los planos con globos. La app los añade desde el `.icp`.
+- **Lectura OCR frente al `.icp`**, en los 1.669 globos con lectura ofrecida: 1.657 coinciden y
+  **12 no** (10 en el 3202 «G», 1 en `3202_balloned low resolution.pdf` y 1 en
+  `BSG-296-2 SOP RCP 3.1 balloned.pdf`). Con el `.icp`, la web enseña el número correcto.
+- **Un plano sin `.icp` no cambia:** el índice de `1 - 313058901F_D_03_balloned.pdf` (3238, 123
+  globos) es idéntico byte a byte con el código anterior y con el nuevo.
+
+**Los 5 que no se sitúan.** Ninguno es un fallo de colocación:
+
+| Plano | Qué pasa |
+|---|---|
+| 3202 `Ballooned DRW/3202_balloned.pdf` | Su carpeta no tiene `.icp`. El visor usa `3202.icp`, que está junto a una copia idéntica en `885253-11250/` |
+| 3288 `5- Retoques molde/20260429_1 loop of correction/BSG-296-01-N0 BASE SOP RCP 3.1_balloned.pdf` | Ídem: el `.icp` está junto a su copia en `REV.01/BSG-296-01/` |
+| 3288 `1- 2D y 3D pieza/Cj20240714_BSG-296-01-N0 BASE SOP RCP 3.1.pdf` | Ídem. Además tiene 3 páginas y ningún globo dibujado |
+| 3202 `Ballooned DRW/20231129_885253-11250_insulator_motor_v1.pdf` | Su carpeta no tiene `.icp`, y la hoja está a media escala: el 1:1 no vale. El visor usa la calibración de su versión con globos |
+| 3288 `REV.02/BSG-296-00 SOP RCP 3.1 .pdf` | Tiene su `.icp`, pero son 2 páginas sin globos: nada dice a qué página corresponde |
+
+- **Qué se puede hacer hoy:** en los tres primeros, vincular en la pieza la copia que está junto a
+  su `.icp`; es el mismo dibujo.
+- **Qué falta:** que la app reconozca copias idénticas en otras carpetas, o que se pueda elegir a
+  mano el `.icp` y la página.
+
+### Copias idénticas (17/11/2026)
+
+**Regla nueva:** si la carpeta del plano no tiene `.icp`, la app usa los que están junto a una
+copia idéntica byte a byte del PDF dentro de la carpeta de la pieza
+([contrato](../docs/cotas-y-evidencia-web.md#globos-del-icp-16112026)).
+
+**Medición** con el código de la app sobre los originales (solo lectura), en la imagen del
+backend. Script y salida fuera de Git, en el scratchpad de la sesión.
+
+- **Inventario de las 21 carpetas:** 4 PDF sin `.icp` propio heredan uno. Ningún otro cambia.
+- **Los 5 que no se situaban el 16/11:**
+
+| Plano | Hereda | Resultado | Igual que su copia |
+|---|---|---|---|
+| 3202 `Ballooned DRW/3202_balloned.pdf` | `885253-11250/3202.icp` | **232 sellos situados** | sí |
+| 3288 `5- Retoques molde/…/BSG-296-01-N0 BASE SOP RCP 3.1_balloned.pdf` | `REV.01/BSG-296-01/Cj20240714_….icp` | **141 sellos situados** | sí |
+| 3288 `1- 2D y 3D pieza/Cj20240714_BSG-296-01-N0 BASE SOP RCP 3.1.pdf` | el mismo `.icp` | 0: 3 páginas sin globos dibujados | sí (su copia tampoco se sitúa) |
+| 3202 `20231129_885253-11250_insulator_motor_v1.pdf` | `885253-11250-G/885253-11250_G.icp` | 0: el `.icp` no cuadra con la hoja | sí |
+| 3288 `REV.02/BSG-296-00 SOP RCP 3.1 .pdf` | — (tiene el suyo) | 0: 2 páginas sin globos | — |
+
+- **Resultado: 27 de 30** planos situados (antes 25). Se esperaban 3 de los 5; son 2. El tercero
+  hereda bien el `.icp`, pero ni él ni su copia se pueden situar: son 3 páginas sin globos.
+- El `insulator_motor_v1` tenía una copia idéntica que no estaba anotada: hereda su `.icp`,
+  que no encaja (hoja a media escala), y no se sitúa nada. No hay colocaciones dudosas.
+- **«Igual que su copia»** compara número y caja de cada sello `.icp` entre el plano y la copia
+  indexada con su carpeta: coinciden en todos.
+- **Sigue faltando** para los 3 restantes: elegir la página (PDF de varias páginas sin globos)
+  y la escala (`insulator_motor_v1`).
+
+**«Ajustar marcas» no se justifica con estos datos.** El editor previsto mueve, gira, voltea y
+escala las marcas. De los 25 planos situados, ninguno lo necesita. De los 5 sin situar, 4 no
+tienen el `.icp` a la vista y 1 no sabe la página: lo que les falta es la asociación, no un
+ajuste. Solo el `insulator_motor_v1` necesitaría además cambiar la escala.
+
 ## Lectores de planos numerados (10/11/2026)
 
 **Qué se mide.** Los tres lectores de planos sin globos de

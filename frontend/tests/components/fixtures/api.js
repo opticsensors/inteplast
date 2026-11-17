@@ -348,6 +348,37 @@ export const FilesService = {
   },
 }
 export const PartsService = {
+  readComponentOptions: async ({ partId }) => ({
+    components: clone(state().organizations?.[partId] ?? []),
+    unassigned: clone(state().unassignedSources?.[partId] ?? []),
+    sources: [
+      { path: "base.pdf", kind: "drawing" },
+      { path: "cover.pdf", kind: "drawing" },
+    ].concat(state().componentExtraSources ?? []),
+    suggestions: [
+      { key: "BASE", name: "BASE", sheets: ["DR(base)"], files: [] },
+      { key: "TAPA", name: "TAPA", sheets: ["DR(tapa)"], files: [] },
+    ],
+    sheet_names: ["DR(base)", "DR(tapa)"].concat(
+      state().componentExtraSheets ?? [],
+    ),
+    workbooks: [
+      {
+        path: "rev.A/report.xls",
+        sheets: ["DR(base)", "DR(tapa)"].concat(
+          state().componentExtraSheets ?? [],
+        ),
+      },
+    ],
+    unassigned_characteristics: 0,
+  }),
+  saveComponentOrganization: async ({ partId, requestBody }) => {
+    state().organizations ??= {}
+    state().organizations[partId] = clone(requestBody.components)
+    state().unassignedSources ??= {}
+    state().unassignedSources[partId] = clone(requestBody.unassigned ?? [])
+    return clone(requestBody)
+  },
   discoverPartFolder: async ({ requestBody }) => ({
     folder_path: requestBody.folder_path,
     name: requestBody.folder_path.split("/").pop(),
@@ -476,15 +507,41 @@ export const PartsService = {
       count: state().parts.length,
     }
   },
-  deletePart: async ({ partId }) => {
+  readPartDeletion: async ({ partId }) => {
+    const part = state().parts.find((item) => item.id === partId)
+    return {
+      part_id: partId,
+      code: part.code,
+      name: part.name,
+      folder_path: part.folder_path ?? null,
+      features: [],
+      characteristics: 0,
+      feature_characteristic_links: 0,
+      measurement_imports: 0,
+      feature_assets: 0,
+      covers_reset: 0,
+      files_removed: 0,
+      uploads_removed: 0,
+      files_kept: 0,
+      reviewed_locations: 0,
+      jobs: 0,
+      key: `scope-of-${partId}`,
+      ...clone(state().deletionScopes?.[partId] ?? {}),
+    }
+  },
+  deletePart: async ({ partId, confirm }) => {
     state().partDeleteRequests ??= []
     state().partDeleteRequests.push(partId)
+    if (confirm !== undefined) {
+      state().partDeleteConfirms ??= []
+      state().partDeleteConfirms.push(confirm)
+    }
     if (state().holdPartDelete)
       await new Promise((resolve) => {
         state().releasePartDelete = resolve
       })
     if (state().failPartDelete) throw new Error("No se pudo eliminar la pieza")
-    if (state().partUsage?.[partId])
+    if (confirm === undefined && state().partUsage?.[partId])
       throw Object.assign(
         new ApiError("Pieza usada en otro feature. Desvinculala primero."),
         { status: 409 },

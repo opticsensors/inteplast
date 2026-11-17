@@ -15,5 +15,6 @@ PILOT_FOLDER = "3212 Pump Housing"
 def is_pilot(part: Part) -> bool:
     return (
         part.code == PILOT_CODE
+        and not part.components
         and PurePosixPath(part.folder_path or "").name == PILOT_FOLDER
     )

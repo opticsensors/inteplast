@@ -24,6 +24,7 @@ from app.assistant.retrieval import (
 )
 from app.assistant.schemas import ChatMessage, ChatRequest, Source, StrictModel
 from app.assistant.summaries import measurements, page
+from app.component_models import identity_expression, qualified
 from app.core.db import engine
 from app.feature_links import feature_membership
 from app.knowledge_models import FeatureCharacteristicLink, PartCharacteristic
@@ -544,7 +545,7 @@ class KnowledgeTools:
             ],
             "characteristics": [
                 {
-                    "code": c.code,
+                    "code": qualified(c.code, c.component),
                     "title": c.title,
                     "revision": c.revision,
                     "part_id": str(c.part_id),
@@ -600,7 +601,7 @@ class KnowledgeTools:
                 PartCharacteristic.part_id == part.id,
             ]
             if characteristic:
-                cota_filters.append(PartCharacteristic.code == characteristic)
+                cota_filters.append(identity_expression() == characteristic)
             if revision:
                 cota_filters.append(PartCharacteristic.revision == revision)
             cota_links = session.exec(
@@ -615,7 +616,9 @@ class KnowledgeTools:
                     "retryable": False,
                 }
             result["feature"] = feature.name
-            allowed_characteristics = {c.code for c in cota_links}
+            allowed_characteristics = {
+                qualified(c.code, c.component) for c in cota_links
+            }
         result["filters"] = {
             "characteristic": characteristic or None,
             "sample": args.sample,
@@ -639,13 +642,11 @@ class KnowledgeTools:
         if args.section == "overview":
             filters: list[Any] = [PartCharacteristic.part_id == part.id]
             if allowed_characteristics is not None:
-                filters.append(
-                    col(PartCharacteristic.code).in_(allowed_characteristics)
-                )
+                filters.append(identity_expression().in_(allowed_characteristics))
             if revision:
                 filters.append(PartCharacteristic.revision == revision)
             if characteristic:
-                filters.append(PartCharacteristic.code == characteristic)
+                filters.append(identity_expression() == characteristic)
             cotas = session.exec(
                 select(PartCharacteristic)
                 .where(*filters)
@@ -675,7 +676,7 @@ class KnowledgeTools:
                     "features_truncated": len(features) > 10,
                     "characteristics": [
                         {
-                            "code": c.code,
+                            "code": qualified(c.code, c.component),
                             "title": c.title,
                             "revision": c.revision,
                         }

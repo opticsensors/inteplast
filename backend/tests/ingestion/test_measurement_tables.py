@@ -65,6 +65,103 @@ def test_comparative_csv_reads_each_cavity_without_using_a_measurement_as_tolera
     assert all(r["line"] == 2 for r in rows)
 
 
+def test_comparative_title_on_its_first_value_line_does_not_inherit_the_previous_cota():
+    # 3212 "totes": the individual export writes each POINT title on its own line.
+    wide = (
+        "N178 PLAN. 0.10 MAX.;;;;;;c13;c14\n"
+        "11;Planitud;;0;0.1;0;0.061;0.073\n"
+        "POINT 1 -> 1.35-0.05 MIN/MAX;Cálculo de fórmula;;1.35;0;-0.05;1.447;1.467\n"
+        ";Cálculo de fórmula;;1.35;0;-0.05;1.467;1.478\n"
+        "N165 MIN. / MAX.;;;;;;;\n"
+        "2;Posición Y;;1.35;0;-0.05;1.427;1.43\n"
+    ).encode("cp1252")
+    individual = (
+        "N178 PLAN. 0.10 MAX.\n"
+        "11;Planitud;;0.000;0.100;0.000;0.061;0.061; ;--\n"
+        "POINT 1 -> 1.35-0.05 MIN/MAX\n"
+        ";Cálculo de fórmula;;1.350;0.000;-0.050;1.447;0.097;0.097;--\n"
+        ";Cálculo de fórmula;;1.350;0.000;-0.050;1.467;0.117;0.117;--\n"
+        "N165 MIN. / MAX.\n"
+        "2;Posición Y;;1.350;0.000;-0.050;1.427;0.077;0.077;--\n"
+    ).encode("cp1252")
+
+    rows = csv_rows(wide)
+    # Without a pilot mapping a POINT block has no cota: it is not attributed to N178.
+    assert [(r["_cavity"], r["numbers"], r["value"], r["line"]) for r in rows] == [
+        ("c13", ["N178"], 0.061, 2),
+        ("c13", ["N165"], 1.427, 6),
+        ("c14", ["N178"], 0.073, 2),
+        ("c14", ["N165"], 1.43, 6),
+    ]
+
+    def identity(row):
+        return row["series_id"], row["numbers"], row["title"], row["value"]
+
+    pilot = [r for r in csv_rows(wide, pilot=True) if r["_cavity"] == "c13"]
+    assert [(r["title"], r["value"]) for r in pilot if r["line"] in {3, 4}] == [
+        ("POINT 1 -> 1.35-0.05 MIN/MAX", 1.447),
+        ("POINT 1 -> 1.35-0.05 MIN/MAX", 1.467),
+    ]
+    # Same blocks, cotas and series as the individual export of that cavity.
+    assert [identity(r) for r in pilot] == [
+        identity(r) for r in csv_rows(individual, pilot=True)
+    ]
+
+
+@pytest.mark.parametrize(
+    "header,row,tolerances",
+    [
+        # 3197 intern.03: second language and a blank separator before the cavities.
+        (
+            "N720 diameter;;;;;;;c1;c2",
+            "5;Diámetro;Durchmesser;29.2;-0.05;-0.15;;29.036;29.047",
+            (-0.15, -0.05),
+        ),
+        # 3197 intern.08 "nozzle": no second language; the first cavity is column 5.
+        ("N720.1 diameter;;;;c1;c2", "6;Diámetro;29.2;;29.036;29.047", (None, None)),
+        # One-sided limit.
+        (
+            "N720 diameter;;;;;;c1;c2",
+            "5;Diámetro;;29.2;;-0.15;29.036;29.047",
+            (-0.15, None),
+        ),
+    ],
+)
+def test_comparative_csv_locates_nominal_and_tolerances_in_each_layout(
+    header, row, tolerances
+):
+    rows = csv_rows(f"{header}\n{row}\n".encode("cp1252"))
+    assert [(r["_cavity"], r["nominal"], r["value"]) for r in rows] == [
+        ("c1", 29.2, 29.036),
+        ("c2", 29.2, 29.047),
+    ]
+    assert {(r["tol_inf"], r["tol_sup"]) for r in rows} == {tolerances}
+
+
+def test_comparative_csv_with_unknown_leading_columns_is_pending_not_guessed(tmp_path):
+    from app.ingestion.measurement_csv import UnsupportedMeasurementCsv
+
+    data = (
+        b"N720 diameter;;;;;;;;c1;c2\n5;Diameter;;29.2;-0.05;-0.15;0.3;;29.036;29.047\n"
+    )
+    with pytest.raises(UnsupportedMeasurementCsv, match="línea 2"):
+        csv_rows(data)
+    path = tmp_path / "totes.csv"
+    path.write_bytes(data)
+    issues: dict[str, str] = {}
+    folder, items = walked(tmp_path, [path])
+    assert collect(folder, items, file_issues=issues) == {}
+    assert "columnas no reconocidas" in issues["totes.csv"]
+
+
+def test_individual_export_never_treats_the_element_column_as_a_title():
+    data = b"N12 DIAMETRO\nCIR 1;Diameter;;10;0.1;-0.1;9.95;-0.05;;\n"
+    rows = csv_rows(data)
+    assert [(r["numbers"], r["title"], r["value"]) for r in rows] == [
+        (["N12"], "N12 DIAMETRO", 9.95)
+    ]
+
+
 @pytest.mark.parametrize(
     "path,sample,cavity,variant,condition",
     [

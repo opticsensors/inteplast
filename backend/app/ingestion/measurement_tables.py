@@ -15,7 +15,7 @@ from zipfile import ZipFile
 import xlrd
 
 from app.ingestion.formula_flags import FormulaAudit, inspect_formulas
-from app.ingestion.measurement_csv import parse
+from app.ingestion.measurement_csv import UnsupportedMeasurementCsv, parse
 from app.ingestion.measurement_provenance import (
     mark_copied_cells,
     possible_generator_copies,
@@ -59,21 +59,51 @@ def cavity_label(text: str) -> tuple[str, str]:
     return (f"c{int(match[1])}", token(match[2])) if match else ("", "")
 
 
+WIDE_FIRST_CAVITY = 4  # element, evaluation and nominal always come first
+
+
+def wide_limits(row: list[str], start: int, line: int) -> tuple[str, str, str] | None:
+    """Nominal and tolerance cells of a comparison row, located from its content.
+
+    The columns before the first cavity vary between exports: a second language for
+    the evaluation, tolerances and a blank separator are all optional. A fixed
+    position would read one of them as another. None when there is no nominal.
+    """
+    lead = [value.strip() for value in row[2:start]]
+    at = next((i for i, value in enumerate(lead) if number(value) is not None), None)
+    if at is None:
+        return None
+    limits = lead[at + 1 :]
+    while limits and not limits[-1]:
+        limits.pop()
+    if len(limits) > 2 or any(v and number(v) is None for v in limits):
+        raise UnsupportedMeasurementCsv(
+            "comparativa de cavidades con columnas no reconocidas antes de la "
+            f"primera cavidad (línea {line})"
+        )
+    limits += [""] * (2 - len(limits))
+    return lead[at], limits[0], limits[1]
+
+
 def csv_rows(data: bytes, *, pilot: bool = False) -> list[dict[str, Any]]:
     try:
         text = data.decode("utf-8-sig")
     except UnicodeDecodeError:
         text = data.decode("cp1252")
     cells = list(csv.reader(text.splitlines(), delimiter=";"))
+
+    def is_header(row: list[str]) -> bool:
+        return any(cavity_label(v)[0] for v in row[WIDE_FIRST_CAVITY:])
+
     headers = next(
         (
             [
                 (i, cavity_label(v))
                 for i, v in enumerate(row)
-                if i >= 5 and cavity_label(v)[0]
+                if i >= WIDE_FIRST_CAVITY and cavity_label(v)[0]
             ]
             for row in cells
-            if any(cavity_label(v)[0] for v in row[5:])
+            if is_header(row)
         ),
         [],
     )
@@ -85,23 +115,23 @@ def csv_rows(data: bytes, *, pilot: bool = False) -> list[dict[str, Any]]:
     for column, (cavity, variant) in headers:
         buffer = io.StringIO()
         writer = csv.writer(buffer, delimiter=";", lineterminator="\n")
-        for row in cells:
-            if any(cavity_label(v)[0] for v in row[5:]):
+        # One output line per input line keeps the original line numbers.
+        for line, row in enumerate(cells, 1):
+            if is_header(row):
                 writer.writerow([row[0]])
-            elif len(row) > column and len(row) > 3 and row[1].strip():
+            elif len(row) > column and row[1].strip():
+                limits = wide_limits(row, start, line)
                 value = number(row[column])
-                nominal = number(row[3])
-                if value is None or nominal is None:
+                nominal = number(limits[0]) if limits else None
+                if limits is None or value is None or nominal is None:
                     writer.writerow([])
                 else:
                     writer.writerow(
-                        row[:4]
-                        + (row[4:6] if start == 6 else ["", ""])
-                        + [row[column], value - nominal]
+                        [row[0], row[1], "", *limits, row[column], value - nominal]
                     )
             else:
                 writer.writerow(row[:1])
-        rows, _ = parse(buffer.getvalue().encode(), pilot=pilot)
+        rows, _ = parse(buffer.getvalue().encode(), pilot=pilot, inline_titles=True)
         output.extend(
             {**row, "_cavity": cavity, "_variant": variant, "_wide": True}
             for row in rows
@@ -242,6 +272,58 @@ def header_label(value: Any) -> str:
     }.get(text, text)
 
 
+def unread_structure(grid: list[list[Any]]) -> str | None:
+    """Why a report sheet with a Nominal header has no readable measurement columns.
+
+    It only describes the sheet: nothing is read from it. A cavity label or a cota
+    number that the report does not contain is never made up.
+    """
+    for r, row in enumerate(grid[:30]):
+        column = next(
+            (c for c, value in enumerate(row) if header_label(value) == "nominal"), None
+        )
+        if column is None:
+            continue
+        numbered = [
+            value
+            for value in row[column + 1 :]
+            if re.fullmatch(r"\d{1,3}(?:\.0)?", str(value).strip())
+        ]
+        if len(numbered) >= 2:
+            return "cavities_numbered_only"
+        codes = [
+            str(line[0]).strip() if line else ""
+            for line in grid[r + 1 :]
+            if column < len(line) and number(line[column]) is not None
+        ]
+        if codes and not any(codes):
+            return "no_cavity_label_and_no_characteristic_code"
+        return "no_cavity_label"
+    return None
+
+
+def omitted_sheet_review(grid: list[list[Any]]) -> str | None:
+    """Content evidence for an unsupported sheet, never a name-only exclusion."""
+    header = next(
+        (
+            (r, c)
+            for r, row in enumerate(grid[:30])
+            for c, v in enumerate(row)
+            if header_label(v) == "nominal"
+        ),
+        None,
+    )
+    if header is None:
+        return None
+    r, c = header
+    if not any(
+        c < len(row) and row[c] is not None and str(row[c]).strip()
+        for row in grid[r + 1 :]
+    ):
+        return "empty_dimensional_template"
+    return "unclassified_dimensional_table"
+
+
 def identity_flags(
     grid: list[list[Any]], part_code: str
 ) -> tuple[list[str], list[str]]:
@@ -298,6 +380,7 @@ def report_rows(
     *,
     part_code: str = "",
     diagnostics: list[dict[str, Any]] | None = None,
+    component_sheets: set[str] | None = None,
 ) -> tuple[str, list[dict[str, Any]]]:
     revisions = set()
     output: list[dict[str, Any]] = []
@@ -316,6 +399,7 @@ def report_rows(
             ]
             diagnostics.append(diagnostic)
         identity, identity_warnings = identity_flags(grid, part_code)
+        sheet_revisions: set[str] = set()
         for row in grid[:12]:
             for c, value in enumerate(row):
                 if "drawing" in str(value).lower() and "level" in str(value).lower():
@@ -337,7 +421,16 @@ def report_rows(
                             following = level[1]
                         if not identity:
                             revisions.add(following)
+                            sheet_revisions.add(following)
+        if omitted_sheet_review(grid) == "empty_dimensional_template":
+            diagnostic.update(
+                status="excluded",
+                reason="empty_dimensional_template",
+                review="empty_dimensional_template",
+            )
+            continue
         if not re.match(r"DR\b|DR[_(-]|CAV[._ ]*\d|100%", sheet, re.I):
+            diagnostic["review"] = omitted_sheet_review(grid)
             continue
         header = next(
             (
@@ -347,12 +440,14 @@ def report_rows(
                 and (
                     any(cavity_label(str(v))[0] for v in row)
                     or re.match(r"CAV[._ ]*\d", sheet, re.I)
+                    or (component_sheets is not None and sheet in component_sheets)
                 )
             ),
             None,
         )
         if header is None:
             diagnostic["reason"] = "no_recognized_header_or_cavities"
+            diagnostic["detail"] = unread_structure(grid)
             continue
         labels = [header_label(v) for v in grid[header]]
         # Later blocks can repeat Nominal/Tol headers for forecasts or customer
@@ -366,6 +461,18 @@ def report_rows(
             for i, v in enumerate(grid[header])
             if cavity_label(str(v))[0]
         ]
+        if not cavities and component_sheets and sheet in component_sheets:
+            # Number-only cavity headers are accepted only after explicit organization.
+            start = max(
+                columns.get("nominal", 0),
+                columns.get("tol-", 0),
+                columns.get("tol +", 0),
+            )
+            cavities = [
+                (i, (f"c{int(float(str(v)))}", ""))
+                for i, v in enumerate(grid[header])
+                if i > start and re.fullmatch(r"[1-9]\d{0,2}(?:\.0)?", str(v).strip())
+            ]
         if not cavities:
             sheet_cavity = re.match(r"CAV[._ ]*(\d+)", sheet, re.I)
             end = columns.get("nok", len(labels))
@@ -381,6 +488,7 @@ def report_rows(
                 ]
         if not cavities:
             diagnostic["reason"] = "no_recognized_cavities"
+            diagnostic["detail"] = unread_structure(grid)
             continue
         diagnostic.update(
             status="read", reason=None, header_row=header + 1, rejected_rows=[]
@@ -565,6 +673,9 @@ def report_rows(
                         "_condition": groups[column],
                         "_variant": ".".join(filter(None, [variant, shot])),
                         "_sheet": sheet,
+                        "_revision": next(iter(sheet_revisions))
+                        if len(sheet_revisions) == 1
+                        else "",
                         "_cell": f"{excel_column(column)}{r + 1}",
                         "_report": True,
                     }

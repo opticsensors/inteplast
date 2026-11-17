@@ -33,7 +33,7 @@ def test_reference_discovery_keeps_all_drawings(tmp_path, monkeypatch):
         path = tmp_path / "9000/6- Método de medición/balloned" / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(b"synthetic PDF candidate")
-    candidates, notices = reference_candidates("9000")
+    candidates, notices, _ = reference_candidates("9000")
     assert len(candidates["drawing"]) == 2
     assert not notices
 
@@ -120,6 +120,107 @@ def test_invalid_cmm_values_still_abort_instead_of_silently_skipping(tmp_path):
         measurements.collect(
             "9000", [SourceItem(path="9000/bad.csv", local=cmm)], file_issues={}
         )
+
+
+COMPONENT_BOOK = [
+    (
+        "DR(base)",
+        [
+            ["Item", "Dimension", "", "", "", "", "", "", "NOK"],
+            ["", "", "type", "Nominal", "Tol +", "Tol-", "Meas. Equip.", 1, 2],
+            [16, "", "", 22.5, 0.1, -0.1, "KEYENCE", 22.66, 22.65],
+        ],
+    ),
+    (
+        "DR(tapa)",
+        [
+            ["Item", "Dimension", "", "", "", "", "", "", "NOK"],
+            [
+                "",
+                "",
+                "type",
+                "Nominal",
+                "Tol +",
+                "Tol-",
+                "Meas. Equip.",
+                "Cav.1",
+                "Cav.2",
+            ],
+            [16, "", "", 11.35, 0.1, -0.1, "KEYENCE", 11.33, 11.29],
+        ],
+    ),
+]
+
+
+def test_base_sheet_is_not_mixed_with_the_cover_before_components_exist(
+    tmp_path, monkeypatch
+):
+    # 3288: the same cota number is another dimension in each component (22.5 / 11.35).
+    report = tmp_path / "intern.01.xls"
+    report.write_bytes(b"synthetic report")
+    monkeypatch.setattr(measurements, "workbook", lambda _: COMPONENT_BOOK)
+    issues: dict[str, str] = {}
+    diagnostics: list = []
+    groups = measurements.collect(
+        "9000",
+        [SourceItem(path="9000/4- Metrologia/intern.01.xls", local=report)],
+        file_issues=issues,
+        diagnostics=diagnostics,
+    )
+    rows = [row for group in groups.values() for row in group]
+    assert {row["source"]["locator"].split("!")[0] for row in rows} == {"DR(tapa)"}
+    assert {(row["numbers"][0], row["nominal"]) for row in rows} == {("N16", 11.35)}
+    key = measurements.sheet_key("4- Metrologia/intern.01.xls", "DR(base)")
+    assert issues == {
+        key: "Pendiente: las columnas de cavidad solo llevan un número; hoja sin leer"
+    }
+    assert measurements.split_sheet_key(key) == (
+        "4- Metrologia/intern.01.xls",
+        "DR(base)",
+    )
+    base = next(s for s in diagnostics[0]["sheets"] if s["sheet"] == "DR(base)")
+    assert base["status"] == "skipped" and base["detail"] == "cavities_numbered_only"
+
+
+def test_report_without_cota_numbers_or_cavity_label_stays_pending_with_its_reason(
+    tmp_path, monkeypatch
+):
+    # 3226: one unlabelled value column and an empty Nr column in every row.
+    report = tmp_path / "intern.01.xls"
+    report.write_bytes(b"synthetic report")
+    sheet = [
+        ["Nr", "Dimension", "", "", "", "", "", "", "", "NOK", "Comments"],
+        [
+            "",
+            "LTR",
+            "type",
+            "Nominal",
+            "class",
+            "Tol +",
+            "Tol-",
+            "Equipment",
+            "",
+            "",
+            "",
+        ],
+        ["", "", "", 21.4, "", 0.17, -0.17, "CALIPER", 21.15, "X", ""],
+        ["", "", "", 0.7, "", 0.05, -0.05, "CT", 0.627, "", "left"],
+    ]
+    monkeypatch.setattr(measurements, "workbook", lambda _: [("DR", sheet)])
+    issues: dict[str, str] = {}
+    groups = measurements.collect(
+        "9000",
+        [SourceItem(path="9000/4- Metrologia/intern.01.xls", local=report)],
+        file_issues=issues,
+    )
+    # Nothing is read and no identifier is made up from the row position.
+    assert sum(map(len, groups.values())) == 0
+    assert issues == {
+        measurements.sheet_key("4- Metrologia/intern.01.xls", "DR"): (
+            "Pendiente: la columna de valores no rotula la cavidad y las filas no "
+            "tienen número de cota; hoja sin leer"
+        )
+    }
 
 
 def test_pilot_keeps_regular_excel_reports_and_excludes_correction_workbooks(

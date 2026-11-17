@@ -10,17 +10,25 @@ import { matchesCotaPrefix, normalizeCota } from "./drawingSearchHelpers"
 import PdfViewer from "./PdfViewer"
 
 export type DrawingFocus = { id: string; page: number; box: number[] }
-/** A human review prevails over the PDF text and over any OCR proposal. */
-type Origin = "review" | "pdf" | "ocr"
+/**
+ * A human review prevails over everything else. A balloon numbered from the drawing's
+ * infra-CONVERT project (.icp) is exact; its position is only approximate when no drawn
+ * balloon confirms it.
+ */
+type Origin = "review" | "pdf" | "icp" | "icp_approximate" | "ocr"
 const ORIGIN_LABELS: Record<Origin, string> = {
   review: "Revisada",
   pdf: "Texto del PDF",
+  icp: "Globo del plano (.icp)",
+  icp_approximate: ".icp · posición aproximada",
   ocr: "OCR · sin verificar",
 }
+const UNVERIFIED: Origin[] = ["ocr", "icp_approximate"]
 type Candidate = DrawingFocus & {
   candidates?: { label: string }[]
   text?: string
   method?: string
+  approximate?: boolean
 }
 type Index = {
   balloons: Candidate[]
@@ -113,7 +121,11 @@ export default function DrawingSearch({
           ? "review"
           : candidate.method === "pdf"
             ? "pdf"
-            : "ocr"
+            : candidate.method === "icp"
+              ? candidate.approximate
+                ? "icp_approximate"
+                : "icp"
+              : "ocr"
         return matches.length
           ? [
               {
@@ -210,7 +222,7 @@ export default function DrawingSearch({
                   <span
                     className={cn(
                       "text-xs font-normal",
-                      result.origin === "ocr"
+                      UNVERIFIED.includes(result.origin)
                         ? "text-amber-700 dark:text-amber-400"
                         : "text-muted-foreground",
                     )}
@@ -229,6 +241,14 @@ export default function DrawingSearch({
           <p className="text-xs text-muted-foreground">
             Las lecturas OCR son propuestas automáticas sin verificar. Comprueba
             el número en el plano antes de utilizarlo.
+          </p>
+        )}
+      {data &&
+        query.trim() &&
+        results.some((result) => result.origin === "icp_approximate") && (
+          <p className="text-xs text-muted-foreground">
+            El número sale del .icp del plano. Su posición es aproximada: este
+            plano no tiene globos dibujados que la confirmen.
           </p>
         )}
       <PdfViewer file={file} title={title} focus={selected} />

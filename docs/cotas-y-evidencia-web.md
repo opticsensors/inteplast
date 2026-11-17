@@ -269,7 +269,45 @@ comprobado en 5 planos reales. Cómo funciona:
   como «Revisada» en su posición guardada, sin depender de las detecciones del índice.
   La consulta no modifica ni borra las filas guardadas.
 
-Comprobación de estas correcciones (30/10/2026): **336 tests del backend en Docker aislado**,
+### Globos del `.icp` (16/11/2026)
+
+Si junto al PDF hay un proyecto de infra-CONVERT (`.icp`), el número de cada globo sale de ahí y
+no del OCR: es exacto. Lo que hay que resolver es **dónde cae cada sello en ese PDF**, que puede
+estar impreso a otra escala, girado o en espejo. Lector: `backend/app/ingestion/icp.py`.
+
+- **Qué `.icp` se consideran:** los de la misma carpeta que el plano vinculado. Si esa carpeta
+  no tiene ninguno, los que están junto a una **copia idéntica byte a byte** del PDF dentro de la
+  carpeta de la pieza que lo usa (17/11/2026, `file_sources.twin_projects`). Solo se compara el
+  contenido de los PDF del mismo tamaño que tienen un `.icp` al lado. Si hay copias en varias
+  carpetas, se ofrecen todos sus `.icp`; si se llaman igual, llevan delante las carpetas
+  necesarias para distinguirlos (`REV1/copy/plan.icp`, `REV2/copy/plan.icp`) y el lector recibe
+  los dos. Estar en la carpeta lo hace candidato; que corresponda
+  al plano lo decide la lectura.
+- **Plano con globos dibujados:** se ajusta la posición con los globos detectados (giro, escala,
+  desplazamiento y simetría). Las lecturas del lector de globos solo sirven de pistas; una
+  lectura equivocada no estropea el ajuste. Se acepta si explica al menos el 30 % de los globos
+  detectados y 10 o más. Entre varios `.icp`, gana el que más globos explica.
+- **Plano sin globos:** se colocan a escala 1:1 con el origen en el centro de la hoja, solo si
+  es un PDF de una página, casi todos los sellos caen dentro de la hoja y un único `.icp` encaja
+  (o uno se llama como el PDF). La web lo enseña como **«.icp · posición aproximada»**, porque
+  nada en la página lo confirma.
+- **Si no se puede situar con fiabilidad, no se sitúa** y se dice en «Notas de lectura». No se
+  enseña una aproximación como si estuviera comprobada.
+- **En el índice:** un globo dibujado conserva su identificador y su caja, así que las
+  revisiones guardadas siguen valiendo y prevalecen. Su lectura OCR se guarda aparte (`ocr`).
+  Los sellos sin globo dibujado se añaden con `drawn: false`. Cada uno lleva `method: "icp"`.
+- **Caché:** la ruta y la versión de los `.icp` (propios o heredados) entran en la clave del
+  índice. Añadir, quitar o cambiar uno, o que la copia deje de ser idéntica, pide preparar de
+  nuevo la búsqueda. Un plano sin `.icp` ni copias con `.icp` conserva su clave y su índice.
+  El resumen de cada versión de PDF comparada se guarda en memoria para no releerlo.
+- **SharePoint:** con `.icp` propio, la clave solo necesita el listado de la carpeta; los `.icp`
+  se descargan al indexar. Sin él, se recorre la carpeta de la pieza y, si hay un PDF del mismo
+  tamaño junto a un `.icp`, se descargan ambos PDF para compararlos (una vez por versión).
+
+Medición sobre los 30 planos con `.icp` y sus límites:
+[planos con globos](../conocimiento/planos-globos.md#icp-automático-en-la-app-16112026).
+
+Comprobación de las correcciones del lector de globos (30/10/2026): **336 tests del backend en Docker aislado**,
 **30 pruebas de la consulta de pieza/plano** (incluidas las revisiones sin correspondencia en
 escritorio y móvil), compilación del frontend, Ruff y lint sin errores. Cliente TypeScript
 regenerado sin cambios de contrato. Imagen de desarrollo `backend:latest` reconstruida.
@@ -385,6 +423,27 @@ antigua revisión de importación desde la pantalla.
   sin modificarlos y los resultados de esta comprobación se generan fuera del repositorio.
 - Esta equivalencia comprueba la migración de los lectores, no valida la exactitud del OCR
   ni amplía el alcance del adaptador a otras piezas.
+
+## Marcas No. y N° en la web (16/11/2026)
+
+`backend/app/ingestion/numbered_marks.py` reimplementa la lectura ampliada por teselas,
+horizontal y vertical. Se activa en páginas con pocos globos y poco texto nativo, sin un
+`.icp` colocado. El índice `drawing-v5` invalida la caché previa; no cambia el lector de globos.
+Las marcas se ofrecen como **OCR · sin verificar**, con el mismo contrato de coordenadas
+normalizadas y sin reemplazar revisiones humanas guardadas.
+
+Se admiten `No.`, `N°` y `Nº`, con 3–4 cifras significativas y al menos 20 marcas por PDF.
+Se descartan rangos y contextos locales de vistas/notas; las referencias 001–099 quedan fuera.
+Un futuro plano que use números bajos, pocas marcas o inclinaciones diferentes puede quedar
+sin propuestas. Los filtros pueden omitir una cota real junto a una anotación.
+
+La repetición de OCR guardado en ocho documentos da igualdad backend/prototipo en número
+y posición. Retira las 14 ubicaciones falsas revisadas del 3174/3186 sin eliminar las
+lecturas revisadas correctas de esas muestras. La lectura nueva de tres PDF de método produce
+172 / 36 / 37 propuestas tras la guarda final de notas. Detalles, controles y alcance en
+[tanda 5](proximos-pasos.md#tanda-5-16112026-alcance-ejecutado-y-límites).
+Son planos conocidos; estos resultados no son una validación independiente ni una garantía
+del 100 % sobre planos futuros.
 
 ## Validación de la integración inicial (18/09/2026)
 

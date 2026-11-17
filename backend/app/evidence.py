@@ -12,10 +12,10 @@ import threading
 import time
 import uuid
 from contextlib import asynccontextmanager
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from sqlalchemy import text
 from sqlmodel import Session, col, select
 
@@ -24,14 +24,24 @@ from app.core.config import settings
 from app.core.db import engine
 from app.evidence_converter import STUDY_FOLDERS, STUDY_SUFFIXES
 from app.file_sources import (
+    SourceError,
+    SourceItem,
     content_type,
     document_cache_key,
     document_path,
+    drawing_projects,
+    item_file,
     local_path,
     stamp,
 )
 from app.ingestion.drawing_version import reader_id
-from app.knowledge_models import EvidenceJob, PartCharacteristic, PartDocument
+from app.knowledge_models import (
+    EvidenceJob,
+    PartCharacteristic,
+    PartDocument,
+    PartFile,
+    PartReference,
+)
 from app.models import Part, StoredFile, get_datetime_utc
 from app.previews import preview_lifespan
 
@@ -48,14 +58,92 @@ def digest(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
 
 
+def piece_folders(document: StoredFile) -> list[str]:
+    """Folders of the pieces that use this document, where its copies are looked for."""
+    current = Session.object_session(document)
+    session = current if isinstance(current, Session) else Session(engine)
+    try:
+        statements = [
+            select(PartDocument.part_id).where(PartDocument.file_id == document.id),
+            select(PartFile.part_id).where(PartFile.file_id == document.id),
+            select(PartReference.part_id).where(PartReference.file_id == document.id),
+        ]
+        parts = {
+            part_id
+            for statement in statements
+            for part_id in session.exec(statement).all()
+        }
+        if not parts:
+            return []
+        folders = session.exec(
+            select(Part.folder_path).where(col(Part.id).in_(list(parts)))
+        ).all()
+        return sorted(folder for folder in folders if folder)
+    finally:
+        if session is not current:
+            session.close()
+
+
+def drawing_projects_of(document: StoredFile) -> list[SourceItem]:
+    try:
+        return drawing_projects(document, piece_folders(document))
+    except SourceError as error:
+        raise HTTPException(status_code=error.status_code, detail=error.message)
+
+
+def drawing_project_versions(document: StoredFile) -> list[list[str]]:
+    """Path and version of each `.icp` of the drawing.
+
+    Projects of its own folder are only listed. Inherited ones need the content hash of
+    the copies of the same size, computed once per version.
+    """
+    return [[item.path, item.version or ""] for item in drawing_projects_of(document)]
+
+
+def drawing_project_files(document: StoredFile) -> list[list[str]]:
+    """Original name and a readable copy of each project, for the reader process.
+
+    SharePoint files are cached under a name derived from their version, so the name the
+    user sees has to travel with the path. Projects inherited from copies in different
+    folders can share a name: those carry as many folders in front as needed to tell
+    them apart (`REV1/copy/plan.icp`, `REV2/copy/plan.icp`).
+    """
+    items = drawing_projects_of(document)
+    return [
+        [name, str(item_file(item))]
+        for name, item in zip(
+            distinct_names([item.path for item in items]), items, strict=True
+        )
+    ]
+
+
+def distinct_names(paths: list[str]) -> list[str]:
+    """Shortest trailing part of each path that no other path shares."""
+    parts = [PurePosixPath(path).parts for path in paths]
+    names = []
+    for index, own in enumerate(parts):
+        others = [other for position, other in enumerate(parts) if position != index]
+        depth = 1
+        while depth < len(own) and any(
+            other[-depth:] == own[-depth:] for other in others
+        ):
+            depth += 1
+        names.append(PurePosixPath(*own[-depth:]).as_posix())
+    return names
+
+
 def drawing_key(document: StoredFile) -> str:
     # The reader identity (index version, own model and thresholds) is part of the key: improving
     # the reader invalidates cached drawing indexes without touching the study imports.
+    # So are the `.icp` projects of the drawing's folder: adding, removing or changing one
+    # asks for a new index. A drawing without them keeps the key it had before.
+    projects = drawing_project_versions(document)
     return digest(
         [
             RECIPE,
             document_cache_key(document),
             reader_id(),
+            *([projects] if projects else []),
         ]
     )
 
@@ -197,6 +285,7 @@ def publish_study(
                 select(PartCharacteristic).where(
                     PartCharacteristic.part_id == part.id,
                     PartCharacteristic.code == code,
+                    PartCharacteristic.component == "",
                     PartCharacteristic.revision == "06",
                 )
             ).first()
@@ -234,8 +323,11 @@ def process_next(stop: threading.Event) -> bool:
             part = session.get(Part, job.part_id) if job.part_id else None
             document = session.get(StoredFile, job.file_id) if job.file_id else None
             source: Path | None = None
+            projects: list[list[str]] = []
             if document:
                 source = document_path(document)
+                if job.kind == "drawing":
+                    projects = drawing_project_files(document)
             elif part and sharepoint.enabled():
                 # The reader expects a folder: copy only the formats it reads.
                 staging = Path(tempfile.mkdtemp(prefix="inteplast-sharepoint-"))
@@ -258,6 +350,7 @@ def process_next(stop: threading.Event) -> bool:
                             job.kind,
                             str(source),
                             temporary,
+                            *([json.dumps(projects)] if projects else []),
                         ],
                         stdout=log,
                         stderr=log,

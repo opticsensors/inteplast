@@ -1317,6 +1317,60 @@ for (const mobile of [false, true]) {
     await expect(notice).toHaveCount(0)
   })
 
+  test(`balloons numbered from the .icp of the drawing are told apart from OCR readings (${mobile ? "mobile" : "desktop"})`, async (t) => {
+    const page = await mount(t, "/parts/part-one?cota=N170", mobile)
+    await page.evaluate(() => {
+      window.evidenceDrawingBalloons = [
+        {
+          id: "icp-drawn",
+          page: 1,
+          box: [400, 420, 420, 440],
+          candidates: [{ label: "N113.1" }],
+          method: "icp",
+        },
+        {
+          id: "icp-clean",
+          page: 1,
+          box: [460, 480, 480, 500],
+          candidates: [{ label: "N113.2" }],
+          method: "icp",
+          approximate: true,
+        },
+      ]
+    })
+    await page.getByRole("button", { name: "Plano", exact: true }).click()
+    const search = page.getByRole("textbox", {
+      name: "Buscar cota en el plano",
+    })
+    const results = page.getByRole("group", {
+      name: "Coincidencias en el plano",
+    })
+    const ocrNotice = page.getByText(
+      "Las lecturas OCR son propuestas automáticas sin verificar.",
+    )
+    const approximateNotice = page.getByText("Su posición es aproximada")
+    await search.fill("N113.1")
+    await expect(page.getByRole("status")).toHaveText("1 resultado")
+    await expect(
+      results.getByRole("button", {
+        name: "N113.1 · Globo del plano (.icp)",
+        exact: true,
+      }),
+    ).toBeVisible()
+    // Its number is exact and a drawn balloon confirms its position: no warning.
+    await expect(ocrNotice).toHaveCount(0)
+    await expect(approximateNotice).toHaveCount(0)
+    await search.fill("N113.2")
+    await expect(
+      results.getByRole("button", {
+        name: "N113.2 · .icp · posición aproximada",
+        exact: true,
+      }),
+    ).toBeVisible()
+    await expect(approximateNotice).toBeVisible()
+    await expect(ocrNotice).toHaveCount(0)
+  })
+
   test(`reviews without a detected balloon remain searchable at their saved positions (${mobile ? "mobile" : "desktop"})`, async (t) => {
     const page = await mount(t, "/parts/part-one?cota=N170", mobile)
     await page.evaluate(() => {

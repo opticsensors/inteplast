@@ -5,7 +5,7 @@
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query"
-import { FileText, Loader2, RefreshCw } from "lucide-react"
+import { Loader2, RefreshCw } from "lucide-react"
 import { useEffect, useRef } from "react"
 import { PartsService } from "@/client"
 import { Button } from "@/components/ui/button"
@@ -23,6 +23,8 @@ export const PIECE_QUERY_KEYS = [
   "feature-evidence",
   "metrology-filters",
   "measurement-history",
+  // Componentes examines the folder: new files appear after reading it again.
+  "part-components",
 ]
 
 export function useReadPartData() {
@@ -41,15 +43,6 @@ export function useReadPartData() {
       )
     },
   })
-}
-
-const STATUS: Record<string, string> = {
-  imported: "Leído",
-  unchanged: "Sin cambios",
-  used: "Leído",
-  queued: "Pendiente",
-  processing: "Leyendo",
-  error: "Error",
 }
 
 export function usePartReading(partId?: string) {
@@ -155,18 +148,12 @@ export function PartReadButton({
 }
 
 export function PartReadStatus({
-  reading: { busy, reading, data, error },
+  reading: { busy, reading, error },
 }: {
   reading: PartReading
 }) {
-  if (!busy && !data && !error) return null
-  const label = busy
-    ? "Lectura en curso"
-    : error || data?.state === "error"
-      ? "No se ha podido completar la lectura"
-      : data?.state === "partial"
-        ? "Lectura con incidencias"
-        : "Lectura completada"
+  // The detailed report remains stored on the server, outside the piece view.
+  if (!busy && !error) return null
   return (
     <section
       className="mb-3 space-y-2 text-xs text-muted-foreground"
@@ -184,46 +171,6 @@ export function PartReadStatus({
         <p role="alert" className="text-destructive">
           {fileErrorMessage(error)}
         </p>
-      )}
-      {data && !reading && !error && (
-        <details open={data.state === "error" || data.state === "partial"}>
-          <summary className="cursor-pointer">
-            <span>{label}</span>
-            <span aria-hidden="true"> · </span>
-            <span>Ficheros de la lectura ({data.files?.length ?? 0})</span>
-          </summary>
-          <div className="mt-2 space-y-2">
-            {data.updated_at && (
-              <p>{new Date(data.updated_at).toLocaleString("es-ES")}</p>
-            )}
-            <p>
-              Grupos de mediciones incorporados: {data.imported ?? 0} · Sin
-              cambios: {data.skipped ?? 0}
-            </p>
-            {data.notices?.map((notice) => (
-              <p key={notice}>{notice}</p>
-            ))}
-            <ul className="space-y-1.5">
-              {data.files?.map((file) => (
-                <li
-                  key={`${file.group}-${file.path}`}
-                  className="flex min-w-0 items-center gap-2"
-                >
-                  <FileText className="size-3.5 shrink-0" />
-                  <span className="min-w-0 flex-1 truncate" title={file.path}>
-                    {file.path.split("/").pop()}
-                  </span>
-                  <span className="shrink-0">
-                    {STATUS[file.status] ?? file.status}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            {!data.files?.length && (
-              <p>No se ha utilizado ningún fichero para extraer datos.</p>
-            )}
-          </div>
-        </details>
       )}
     </section>
   )

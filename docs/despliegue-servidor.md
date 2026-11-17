@@ -35,6 +35,33 @@ El backend necesita conexiones salientes HTTPS a Microsoft Entra, Microsoft Grap
 destinos de descarga de SharePoint/OneDrive. El retorno del login llega a través del
 navegador del usuario, por lo que la API puede seguir siendo interna.
 
+## Nombre propuesto por IT de Eurecat (17/11/2026)
+
+IT ofrece **un solo nombre DNS** para la fase 2, con la API en el mismo dominio:
+
+- Web: `https://euredinteplast.local.eurecat.org`
+- API: el mismo nombre, bajo `/api`. **En minúsculas**: IT lo escribió `/API`, pero las rutas
+  distinguen mayúsculas y la API ya vive en `/api/v1` (`API_V1_STR`).
+- Puertos: solo 443 y SSH. Salida HTTPS hacia Microsoft, Docker Hub y GitHub (mensaje a IT
+  del 16/11/2026).
+
+Un solo nombre sirve y simplifica: web y API comparten origen, sin CORS entre dominios.
+Cambios necesarios, **sin hacer todavía**:
+
+| Qué | Cambio |
+|---|---|
+| Reglas de Traefik (`compose.yml`) | Backend: `Host(nombre) && PathPrefix(/api)`. Frontend: `Host(nombre)` con menor prioridad. Sustituyen a `api.${DOMAIN}` y `dashboard.${DOMAIN}`. Adminer y el panel de Traefik no se publican |
+| `VITE_API_URL` | `https://euredinteplast.local.eurecat.org`, sin `/api`: el cliente ya añade `/api/v1`. Se fija al construir el frontend |
+| `FRONTEND_HOST`, `BACKEND_CORS_ORIGINS` | `https://euredinteplast.local.eurecat.org` |
+| `MICROSOFT_REDIRECT_URI` y Entra | `https://euredinteplast.local.eurecat.org/api/v1/login/microsoft/callback`, registrado como Web |
+| Certificado | Let's Encrypt no sirve para un nombre interno `.local`: pedir a IT el certificado de ese nombre (y quién lo renueva) y cargarlo en Traefik en lugar del resolver `le` |
+
+Respuesta propuesta a IT (no enviada):
+
+> Perfecte, amb un sol nom n'hi ha prou: la web a `https://euredinteplast.local.eurecat.org` i
+> l'API a `/api` del mateix domini (en minúscules). Em podeu passar el certificat HTTPS per a
+> aquest nom i dir-me qui se n'encarrega de renovar-lo? Gràcies!
+
 ## Por qué HTTPS y qué alternativas existen
 
 Servir una web en `http://IP:puerto` es posible, como en el proyecto IoT con Grafana y

@@ -75,7 +75,10 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
   etiquetados como en Features. Cancelar descarta el borrador sin registrar la pieza.
 - Actualizar datos es un icono en la esquina superior derecha del título Cotas; su ayuda
   al pasar el ratón explica la lectura. No tiene panel vacío. El progreso aparece solo
-  durante la lectura y el resultado, incidencias y fuentes quedan en un resumen desplegable.
+  durante la lectura. El resultado, las incidencias y los archivos usados se conservan
+  en el registro del servidor (`Part.last_read`, API `GET /parts/{id}/read-data`), sin
+  panel ni resumen en la ficha. Decisión de Eduard del 16/11/2026. Un error de la
+  petición permite reintentar; ocultar el diagnóstico no convierte una lectura parcial en completa.
 - Reutilizar `Input`, el botón con Plus, la papelera, `useAutosave` y `SaveStatus` del
   editor de cotas. Los borradores fallidos se conservan y participan en Guardar.
 - Las cotas guardadas abren sus mediciones; el icono de plano contiguo abre esa cota
@@ -94,6 +97,9 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
 - `/parts` redirige al catálogo filtrado por piezas. `/parts/{id}` conserva los enlaces
   de cotas y plano y ahora muestra portada, identidad, Features, Cotas y Archivos.
 - La ficha de pieza comparte cabecera, navegación y secciones con la del feature.
+  Como en el feature, junto a Editar pieza hay un menú **⋯** con Eliminar, solo para
+  administradores. El diálogo muestra qué se elimina y qué se conserva, y pide escribir
+  el código de la pieza antes de activar «Eliminar pieza».
   Cotas y gráficas van a la izquierda; Features y, debajo, Archivos a la derecha.
   En móvil se apilan. Los features no repiten fotos: cada subtarjeta muestra el nombre
   enlazado y sus cotas de esta pieza. Pulsar una cota la consulta en la columna izquierda.
@@ -204,8 +210,10 @@ franja que se adapta al ancho disponible, con un contador de resultados. Selecci
 una enfoca su ubicación. Conservar las subcotas entre los resultados, sin casilla para
 activarlas. Si el mismo número aparece en varias ubicaciones, distinguirlas con `1/2`, `2/2`.
 Cada botón indica el origen de la lectura: «Revisada» (prevalece sobre las demás), «Texto
-del PDF» u «OCR · sin verificar». Si hay propuestas OCR, un aviso breve bajo la franja
-recuerda comprobar el número en el plano.
+del PDF», «Globo del plano (.icp)», «.icp · posición aproximada» u «OCR · sin verificar».
+Si hay propuestas OCR, un aviso breve bajo la franja recuerda comprobar el número en el
+plano. Si hay globos de un `.icp` con posición aproximada, otro aviso dice que el número es
+el del `.icp` y que el plano no tiene globos dibujados que confirmen la posición.
 
 No añadir columna lateral, descarga del original, filtro «Sin lectura», autor o fecha de la
 revisión ni formulario «Número de esta ubicación / Guardar revisión» en esta consulta. Las
@@ -257,6 +265,34 @@ ni ocultarla por no aparecer en el índice nuevo.
   sin recuperar las pestañas eliminadas.
 
 ## Comprobación
+
+**Componentes (16/11/2026).** Una ficha guardada con carpeta ofrece «Componentes» junto al
+nombre de carpeta, también cuando todavía no tiene componentes configurados. Es una opción
+manual; su presencia no indica detección automática. Las piezas simples no necesitan usarla.
+Al crear una pieza, «Varios componentes» la guarda sin leerla y abre «Componentes».
+Al cerrar el diálogo, guardado o cancelado, se leen sus datos: **sin componentes, como una
+pieza normal** (17/11/2026). El diálogo reutiliza campos, selector y buscador de archivos de
+la aplicación, con Cancelar / Guardar cambios y una sola frase de ayuda. Cada componente es
+un campo de nombre compacto («Añadir componente» lo crea vacío y enfocado). Debajo, una fila
+por **hoja de Excel** (con el número de libros que la contienen) y otra por **archivo**, cada
+una con su desplegable; cada plano lleva su revisión. Lo que coincide con el nombre de un
+componente aparece ya elegido y marcado «· Propuesta»; el usuario lo corrige y guarda todo
+en una operación.
+Una cota conserva el número original, pero su selección incluye el componente.
+El enlace busca ese número dentro del PDF de su componente/revisión; si hay varias opciones,
+la consulta muestra un selector. Una asociación incompleta no recupera el plano de otro
+componente. Cambiar de carpeta conserva identidades e historial y vacía las asignaciones,
+que hay que confirmar para la nueva carpeta.
+
+El registro técnico de lectura identifica hoja y primeras filas rechazadas y distingue
+plantillas vacías de pendientes relevantes. No se muestra en la ficha de pieza.
+
+La estrella de Archivos sigue indicando un único principal por tipo y pieza. No certifica
+el documento ni representa un principal por componente. Los enlaces de las cotas usan la
+asignación guardada de componente y revisión. Desde el 17/11/2026 la propuesta inicial del
+plano principal es el primero por ruta de los que tienen un `.icp` en su carpeta, y si no hay
+ninguno, el primero por ruta. Sigue siendo una propuesta que el usuario revisa; no debe
+describirse como selección automática del plano correcto.
 
 La lectura del 26/10/2026 ha contrastado `CatalogPage`, `FeatureSearch`, `FeatureForm`,
 `NoteList`, `FeaturePartEvidence`, `PartDetailPage`, `PartFiles`, `MetrologyPage`,

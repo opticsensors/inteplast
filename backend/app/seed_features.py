@@ -159,6 +159,7 @@ def _seed(session: Session) -> bool:
             select(PartCharacteristic).where(
                 PartCharacteristic.part_id == part.id,
                 PartCharacteristic.code == code,
+                PartCharacteristic.component == "",
                 PartCharacteristic.revision == "06",
             )
         ).first()

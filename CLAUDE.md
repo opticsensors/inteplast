@@ -1,5 +1,13 @@
 # INTEPLAST — contexto del proyecto
 
+> **Regla de Eduard (16/11/2026): no completar ni corregir manualmente fichas para suplir
+> al algoritmo.** Conservar su resultado, registrar el fallo y corregir la regla general.
+> Si no se puede automatizar, concretar con INTEPLAST los datos necesarios o dejar la
+> selección al usuario en la app. El agente no decide planos, componentes, revisiones,
+> nombres ni otros valores por su cuenta. Desplegar o probar no autoriza esos ajustes.
+> Las configuraciones manuales de prueba no acreditan funcionamiento automático.
+> Instrucción completa en [AGENTS.md](AGENTS.md).
+
 ## Qué es este repo
 
 **El repo de INTEPLAST: código + conocimiento del proyecto**
@@ -122,8 +130,13 @@ búsqueda en planos:
 
 El prototipo está **congelado**: no se ajusta más sobre los planos actuales sin evidencia nueva.
 Ver [Lector de globos](docs/cotas-y-evidencia-web.md#lector-de-globos-30102026).
-Los lectores nuevos para planos sin globos de color (`[]`, `No.`, recuadros) y el uso de los `.icp`
-se prueban primero en el visor de `conocimiento/`; todavía no están en la app.
+Desde el **2026-11-16** el índice usa también el `.icp` que acompaña al plano: el número del
+globo sale del `.icp` y no del OCR (`backend/app/ingestion/icp.py`,
+[contrato](docs/cotas-y-evidencia-web.md#globos-del-icp-16112026)).
+Desde el **2026-11-16** el lector `No.` / `N°` está también en el backend (`numbered_marks.py`),
+con filtro de contexto y propuestas sin verificar. `[]` y recuadros siguen solo en el prototipo.
+Los globos de color permanecen congelados. Componentes y omisiones: tandas 4–5 de
+`docs/proximos-pasos.md`.
 🔑 **En el prototipo hay un solo código de lectura de planos (09/11/2026):**
 `prototypes/data-explorer/lectores_planos.py` (globos, `[]`, `No.`, recuadros y `.icp`). Lo comparten
 el visor y los scripts de medida, y ya no importan el backend. Un cambio se hace ahí; la app

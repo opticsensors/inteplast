@@ -594,7 +594,27 @@ def reader_id() -> str:
 
 TESELA, SOLAPE = 1600, 240
 MARCA_CUADRO = re.compile(r"\[\]\s*(\d(?:\s?\d){1,3})(?!\d)")
-MARCA_NO = re.compile(r"(?i)N[o0]\s*[.,．]\s*(\d{3,4})(\s*[Φφ±\dR(].*)?")
+MARCA_NO = re.compile(r"(?i)N(?:[o0]\s*[.,．]|[°º])\s*(\d{3,4})(\s*[ΦφØø±\dR(].*)?")
+
+
+def no_en_contexto_documental(token: dict, tokens: list[dict]) -> bool:
+    """Rechaza listas de vistas y notas por texto vecino, sin zonas fijas por plano."""
+    center = np.asarray(token["q"], float).mean(axis=0)
+    vecinos = [(otro, np.asarray(otro["q"], float).mean(axis=0) - center) for otro in tokens]
+    pareja = any(
+        otro["texto"].strip() != token["texto"].strip()
+        and MARCA_NO.fullmatch(otro["texto"].strip())
+        and abs(delta[0]) < .012 and .003 < abs(delta[1]) < .015
+        for otro, delta in vecinos
+    )
+    for otro, delta in vecinos:
+        texto = otro["texto"].upper()
+        if abs(delta[0]) < .045 and -.03 < delta[1] < .005:
+            if pareja and re.search(r"\b(?:VIEW|SECTION|DETAIL)\b", texto):
+                return True
+            if re.search(r"\b(?:GENERAL NOTES?|REVISION|ADDED|DELETED)\b", texto):
+                return True
+    return False
 
 
 def marcas_en_token(texto: str) -> list[tuple[str, str, int, int]]:
@@ -607,8 +627,8 @@ def marcas_en_token(texto: str) -> list[tuple[str, str, int, int]]:
     texto = texto.strip()
     salida = [("[]", re.sub(r"\s", "", m.group(1)), m.start(), m.end()) for m in MARCA_CUADRO.finditer(texto)]
     m = MARCA_NO.fullmatch(texto)
-    if m and "no" not in (m.group(2) or "").lower():
-        salida.append(("No.", m.group(1), m.start(), m.end(1)))
+    if m and int(m.group(1)) >= 100 and "no" not in (m.group(2) or "").lower():
+        salida.append(("No.", str(int(m.group(1))), m.start(), m.end(1)))
     return salida
 
 
@@ -669,6 +689,8 @@ def marcas_de_tokens(tokens: list[dict], pagina: int) -> list[dict]:
         izquierda, derecha = (q[0] + q[3]) / 2, (q[1] + q[2]) / 2
         n = max(1, len(token["texto"].strip()))
         for estilo, numero, ini, fin in marcas_en_token(token["texto"]):
+            if estilo == "No." and no_en_contexto_documental(token, tokens):
+                continue
             a, b = izquierda + (derecha - izquierda) * ini / n, izquierda + (derecha - izquierda) * fin / n
             alto = np.abs(q[3] - q[0]).max()
             x0, x1, y0, y1 = min(a[0], b[0]), max(a[0], b[0]), min(a[1], b[1]), max(a[1], b[1])

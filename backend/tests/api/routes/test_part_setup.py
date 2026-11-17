@@ -72,6 +72,28 @@ def test_refresh_keeps_spc_pending_and_imports_supported_files(
     assert again["state"] == "partial" and again["imported"] == 0
 
 
+def test_refresh_reports_an_unread_sheet_of_a_file_whose_other_sheet_was_read(
+    client: TestClient, normal_user_token_headers, source, monkeypatch
+):
+    from app import automatic_measurements
+    from tests.ingestion.test_folder_extraction import COMPONENT_BOOK
+
+    folder, root = source
+    write(root, "4- Metrologia/intern.01.xls", b"synthetic report")
+    monkeypatch.setattr(automatic_measurements, "workbook", lambda _: COMPONENT_BOOK)
+    headers = normal_user_token_headers
+    part, _ = register_piece(client, headers, folder)
+    result = client.post(f"{API}/{part['id']}/refresh", headers=headers).json()
+    assert result["state"] == "partial" and result["imported"] == 2
+    files = {(f["path"], f["sheet"]): f["status"] for f in result["files"]}
+    assert files[("4- Metrologia/intern.01.xls", None)] == "imported"
+    assert files[("4- Metrologia/intern.01.xls", "DR(base)")].startswith(
+        "Pendiente: las columnas de cavidad solo llevan un número"
+    )
+    saved = client.get(f"{API}/{part['id']}/detail", headers=headers)
+    assert saved.status_code == 200, saved.text
+
+
 def test_edit_references_saves_with_header_without_importing_or_changing_features(
     client: TestClient,
     db: Session,

@@ -13,6 +13,7 @@ from app import crud
 from app.api.deps import CurrentUser, SessionDep
 from app.api.routes.parts import get_part_or_404
 from app.cad_covers import validate_document
+from app.component_models import identity_expression, qualified
 from app.evidence import job_id
 from app.feature_links import feature_membership
 from app.file_sources import SourceError, document_cache_key
@@ -185,7 +186,7 @@ def search_catalog(
         )
         matching_cotas = select(PartCharacteristic.part_id).where(
             or_(
-                col(PartCharacteristic.code).ilike(code_like, escape="\\"),
+                identity_expression().ilike(code_like, escape="\\"),
                 col(PartCharacteristic.title).ilike(like, escape="\\"),
             )
         )
@@ -236,7 +237,7 @@ def search_catalog(
     if needle and kind != "feature":
         cota_filters: list[Any] = [
             or_(
-                col(PartCharacteristic.code).ilike(code_like, escape="\\"),
+                identity_expression().ilike(code_like, escape="\\"),
                 col(PartCharacteristic.title).ilike(like, escape="\\"),
             )
         ]
@@ -257,7 +258,7 @@ def search_catalog(
         cotas = [
             CotaSearchResult(
                 id=c.id,
-                code=c.code,
+                code=qualified(c.code, c.component),
                 title=c.title,
                 revision=c.revision,
                 part=PartPublic.model_validate(p),

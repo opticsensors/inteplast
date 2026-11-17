@@ -36,8 +36,21 @@ def numeric(value: str, line: int) -> float | None:
     return result
 
 
+def inline_title(cell: str) -> bool:
+    """A block title written in the element column of its first value row.
+
+    Individual exports put the title on its own line and leave the element column
+    empty or with a numeric id. Cavity comparisons can join both lines
+    (``POINT 1 -> 1.35-0.05 MIN/MAX;Cálculo de fórmula;…``).
+    """
+    text = cell.strip()
+    return bool(text) and (
+        bool(re.search(r"\s", text)) or bool(dimension_numbers(text))
+    )
+
+
 def parse(
-    data: bytes, *, pilot: bool = False
+    data: bytes, *, pilot: bool = False, inline_titles: bool = False
 ) -> tuple[list[dict[str, Any]], list[str]]:
     try:
         text = data.decode("utf-8-sig")
@@ -68,6 +81,12 @@ def parse(
             seen[block] = seen.get(block, 0) + 1
             occurrence = seen[block]
             continue
+        if inline_titles and inline_title(cells[0]):
+            # Without this the row would inherit the previous block and its cota.
+            block, element, idx = cells[0].strip(), "", 0
+            seen[block] = seen.get(block, 0) + 1
+            occurrence = seen[block]
+            cells = ["", *cells[1:]]
         idx += 1
         if len(cells) > 9 and re.fullmatch(r"[+-]?\d+(?:[.,]\d+)?", cells[9].strip()):
             raise ValueError(

@@ -5,6 +5,7 @@ import { EvidenceService } from "@/client"
 import { FilterSelect } from "@/components/Common/FilterSelect"
 import { Button } from "@/components/ui/button"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
+import { componentDrawings, drawingNumber } from "./componentDrawings"
 import { Measurements } from "./Measurements"
 import { MetrologyFilters } from "./MetrologyFilters"
 import type { PartSearch } from "./measurementSelection"
@@ -76,20 +77,49 @@ export function MetrologyPage({
   const data = result.data
   const study =
     data?.study.state === "ready" ? (data.study.payload as Study) : undefined
-  const drawing =
-    data?.documents.find(
-      (document) =>
-        document.id === search.drawingFile &&
-        document.filename.toLowerCase().endsWith(".pdf"),
-    ) ??
-    data?.documents.find((document) => document.id === data.drawing_file_id) ??
-    (data?.drawing_reference_set
-      ? undefined
-      : data?.documents.find((document) =>
-          /(?:DRW|plano|drawing).*\.pdf$/i.test(document.filename),
-        ))
+  const componentPlans = componentDrawings(
+    data,
+    search.cota,
+    search.revision ?? study?.measurement_revision,
+  )
+  const drawing = componentPlans
+    ? (componentPlans.find((d) => d.id === search.drawingFile) ??
+      (componentPlans.length === 1 ? componentPlans[0] : undefined))
+    : (data?.documents.find(
+        (document) =>
+          document.id === search.drawingFile &&
+          document.filename.toLowerCase().endsWith(".pdf"),
+      ) ??
+      data?.documents.find(
+        (document) => document.id === data.drawing_file_id,
+      ) ??
+      (data?.drawing_reference_set
+        ? undefined
+        : data?.documents.find((document) =>
+            /(?:DRW|plano|drawing).*\.pdf$/i.test(document.filename),
+          )))
   const filters = (
     <div className="space-y-3">
+      {componentPlans && search.cota && (
+        <div className="max-w-md">
+          {componentPlans.length ? (
+            <FilterSelect
+              label="Plano del componente"
+              value={drawing?.id ?? ""}
+              options={componentPlans.map((d) => ({
+                value: d.id,
+                label: d.filename,
+              }))}
+              onChange={(drawingFile) => change({ drawingFile })}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Asigna un plano a este componente y revisión en Organizar por
+              componentes.
+            </p>
+          )}
+        </div>
+      )}
       {!embedded && (
         <MetrologyFilters
           hidePart={embedded}
@@ -169,7 +199,7 @@ export function MetrologyPage({
         search={{
           ...search,
           plano: undefined,
-          drawingQ: search.drawingQ ?? search.cota,
+          drawingQ: search.drawingQ ?? drawingNumber(search.cota),
         }}
         replace
       />
@@ -208,6 +238,7 @@ export function MetrologyPage({
         status={status}
         filters={
           !embedded ||
+          !!componentPlans ||
           (data?.measurement_revisions?.length ?? 0) > 1 ||
           search.snapshot
             ? filters
@@ -247,17 +278,31 @@ export function MetrologyPage({
             : undefined
         }
         onDrawing={
-          drawing && partId
-            ? (code) =>
+          (drawing || data?.components?.length) && partId
+            ? (code) => {
+                const plans = componentDrawings(
+                  data,
+                  code,
+                  search.revision ?? study?.measurement_revision,
+                )
+                const target = plans
+                  ? (plans.find((d) => d.id === search.drawingFile) ??
+                    (plans.length === 1 ? plans[0] : undefined))
+                  : drawing
+                if (!target) {
+                  change({ cota: code, drawingFile: undefined })
+                  return
+                }
                 void navigate({
                   to: "/parts/$partId/fichero/$fileId",
-                  params: { partId, fileId: drawing.id },
+                  params: { partId, fileId: target.id },
                   search: {
                     ...consultationSearch,
                     plano: undefined,
-                    drawingQ: code,
+                    drawingQ: drawingNumber(code),
                   },
                 })
+              }
             : undefined
         }
       />

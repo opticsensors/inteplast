@@ -4,19 +4,21 @@ import uuid
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from pydantic import Field as PydanticField
 from sqlalchemy import JSON, Column, DateTime, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
+from app.component_models import ComponentDefinition, qualified
 from app.models import FeatureCategory, FilePublic, PartPublic, get_datetime_utc
 
 
 class PartCharacteristic(SQLModel, table=True):
-    __table_args__ = (UniqueConstraint("part_id", "code", "revision"),)
+    __table_args__ = (UniqueConstraint("part_id", "component", "code", "revision"),)
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     part_id: uuid.UUID = Field(foreign_key="part.id", ondelete="CASCADE", index=True)
     code: str = Field(max_length=64)
+    component: str = Field(default="", max_length=24)
     revision: str = Field(default="06", max_length=64)
     title: str = Field(default="", max_length=255)
 
@@ -120,13 +122,24 @@ class CharacteristicPublic(BaseModel):
     id: uuid.UUID
     part_id: uuid.UUID
     code: str
+    component: str = ""
+    number: str = ""
     revision: str
     title: str
     role: str | None = None
 
+    @model_validator(mode="after")
+    def qualified_identity(self) -> "CharacteristicPublic":
+        if not self.number:
+            self.number = self.code
+            self.code = qualified(self.code, self.component)
+        return self
+
 
 class CharacteristicAssignment(BaseModel):
-    code: str = PydanticField(pattern=r"^N\d{1,6}(?:\.\d{1,3})?$", max_length=64)
+    code: str = PydanticField(
+        pattern=r"^(?:[A-Z][A-Z0-9_-]{0,23}:)?N\d{1,6}(?:\.\d{1,3})?$", max_length=64
+    )
     revision: str = PydanticField(min_length=1, max_length=64)
     role: Literal["primary", "reference", "context"] = "primary"
 
@@ -181,6 +194,7 @@ class MetrologyCatalog(BaseModel):
 
 
 class PartEvidencePublic(BaseModel):
+    components: list[ComponentDefinition] = []
     part: PartPublic
     documents: list[EvidenceDocument]
     characteristics: list[CharacteristicPublic]

@@ -35,7 +35,8 @@ código y cuatro referencias. Se pueden añadir más ficheros de esa carpeta, es
 tipo, darles un nombre visible y elegir el principal de cada tipo de referencia.
 Crear guarda la ficha e incorpora automáticamente CSV CMM individuales/comparativos y
 tablas PPAP XLS/XLSX. **Actualizar datos** repite la lectura de forma explícita y muestra
-su resultado, progreso y fuentes en Cotas. Features ofrece únicamente piezas registradas y reutiliza sus referencias al
+su progreso en Cotas; el resultado y las fuentes quedan en el registro técnico del servidor,
+sin un panel de diagnóstico en la ficha (decisión del 16/11/2026). Features ofrece únicamente piezas registradas y reutiliza sus referencias al
 asociarlas. La integración nativa local se describe en [ficheros-externos.md](ficheros-externos.md).
 La interpretación de correcciones de otras piezas sigue pendiente.
 
@@ -131,7 +132,7 @@ Decisiones que conviene conocer antes de tocarlo:
 | `FeatureAsset.file_id` y `part_id` son **`SET NULL`** | Las FK conservan la fila del adjunto ante un borrado directo del registro referenciado. La API bloquea el borrado de piezas usadas; no ofrece dejarlas sin pieza como flujo de usuario |
 | `Part.code` es **UNIQUE**; las piezas existentes se pueden vincular sin duplicarlas | Es la clave con la que se agrupa todo. El alta desde carpeta extrae un código editable del nombre |
 | `FeaturePartLink` es una tabla de unión **sin campos propios** | Solo dice *«este feature está en esta pieza»*. Las cotas no cuelgan de aquí: se asocian con `FeatureCharacteristicLink` (feature ↔ cota de una pieza y revisión, con rol). El modelo normalizado `INSTANCIA_EN_PROYECTO` sigue pendiente |
-| Borrar una pieza es **solo de superusuario y si no tiene uso** | Se rechaza con `409` si quedan vínculos/adjuntos en features, importaciones, cotas o documentos de evidencia; no se borran originales |
+| Borrar una pieza es **solo de superusuario** | Sin confirmación solo se borra una pieza sin uso (`409` si tiene vínculos, importaciones, cotas o documentos). Con la clave del alcance (`GET /parts/{id}/deletion`) se borra con sus datos en la app; los features, las demás piezas, los documentos compartidos y los originales se conservan (17/11/2026, `app/part_deletion.py`) |
 
 ### Ficheros subidos y originales externos
 
@@ -215,7 +216,8 @@ Todo bajo `/api/v1`. Documentación interactiva en `http://localhost:8000/docs`.
 | `GET` | `/catalog` | Búsqueda paginada de piezas/features; cotas por pieza/revisión solo con texto. Filtros compartidos y `kind=all/part/feature` |
 | `GET` | `/parts/{id}/detail` | Identidad, portada/CAD, referencias y features vinculados |
 | `PUT` | `/parts/{id}/cover` | Guardar una captura del CAD actual, validando versión y SHA-256 |
-| `DELETE` | `/parts/{id}` | Borrar una pieza sin uso. **Solo superusuario**; usada → `409` |
+| `GET` | `/parts/{id}/deletion` | Alcance del borrado: qué se elimina, qué se conserva y la clave `key`. **Solo superusuario** |
+| `DELETE` | `/parts/{id}` | Borrar una pieza. **Solo superusuario**. Sin `confirm`, solo si no tiene uso (`409`). Con `?confirm=<key>`, con sus datos; si el alcance ha cambiado → `409` |
 | `POST` | `/files/` | Subir un fichero (multipart) → devuelve el `id` que se referencia |
 | `GET` | `/files/source` | Listar una carpeta del origen configurado; `path`, `skip`, `limit` |
 | `POST` | `/files/reference` | Registrar/reutilizar una referencia del origen configurado; ver contrato local/Graph |
@@ -244,8 +246,40 @@ el administrador. Las rutas privadas para crear usuarios de prueba requieren
 - **Borrar un feature**: solo el autor o un superusuario.
 - **Borrar notas, adjuntos y ficheros**: cualquier usuario autenticado, conforme al modelo
   colaborativo. También son acciones permanentes; quitar un adjunto no borra sus bytes.
-- **Borrar piezas**: solo superusuario, sin vínculos a features ni importaciones, cotas o documentos de evidencia.
+- **Borrar piezas**: solo superusuario, comprobado en el backend. Con sus datos solo tras revisar el alcance en la ficha de pieza y escribir su código (ver [borrado de una pieza](#borrado-de-una-pieza-17112026)).
 - **Gestión de usuarios**: superusuario, como en la plantilla.
+
+### Borrado de una pieza (17/11/2026)
+
+En la ficha de pieza, un administrador abre **⋯ → Eliminar**. El diálogo pide el alcance a
+`GET /parts/{id}/deletion` y muestra qué se elimina y qué se conserva. «Eliminar pieza» se
+activa al escribir el código de la pieza y envía `DELETE /parts/{id}?confirm=<key>`.
+Los usuarios normales no ven la acción y el backend responde `403`. Código: `app/part_deletion.py`
+y `Parts/DeletePart.tsx`.
+
+- **Se elimina:** la pieza, sus cotas (`PartCharacteristic`) y las asignaciones de esas cotas
+  a features, las importaciones de medición, sus listas de archivos y referencias, los trabajos
+  de evidencia, sus adjuntos en features y su entrada en el orden de piezas de cada feature.
+  Una portada 3D hecha con esta pieza se quita del feature.
+- **Documentos:** un `StoredFile` usado solo por esta pieza se elimina con su vista previa,
+  su índice de plano y sus ubicaciones revisadas. Si es una subida, también sus bytes. Si lo usa
+  otra pieza, un feature, la imagen de un feature o una nota (`![…](file:id)` en una advertencia
+  o lección), se conserva entero.
+- **Nunca se tocan** los originales de INTEPLAST, en local ni en SharePoint: el `StoredFile`
+  de un original es solo una referencia. Los features, sus notas y las demás piezas se conservan.
+- **Confirmación ligada a los datos:** `key` es la huella del contenido completo de las filas
+  que se borran (cotas, sus asignaciones, importaciones, adjuntos y ubicaciones revisadas), no
+  solo de los recuentos; de los trabajos de evidencia, solo su identidad, porque su progreso
+  cambia con el diálogo abierto. Si algo cambia entre la revisión y el borrado, se responde `409` y el diálogo
+  vuelve a cargar el alcance. El borrado bloquea la pieza y espera a que termine una importación
+  de evidencia que esté escribiendo en ella.
+- **Sin `confirm`** se mantiene el comportamiento anterior: solo se borra una pieza sin uso.
+  Es lo que usa la papelera del desplegable «Añadir pieza» de la ficha del feature.
+- **Pruebas** en BD aislada (`tests/api/routes/test_parts.py`): alcance y borrado completo,
+  rechazo a usuarios normales, clave antigua o falsa, clave que cambia al editar una ubicación,
+  una cota o una importación sin cambiar los recuentos, conservación del original, del documento
+  compartido, de la imagen de una nota, de la otra pieza y sus cotas, y ausencia de filas que apunten a la pieza o a sus
+  documentos borrados. En el navegador, `piece-editor.test.cjs`.
 
 ---
 

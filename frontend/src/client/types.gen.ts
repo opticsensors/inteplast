@@ -64,6 +64,8 @@ export type CharacteristicPublic = {
     id: string;
     part_id: string;
     code: string;
+    component?: string;
+    number?: string;
     revision: string;
     title: string;
     role?: (string | null);
@@ -80,12 +82,54 @@ export type ChatRequest = {
     messages: Array<ChatMessage>;
 };
 
+export type ComponentDefinition = {
+    key: string;
+    name: string;
+    sheets?: Array<(string)>;
+    files?: Array<ComponentFile>;
+};
+
+export type ComponentFile = {
+    path: string;
+    revision?: string;
+};
+
+export type ComponentOptions = {
+    components?: Array<ComponentDefinition>;
+    unassigned?: Array<(string)>;
+    sources?: Array<ComponentSource>;
+    sheet_names?: Array<(string)>;
+    workbooks?: Array<WorkbookSheets>;
+    suggestions?: Array<ComponentDefinition>;
+    unassigned_characteristics?: number;
+};
+
+export type ComponentOrganization_Input = {
+    components?: Array<ComponentDefinition>;
+    unassigned?: Array<(string)>;
+};
+
+export type ComponentOrganization_Output = {
+    components?: Array<ComponentDefinition>;
+    unassigned?: Array<(string)>;
+};
+
+export type ComponentSource = {
+    path: string;
+    kind: string;
+};
+
 export type CotaSearchResult = {
     id: string;
     code: string;
     title: string;
     revision: string;
     part: PartPublic;
+};
+
+export type DeletionFeature = {
+    id: string;
+    name: string;
 };
 
 export type DrawingPublic = {
@@ -531,6 +575,33 @@ export type PartCreate = {
     folder_path?: (string | null);
 };
 
+export type PartDeletionResult = {
+    message: string;
+    scope: PartDeletionScope;
+};
+
+/**
+ * What deleting the piece removes and what it keeps.
+ */
+export type PartDeletionScope = {
+    part_id: string;
+    code: string;
+    name?: (string | null);
+    folder_path?: (string | null);
+    features?: Array<DeletionFeature>;
+    characteristics?: number;
+    feature_characteristic_links?: number;
+    measurement_imports?: number;
+    feature_assets?: number;
+    covers_reset?: number;
+    files_removed?: number;
+    uploads_removed?: number;
+    files_kept?: number;
+    reviewed_locations?: number;
+    jobs?: number;
+    key: string;
+};
+
 export type PartDetailPublic = {
     part: PartCardPublic;
     features: Array<FeaturePublic>;
@@ -539,6 +610,7 @@ export type PartDetailPublic = {
 };
 
 export type PartEvidencePublic = {
+    components?: Array<ComponentDefinition>;
     part: PartPublic;
     documents: Array<EvidenceDocument>;
     characteristics: Array<CharacteristicPublic>;
@@ -647,6 +719,7 @@ export type ReadFileReport = {
     path: string;
     group: string;
     status: string;
+    sheet?: (string | null);
 };
 
 export type ReferenceCandidate = {
@@ -759,6 +832,11 @@ export type ValidationError = {
     ctx?: {
         [key: string]: unknown;
     };
+};
+
+export type WorkbookSheets = {
+    path: string;
+    sheets?: Array<(string)>;
 };
 
 export type AssistantStatusResponse = (AssistantStatus);
@@ -1209,10 +1287,30 @@ export type PartsUpdatePartData = {
 export type PartsUpdatePartResponse = (PartPublic);
 
 export type PartsDeletePartData = {
+    confirm?: (string | null);
     partId: string;
 };
 
-export type PartsDeletePartResponse = (Message);
+export type PartsDeletePartResponse = (PartDeletionResult);
+
+export type PartsReadPartDeletionData = {
+    partId: string;
+};
+
+export type PartsReadPartDeletionResponse = (PartDeletionScope);
+
+export type PartsReadComponentOptionsData = {
+    partId: string;
+};
+
+export type PartsReadComponentOptionsResponse = (ComponentOptions);
+
+export type PartsSaveComponentOrganizationData = {
+    partId: string;
+    requestBody: ComponentOrganization_Input;
+};
+
+export type PartsSaveComponentOrganizationResponse = (ComponentOrganization_Output);
 
 export type PrivateCreateUserData = {
     requestBody: PrivateUserCreate;

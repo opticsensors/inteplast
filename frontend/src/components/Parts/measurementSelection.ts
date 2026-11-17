@@ -5,6 +5,8 @@ import type { Entry, Series, Study } from "./types"
 
 export type PartSearch = {
   editar?: true
+  /** Recién creada con «Varios componentes»: abrir Componentes y leer al cerrar. */
+  componentes?: true
   q?: string
   cota?: string
   revision?: string
@@ -39,6 +41,10 @@ export function validatePartSearch(
   return {
     editar:
       search.editar === true || search.editar === "true" ? true : undefined,
+    componentes:
+      search.componentes === true || search.componentes === "true"
+        ? true
+        : undefined,
     q: typeof search.q === "string" ? search.q : text(search.q),
     cota: text(search.cota) ?? text(search.caso),
     revision: text(search.revision),

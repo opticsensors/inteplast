@@ -82,7 +82,7 @@ def folders(root: Path) -> tuple[list[str], list[str]]:
 
 def check_piece(root: Path, folder: str, out: Path) -> dict[str, Any]:
     configure(root, out)
-    from app.automatic_measurements import READER, collect, measurement_skip_reason
+    from app.automatic_measurements import READER, collect, measurement_skip_reason, split_sheet_key
     from app.core.config import settings
     from app.file_sources import source_item
     from app.ingestion.measurement_provenance import usable_measurement
@@ -112,7 +112,7 @@ def check_piece(root: Path, folder: str, out: Path) -> dict[str, Any]:
              "mtime_ns": i.local.stat().st_mtime_ns}
             for i in items if i.local
         ]
-        candidates, notices = reference_candidates(folder)
+        candidates, notices, _icp_folders = reference_candidates(folder)
         result["references"] = {
             kind: [c.model_dump() for c in choices] for kind, choices in candidates.items()
         }
@@ -131,7 +131,12 @@ def check_piece(root: Path, folder: str, out: Path) -> dict[str, Any]:
         # read normally; the separate correction-study adapter is not executed.
         issues: dict[str, str] = {}
         groups = collect(folder, checked, pilot=result["pilot"], file_issues=issues, diagnostics=diagnostics)
-        result["file_issues"] = issues
+        # Sheet-level entries are reported apart so file counts stay comparable.
+        result["file_issues"] = {k: v for k, v in issues.items() if split_sheet_key(k)[1] is None}
+        result["sheet_issues"] = [
+            {"path": split_sheet_key(k)[0], "sheet": split_sheet_key(k)[1], "status": v}
+            for k, v in issues.items() if split_sheet_key(k)[1] is not None
+        ]
         result["groups"] = len(groups)
         result["observations"] = sum(len(rows) for rows in groups.values())
         result["usable_observations"] = sum(usable_measurement(row) for rows in groups.values() for row in rows)
@@ -148,7 +153,7 @@ def check_piece(root: Path, folder: str, out: Path) -> dict[str, Any]:
     components = {s["sheet"].strip().lower() for s in sheets}
     if any(re.search(r"\bbase\b", s) for s in components) and any(re.search(r"\btapa\b", s) for s in components):
         result["limitations"].append("component_identity_missing_base_tapa")
-    if result["status"] == "read" and (result["sheets_to_review"] or result["rejected_rows"] or result.get("file_issues")):
+    if result["status"] == "read" and (result["sheets_to_review"] or result["rejected_rows"] or result.get("file_issues") or result.get("sheet_issues")):
         result["status"] = "read_with_gaps"
     result["elapsed_seconds"] = round(time.monotonic() - started, 2)
     return result

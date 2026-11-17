@@ -335,6 +335,13 @@ class FeaturePartLink(SQLModel, table=True):
 class Part(PartBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     files_managed: bool = False
+    components: list[dict[str, Any]] = Field(
+        default_factory=list, sa_column=Column(JSON, nullable=False)
+    )
+    # "file:<path>" / "sheet:<name>" left without component on purpose: no proposals.
+    component_unassigned: list[str] = Field(
+        default_factory=list, sa_column=Column(JSON, nullable=False)
+    )
     last_read: dict[str, Any] | None = Field(default=None, sa_column=Column(JSON))
     created_at: datetime | None = Field(
         default_factory=get_datetime_utc,

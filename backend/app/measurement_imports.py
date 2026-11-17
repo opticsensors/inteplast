@@ -50,7 +50,14 @@ def digest(value: Any) -> str:
 
 def context_key(part: Part) -> str:
     return digest(
-        [str(part.id), part.code, part.folder_path, settings.ASSETS_SOURCE_ID, READER]
+        [
+            str(part.id),
+            part.code,
+            part.folder_path,
+            settings.ASSETS_SOURCE_ID,
+            READER,
+            part.components,
+        ]
     )
 
 
@@ -377,6 +384,11 @@ def commit(
     # Serialize imports, including retries and imports initiated from another feature.
     session.exec(select(Part).where(Part.id == part.id).with_for_update()).one()
     session.refresh(part)
+    if part.components:
+        raise HTTPException(
+            422,
+            "Para piezas con componentes, asigna las fuentes en Organizar por componentes y usa Actualizar datos.",
+        )
     if request.context_key != context_key(part):
         raise HTTPException(
             409, "La pieza o su carpeta han cambiado. Vuelve a revisar los datos."
@@ -425,6 +437,7 @@ def commit(
                         PartCharacteristic.part_id == part.id,
                         PartCharacteristic.revision == item.revision,
                         PartCharacteristic.code == code,
+                        PartCharacteristic.component == "",
                     )
                 ).first()
                 if characteristic is None:

@@ -1,5 +1,20 @@
 # TODO
 
+NEW todo humanly made:
+
+- me gustaria que la app web final tuviera un bototn que me pasara de una presentacion en lista en el catalogo a una presentacion en cuadricula como la de app.py, tanto para piezas como para los features
+
+- el tema de la visualizacion por grafo y la visualizacion del grid de planos se puede añadir a la web? lo meterias en la pestaña catalogo, o lo metemos en nueves pestañas debajo de catalogo? de hecho pensandolo el grafo me parece buena idea que este como con un boton (del mismo modo que el boton cuadricula te pasa de lista a cuadricula, que haya un boton que pase a grafo, y ese grafo sea como el de app.py y el usuario pueda interactuar con el y que al clickar se vara a la ficha o pieza clickadas..., añadir la opcion de añadir en el grafo fabricante, y tambein familia de pieza de moemnto peroq ue salgan sin seleccionar por defecto. )
+
+
+- traspasar la app en el server. el server es diu euredinteplast.local.eurecat.org et serveix com a entrada DNS? https://euredinteplast.local.eurecat.org ?
+  i per la API et val el mateix subdomini: https://euredinteplast.local.eurecat.org/API
+
+
+- cambiar el olama por uno de chatgpt codex de prueba, el mas rapido, para ver que tal funciona, no hacerlo agente, decirle soloq eu lo use de fondo como prueba asuemiendo o simulando mejro dicjho como si fuera un agente coenctado a la api de la app
+
+
+
 titulo oficial: gestor de conocimiento de modificaciones de molde
 *(04/11/2026: todavía no se usa; `PROJECT_NAME` y el `<title>` de la web siguen sin él. Pendiente decidir dónde va.)*
 

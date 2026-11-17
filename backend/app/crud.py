@@ -5,6 +5,7 @@ from sqlalchemy import ColumnElement, case, func
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, or_, select
 
+from app.component_models import identity_expression
 from app.core.security import get_password_hash, verify_password
 from app.feature_links import feature_membership
 from app.knowledge_models import FeatureCharacteristicLink, PartCharacteristic
@@ -138,7 +139,7 @@ def _search_conditions(
                 col(Feature.id).in_(
                     select(FeatureCharacteristicLink.feature_id)
                     .join(PartCharacteristic)
-                    .where(col(PartCharacteristic.code).ilike(like))
+                    .where(identity_expression().ilike(like))
                 ),
                 col(Feature.name).ilike(like),
                 col(Feature.description).ilike(like),
@@ -208,7 +209,7 @@ def search_features(
         matching_cotas = (
             select(FeatureCharacteristicLink.feature_id)
             .join(PartCharacteristic)
-            .where(func.lower(PartCharacteristic.code) == q.strip().lower())
+            .where(func.lower(identity_expression()) == q.strip().lower())
         )
         statement = statement.order_by(
             case(

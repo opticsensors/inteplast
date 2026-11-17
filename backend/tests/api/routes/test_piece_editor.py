@@ -215,7 +215,12 @@ def test_read_report_lists_only_used_sources_and_polling_does_not_reimport(
     assert report["state"] == "ready"
     assert report["imported"] == 1
     assert report["files"] == [
-        {"path": measurement, "group": "measurements", "status": "imported"}
+        {
+            "path": measurement,
+            "group": "measurements",
+            "status": "imported",
+            "sheet": None,
+        }
     ]
     write(root, measurement, csv("9.960"))
     assert client.get(f"{url}/read-data", headers=headers).json() == report

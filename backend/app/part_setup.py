@@ -76,6 +76,8 @@ class ReadFileReport(BaseModel):
     path: str
     group: str
     status: str
+    # Set when the entry describes one sheet of the file, not the whole file.
+    sheet: str | None = None
 
 
 def folder_files(folder_path: str) -> list[SourceItem]:
@@ -174,11 +176,20 @@ def references(session: Session, part_id: uuid.UUID) -> dict[str, StoredFile]:
 
 def reference_candidates(
     folder_path: str,
-) -> tuple[dict[str, list[ReferenceCandidate]], list[str]]:
-    """Read-only discovery, also used by the offline ingestion check."""
+) -> tuple[dict[str, list[ReferenceCandidate]], list[str], set[str]]:
+    """Read-only discovery, also used by the offline ingestion check.
+
+    Also returns the folders that hold an infra-CONVERT project (`.icp`).
+    """
     candidates: dict[str, list[ReferenceCandidate]] = defaultdict(list)
     notices: list[str] = []
-    for item in folder_files(folder_path):
+    files = folder_files(folder_path)
+    icp_folders = {
+        PurePosixPath(item.path).parent.as_posix()
+        for item in files
+        if item.suffix == ".icp"
+    }
+    for item in files:
         kind = reference_kind(item.relative_to(folder_path))
         if not kind:
             continue
@@ -197,7 +208,25 @@ def reference_candidates(
             notices.append(f"No se puede vincular todavía: {relative}.")
     for choices in candidates.values():
         choices.sort(key=lambda item: item.path.casefold())
-    return candidates, notices
+    return candidates, notices, icp_folders
+
+
+def proposed_reference(
+    kind: str, choices: list[ReferenceCandidate], icp_folders: set[str]
+) -> ReferenceCandidate | None:
+    """A deterministic first approximation, explicitly reviewed before saving.
+
+    The first one by path. For the drawing, one with an `.icp` beside it goes first:
+    it is the one whose balloons the index can number.
+    """
+    if kind == "drawing":
+        beside = [
+            item
+            for item in choices
+            if PurePosixPath(item.path).parent.as_posix() in icp_folders
+        ]
+        choices = beside or choices
+    return choices[0] if choices else None
 
 
 def discover(session: Session, folder_path: str) -> FolderDiscovery:
@@ -206,7 +235,7 @@ def discover(session: Session, folder_path: str) -> FolderDiscovery:
             422, "Selecciona la carpeta de una pieza dentro del origen."
         )
     root = source_item(folder_path, directory=True)
-    candidates, notices = reference_candidates(folder_path)
+    candidates, notices, icp_folders = reference_candidates(folder_path)
     part = session.exec(select(Part).where(Part.folder_path == folder_path)).first()
     current = references(session, part.id) if part else {}
     chosen = reference_choices(session, part.id) if part else {}
@@ -214,8 +243,11 @@ def discover(session: Session, folder_path: str) -> FolderDiscovery:
     for kind in KINDS:
         choices = sorted(candidates[kind], key=lambda item: item.path.casefold())
         existing = current.get(kind)
-        # A deterministic first approximation, explicitly reviewed before saving.
-        selected = choices[0] if choices and kind not in chosen else None
+        selected = (
+            proposed_reference(kind, choices, icp_folders)
+            if kind not in chosen
+            else None
+        )
         proposals.append(
             ReferenceProposal(
                 kind=kind,
@@ -391,10 +423,12 @@ def refresh(session: Session, part: Part, user_id: uuid.UUID) -> PartRefreshResu
     added, skipped = automatic_measurements.refresh(
         session, part, user_id, paths, used_files=used_files
     )
-    read_files = [
-        ReadFileReport(path=path, group="measurements", status=status)
-        for path, status in sorted(used_files.items())
-    ]
+    read_files = []
+    for key, status in sorted(used_files.items()):
+        path, sheet = automatic_measurements.split_sheet_key(key)
+        read_files.append(
+            ReadFileReport(path=path, group="measurements", status=status, sheet=sheet)
+        )
     preview = MeasurementPreview(
         context_key=measurement_imports.context_key(part), files=[]
     )

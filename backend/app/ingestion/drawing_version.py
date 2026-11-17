@@ -7,7 +7,7 @@ import hashlib
 from functools import lru_cache
 from pathlib import Path
 
-INDEX_VERSION = 4
+INDEX_VERSION = 5
 MODEL = Path(__file__).with_name("models") / "lector_globos.onnx"
 
 # Provisional thresholds (29/10/2026), chosen on the prototype's development drawings with at most

@@ -9,6 +9,8 @@
 > viven en las fichas enlazadas; aquí se mantiene la pregunta o la resolución.
 > El **13/11/2026** se añade [A27: exportaciones SPC](#a27-export-spc) y se prioriza
 > el paquete de aclaraciones para la extracción sin IA que sigue a continuación.
+> El **16/11/2026** se añaden [A28: informe del 3226 sin numeración](#a28-3226-sin-numeracion)
+> y la incongruencia I-209 (3197), que no se pregunta por separado: va con A14/A24.
 
 <a id="extraccion-sin-ia"></a>
 ## Para validar la extracción sin IA · 13/11/2026
@@ -786,6 +788,29 @@ ya figuraban pendientes en el estudio de ingesta; esta pregunta los concreta con
 un archivo y una línea. No atribuir a estos CSV conclusiones de otros SPC por
 compartir extensión o marcador. Complementa A14/A24; no sustituye la decisión de
 Eduard sobre el envío de A18.
+</details>
+
+<a id="a28-3226-sin-numeracion"></a>
+### A28 · 3226: el informe no numera las cotas
+
+**Recordatorio.** El informe `3226-00_intern.01.xls` (hoja `DR`, plano `DW-UMED-18` según su
+cabecera) tiene 47 filas con nominal, tolerancias, equipo y un valor medido, de la 14 a la 60.
+
+**Qué no nos cuadra.** La columna `Nr` está vacía en las 47 filas y la columna del valor no
+dice de qué cavidad es. El plano que tenemos (`20241028_DW-UMED-2-2_REV01.PDF`) tampoco lleva
+las cotas numeradas. Sin un número no podemos enlazar cada fila con su cota del plano; solo
+distinguimos algunas por el comentario `left`/`right`.
+
+**Pregunta: ¿existe un plano o un informe del 3226 con las cotas numeradas, y de qué cavidad
+es la medida de ese informe?**
+
+<details><summary>Contexto interno (no enviar)</summary>
+
+Comprobado el 16/11/2026 con el lector de la app (`measurement_tables.workbook`). La copia de
+`5- Retoques molde/1st loop of corrections/` es la misma hoja. El informe cita el plano
+`DW-UMED-18` y el que tenemos es `DW-UMED-2-2`: no se ha comprobado si son el mismo. No se
+inventan identificadores por la posición de la fila: una fila insertada los cambiaría todos.
+La app deja la hoja como pendiente con ese motivo. Decidir si se envía corresponde a Eduard.
 </details>
 
 ### Correspondencia con las incongruencias abiertas

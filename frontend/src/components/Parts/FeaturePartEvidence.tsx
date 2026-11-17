@@ -16,6 +16,7 @@ import { usePendingTask } from "@/components/Features/usePendingTask"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
+import { componentDrawings, drawingNumber } from "./componentDrawings"
 
 type AddedCota = {
   key: string
@@ -23,7 +24,9 @@ type AddedCota = {
   manual?: boolean
 }
 const validCode = (code: string) =>
-  /^N\d{1,6}(?:\.\d{1,3})?$/.test(normalizeCota(code))
+  /^(?:[A-Z][A-Z0-9_-]{0,23}:)?N\d{1,6}(?:\.\d{1,3})?$/.test(
+    normalizeCota(code),
+  )
 const uniqueRevision = (items: CharacteristicPublic[]) => {
   const revisions = [
     ...new Set(items.map((item) => item.revision).filter(Boolean)),
@@ -53,7 +56,9 @@ export function FeaturePartEvidence({
   const partEvidence = useQuery({
     queryKey: ["part-evidence", partId],
     queryFn: () => EvidenceService.readPartEvidence({ partId }),
-    enabled: Boolean(editable),
+    enabled: Boolean(
+      editable || result.data?.characteristics.some((c) => c.component),
+    ),
   })
   const invalidate = () => {
     void client.invalidateQueries({ queryKey })
@@ -150,66 +155,79 @@ export function FeaturePartEvidence({
       asset.kind === "drawing" &&
       asset.file?.filename.toLowerCase().endsWith(".pdf"),
   )?.file
-  const chip = (cota: CharacteristicPublic) => (
-    <div
-      key={cota.id}
-      className="inline-flex h-7 shrink-0 items-center rounded-md border text-sm"
-    >
-      {onSelectCota ? (
-        <button
-          type="button"
-          className="h-full rounded-md px-2 font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          onClick={() => onSelectCota(cota)}
-        >
-          {cota.code}
-        </button>
-      ) : (
-        <Link
-          to="/parts/$partId"
-          params={{ partId }}
-          search={{
-            cota: cota.code,
-            revision: cota.revision,
-            feature: feature.id,
-          }}
-          className="px-2 font-medium hover:underline"
-        >
-          {cota.code}
-        </Link>
-      )}
-      {drawing && (
-        <Button asChild variant="ghost" size="icon" className="size-6 shrink-0">
+  const chip = (cota: CharacteristicPublic) => {
+    const plans = componentDrawings(partEvidence.data, cota.code, cota.revision)
+    const cotaDrawing = plans
+      ? plans.length === 1
+        ? plans[0]
+        : undefined
+      : drawing
+    return (
+      <div
+        key={cota.id}
+        className="inline-flex h-7 shrink-0 items-center rounded-md border text-sm"
+      >
+        {onSelectCota ? (
+          <button
+            type="button"
+            className="h-full rounded-md px-2 font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            onClick={() => onSelectCota(cota)}
+          >
+            {cota.code}
+          </button>
+        ) : (
           <Link
-            to="/parts/$partId/fichero/$fileId"
-            params={{ partId, fileId: drawing.id }}
+            to="/parts/$partId"
+            params={{ partId }}
             search={{
               cota: cota.code,
               revision: cota.revision,
               feature: feature.id,
-              drawingQ: cota.code,
             }}
-            title={`Buscar ${cota.code} en el plano`}
+            className="px-2 font-medium hover:underline"
           >
-            <FileSearch className="size-3.5" />
-            <span className="sr-only">Buscar {cota.code} en el plano</span>
+            {cota.code}
           </Link>
-        </Button>
-      )}
-      {editable && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-6 shrink-0 text-destructive"
-          disabled={remove.isPending}
-          onClick={() => remove.mutate(cota.id)}
-        >
-          <Trash2 className="size-3.5" />
-          <span className="sr-only">Quitar {cota.code}</span>
-        </Button>
-      )}
-    </div>
-  )
+        )}
+        {cotaDrawing && (
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
+            className="size-6 shrink-0"
+          >
+            <Link
+              to="/parts/$partId/fichero/$fileId"
+              params={{ partId, fileId: cotaDrawing.id }}
+              search={{
+                cota: cota.code,
+                revision: cota.revision,
+                feature: feature.id,
+                drawingQ: drawingNumber(cota.code),
+              }}
+              title={`Buscar ${cota.code} en el plano`}
+            >
+              <FileSearch className="size-3.5" />
+              <span className="sr-only">Buscar {cota.code} en el plano</span>
+            </Link>
+          </Button>
+        )}
+        {editable && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-6 shrink-0 text-destructive"
+            disabled={remove.isPending}
+            onClick={() => remove.mutate(cota.id)}
+          >
+            <Trash2 className="size-3.5" />
+            <span className="sr-only">Quitar {cota.code}</span>
+          </Button>
+        )}
+      </div>
+    )
+  }
   const additions = new Set(added.map((item) => item.characteristic?.id))
   const stored =
     result.data?.characteristics.filter((item) => !additions.has(item.id)) ?? []

@@ -98,6 +98,238 @@ async function choose(page, selected = "9001 New housing") {
   await page.getByLabel("Cliente", { exact: true }).fill("Example company")
 }
 
+test("a multi-component piece opens Componentes on creation and reads its data when closed", async (t) => {
+  const page = await mount(t)
+  await choose(page)
+  await page.evaluate(() => {
+    window.review.refreshRequests = []
+  })
+  await page
+    .getByRole("checkbox", {
+      name: "Varios componentes",
+    })
+    .check()
+  await page.getByRole("button", { name: "Crear pieza", exact: true }).click()
+  const dialog = page.getByRole("dialog", { name: "Componentes" })
+  await expect(dialog).toBeVisible()
+  assert.equal(
+    await page.evaluate(() => window.review.refreshRequests.length),
+    0,
+  )
+  // Without components the piece is read as a single one.
+  await dialog.getByRole("button", { name: "Cancelar" }).click()
+  await expect(dialog).toHaveCount(0)
+  await expect
+    .poll(() => page.evaluate(() => window.review.refreshRequests.length))
+    .toBe(1)
+  assert.equal(
+    await page.evaluate(() => window.review.location().search.componentes),
+    undefined,
+  )
+  await page
+    .getByRole("button", { name: "Actualizar datos", exact: true })
+    .click()
+  await expect
+    .poll(() => page.evaluate(() => window.review.refreshRequests.length))
+    .toBe(2)
+})
+
+test("components propose files and sheets by name; ambiguous or edited ones stay as chosen", async (t) => {
+  const page = await mount(t)
+  await choose(page)
+  await page.getByRole("button", { name: "Crear pieza", exact: true }).click()
+  await page.evaluate(() => {
+    window.review.componentExtraSources = [
+      { path: "1- 2D y 3D pieza/20240508_BASE_RCP31.stp", kind: "part" },
+      { path: "1- 2D y 3D pieza/Tapón_v2.pdf", kind: "drawing" },
+      { path: "1- 2D y 3D pieza/BASE_TAPON conjunto.pdf", kind: "drawing" },
+      { path: "1- 2D y 3D pieza/BASE2.pdf", kind: "drawing" },
+      { path: "4- Metrologia/BASE informe.xls", kind: "measurements" },
+    ]
+    window.review.componentExtraSheets = ["DR(TAPÓN)", "Resumen base"]
+  })
+  await page.getByRole("button", { name: "Componentes", exact: true }).click()
+  const dialog = page.getByRole("dialog", { name: "Componentes" })
+  await dialog.getByRole("button", { name: "Añadir componente" }).click()
+  await dialog.getByLabel("Nombre", { exact: true }).first().fill("BASE")
+  await dialog.getByRole("button", { name: "Añadir componente" }).click()
+  await dialog.getByLabel("Nombre", { exact: true }).nth(1).fill("Tapón")
+  const owner = (label) => dialog.getByRole("combobox", { name: label })
+  await expect(owner("Componente de base.pdf")).toHaveText("BASE")
+  await expect(
+    owner("Componente de 1- 2D y 3D pieza/20240508_BASE_RCP31.stp"),
+  ).toHaveText("BASE")
+  await expect(owner("Componente de 1- 2D y 3D pieza/Tapón_v2.pdf")).toHaveText(
+    "Tapón",
+  )
+  // Two components, a different word or a whole workbook: no proposal.
+  for (const path of [
+    "1- 2D y 3D pieza/BASE_TAPON conjunto.pdf",
+    "1- 2D y 3D pieza/BASE2.pdf",
+    "4- Metrologia/BASE informe.xls",
+    "cover.pdf",
+  ])
+    await expect(owner(`Componente de ${path}`)).toHaveText("Sin asignar")
+  await expect(owner("Componente de la hoja DR(base)")).toHaveText("BASE")
+  await expect(owner("Componente de la hoja DR(TAPÓN)")).toHaveText("Tapón")
+  await expect(owner("Componente de la hoja Resumen base")).toHaveText("BASE")
+  await expect(owner("Componente de la hoja DR(tapa)")).toHaveText(
+    "Sin asignar",
+  )
+  // The user corrects a proposal and leaves another one unassigned.
+  await owner("Componente de la hoja Resumen base").click()
+  await page.getByRole("option", { name: "Sin asignar" }).click()
+  await owner("Componente de cover.pdf").click()
+  await page.getByRole("option", { name: "Tapón" }).click()
+  await page.screenshot({
+    path: path.join(artifacts, "component-proposals.png"),
+    fullPage: true,
+  })
+  await dialog.getByRole("button", { name: "Guardar cambios" }).click()
+  await expect(dialog).toHaveCount(0)
+  const saved = await page.evaluate(() =>
+    Object.values(window.review.organizations).at(-1),
+  )
+  const base = saved.find((c) => c.name === "BASE")
+  const tapon = saved.find((c) => c.name === "Tapón")
+  assert.equal(base.key, "BASE")
+  assert.equal(tapon.key, "TAPON")
+  assert.deepEqual(base.sheets.sort(), ["DR(base)"])
+  assert.deepEqual(tapon.sheets, ["DR(TAPÓN)"])
+  assert.deepEqual(base.files.map((f) => f.path).sort(), [
+    "1- 2D y 3D pieza/20240508_BASE_RCP31.stp",
+    "base.pdf",
+  ])
+  assert.deepEqual(tapon.files.map((f) => f.path).sort(), [
+    "1- 2D y 3D pieza/Tapón_v2.pdf",
+    "cover.pdf",
+  ])
+  assert.deepEqual(
+    await page.evaluate(() =>
+      Object.values(window.review.unassignedSources).at(-1),
+    ),
+    // Everything saved without component, touched or not (ambiguous, no match).
+    [
+      "file:1- 2D y 3D pieza/BASE2.pdf",
+      "file:1- 2D y 3D pieza/BASE_TAPON conjunto.pdf",
+      "file:4- Metrologia/BASE informe.xls",
+      "sheet:DR(tapa)",
+      "sheet:Resumen base",
+    ],
+  )
+  // Saved choices, including leaving a sheet unassigned, are not proposed again.
+  await page.getByRole("button", { name: "Componentes", exact: true }).click()
+  await expect(owner("Componente de cover.pdf")).toHaveText("Tapón")
+  await expect(owner("Componente de la hoja DR(base)")).toHaveText("BASE")
+  await expect(owner("Componente de la hoja Resumen base")).toHaveText(
+    "Sin asignar",
+  )
+  await expect(dialog.getByText("· Propuesta")).toHaveCount(0)
+  await expect(
+    dialog.getByRole("button", { name: "Guardar cambios" }),
+  ).toBeDisabled()
+  // Renaming Tapón to Tapa would resolve the ambiguous drawing and match DR(tapa):
+  // both were saved unassigned, so they are not proposed.
+  await dialog.getByLabel("Nombre", { exact: true }).nth(1).fill("Tapa")
+  await expect(
+    owner("Componente de 1- 2D y 3D pieza/BASE_TAPON conjunto.pdf"),
+  ).toHaveText("Sin asignar")
+  await expect(owner("Componente de la hoja DR(tapa)")).toHaveText(
+    "Sin asignar",
+  )
+  await expect(dialog.getByText("· Propuesta")).toHaveCount(0)
+  // A new file is proposed with the same rule; the saved ones stay as they are.
+  await dialog.getByRole("button", { name: "Cancelar" }).click()
+  await page.evaluate(() => {
+    window.review.componentExtraSources.push({
+      path: "1- 2D y 3D pieza/BASE rev 3.pdf",
+      kind: "drawing",
+    })
+  })
+  await page
+    .getByRole("button", { name: "Actualizar datos", exact: true })
+    .click()
+  await page.getByRole("button", { name: "Componentes", exact: true }).click()
+  await expect(
+    owner("Componente de 1- 2D y 3D pieza/BASE rev 3.pdf"),
+  ).toHaveText("BASE")
+  await expect(dialog.getByText("· Propuesta")).toHaveCount(1)
+  await dialog.getByRole("button", { name: "Cancelar" }).click()
+})
+
+test("component organization is optional and remembers sheet and drawing choices", async (t) => {
+  const page = await mount(t)
+  await choose(page)
+  await page.getByRole("button", { name: "Crear pieza", exact: true }).click()
+  await page.evaluate(() => {
+    window.review.componentExtraSources = [
+      {
+        path: "6- Método de medición/balloned/REV.01/BSG-296-01/BSG-296-01-N0 BASE SOP RCP 3.1_balloned.pdf",
+        kind: "drawing",
+      },
+    ]
+  })
+  const organize = page.getByRole("button", {
+    name: "Componentes",
+    exact: true,
+  })
+  await organize.click()
+  const dialog = page.getByRole("dialog", { name: "Componentes" })
+  await dialog.getByRole("button", { name: "Usar propuesta" }).click()
+  await expect(
+    dialog.getByLabel("Nombre", { exact: true }).first(),
+  ).toHaveValue("BASE")
+  await expect(dialog.getByLabel("Nombre", { exact: true }).nth(1)).toHaveValue(
+    "TAPA",
+  )
+  await dialog.getByRole("combobox", { name: "Componente de base.pdf" }).click()
+  await page.getByRole("option", { name: "BASE", exact: true }).click()
+  await dialog.getByLabel("Revisión de base.pdf").fill("01")
+  await dialog
+    .getByRole("combobox", { name: "Componente de cover.pdf" })
+    .click()
+  await page.getByRole("option", { name: "TAPA", exact: true }).click()
+  await dialog.getByLabel("Revisión de cover.pdf").fill("02")
+  await dialog.getByRole("button", { name: "Guardar cambios" }).click()
+  await expect(dialog).toHaveCount(0)
+  await organize.click()
+  await expect(
+    dialog.getByRole("combobox", { name: "Componente de la hoja DR(base)" }),
+  ).toHaveText("BASE")
+  await expect(
+    dialog.getByRole("combobox", { name: "Componente de la hoja DR(tapa)" }),
+  ).toHaveText("TAPA")
+  await expect(dialog.getByLabel("Revisión de base.pdf")).toHaveValue("01")
+  await expect(dialog.getByLabel("Revisión de cover.pdf")).toHaveValue("02")
+  await dialog.getByLabel("Buscar archivo", { exact: true }).fill("cover")
+  await expect(
+    dialog.getByRole("combobox", { name: "Componente de base.pdf" }),
+  ).toHaveCount(0)
+  await expect(
+    dialog.getByRole("combobox", { name: "Componente de cover.pdf" }),
+  ).toBeVisible()
+  await dialog.getByRole("button", { name: "Limpiar busqueda" }).click()
+  await expect(dialog.getByLabel("Revisión de base.pdf")).toHaveValue("01")
+  await page.screenshot({
+    path: path.join(artifacts, "components.png"),
+    fullPage: true,
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  assert.equal(
+    await dialog.evaluate(
+      (element) => element.scrollWidth <= element.clientWidth + 1,
+    ),
+    true,
+  )
+  await expect(
+    dialog.getByRole("button", { name: "Cancelar", exact: true }),
+  ).toBeVisible()
+  await page.screenshot({
+    path: path.join(artifacts, "components-mobile.png"),
+    fullPage: true,
+  })
+})
+
 test("with SharePoint the folder is chosen inside the application, without the Windows dialog", async (t) => {
   const page = await mount(t)
   let nativeRequests = 0
@@ -257,12 +489,14 @@ test("new piece is an empty labelled page; folder proposals, arbitrary named fil
   assert.deepEqual(registered.feature_ids, ["feature-one"])
   await page.evaluate(() => window.review.releaseRefresh())
   await expect(
-    page.getByText("Lectura completada", { exact: true }),
-  ).toBeVisible()
-  await page.getByText("Ficheros de la lectura (1)", { exact: true }).click()
+    page.getByRole("button", { name: "Actualizar datos", exact: true }),
+  ).toBeEnabled()
   await expect(
-    page.getByText("measurements.csv", { exact: true }),
-  ).toBeVisible()
+    page.getByRole("region", { name: "Lectura de datos" }),
+  ).toHaveCount(0)
+  await expect(page.getByText("measurements.csv", { exact: true })).toHaveCount(
+    0,
+  )
   await expect(page.getByRole("dialog")).toHaveCount(0)
   await page.setViewportSize({ width: 1440, height: 1050 })
   await page.evaluate(() => {
@@ -348,8 +582,11 @@ test("a failed automatic read keeps the created piece and can retry without a se
     .getByRole("button", { name: "Actualizar datos", exact: true })
     .click()
   await expect(
-    page.getByText("Lectura completada", { exact: true }),
-  ).toBeVisible()
+    page.getByRole("button", { name: "Actualizar datos", exact: true }),
+  ).toBeEnabled()
+  await expect(
+    page.getByRole("region", { name: "Lectura de datos" }),
+  ).toHaveCount(0)
   assert.equal(
     await page.evaluate(() => window.review.registrationRequests.length),
     1,
@@ -454,19 +691,91 @@ test("asynchronous correction progress is polled without starting another import
   ).toBeDisabled()
   await page.evaluate(() => {
     const report = Object.values(window.review.readReports)[0]
-    report.state = "ready"
-    report.corrections_state = "ready"
-    report.files[0].status = "used"
+    report.state = "partial"
+    report.corrections_state = "needs_review"
+    report.files[0].status = "Pending interpretation"
   })
   await expect(
-    page.getByText("Lectura completada", { exact: true }),
-  ).toBeVisible()
-  await page.getByText("Ficheros de la lectura (1)", { exact: true }).click()
+    page.getByRole("button", { name: "Actualizar datos", exact: true }),
+  ).toBeEnabled()
   await expect(
-    page.getByText("corrections.pptx", { exact: true }),
-  ).toBeVisible()
+    page.getByRole("region", { name: "Lectura de datos" }),
+  ).toHaveCount(0)
+  await expect(page.getByText("corrections.pptx", { exact: true })).toHaveCount(
+    0,
+  )
+  // The report is retained, even though the piece view has no diagnostics panel.
+  const report = await page.evaluate(
+    () => Object.values(window.review.readReports)[0],
+  )
+  assert.equal(report.state, "partial")
+  assert.equal(report.files[0].status, "Pending interpretation")
   assert.equal(
     await page.evaluate(() => window.review.refreshRequests.length),
     1,
   )
+})
+
+test("only an administrator deletes a piece, after reviewing its scope and typing its code", async (t) => {
+  const page = await mount(t)
+  await choose(page)
+  await page.getByRole("button", { name: "Crear pieza", exact: true }).click()
+  const more = page.getByRole("button", { name: "Más acciones de la pieza" })
+  await expect(
+    page.getByRole("button", { name: "Editar pieza", exact: true }),
+  ).toBeVisible()
+  await expect(more).toHaveCount(0)
+  const partId = await page.evaluate(async () => {
+    window.review.user.is_superuser = true
+    await window.review.refreshUser()
+    const part = window.review.parts.at(-1)
+    window.review.deletionScopes = {
+      [part.id]: {
+        features: [{ id: "feature-one", name: "Bolt Eye" }],
+        characteristics: 12,
+        measurement_imports: 3,
+        files_removed: 2,
+        uploads_removed: 1,
+        files_kept: 1,
+        feature_assets: 4,
+        key: "the-reviewed-scope",
+      },
+    }
+    return part.id
+  })
+  await more.click()
+  await page.getByRole("menuitem", { name: "Eliminar" }).click()
+  const dialog = page.getByRole("dialog", { name: "Eliminar pieza" })
+  const removed = dialog.getByRole("region", { name: "Se elimina" })
+  await expect(removed.getByText("12 cotas")).toBeVisible()
+  await expect(removed.getByText("3 mediciones importadas")).toBeVisible()
+  await expect(
+    removed.getByText("2 documentos vinculados (1 subido a la app)"),
+  ).toBeVisible()
+  await expect(removed.getByText("4 adjuntos de features")).toBeVisible()
+  const kept = dialog.getByRole("region", { name: "Se conserva" })
+  await expect(kept.getByText(/archivos y carpetas originales/)).toBeVisible()
+  await expect(kept.getByText(/«Bolt Eye»/)).toBeVisible()
+  const confirm = dialog.getByRole("button", { name: "Eliminar pieza" })
+  await expect(confirm).toBeDisabled()
+  await dialog.getByLabel(/Escribe el código/).fill("9000")
+  await expect(confirm).toBeDisabled()
+  await dialog.getByLabel(/Escribe el código/).fill("9001")
+  await page.screenshot({ path: path.join(artifacts, "delete-piece.png") })
+  await confirm.click()
+  await expect(dialog).toHaveCount(0)
+  assert.deepEqual(
+    await page.evaluate(() => window.review.partDeleteConfirms),
+    ["the-reviewed-scope"],
+  )
+  assert.equal(
+    await page.evaluate(
+      (id) => window.review.parts.some((part) => part.id === id),
+      partId,
+    ),
+    false,
+  )
+  await expect
+    .poll(() => page.evaluate(() => window.review.location().pathname))
+    .toBe("/features")
 })
