@@ -19,7 +19,7 @@ su cobertura no implica que el importador de la aplicación soporte los mismos f
 | Preparar el servidor y solicitar infraestructura a IT | [Despliegue en servidor interno](despliegue-servidor.md) | Decisión del 05/11/2026: Linux y HTTPS interno; configuración y validación pendientes |
 | Convertir CAD grandes a GLB y gestionar su cola | [Vistas 3D](vistas-3d.md) | Implementado y límites conocidos |
 | Elegir caras, encuadres y capturas del CAD | [Portadas CAD](portadas-cad.md) | Implementado y limitaciones de actualización |
-| Chat, herramientas, fuentes y concurrencia | [Asistente](asistente.md) | Implementado; decisiones de despliegue pendientes |
+| Chat, herramientas, fuentes y concurrencia | [Asistente](asistente.md) | Codex integrado para prueba local (18/11), sin Ollama; Copilot sigue pendiente como solución final |
 | Generalizar la lectura a otras familias | [Ingesta automática](ingesta-automatica.md) | Análisis y propuesta; separa prototipos de producción |
 | Diseñar el modelo normalizado del dominio | [Modelo de datos](modelo-datos.md) | Propuesta, con correspondencia explícita a tablas reales |
 | Consultar el alcance futuro | [Hoja de ruta](hoja-de-ruta.md) | Etapas y condiciones para avanzar |

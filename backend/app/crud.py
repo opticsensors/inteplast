@@ -13,7 +13,6 @@ from app.models import (
     Feature,
     FeatureAsset,
     FeatureAssetCreate,
-    FeatureCategory,
     FeatureCreate,
     FeatureFilterOption,
     FeatureFilters,
@@ -107,20 +106,42 @@ def create_feature(
     return db_feature
 
 
-def _features_with_part(part_id: uuid.UUID) -> ColumnElement[bool]:
-    """The same declared, asset and cota links used by both selector lists."""
+def part_conditions(
+    *,
+    part_id: uuid.UUID | None = None,
+    family_id: uuid.UUID | None = None,
+    customer_id: uuid.UUID | None = None,
+) -> list[ColumnElement[bool]]:
+    """Piece filters of the catalogue. A piece matches when it meets all of them."""
+    conditions: list[ColumnElement[bool]] = []
+    if part_id:
+        conditions.append(col(Part.id) == part_id)
+    if family_id:
+        conditions.append(col(Part.family_id) == family_id)
+    if customer_id:
+        conditions.append(col(Part.customer_id) == customer_id)
+    return conditions
+
+
+def features_of_parts(conditions: list[ColumnElement[bool]]) -> ColumnElement[bool]:
+    """A feature linked to at least one piece that meets every piece filter at once.
+
+    The same declared, asset and cota links used by the selector lists. With family
+    «Pump Housing» and customer «Bosch», a feature linked to a Pump Housing of another
+    customer and to a Bosch piece of another family does not match.
+    """
     links = feature_membership()
     return col(Feature.id).in_(
-        select(links.c.feature_id).where(links.c.part_id == part_id)
+        select(links.c.feature_id).where(
+            links.c.part_id.in_(select(Part.id).where(*conditions))
+        )
     )
 
 
 def _search_conditions(
     *,
     q: str | None,
-    category: FeatureCategory | None,
-    tag: str | None,
-    part_id: uuid.UUID | None,
+    parts: list[ColumnElement[bool]],
 ) -> list[ColumnElement[bool]]:
     """Filtros del buscador del dashboard, combinados con AND."""
     conditions: list[ColumnElement[bool]] = []
@@ -132,7 +153,7 @@ def _search_conditions(
         matching_parts = select(Part.id).where(
             or_(col(Part.code).ilike(like), col(Part.name).ilike(like))
         )
-        # Busqueda global: nombre, descripcion, tags, y tambien el contenido
+        # Busqueda global: nombre, descripcion, y tambien el contenido
         # relacionado (piezas, adjuntos, warnings y lessons learned).
         conditions.append(
             or_(
@@ -143,7 +164,6 @@ def _search_conditions(
                 ),
                 col(Feature.name).ilike(like),
                 col(Feature.description).ilike(like),
-                func.array_to_string(col(Feature.tags), " ").ilike(like),
                 col(Feature.id).in_(
                     select(FeatureAsset.feature_id).where(
                         or_(
@@ -168,15 +188,29 @@ def _search_conditions(
             )
         )
 
-    if category:
-        conditions.append(col(Feature.category) == category)
+    if parts:
+        conditions.append(features_of_parts(parts))
 
-    if tag:
-        conditions.append(col(Feature.tags).any(tag))  # type: ignore[arg-type]
+    return conditions
 
-    if part_id:
-        conditions.append(_features_with_part(part_id))
 
+def feature_conditions(
+    *,
+    q: str | None = None,
+    part_id: uuid.UUID | None = None,
+    family_id: uuid.UUID | None = None,
+    customer_id: uuid.UUID | None = None,
+    feature_id: uuid.UUID | None = None,
+) -> list[ColumnElement[bool]]:
+    """Features shown by the catalogue: the list, the grid and the graph use this."""
+    conditions = _search_conditions(
+        q=q,
+        parts=part_conditions(
+            part_id=part_id, family_id=family_id, customer_id=customer_id
+        ),
+    )
+    if feature_id:
+        conditions.append(col(Feature.id) == feature_id)
     return conditions
 
 
@@ -184,16 +218,20 @@ def search_features(
     *,
     session: Session,
     q: str | None = None,
-    category: FeatureCategory | None = None,
-    tag: str | None = None,
     part_id: uuid.UUID | None = None,
+    family_id: uuid.UUID | None = None,
+    customer_id: uuid.UUID | None = None,
     feature_id: uuid.UUID | None = None,
     skip: int = 0,
     limit: int = 100,
 ) -> tuple[list[Feature], int]:
-    conditions = _search_conditions(q=q, category=category, tag=tag, part_id=part_id)
-    if feature_id:
-        conditions.append(col(Feature.id) == feature_id)
+    conditions = feature_conditions(
+        q=q,
+        part_id=part_id,
+        family_id=family_id,
+        customer_id=customer_id,
+        feature_id=feature_id,
+    )
 
     count_statement = select(func.count()).select_from(Feature)
     statement = select(Feature).options(
@@ -236,12 +274,6 @@ def search_features(
 
 def get_feature_filters(*, session: Session) -> FeatureFilters:
     """Valores realmente presentes en la BD, para poblar los desplegables."""
-    categories = sorted(
-        {c for c in session.exec(select(Feature.category)).all() if c is not None}
-    )
-    tags = sorted(
-        {tag for tags in session.exec(select(Feature.tags)).all() for tag in tags}
-    )
     # Solo las piezas que algun feature usa: una pieza sin features seria una
     # opcion de filtro que no devuelve nada.
     links = feature_membership()
@@ -256,8 +288,6 @@ def get_feature_filters(*, session: Session) -> FeatureFilters:
         .order_by(col(Part.code))
     ).all()
     return FeatureFilters(
-        categories=categories,
-        tags=tags,
         parts=[PartPublic.model_validate(part) for part in parts],
         features=[
             FeatureFilterOption.model_validate(feature).model_copy(

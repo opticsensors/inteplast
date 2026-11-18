@@ -180,6 +180,82 @@ export const CadFaceSelectionSchema = {
     title: 'CadFaceSelection'
 } as const;
 
+export const CatalogGraphSchema = {
+    properties: {
+        nodes: {
+            items: {
+                '$ref': '#/components/schemas/GraphNode'
+            },
+            type: 'array',
+            title: 'Nodes'
+        },
+        links: {
+            items: {
+                '$ref': '#/components/schemas/GraphLink'
+            },
+            type: 'array',
+            title: 'Links'
+        },
+        total: {
+            type: 'integer',
+            title: 'Total'
+        },
+        truncated: {
+            type: 'boolean',
+            title: 'Truncated'
+        }
+    },
+    type: 'object',
+    required: ['nodes', 'links', 'total', 'truncated'],
+    title: 'CatalogGraph'
+} as const;
+
+export const CatalogNameCreateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 255,
+            minLength: 1,
+            title: 'Name'
+        }
+    },
+    type: 'object',
+    required: ['name'],
+    title: 'CatalogNameCreate'
+} as const;
+
+export const CatalogNamePublicSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        }
+    },
+    type: 'object',
+    required: ['id', 'name'],
+    title: 'CatalogNamePublic'
+} as const;
+
+export const CatalogNamesPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/CatalogNamePublic'
+            },
+            type: 'array',
+            title: 'Data'
+        }
+    },
+    type: 'object',
+    required: ['data'],
+    title: 'CatalogNamesPublic'
+} as const;
+
 export const CatalogPublicSchema = {
     properties: {
         features: {
@@ -558,6 +634,50 @@ export const DeletionFeatureSchema = {
     title: 'DeletionFeature'
 } as const;
 
+export const DrawingCardSchema = {
+    properties: {
+        file: {
+            '$ref': '#/components/schemas/FilePublic'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        primary: {
+            type: 'boolean',
+            title: 'Primary'
+        },
+        part: {
+            '$ref': '#/components/schemas/PartPublic'
+        },
+        component: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Component'
+        },
+        revision: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Revision'
+        }
+    },
+    type: 'object',
+    required: ['file', 'name', 'primary', 'part'],
+    title: 'DrawingCard'
+} as const;
+
 export const DrawingPublicSchema = {
     properties: {
         state: {
@@ -605,6 +725,25 @@ export const DrawingPublicSchema = {
     type: 'object',
     required: ['state'],
     title: 'DrawingPublic'
+} as const;
+
+export const DrawingsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/DrawingCard'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'DrawingsPublic'
 } as const;
 
 export const EvidenceDocumentSchema = {
@@ -865,12 +1004,6 @@ export const FeatureAssetUpdateSchema = {
     title: 'FeatureAssetUpdate'
 } as const;
 
-export const FeatureCategorySchema = {
-    type: 'string',
-    enum: ['hole', 'rib', 'thickness', 'boss', 'fillet', 'draft', 'other'],
-    title: 'FeatureCategory'
-} as const;
-
 export const FeatureCover3DSchema = {
     properties: {
         asset_id: {
@@ -955,23 +1088,6 @@ export const FeatureCreateSchema = {
             ],
             title: 'Description'
         },
-        category: {
-            anyOf: [
-                {
-                    '$ref': '#/components/schemas/FeatureCategory'
-                },
-                {
-                    type: 'null'
-                }
-            ]
-        },
-        tags: {
-            items: {
-                type: 'string'
-            },
-            type: 'array',
-            title: 'Tags'
-        },
         image_id: {
             anyOf: [
                 {
@@ -1009,23 +1125,6 @@ export const FeatureDetailSchema = {
                 }
             ],
             title: 'Description'
-        },
-        category: {
-            anyOf: [
-                {
-                    '$ref': '#/components/schemas/FeatureCategory'
-                },
-                {
-                    type: 'null'
-                }
-            ]
-        },
-        tags: {
-            items: {
-                type: 'string'
-            },
-            type: 'array',
-            title: 'Tags'
         },
         id: {
             type: 'string',
@@ -1154,23 +1253,6 @@ export const FeatureFilterOptionSchema = {
             type: 'string',
             title: 'Name'
         },
-        category: {
-            anyOf: [
-                {
-                    '$ref': '#/components/schemas/FeatureCategory'
-                },
-                {
-                    type: 'null'
-                }
-            ]
-        },
-        tags: {
-            items: {
-                type: 'string'
-            },
-            type: 'array',
-            title: 'Tags'
-        },
         part_ids: {
             items: {
                 type: 'string',
@@ -1187,20 +1269,6 @@ export const FeatureFilterOptionSchema = {
 
 export const FeatureFiltersSchema = {
     properties: {
-        categories: {
-            items: {
-                '$ref': '#/components/schemas/FeatureCategory'
-            },
-            type: 'array',
-            title: 'Categories'
-        },
-        tags: {
-            items: {
-                type: 'string'
-            },
-            type: 'array',
-            title: 'Tags'
-        },
         parts: {
             items: {
                 '$ref': '#/components/schemas/PartPublic'
@@ -1217,7 +1285,7 @@ export const FeatureFiltersSchema = {
         }
     },
     type: 'object',
-    required: ['categories', 'tags', 'parts', 'features'],
+    required: ['parts', 'features'],
     title: 'FeatureFilters'
 } as const;
 
@@ -1398,23 +1466,6 @@ export const FeaturePublicSchema = {
             ],
             title: 'Description'
         },
-        category: {
-            anyOf: [
-                {
-                    '$ref': '#/components/schemas/FeatureCategory'
-                },
-                {
-                    type: 'null'
-                }
-            ]
-        },
-        tags: {
-            items: {
-                type: 'string'
-            },
-            type: 'array',
-            title: 'Tags'
-        },
         id: {
             type: 'string',
             format: 'uuid',
@@ -1513,23 +1564,6 @@ export const FeatureUpdateSchema = {
                 }
             ],
             title: 'Description'
-        },
-        category: {
-            anyOf: [
-                {
-                    '$ref': '#/components/schemas/FeatureCategory'
-                },
-                {
-                    type: 'null'
-                }
-            ]
-        },
-        tags: {
-            items: {
-                type: 'string'
-            },
-            type: 'array',
-            title: 'Tags'
         },
         image_id: {
             anyOf: [
@@ -1766,6 +1800,74 @@ export const FolderDiscoverySchema = {
     type: 'object',
     required: ['folder_path', 'name', 'references'],
     title: 'FolderDiscovery'
+} as const;
+
+export const GraphLinkSchema = {
+    properties: {
+        source: {
+            type: 'string',
+            title: 'Source'
+        },
+        target: {
+            type: 'string',
+            title: 'Target'
+        },
+        kind: {
+            type: 'string',
+            enum: ['feature', 'family', 'customer'],
+            title: 'Kind'
+        }
+    },
+    type: 'object',
+    required: ['source', 'target', 'kind'],
+    title: 'GraphLink'
+} as const;
+
+export const GraphNodeSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            title: 'Id'
+        },
+        kind: {
+            type: 'string',
+            enum: ['part', 'feature', 'family', 'customer'],
+            title: 'Kind'
+        },
+        ref_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Ref Id'
+        },
+        label: {
+            type: 'string',
+            title: 'Label'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        image: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FilePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    type: 'object',
+    required: ['id', 'kind', 'ref_id', 'label'],
+    title: 'GraphNode'
 } as const;
 
 export const HTTPValidationErrorSchema = {
@@ -2384,24 +2486,6 @@ export const MetrologyFeatureSchema = {
             type: 'string',
             title: 'Name'
         },
-        category: {
-            anyOf: [
-                {
-                    '$ref': '#/components/schemas/FeatureCategory'
-                },
-                {
-                    type: 'null'
-                }
-            ]
-        },
-        tags: {
-            items: {
-                type: 'string'
-            },
-            type: 'array',
-            title: 'Tags',
-            default: []
-        },
         characteristics: {
             items: {
                 '$ref': '#/components/schemas/CharacteristicPublic'
@@ -2426,24 +2510,6 @@ export const MetrologyFeatureChoiceSchema = {
         name: {
             type: 'string',
             title: 'Name'
-        },
-        category: {
-            anyOf: [
-                {
-                    '$ref': '#/components/schemas/FeatureCategory'
-                },
-                {
-                    type: 'null'
-                }
-            ]
-        },
-        tags: {
-            items: {
-                type: 'string'
-            },
-            type: 'array',
-            title: 'Tags',
-            default: []
         },
         part_ids: {
             items: {
@@ -2605,17 +2671,29 @@ export const PartCardPublicSchema = {
             ],
             title: 'Description'
         },
-        customer: {
+        family_id: {
             anyOf: [
                 {
                     type: 'string',
-                    maxLength: 255
+                    format: 'uuid'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Customer'
+            title: 'Family Id'
+        },
+        customer_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Customer Id'
         },
         folder_path: {
             anyOf: [
@@ -2645,6 +2723,26 @@ export const PartCardPublicSchema = {
                 }
             ],
             title: 'Created At'
+        },
+        family: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/CatalogNamePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        customer: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/CatalogNamePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         },
         feature_count: {
             type: 'integer',
@@ -2725,17 +2823,29 @@ export const PartCatalogPublicSchema = {
             ],
             title: 'Description'
         },
-        customer: {
+        family_id: {
             anyOf: [
                 {
                     type: 'string',
-                    maxLength: 255
+                    format: 'uuid'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Customer'
+            title: 'Family Id'
+        },
+        customer_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Customer Id'
         },
         folder_path: {
             anyOf: [
@@ -2765,6 +2875,26 @@ export const PartCatalogPublicSchema = {
                 }
             ],
             title: 'Created At'
+        },
+        family: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/CatalogNamePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        customer: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/CatalogNamePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         },
         feature_count: {
             type: 'integer',
@@ -2854,17 +2984,29 @@ export const PartCreateSchema = {
             ],
             title: 'Description'
         },
-        customer: {
+        family_id: {
             anyOf: [
                 {
                     type: 'string',
-                    maxLength: 255
+                    format: 'uuid'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Customer'
+            title: 'Family Id'
+        },
+        customer_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Customer Id'
         },
         folder_path: {
             anyOf: [
@@ -3250,17 +3392,29 @@ export const PartPublicSchema = {
             ],
             title: 'Description'
         },
-        customer: {
+        family_id: {
             anyOf: [
                 {
                     type: 'string',
-                    maxLength: 255
+                    format: 'uuid'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Customer'
+            title: 'Family Id'
+        },
+        customer_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Customer Id'
         },
         folder_path: {
             anyOf: [
@@ -3290,6 +3444,26 @@ export const PartPublicSchema = {
                 }
             ],
             title: 'Created At'
+        },
+        family: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/CatalogNamePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        customer: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/CatalogNamePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         }
     },
     type: 'object',
@@ -3389,9 +3563,15 @@ export const PartRegistrationSchema = {
             title: 'Folder Path'
         },
         name: {
-            type: 'string',
-            maxLength: 255,
-            minLength: 1,
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Name'
         },
         code: {
@@ -3400,11 +3580,29 @@ export const PartRegistrationSchema = {
             minLength: 1,
             title: 'Code'
         },
-        customer: {
-            type: 'string',
-            maxLength: 255,
-            minLength: 1,
-            title: 'Customer'
+        family_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Family Id'
+        },
+        customer_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Customer Id'
         },
         description: {
             anyOf: [
@@ -3437,7 +3635,7 @@ export const PartRegistrationSchema = {
         }
     },
     type: 'object',
-    required: ['folder_path', 'name', 'code', 'customer'],
+    required: ['folder_path', 'code'],
     title: 'PartRegistration'
 } as const;
 
@@ -3512,17 +3710,29 @@ export const PartUpdateSchema = {
             ],
             title: 'Description'
         },
-        customer: {
+        family_id: {
             anyOf: [
                 {
                     type: 'string',
-                    maxLength: 255
+                    format: 'uuid'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Customer'
+            title: 'Family Id'
+        },
+        customer_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Customer Id'
         },
         folder_path: {
             anyOf: [
@@ -3874,6 +4084,30 @@ export const SourceTableSchema = {
     type: 'object',
     required: ['sheets'],
     title: 'SourceTable'
+} as const;
+
+export const ThumbnailPublicSchema = {
+    properties: {
+        state: {
+            type: 'string',
+            enum: ['ready', 'busy'],
+            title: 'State'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        }
+    },
+    type: 'object',
+    required: ['state'],
+    title: 'ThumbnailPublic'
 } as const;
 
 export const TokenSchema = {

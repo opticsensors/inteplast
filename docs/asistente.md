@@ -1,4 +1,83 @@
-# Asistente local de consulta
+# Asistente de consulta
+
+## Decisión de Eduard (17/11/2026)
+
+**Ollama queda descartado. La solución final será Copilot de empresa mediante un agente
+conectado a la API de la aplicación.** Esta decisión sustituye la preferencia provisional
+del 09/11 y las alternativas de despliegue con Ollama.
+
+Antes de trasladar la app al servidor, se hará una **prueba de concepto en el PC de Eduard
+con Codex (ChatGPT)**, sustituyendo temporalmente a Ollama como motor de fondo del asistente:
+
+- Usar **el modelo más rápido disponible** para probar la respuesta y la experiencia de uso.
+  El 18/11 se eligió `gpt-reserve` con esfuerzo `low` por el menor tiempo observado en
+  tres pruebas individuales. No demuestra que sea siempre el más rápido.
+- **No crear un agente para esta prueba.** Usar Codex de fondo con instrucciones
+  para simular cómo respondería un agente conectado a la API de la app, apoyándose en sus
+  consultas y resultados. La prueba debe permitir evaluar respuestas y fuentes con datos reales.
+- Codex es una solución **provisional, local y anterior al despliegue**. No se plantea llevar
+  esta prueba al servidor como sustituto de Copilot.
+- Después, integrar **Copilot como solución final**, concretando con IT la conexión a la API,
+  autenticación, permisos y uso por varios usuarios.
+
+**Estado: prueba local integrada el 18/11/2026, después de A–E.** Codex sustituye el generador
+y su configuración desactiva los embeddings y el indexador de Ollama. Se conserva la búsqueda
+por palabras. No dimensionar ni pedir una instalación de Ollama para el servidor.
+
+## Prueba local integrada (18/11/2026)
+
+El backend incluye el [glosario de la aplicación](../backend/app/assistant/knowledge/glosario.md)
+en el contexto que envía al modelo, tanto para decidir qué consultar como para redactar la
+respuesta con los resultados. El glosario aporta las definiciones generales. Las fichas y las
+mediciones aportan los hechos y las fuentes de cada caso. Para actualizar el vocabulario,
+editar ese archivo y reconstruir el backend.
+
+Un proveedor que use el mismo flujo de chat recibirá el glosario automáticamente. Si Copilot
+se conecta desde fuera como agente de Microsoft y gestiona su propio contexto, su integración
+deberá obtener ese mismo recurso a través de la API e incluirlo en el contexto del agente.
+La ruta del archivo y su contenido se pueden conservar en ambos casos.
+
+Para comprobar el glosario con cualquier proveedor, hacer estas tres preguntas en la misma
+conversación usando un feature y una pieza vinculados en el catálogo de prueba.
+
+| Pregunta de prueba | Qué comprobar |
+|---|---|
+| ¿Qué es un feature en esta app? | Explica el concepto y su relación con las piezas. Si da un ejemplo genérico, lo identifica como tal. |
+| ¿En qué piezas está registrado el feature X? | Los vínculos coinciden con los del catálogo y la respuesta incluye la ficha como fuente. |
+| ¿Cómo se aplica esa definición a la pieza Y? | Usa la definición del primer turno y el vínculo real de Y. Cualquier cota o advertencia concreta debe aparecer en los datos recuperados. |
+
+El frontend y su protocolo permanecen intactos. El nuevo proveedor Python llama a un puente
+HTTP en Windows, que ejecuta `codex exec` con la sesión de Codex del PC. Cada llamada es
+efímera, en un directorio vacío, sin herramientas de shell, navegador, archivos o multiagente.
+Codex devuelve texto o solicitudes JSON de las cuatro lecturas admitidas; el backend valida
+y ejecuta esas lecturas con el usuario autenticado. No se crea un agente autónomo ni una
+nueva API de datos para Copilot.
+
+La instalación selecciona `ASSISTANT_PROVIDER=codex` y `ASSISTANT_MODEL=gpt-reserve` en su
+`.env` privado. El token del puente queda fuera de Git y del frontend. `compose.yml` transmite
+la configuración sin un overlay adicional. El puente está separado de las sesiones de
+desarrollo; cambiarlo no modifica su modelo ni configuración.
+
+Límites de la prueba: una llamada al modelo a la vez, respuesta completa al terminar en lugar
+de token a token, y recuperación por palabras sin embeddings. Detener la consulta cancela su
+proceso. Tras reiniciar Windows se arranca el puente con
+`powershell -File .\integrations\codex-bridge\start.ps1 -Background`; no se instala un servicio
+automático. Preparación, variables, modelo y pruebas en
+[integrations/codex-bridge/README.md](../integrations/codex-bridge/README.md).
+
+Al integrar se repitieron **83 pruebas aisladas** (8 Node, 16 del proveedor y 59 del asistente),
+con Ruff y mypy correctos. El recorrido completo de la prueba previa, con BD sintética,
+puente HTTP y Codex real, tardó 7,03 s. Eso no valida la ingesta automática ni la calidad
+general sobre documentos del cliente; sigue pendiente la evaluación con preguntas reales
+y la integración final de Copilot.
+
+**Comprobación en la instalación:** backend reconstruido, puente activo en segundo plano y
+consulta real de advertencias con fuente completada en 17,07 s, sin escribir datos. Se usó
+una credencial técnica temporal de una cuenta existente, sin repetir el login Microsoft.
+El frontend y la BD mantienen sus contenedores. La prueba solo acredita ese recorrido;
+no sustituye una evaluación de calidad del asistente.
+
+## Implementación de referencia con Ollama
 
 **Estado contrastado con el código el 26/10/2026.** Esta ficha describe el chat
 implementado. Esta revisión documental no ha ejecutado tests ni consultas al modelo.
@@ -6,14 +85,17 @@ La importación que alimenta sus lecturas se describe en
 [cotas y evidencia](cotas-y-evidencia-web.md); su ampliación, en
 [ingesta automática](ingesta-automatica.md).
 
-El chat opcional usa Ollama en la URL configurada por el servidor; el modelo por
+El proveedor anterior, conservado como referencia técnica, usa Ollama en la URL configurada por el servidor; el modelo por
 defecto es `qwen3.5:2b`, con `think: false`. Muestra texto progresivamente,
 admite detener/reintentar y conserva
 la conversación al navegar dentro de la app. Se abre abajo a la derecha y se
 minimiza a su cabecera. Cerrar no borra el historial; «Nueva conversación», salir de
 la sesión o recargar sí. El historial solo vive en memoria del navegador.
 
-## Arranque
+## Arranque de la implementación con Ollama (referencia técnica)
+
+Los pasos siguientes describen el código existente. No son el plan de la prueba con Codex
+ni las instrucciones para el futuro servidor.
 
 1. Instalar y abrir Ollama en Windows. Descargar el modelo una vez:
    `ollama pull qwen3.5:2b` y `ollama pull embeddinggemma`.
@@ -46,7 +128,8 @@ puede tardar más; desactivar thinking no hace instantánea la inferencia en CPU
 No hay límite de palabras: se pide responder de forma directa y con la extensión
 necesaria. Si alcanza el límite técnico de tokens, la interfaz lo indica. Se atiende una petición por proceso;
 las simultáneas reciben un aviso para reintentar, sin acumular cola. En producción hay varios
-procesos: ver [Concurrencia y despliegue](#concurrencia-y-despliegue), pendiente de decisión.
+procesos: ver [Concurrencia y despliegue](#concurrencia-y-despliegue). Estos límites describen
+la implementación existente; habrá que medir la prueba con Codex y la integración con Copilot.
 Las respuestas largas se conservan completas en pantalla. El navegador conserva
 hasta 30 turnos y envía como máximo cuatro intercambios completos anteriores,
 abreviando las respuestas largas, más la pregunta actual. La API admite hasta nueve
@@ -56,10 +139,9 @@ la conversación es limitada aunque los turnos anteriores sigan visibles.
 
 ## Concurrencia y despliegue
 
-**Decisión abierta desde el 20/10/2026; implementación revisada el 26/10/2026.** Esta
-sección recoge cómo funciona el código y qué hay que decidir antes de abrir el asistente a varios
-usuarios. Se decidirá cuando se elija el despliegue (ver el
-[acta del 24/09/2026](acta-reunion-2026-09-24.md): asistente local o vinculado a Copilot).
+**Plan decidido el 17/11/2026: prueba local con Codex y solución final con Copilot.** La tabla
+siguiente describe la implementación con Ollama revisada el 26/10/2026, aún presente en el
+código. Sus límites son antecedentes técnicos, no una validación de los nuevos proveedores.
 
 ### Cómo funciona hoy
 
@@ -77,35 +159,24 @@ Las que esperan consumen su límite de tiempo y pueden terminar con «La consult
 demasiado». El indexador y los embeddings de las búsquedas compiten además por la misma
 máquina. No hay tiempos medidos que permitan cuantificarlo.
 
-### Qué hay que decidir
+### Trabajo pendiente del plan elegido
 
-1. **Proveedor:** Ollama local, un modelo en la nube como motor de este chat, o un agente de
-   Copilot Studio. **Preferencia de Eduard (09/11/2026): a poder ser, el Copilot de empresa
-   mediante un agente.** Es trabajo futuro, junto con el servidor; falta acordarlo con
-   INTEPLAST y su IT. Mientras tanto sigue el chat con Ollama.
-2. **Máquina del servidor**, si se mantiene Ollama: GPU, RAM disponible y modelos de chat y
-   de embeddings.
-3. **Tiempos de respuesta medidos** con esos modelos en esa máquina.
-4. **Usuarios simultáneos** esperados, entre Olot y la República Checa.
-5. **Alcance del límite:** solo el chat, o también los embeddings (indexación y búsquedas).
-
-### Qué implicaría cada opción
-
-| Opción | Alcance |
-|---|---|
-| Mantener Ollama y limitar a **un chat en todo el servidor** | Acotado. Bloqueo compartido entre procesos (por ejemplo, un bloqueo asesor de PostgreSQL, como las colas de vistas 3D y de evidencias), respuesta clara de «ocupado» y liberación ante errores, cancelaciones y desconexiones. Debe probarse con **dos procesos**: dos peticiones dentro del mismo proceso no demuestran nada. Hay que definir cómo convive con el indexador y los embeddings de las búsquedas. |
-| Permitir **N chats a la vez** | El mismo mecanismo con un límite configurable, ajustado a la capacidad medida y a la configuración del proveedor. |
-| **Cola con espera** | Requiere diseño propio: posición en la cola, límites de tiempo y cancelación. |
-| **Modelo en la nube** como motor de este chat | Implementar otro `ChatProvider` (hoy solo existe Ollama), con su autenticación, coste y cuotas. Sigue haciendo falta un límite, ajustado a las cuotas en vez de a la máquina. Los embeddings seguirían usando Ollama, salvo que se añada otro proveedor o se use solo la búsqueda por palabras. |
-| **Agente de Copilot Studio** | Trabajo distinto: el agente puede vivir en Teams, en Microsoft 365 o integrarse en esta web, y consultaría nuestras lecturas expuestas como API con autenticación de Microsoft (Entra ID). Hay que concretarlo antes de estimarlo. |
+1. **Prueba local con Codex: implementada el 18/11.** Puente de Windows, `gpt-reserve` con
+   esfuerzo `low`, sin agente autónomo y con lecturas del backend existente.
+2. **Búsqueda sin Ollama: resuelta para la prueba.** Usa búsqueda por palabras; la recuperación
+   semántica con otro proveedor queda fuera de esta prueba.
+3. **Evaluación local:** probar preguntas representativas, exactitud, fuentes, latencia y errores.
+   Registrar qué se ha simulado; el resultado no valida por sí solo la integración con Copilot.
+4. **Copilot definitivo:** acordar con IT la integración del agente con la API, autenticación,
+   permisos y presentación al usuario. No trasladar Codex ni Ollama como solución de producción.
+5. **Uso compartido:** definir usuarios simultáneos, cuotas, límites y esperas, y medirlos con
+   Copilot. Las mediciones de Ollama o de la prueba local no acreditan su capacidad en producción.
 
 **Demo en el visor (12/11/2026).** La pestaña Asistente del visor de `conocimiento/`
 ([README](../prototypes/data-explorer/conocimiento/asistente/README.md)) usa Claude Code con Haiku 5.5 y la suscripción
-personal de Eduard. Sirve para enseñar en su portátil cómo respondería un asistente con ese contexto, pero **no se puede
-trasladar tal cual a esta app**, porque aquí la usan otras personas. En Docker haría falta un modelo en la nube con
-clave de API, de pago por uso (la fila «Modelo en la nube»), o el agente de Copilot. Lo que sí se puede llevar es el
-diseño: funciones de lectura con citas como herramientas, el proceso o la sesión mantenidos entre preguntas, y los
-pasos visibles. Los tiempos medidos allí son de Claude Code, no de esta app.
+personal de Eduard. Es una demo distinta de la prueba con Codex acordada el 17/11 y no es la
+integración final con Copilot. Puede servir de referencia para las lecturas con citas y la
+continuidad entre preguntas. Los tiempos medidos allí son de Claude Code, no de Codex ni de esta app.
 
 ## Límites del módulo
 
@@ -270,8 +341,8 @@ Una revisión pedida explícitamente prevalece; si se omite, la lectura utiliza 
 que sea la versión entregada o aprobada. No se mezclan revisiones ni se atribuyen todas las cotas de una
 pieza a cada feature.
 
-No se leen los Markdown del repositorio, README, código, notas de desarrollo,
-archivos originales ni rutas arbitrarias. Las notas de usuarios de la BD sí forman
+El único Markdown del repositorio que el backend incorpora al contexto es el glosario
+empaquetado con la aplicación. Las notas de usuarios de la BD también forman
 parte del conocimiento, aunque su cuerpo use Markdown. Solo hay acceso al contenido
 que los importadores ya han extraído: no se interpreta geometría STEP, imágenes de
 PPTX, PDFs completos ni nubes TXT. Un plan de retoque no demuestra su ejecución.
@@ -320,9 +391,9 @@ y caída del proveedor semántico. No necesita Ollama para las pruebas automáti
 `node --test frontend/tests/components/assistant.test.cjs` verifica streaming UTF-8,
 fuentes, minimizar/reabrir, navegación sin enviar contexto de pantalla, detener,
 reiniciar y errores.
-Los tests automáticos no dependen del modelo ni de los datos de trabajo. Quedan
-separadas la prueba de conexión al Ollama desplegado y la evaluación de respuestas
-abiertas. La prueba futura de `conocimiento/` en una sesión nueva de desarrollo es
-otra tarea, recogida en [Próximos pasos](proximos-pasos.md). También siguen pendientes
-la decisión de despliegue y las mediciones de
-concurrencia descritas arriba.
+Los tests automáticos existentes no dependen del modelo ni de los datos de trabajo. El 18/11
+se añadieron las comprobaciones del proveedor y puente Codex. Hay que evaluar por separado
+la calidad de las respuestas locales y las de Copilot en la integración final. La prueba futura de
+`conocimiento/` en una sesión nueva de desarrollo es otra tarea, recogida en
+[Próximos pasos](proximos-pasos.md). El rechazo de llamadas simultáneas y la cancelación del
+puente local están probados; siguen pendientes las mediciones de capacidad de Copilot.

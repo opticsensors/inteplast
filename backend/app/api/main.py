@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.routes import (
     catalog,
+    catalog_names,
     components,
     evidence,
     features,
@@ -30,6 +31,7 @@ api_router.include_router(part_setup.router)
 api_router.include_router(parts.router)
 api_router.include_router(components.router)
 api_router.include_router(catalog.router)
+api_router.include_router(catalog_names.router)
 api_router.include_router(evidence.router)
 api_router.include_router(measurement_imports.router)
 api_router.include_router(files.router)

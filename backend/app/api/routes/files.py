@@ -1,13 +1,14 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt.exceptions import InvalidTokenError
+from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 
@@ -42,6 +43,8 @@ from app.models import (
 )
 from app.previews import delete_preview, preview_key, preview_path, request_preview
 from app.source_tables import SourceTable, read_table
+from app.thumbnails import delete_thumbnails, thumbnail_key, thumbnail_path
+from app.thumbnails import prepare as prepare_thumbnail_file
 
 router = APIRouter(prefix="/files", tags=["files"])
 
@@ -447,6 +450,88 @@ def read_preview(
     )
 
 
+class ThumbnailPublic(BaseModel):
+    state: Literal["ready", "busy"]
+    url: str | None = None
+
+
+@router.post("/{file_id}/thumbnail", response_model=ThumbnailPublic)
+def prepare_thumbnail(
+    session: SessionDep, current_user: CurrentUser, file_id: uuid.UUID
+) -> ThumbnailPublic:
+    """First page of a PDF as a small PNG, made once per version of the original.
+
+    "busy" means that other thumbnails are being drawn: show a placeholder and ask again.
+    """
+    document = session.get(StoredFile, file_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail="File not found")
+    state, key = prepare_thumbnail_file(document)
+    if state == "busy":
+        return ThumbnailPublic(state="busy")
+    expires_at = datetime.now(timezone.utc) + timedelta(
+        minutes=settings.FILE_ACCESS_TOKEN_EXPIRE_MINUTES
+    )
+    token = jwt.encode(
+        {
+            "sub": str(file_id),
+            "uid": str(current_user.id),
+            "purpose": "file-thumbnail",
+            "cache_key": key,
+            "version": str(document.version) if document.version else None,
+            "exp": expires_at,
+        },
+        settings.SECRET_KEY,
+        algorithm=ALGORITHM,
+    )
+    return ThumbnailPublic(
+        state="ready",
+        url=f"{settings.API_V1_STR}/files/{file_id}/thumbnail?token={token}",
+    )
+
+
+@router.get("/{file_id}/thumbnail")
+def read_thumbnail(
+    session: SessionDep,
+    file_id: uuid.UUID,
+    credentials: Annotated[
+        HTTPAuthorizationCredentials | None, Depends(optional_bearer)
+    ],
+    token: str | None = None,
+) -> FileResponse:
+    if credentials:
+        user_id = get_current_user(session, credentials.credentials).id
+    elif token:
+        user_id = authorize_file_token(
+            session, file_id, token, purpose="file-thumbnail"
+        )
+    else:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    document = session.get(StoredFile, file_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail="File not found")
+    with sharepoint.acting_as(user_id):
+        key = thumbnail_key(document)
+    if token and not credentials:
+        authorize_file_token(
+            session, file_id, token, purpose="file-thumbnail", cache_key=key
+        )
+    path = thumbnail_path(file_id, key)
+    if not path.is_file():
+        raise HTTPException(
+            status_code=409, detail="La miniatura ha cambiado. Vuelve a pedirla."
+        )
+    return FileResponse(
+        path,
+        media_type="image/png",
+        headers={
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "private, max-age=3600",
+            "Referrer-Policy": "no-referrer",
+        },
+    )
+
+
 @router.get("/{file_id}")
 def read_file(
     session: SessionDep,
@@ -517,4 +602,5 @@ def delete_file(
     if stored.source == "upload":
         storage_path(file_id).unlink(missing_ok=True)
     delete_preview(file_id)
+    delete_thumbnails(file_id)
     return Message(message="File deleted successfully")

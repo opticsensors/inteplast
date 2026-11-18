@@ -371,17 +371,6 @@ def test_evidence_documents_cannot_be_deleted(
     )
 
 
-def test_numbers_are_not_global_tags(
-    client: TestClient, normal_user_token_headers: dict[str, str]
-) -> None:
-    response = client.post(
-        f"{settings.API_V1_STR}/features/",
-        headers=normal_user_token_headers,
-        json={"name": "test", "tags": ["N170"]},
-    )
-    assert response.status_code == 422
-
-
 def test_import_preserves_source_identity_without_local_urls(
     db: Session, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

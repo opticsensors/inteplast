@@ -1,4 +1,3 @@
-import re
 import uuid
 from collections.abc import Sequence
 from typing import Any
@@ -16,7 +15,6 @@ from app.models import (
     FeatureAssetOrder,
     FeatureAssetPublic,
     FeatureAssetUpdate,
-    FeatureCategory,
     FeatureCreate,
     FeatureDetail,
     FeatureFilters,
@@ -54,8 +52,6 @@ def read_features(
     session: SessionDep,
     _current_user: CurrentUser,
     q: str | None = None,
-    category: FeatureCategory | None = None,
-    tag: str | None = None,
     part_id: uuid.UUID | None = None,
     feature_id: uuid.UUID | None = None,
     skip: int = 0,
@@ -64,15 +60,13 @@ def read_features(
     """
     Buscar features.
 
-    `q` busca a la vez en nombre, descripcion, tags, codigo y nombre de las
-    piezas, nombres de los adjuntos, y texto de warnings y lessons learned.
-    `category`, `tag`, `part_id` y `feature_id` se combinan con la búsqueda.
+    `q` busca a la vez en nombre, descripcion, codigo y nombre de las piezas,
+    nombres de los adjuntos, y texto de warnings y lessons learned.
+    `part_id` y `feature_id` se combinan con la búsqueda.
     """
     features, count = crud.search_features(
         session=session,
         q=q,
-        category=category,
-        tag=tag,
         part_id=part_id,
         feature_id=feature_id,
         skip=skip,
@@ -111,13 +105,6 @@ def create_feature(
     """
     Crear un feature.
     """
-    if feature_in.tags and any(
-        re.fullmatch(r"N\s*\d+(?:\.\d+)?", tag.strip(), re.I) for tag in feature_in.tags
-    ):
-        raise HTTPException(
-            status_code=422,
-            detail="Vincula los números de cota dentro de su pieza; los tags son globales.",
-        )
     if feature_in.image_id and not session.get(StoredFile, feature_in.image_id):
         raise HTTPException(status_code=404, detail="File not found")
     feature = crud.create_feature(
@@ -139,13 +126,6 @@ def update_feature(
     conocimiento es colaborativa.
     """
     feature = get_feature_or_404(session, feature_id)
-    if feature_in.tags and any(
-        re.fullmatch(r"N\s*\d+(?:\.\d+)?", tag.strip(), re.I) for tag in feature_in.tags
-    ):
-        raise HTTPException(
-            status_code=422,
-            detail="Vincula los números de cota dentro de su pieza; los tags son globales.",
-        )
     if feature_in.image_id and not session.get(StoredFile, feature_in.image_id):
         raise HTTPException(status_code=404, detail="File not found")
     changes = feature_in.model_dump(exclude_unset=True)

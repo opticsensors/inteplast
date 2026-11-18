@@ -141,7 +141,7 @@ export function Measurements({
       </div>
       {(scope || !code) && search.q?.trim() && entries.length > 0 && (
         <CotaChoices
-          key={`${search.feature ?? "all"}-${search.category}-${search.tag}-${code ? "selected" : (search.q ?? "")}`}
+          key={`${search.feature ?? "all"}-${code ? "selected" : (search.q ?? "")}`}
           entries={code ? entries : findEntries(entries, search.q ?? "")}
           selected={code}
           onSelect={choose}
@@ -164,9 +164,7 @@ export function Measurements({
               : scope === null
                 ? "Este feature no está asociado a esta pieza."
                 : scope && !entries.length
-                  ? search.category || search.tag
-                    ? "No hay cotas vinculadas a los features de estos filtros."
-                    : "Este feature está presente en la pieza, pero todavía no tiene cotas vinculadas."
+                  ? "Este feature está presente en la pieza, pero todavía no tiene cotas vinculadas."
                   : filtered && code && !entry
                     ? "Esta cota no está vinculada a los filtros seleccionados."
                     : code && !revisionMatches

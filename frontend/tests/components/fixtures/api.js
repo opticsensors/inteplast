@@ -142,8 +142,6 @@ export const FeaturesService = {
   readFeatureFilters: async () => ({
     parts: [],
     features: [],
-    tags: [],
-    categories: [],
   }),
   createFeatureNote: async ({ featureId, requestBody }) => {
     if (featureId !== state().feature.id) throw new Error("Unknown feature")
@@ -234,6 +232,17 @@ export const FeaturesService = {
 }
 
 export const FilesService = {
+  /** `window.review.thumbnailBusy[fileId]`: how many times to answer "busy" first. */
+  prepareThumbnail: async ({ fileId }) => {
+    state().thumbnailRequests ??= []
+    state().thumbnailRequests.push(fileId)
+    const busy = state().thumbnailBusy ?? {}
+    if (busy[fileId] > 0) {
+      busy[fileId]--
+      return { state: "busy", url: null }
+    }
+    return { state: "ready", url: `/thumbnails/${fileId}.png` }
+  },
   readSourceTable: async ({ fileId }) => {
     if (state().tableError) throw new Error(state().tableError)
     return clone(state().sourceTables?.[fileId] ?? { sheets: [] })
@@ -494,7 +503,7 @@ export const PartsService = {
     state().parts ??= clone(state().feature.parts)
     return {
       data: state().parts.map((part) => ({
-        ...clone(part),
+        ...clone(withCatalogNames(part)),
         feature_count:
           (state().partUsage?.[part.id] ?? 0) +
           Number(
@@ -624,7 +633,48 @@ export const LoginService = {
   }),
 }
 
+/** Shared lists of families and customers: same name ignoring case and spaces. */
+const catalogNames = (kind) => {
+  state()[kind] ??= []
+  return state()[kind]
+}
+const catalogKey = (name) =>
+  name.trim().split(/\s+/).join(" ").toLocaleLowerCase()
+const addCatalogName = async (kind, { requestBody }) => {
+  state().catalogNameRequests ??= []
+  state().catalogNameRequests.push({ kind, name: requestBody.name })
+  const name = requestBody.name.trim().split(/\s+/).join(" ")
+  const list = catalogNames(kind)
+  const existing = list.find(
+    (item) => catalogKey(item.name) === catalogKey(name),
+  )
+  if (existing) return clone(existing)
+  const created = { id: `${kind}-${list.length + 1}`, name }
+  list.push(created)
+  return clone(created)
+}
+const withCatalogNames = (part) => ({
+  ...part,
+  family:
+    catalogNames("families").find((item) => item.id === part.family_id) ?? null,
+  customer:
+    catalogNames("customers").find((item) => item.id === part.customer_id) ??
+    null,
+})
+
 export const CatalogService = {
+  readFamilies: async () => ({
+    data: clone(catalogNames("families")).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    ),
+  }),
+  readCustomers: async () => ({
+    data: clone(catalogNames("customers")).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    ),
+  }),
+  createFamily: (data) => addCatalogName("families", data),
+  createCustomer: (data) => addCatalogName("customers", data),
   searchCatalog: async (params = {}) => {
     const features =
       params.kind === "part"
@@ -634,13 +684,131 @@ export const CatalogService = {
       params.kind === "feature"
         ? { data: [], count: 0 }
         : await PartsService.readParts()
+    // The server's criterion: a piece meets every piece filter at once.
+    const pieceMatches = (part) =>
+      (!params.partId || part.id === params.partId) &&
+      (!params.familyId || part.family_id === params.familyId) &&
+      (!params.customerId || part.customer_id === params.customerId)
+    const filtered = params.familyId || params.customerId
+    const shownParts = filtered ? parts.data.filter(pieceMatches) : parts.data
+    const matching = new Set(shownParts.map((part) => part.id))
+    const shownFeatures = filtered
+      ? features.data.filter((feature) =>
+          [
+            ...(feature.parts ?? []),
+            ...(feature.assets ?? []).map((asset) => asset.part),
+          ].some((part) => part && matching.has(part.id)),
+        )
+      : features.data
+    state().catalogRequests ??= []
+    state().catalogRequests.push(clone(params))
+    // Paged like the server; counts stay the totals.
+    const page = (items) =>
+      params.limit === undefined
+        ? items
+        : items.slice(params.skip ?? 0, (params.skip ?? 0) + params.limit)
     return {
-      features: features.data,
-      parts: parts.data,
+      features: page(shownFeatures),
+      parts: page(shownParts),
       cotas: [],
-      feature_count: features.count,
-      part_count: parts.count,
+      feature_count: filtered ? shownFeatures.length : features.count,
+      part_count: filtered ? shownParts.length : parts.count,
       cota_count: 0,
+    }
+  },
+  /** Same results as the list; `window.review.graphLimit` forces the cut. */
+  readCatalogGraph: async (params = {}) => {
+    state().graphRequests ??= []
+    state().graphRequests.push(clone(params))
+    const list = await CatalogService.searchCatalog({ ...params, limit: 100 })
+    const candidates = [
+      ...list.parts.map((part) => ({
+        id: `part:${part.id}`,
+        kind: "part",
+        ref_id: part.id,
+        label: part.code,
+        name: part.name ?? null,
+        image: part.image ?? null,
+      })),
+      ...list.features.map((feature) => ({
+        id: `feature:${feature.id}`,
+        kind: "feature",
+        ref_id: feature.id,
+        label: feature.name,
+      })),
+    ]
+    for (const group of ["family", "customer"])
+      for (const part of list.parts) {
+        const value = part[group]
+        if (
+          value &&
+          !candidates.some((node) => node.id === `${group}:${value.id}`)
+        )
+          candidates.push({
+            id: `${group}:${value.id}`,
+            kind: group,
+            ref_id: value.id,
+            label: value.name,
+          })
+      }
+    const nodes = candidates.slice(0, state().graphLimit ?? 500)
+    const present = new Set(nodes.map((node) => node.id))
+    const links = []
+    for (const feature of list.features)
+      for (const part of [
+        ...(feature.parts ?? []),
+        ...(feature.assets ?? []).map((asset) => asset.part),
+      ])
+        if (part)
+          links.push({
+            source: `part:${part.id}`,
+            target: `feature:${feature.id}`,
+            kind: "feature",
+          })
+    for (const part of list.parts)
+      for (const group of ["family", "customer"])
+        if (part[`${group}_id`])
+          links.push({
+            source: `part:${part.id}`,
+            target: `${group}:${part[`${group}_id`]}`,
+            kind: group,
+          })
+    return {
+      nodes,
+      links: links.filter(
+        (link, index) =>
+          present.has(link.source) &&
+          present.has(link.target) &&
+          links.findIndex(
+            (other) =>
+              other.source === link.source && other.target === link.target,
+          ) === index,
+      ),
+      total: candidates.length,
+      truncated: candidates.length > nodes.length,
+    }
+  },
+  /** `window.review.drawings`: every drawing card, filtered like the server. */
+  readCatalogDrawings: async (params = {}) => {
+    state().drawingRequests ??= []
+    state().drawingRequests.push(clone(params))
+    const parts = (await PartsService.readParts()).data
+    const matches = (card) => {
+      const part = parts.find((item) => item.id === card.part.id)
+      return (
+        (!params.partId || card.part.id === params.partId) &&
+        (!params.familyId || part?.family_id === params.familyId) &&
+        (!params.customerId || part?.customer_id === params.customerId) &&
+        (!params.q ||
+          card.name.toLowerCase().includes(params.q.toLowerCase()) ||
+          card.part.code.includes(params.q))
+      )
+    }
+    const data = clone(state().drawings ?? []).filter(matches)
+    const skip = params.skip ?? 0
+    return {
+      data: data.slice(skip, skip + (params.limit ?? 40)),
+      count: data.length,
     }
   },
   readPartDetail: async ({ partId }) => ({

@@ -7,12 +7,13 @@ from starlette.concurrency import run_in_threadpool
 
 from app.assistant.answers import correction_answer, measurement_answer
 from app.assistant.drafting import messages as drafting_messages
+from app.assistant.knowledge import GLOSSARY
 from app.assistant.providers import ChatProvider, ProviderError
 from app.assistant.retrieval import correction_question
 from app.assistant.schemas import ChatRequest, StreamEvent
 from app.assistant.tools import TOOL_LABELS, KnowledgeTools, definitions
 
-SYSTEM = """Asistente de Inteplast. Responde en el idioma del usuario, con la extensión
+SYSTEM = f"""Asistente de Inteplast. Responde en el idioma del usuario, con la extensión
 necesaria para contestar todas las partes de la pregunta. Sé directo y evita repeticiones.
 Usa listas cuando ayuden. No muestres razonamiento, JSON, UUIDs ni enlaces.
 Conserva los nombres originales de piezas/features. El estado de importación no es el
@@ -55,7 +56,9 @@ como si representase todo el estudio. Evita comentarios sobre tus instrucciones 
 coverage indica qué listas están incompletas y next_offset permite continuar su lectura.
 Una búsqueda por relevancia NO es un inventario de todas las notas: usa read_feature para ello.
 Indica código/revisión, datos ausentes y páginas parciales; no generalices muestras.
-"""
+Usa el glosario para las definiciones. Para hechos sobre una ficha, consulta sus datos.
+
+{GLOSSARY}"""
 
 
 def bounded_result(result: dict[str, Any], budget: int) -> str:
@@ -146,6 +149,7 @@ async def answer(
             12000,
             (knowledge.settings.context_tokens - knowledge.settings.max_tokens - 2000)
             * 2
+            - len(GLOSSARY)
             - sum(len(m["content"]) for m in recent),
         ),
     )

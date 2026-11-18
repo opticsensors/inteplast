@@ -11,6 +11,14 @@ y actualizar el servidor.
 2. Servidor de Eurecat, con cuentas de Eurecat y SharePoint de Eurecat.
 3. Traslado a los servidores de INTEPLAST. Esta fase depende de [A10](preguntas-abiertas.md#a10-acceso-originales).
 
+**Asistente — decisión de Eduard (17/11/2026): Ollama descartado.** Antes del traslado,
+hacer en el PC de Eduard una prueba de concepto con Codex (ChatGPT), con el modelo más rápido
+disponible como motor de fondo, simulando un agente conectado a la API de la app sin crear
+un agente para esta prueba. **La solución final será Copilot de empresa.** La prueba con Codex es
+local y provisional; no se traslada como solución de producción. Prueba integrada el
+18/11/2026 con puente de Windows y búsqueda por palabras sin Ollama; detalle en
+[asistente](asistente.md#prueba-local-integrada-18112026).
+
 Esta guía recoge la opción elegida, la petición a IT y el trabajo pendiente. **No implica
 que el servidor esté provisionado ni que se haya desplegado o validado la aplicación allí.**
 Los comandos generales están en [deployment.md](../deployment.md); la integración de
@@ -96,12 +104,13 @@ Texto base para solicitar la infraestructura; sustituir los nombres cuando IT lo
 > - Registrar como plataforma **Web** el retorno `https://<nombre-interno-api>/api/v1/login/microsoft/callback` en la aplicación de Microsoft Entra correspondiente.
 > - Confirmar el tenant, el registro de aplicación, los permisos delegados y su consentimiento, la biblioteca compartida y los usuarios autorizados. Necesitamos el identificador de unidad (`SHAREPOINT_DRIVE_ID`) y la carpeta raíz.
 > - Almacenamiento persistente y copias de seguridad de PostgreSQL y de los archivos de la aplicación, con un procedimiento de restauración.
-> - Acordar dónde ejecutar Ollama y sus modelos si se incluye el asistente, y dimensionar CPU, RAM, disco y, si procede, GPU según CAD grandes y usuarios simultáneos.
+> - Acordar la integración final de Copilot con la API de la app, sus permisos y usuarios simultáneos. Ollama queda descartado; dimensionar CPU, RAM y disco para CAD grandes, importaciones y uso de la aplicación.
 >
 > La aplicación ya incluye contenedores e integración con Microsoft. Quedan la configuración del servidor, el traslado de datos y las pruebas del login y de archivos reales.
 
 La capacidad final se fijará con mediciones en la máquina elegida. Las conversiones CAD,
-la caché de SharePoint, las vistas 3D y el asistente deben entrar en ese cálculo; consultar
+la caché de SharePoint, las vistas 3D y las consultas de la futura integración con Copilot
+deben entrar en ese cálculo; no reservar recursos para modelos de Ollama. Consultar
 [vistas 3D](vistas-3d.md) y [concurrencia del asistente](asistente.md#concurrencia-y-despliegue).
 
 ## Configuración de la aplicación
@@ -122,7 +131,7 @@ de ejemplo. Las credenciales se entregarán por el canal privado acordado con IT
 | `SHAREPOINT_DRIVE_ID` | La unidad compartida elegida. Vacío significa el OneDrive de cada usuario conectado, no una biblioteca común. |
 | `SHAREPOINT_ROOT_PATH` | La carpeta raíz dentro de esa unidad, no una ruta del sistema operativo. |
 | `ASSETS_SOURCE_ID`, `ASSETS_SOURCE_NAME` | Mantener el identificador del conjunto actual al migrar su BD y sus documentos; el nombre es la etiqueta visible. |
-| `ASSISTANT_OLLAMA_URL` | Dirección alcanzable desde el backend al servidor de Ollama, si se incluye el asistente. |
+| `ASSISTANT_ENABLED` | Mantener `false` en el servidor hasta disponer de la integración con Copilot. Ollama está descartado y el proveedor Codex incorporado el 18/11 es solo para la prueba local; no trasladar la sesión ni el token del puente del PC al servidor. |
 
 El usuario necesita tanto un alta activa en INTEPLAST como permisos en Microsoft para
 los originales. Hay que designar al primer administrador corporativo de la app; el rol de
@@ -149,10 +158,11 @@ hecho de documentarlos**:
 3. **Servicios de producción.** Usar el frontend compilado y el backend de producción.
    Excluir `compose.override.yml`, destinado al desarrollo, y definir los servicios y
    puertos que utilizará el proxy elegido. No es necesario publicar PostgreSQL a los usuarios.
-4. **Asistente.** Si se traslada también, instalar Ollama y sus modelos o conectarlo a un
-   servicio existente. La dirección `host.docker.internal` del PC con Docker Desktop no
-   debe darse por configurada en Docker Engine sobre Linux. Probar conectividad y carga
-   concurrente; el proveedor y el dimensionamiento siguen pendientes de acordar.
+4. **Asistente.** No instalar Ollama en el servidor. La prueba local con Codex está integrada
+   desde el 18/11; después se integrará Copilot como solución final. El proveedor local usa
+   el puente del PC y búsqueda por palabras, por lo que el módulo debe permanecer desactivado
+   en el servidor hasta integrar Copilot. Esa integración requiere concretar autenticación,
+   permisos, conexión a la API y pruebas de concurrencia; la prueba local no la valida.
 
 La integración Graph y el retorno automático ya existen: estos puntos son principalmente
 configuración de despliegue. Si se decide usar carpetas locales del servidor en lugar de

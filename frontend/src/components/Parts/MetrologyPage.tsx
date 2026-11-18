@@ -8,7 +8,7 @@ import { fileErrorMessage } from "@/hooks/useFileAccess"
 import { componentDrawings, drawingNumber } from "./componentDrawings"
 import { Measurements } from "./Measurements"
 import { MetrologyFilters } from "./MetrologyFilters"
-import type { PartSearch } from "./measurementSelection"
+import { type PartSearch, withoutLegacyFilters } from "./measurementSelection"
 import {
   PartReadButton,
   PartReadStatus,
@@ -29,8 +29,8 @@ export function MetrologyPage({
   const reading = usePartReading(embedded ? undefined : partId)
   // The piece shows all its cotas; catalogue filters no longer scope this page.
   const consultationSearch = embedded
-    ? { ...search, feature: undefined, category: undefined, tag: undefined }
-    : search
+    ? { ...withoutLegacyFilters(search), feature: undefined }
+    : withoutLegacyFilters(search)
   const options = useQuery({
     queryKey: ["metrology-filters"],
     queryFn: () => EvidenceService.readMetrologyFilters(),
@@ -130,19 +130,13 @@ export function MetrologyPage({
           }
           search={search}
           onPart={(id) => {
-            visit(id, {
-              feature: search.feature,
-              category: search.category,
-              tag: search.tag,
-            })
+            visit(id, { feature: search.feature })
           }}
           onScope={(values) => {
             visit(partId, {
               revision: search.revision,
               snapshot: search.snapshot,
               feature: search.feature,
-              category: search.category,
-              tag: search.tag,
               plano: search.plano,
               drawingFile: search.drawingFile,
               view: search.view,
@@ -250,11 +244,7 @@ export function MetrologyPage({
             ? consultationSearch
             : partId
               ? search
-              : {
-                  feature: search.feature,
-                  category: search.category,
-                  tag: search.tag,
-                }
+              : { feature: search.feature }
         }
         onChange={change}
         onSource={

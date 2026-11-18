@@ -15,7 +15,6 @@ from app.models import (
     AssetKind,
     Feature,
     FeatureAsset,
-    FeatureCategory,
     FeatureNote,
     NoteKind,
     Part,
@@ -120,8 +119,6 @@ def _seed(session: Session) -> bool:
             "(posicion), N178 (planitud del plano A de referencia) y N288 "
             "(fuerza de insercion del pin)."
         ),
-        category=FeatureCategory.hole,
-        tags=["Bosch"],
     )
     session.add(feature)
     session.flush()

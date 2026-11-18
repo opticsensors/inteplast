@@ -104,7 +104,7 @@ def collect(session: Session) -> list[Passage]:
             chunks(
                 f"feature:{feature.id}",
                 feature.name,
-                "\n".join([feature.name, feature.description or "", *feature.tags]),
+                "\n".join([feature.name, feature.description or ""]),
                 f"/features/{feature.id}",
                 {**feature_scope(feature), "kind": "description"},
             )

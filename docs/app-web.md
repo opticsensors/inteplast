@@ -17,7 +17,7 @@
 
 **22/09/2026:** **Catálogo** reúne piezas y features en `/features`, con cotas solo cuando
 se escribe en el buscador. Nueva pieza y Nuevo feature están juntos. Cada pieza tiene ficha
-con título, descripción, código y cliente, features vinculados y la consulta de metrología
+con código (título), nombre opcional, familia, cliente y descripción, features vinculados y la consulta de metrología
 reutilizada. Los vínculos se editan desde cualquiera de las dos fichas. La portada STEP
 encuadrada aparece junto a la cabecera de la ficha y en la tarjeta del catálogo;
 los archivos abren su visor desde la ficha.
@@ -85,11 +85,15 @@ StoredFile                    identidad común de un documento subido o referenc
   version (UUID del vínculo), revision (etiqueta), reference_key (deduplicación)
 
 Part                          registro de pieza; no es una tabla independiente de moldes
-  id, code ("3212", UNIQUE), name, description, customer, folder_path
+  id, code ("3212", UNIQUE), name (opcional), description, folder_path
+  family_id → PartFamily, customer_id → Customer (opcionales, RESTRICT)
   files_managed, last_read, created_at
 
+PartFamily / Customer         listas compartidas (17/11/2026)
+  id, name, key (UNIQUE: sin mayúsculas ni espacios sobrantes)
+
 Feature                       la ficha del feature
-  id, name, description, category, tags[], owner_id, image_id → StoredFile, cover_3d (JSON)
+  id, name, description, owner_id, image_id → StoredFile, cover_3d (JSON)
   ├─ FeatureNote (n)          kind = warning | lesson
   │    title, body (markdown reducido), position
   ├─ FeatureAsset (n)         kind = mold | part | scan | drawing | moldflow
@@ -125,7 +129,9 @@ Decisiones que conviene conocer antes de tocarlo:
 | Decisión | Por qué |
 |---|---|
 | **Una sola tabla `FeatureNote`** con `kind` en vez de dos tablas | Warnings y lessons learned tienen exactamente los mismos campos y la misma UI. Una tabla, un juego de endpoints, un componente |
-| `tags` como **`ARRAY(String)` de Postgres**, no tabla aparte | Se filtra con `tags @> ...` y se busca con `array_to_string`. Sin joins ni tabla de unión para algo que es texto libre |
+| **Sin tags ni categoría de feature** (17/11/2026, migración `o16d92fa1c07`) | No venían de INTEPLAST y con 8 features casi cada categoría tenía uno solo; «bomba» era falso para el 3197. Lo propio de cada feature va en descripción, advertencias, lecciones y cotas. Valores perdidos, anotados: Bolt Eye (`hole`, `bomba`, `automoción`) y Nervios (`rib`). Volver atrás recrea las columnas vacías; los valores solo vuelven desde la copia de la BD |
+| **Caché del frontend tras reconstruir** (18/11/2026) | `index.html` se sirve con `Cache-Control: no-cache`; `/assets/` (nombres con huella) con caché larga y 404 si no existe, en vez de devolver `index.html` (`frontend/nginx.conf`). Una pestaña abierta antes de una reconstrucción que pide un trozo antiguo recarga una vez sola (`vite:preloadError` en `main.tsx`). Antes, abrir la portada en edición tras reconstruir mostraba «Oops! Something went wrong» |
+| **Familia y cliente como tablas propias** (17/11/2026) | Desplegable compartido con «Añadir». El nombre es único sin distinguir mayúsculas ni espacios: «bosch» y «Bosch » no crean otra entrada; «Robert Bosch» sí. La migración agrupó así los textos de `Part.customer` (grafía más repetida; si empatan, la de la pieza más antigua). Renombrar, fusionar y borrar quedan para cuando se corrija el idioma |
 | Los enums se guardan como **VARCHAR** (`sa_type=AutoString`), no como tipo `ENUM` de Postgres | Añadir una categoría nueva no obliga a una migración. En la API y en el cliente TypeScript siguen siendo uniones cerradas |
 | `Feature.owner_id` es **`ON DELETE SET NULL`** | La ficha es conocimiento compartido: sobrevive al borrado del usuario que la creó. (El `Item` de la plantilla, en cambio, es `CASCADE`) |
 | Las notas y los adjuntos son **`ON DELETE CASCADE`** | No tienen sentido sin su feature |
@@ -197,8 +203,9 @@ Todo bajo `/api/v1`. Documentación interactiva en `http://localhost:8000/docs`.
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| `GET` | `/features/` | Buscar. Params: `q`, `category`, `tag`, `part_id`, `skip`, `limit` |
-| `GET` | `/features/filters` | Features con sus vínculos, categorías, tags y piezas **que algún feature usa**, para los desplegables |
+| `GET` | `/features/` | Buscar. Params: `q`, `part_id`, `feature_id`, `skip`, `limit` (`category` y `tag` de enlaces antiguos se ignoran) |
+| `GET` | `/features/filters` | Features con sus vínculos y piezas **que algún feature usa**, para los desplegables |
+| `GET` `POST` | `/families`, `/customers` | Listar y añadir familias y clientes, con usuario autenticado. Añadir un nombre existente (otras mayúsculas o espacios) devuelve el existente |
 | `POST` | `/features/` | Crear |
 | `GET` | `/features/{id}` | Ficha completa: + `notes` + `assets` |
 | `PUT` `DELETE` | `/features/{id}` | Editar / borrar |
@@ -212,8 +219,12 @@ Todo bajo `/api/v1`. Documentación interactiva en `http://localhost:8000/docs`.
 | `PUT` `DELETE` | `/features/assets/{id}` | Editar / quitar un adjunto |
 | `POST` | `/parts/from-folder` | Registrar o reutilizar una carpeta de pieza existente, sin duplicados |
 | `GET` `POST` | `/parts/` | Listar (incluye `feature_count` por pieza) y dar de alta piezas |
-| `PUT` | `/parts/{id}` | Editar identidad, descripción, cliente, carpeta y archivos/referencias según `PartUpdate`. El código es único: choque → `409` |
-| `GET` | `/catalog` | Búsqueda paginada de piezas/features; cotas por pieza/revisión solo con texto. Filtros compartidos y `kind=all/part/feature` |
+| `PUT` | `/parts/{id}` | Editar código, nombre, descripción, `family_id`, `customer_id` (omitido conserva, `null` quita), carpeta y archivos/referencias según `PartUpdate`. El código es único: choque → `409`; familia o cliente inexistente → `422` |
+| `GET` | `/catalog` | Búsqueda paginada de piezas/features; cotas por pieza/revisión solo con texto. Filtros `part_id`, `feature_id`, `family_id`, `customer_id` y `kind=all/part/feature`. **Criterio único:** una pieza cumple si cumple todos los filtros de pieza a la vez; un feature, si está vinculado a al menos una pieza que los cumpla todos |
+| `GET` | `/catalog/graph` | Lo mismo que `/catalog` con los mismos filtros (`catalog_part_filters` y `crud.feature_conditions`), sin páginas: nodos de pieza (código, nombre, captura CAD guardada; nunca lanza una nueva), feature, familia y cliente, y uniones pieza–feature (pertenencia completa, como la lista), pieza–familia y pieza–cliente. Tope `limit` (máx. y por defecto 500 nodos): si se supera devuelve `truncated` y el `total` real |
+| `GET` | `/catalog/drawings` | «Planos» del catálogo: **todos** los planos de las piezas que cumplen los filtros (mismo criterio de pieza, familia, cliente y feature), no solo el principal. Cada pieza aporta los que muestra su ficha (`read_files`): su lista gestionada o, si no la tiene, sus referencias y los adjuntos de features (corregido el 18/11/2026; antes solo miraba `PartFile`). `q` busca en el nombre del archivo y en el código o nombre de la pieza. Cada tarjeta lleva componente y revisión si están asignados en «Organizar por componentes». Paginado (`skip`, `limit` ≤ 100) |
+| `POST` | `/files/{id}/thumbnail` | Miniatura PNG de la primera página de un PDF (PyMuPDF, 480 px de ancho), en `uploads/thumbnails/{id}/{clave}.png`. La clave es la de la versión del original, como en las vistas 3D: no se regenera si el archivo no cambia y sí si cambia (se borra la anterior). PyMuPDF corre en un proceso hijo (`app.thumbnail_converter`) con 60 s de límite, porque no admite hilos; como mucho 2 a la vez por proceso de la API y uno por documento, con un bloqueo de archivo que el sistema libera también tras un fallo o un timeout. Si no hay hueco o el mismo PDF se está dibujando, responde `busy` y la web reintenta con un marcador. El temporal (`*.part`) queda fuera de la limpieza de versiones anteriores (`*.png`). Fallo → `422` con el motivo; timeout → `504`. Devuelve un enlace firmado (`purpose: file-thumbnail`). Solo PDF (`415`) |
+| `GET` | `/files/{id}/thumbnail` | Sirve la miniatura con token o sesión; un enlace de una versión anterior ya no sirve (`409`/`401`) |
 | `GET` | `/parts/{id}/detail` | Identidad, portada/CAD, referencias y features vinculados |
 | `PUT` | `/parts/{id}/cover` | Guardar una captura del CAD actual, validando versión y SHA-256 |
 | `GET` | `/parts/{id}/deletion` | Alcance del borrado: qué se elimina, qué se conserva y la clave `key`. **Solo superusuario** |
@@ -227,7 +238,7 @@ Todo bajo `/api/v1`. Documentación interactiva en `http://localhost:8000/docs`.
 | `GET` | `/files/{id}` | Servirlo con bearer o enlace firmado válido |
 | `DELETE` | `/files/{id}` | Borrar el registro; no borra el original externo |
 
-**La búsqueda `q` es global**: mira en el nombre, la descripción, los tags, el **código y el
+**La búsqueda `q` es global**: mira en el nombre, la descripción, el **código y el
 nombre de las piezas** (por adjunto y por declaración), el nombre de los adjuntos, y el título y
 el cuerpo de warnings y lessons learned. Es lo que permite encontrar el Bolt Eye escribiendo
 `3212`, `Pump Housing` o `N170`.
@@ -296,11 +307,11 @@ izquierda, Features y Archivos a la derecha. Cada feature aparece sin foto, con 
 enlazado y las cotas de esta pieza; estas abren la medición en la misma página.
 La sección Cotas reutiliza `MetrologyPage` con la pieza fijada por la ficha, sin selectores
 de pieza, Feature ni Más filtros. Conserva buscador y controles de las mediciones.
-`GET /evidence/metrology/filters` proporciona opciones ligeras con pertenencia, categoría
-y tags; `GET /evidence/parts/{id}` incluye features y sus cotas, además de los datos importados.
+`GET /evidence/metrology/filters` proporciona opciones ligeras con pertenencia;
+`GET /evidence/parts/{id}` incluye features y sus cotas, además de los datos importados.
 El catálogo ofrece todas las piezas registradas, incluidas las que no tienen features.
-`Common/SearchSelect` se reutiliza también en Features. Categoría y tag deben coincidir
-en un mismo feature y solo atribuyen a la consulta sus cotas realmente vinculadas.
+`Common/SearchSelect` se reutiliza también en Features. El filtro Feature solo atribuye a la
+consulta sus cotas realmente vinculadas.
 La ficha no selecciona N170 ni otra cota automáticamente. Siempre ofrece todas las cotas
 de la pieza, también las no asignadas a features o sin mediciones. Los filtros del catálogo
 en enlaces antiguos no limitan esta consulta; al interactuar se eliminan del enlace.
@@ -322,7 +333,7 @@ varias, y consultar una versión anterior desde el historial de importaciones de
 | Ruta | Fichero | Qué es |
 |---|---|---|
 | `/` | `routes/_layout/index.tsx` | Redirige a `/features`, conservando los filtros de los enlaces antiguos |
-| `/features/{id}` | `routes/_layout/features_.$featureId.tsx` | 🔑 **La ficha del feature**: cabecera con la imagen a la izquierda e identidad a la derecha (nombre, descripción, categoría, tags, piezas), y debajo advertencias y lecciones a la izquierda y piezas con sus cotas a la derecha. **Se edita aquí mismo** (ver abajo) |
+| `/features/{id}` | `routes/_layout/features_.$featureId.tsx` | 🔑 **La ficha del feature**: cabecera con la imagen a la izquierda e identidad a la derecha (nombre, descripción, piezas), y debajo advertencias y lecciones a la izquierda y piezas con sus cotas a la derecha. **Se edita aquí mismo** (ver abajo) |
 | `/features` | `routes/_layout/features.tsx` | **Catálogo e inicio**: buscador, filtros y tarjetas que abren la ficha en lectura, con *Nuevo feature* y *Editar* directamente accesibles. La búsqueda va en la URL (`/features?q=3212`) |
 | `/features/{id}/fichero/{assetId}` | `routes/_layout/features_.$featureId_.fichero.$assetId.tsx` | Página antigua de un adjunto del feature. Se conserva para enlaces guardados; la interfaz ya no enlaza a ella |
 | `/parts/{id}` | `routes/_layout/parts_.$partId.tsx` | 🔑 **La ficha de pieza**: identidad, carpeta, Cotas (mediciones, correcciones y plano), Features y Archivos. Se edita aquí mismo con `?editar=true` |
@@ -335,8 +346,8 @@ Componentes en `components/Features/`:
 
 | Fichero | Qué |
 |---|---|
-| `FeatureSearch.tsx` | Buscador + Pieza y Feature; Categoría y Tag bajo Más filtros. Selectores con búsqueda interna poblados desde `/features/filters`; `feature_id` filtra por identidad exacta y se conserva como `feature` en la URL |
-| `FeatureCard.tsx` | La tarjeta: imagen, nombre, descripción, tags y el resumen *«2 piezas · 3197, 3212»* |
+| `FeatureSearch.tsx` | Buscador + Pieza, Feature, Familia y Cliente bajo Filtros. Selectores con búsqueda interna poblados desde `/features/filters`, `/families` y `/customers`; `feature_id` filtra por identidad exacta; en la URL quedan `part`, `feature`, `family` y `customer` |
+| `FeatureCard.tsx` | La tarjeta: imagen, nombre, descripción y el resumen *«2 piezas · 3197, 3212»* |
 | `PartAssetList.tsx` | 🔑 **Las piezas del feature con sus cotas**: un desplegable por pieza con su fila COTAS y «Ver pieza». Los documentos se consultan en la ficha de pieza. **El mismo componente sirve la ficha y el formulario** (`editable`) |
 | `Parts/FeaturePartEvidence.tsx` | Fila **COTAS** compacta: números, plano, añadir y papelera. Añadir permite seleccionar una cota importada con su revisión o escribir otra al final de la fila. |
 | `Parts/PartDetailPage.tsx` | Ficha y alta de pieza (`/parts/{id}`, `/parts/nueva`): cabecera, carpeta, Cotas, Features y Archivos. **Actualizar datos** (`Parts/PartReadStatus.tsx`) relee la carpeta; no asigna cotas al feature. |
@@ -353,7 +364,7 @@ Componentes en `components/Features/`:
 | `NoteList.tsx` | Warnings y lessons **en modo edición**: título editable en su sitio, desplegable con el cuerpo dentro y autoguardado |
 | `SourceFilePicker.tsx` | Selector de originales: elegir un archivo y vincularlo a esta tarjeta, sin opciones adicionales |
 | `DocumentStatus.tsx` | Estado del original y aviso de archivo ausente/cambiado/inaccesible |
-| `constants.ts` | Las etiquetas en castellano de categorías y tipos, y el icono de cada tipo |
+| `constants.ts` | Las etiquetas en castellano de los tipos de archivo y notas, y el icono de cada tipo |
 | `queries.ts` | Claves de consulta: catálogo/fichas de features bajo `["features"]`; las piezas tienen `["parts"]` y otras consultas invalidan sus propias claves |
 
 Y en `components/Common/`: `FileUpload.tsx` (drag and drop), `RichText.tsx` (editor y visor),
@@ -378,8 +389,8 @@ del prefijo numérico de la carpeta o se asigna uno provisional estable `PIEZA-�
 Se reutilizan registros existentes, sin crear carpetas ni duplicar piezas. Código y carpeta
 son únicos; un código asociado a otra carpeta produce conflicto.
 
-En la ficha de pieza, **Editar pieza** permite cambiar título, descripción, código, cliente,
-carpeta y archivos; **Guardar cambios** los guarda juntos y **Cancelar** los descarta.
+En la ficha de pieza, **Editar pieza** permite cambiar código, nombre, familia, cliente,
+descripción, carpeta y archivos; **Guardar cambios** los guarda juntos y **Cancelar** los descarta.
 Cambiar la carpeta propone sus archivos y conserva el título y el código ya editados. Uso
 detallado en [archivos externos](ficheros-externos.md#uso-en-la-ficha-de-pieza). Código y
 nombre también se editan en la cabecera de cada pieza dentro del editor del feature, con
@@ -691,7 +702,7 @@ La cobertura HTML se genera dentro del stack de tests y desaparece al limpiarlo.
 | **Conexión Microsoft 365** | Implementada el 22/10/2026 con la app de Eurecat (login delegado + Graph). Login real el 30/10 y retorno automático el 09/11/2026; pendiente la primera prueba real de archivos. INTEPLAST: confirmar ubicación y permisos con su IT (A10, prioridad 1). Se direcciona por ruta: un renombrado rompe el vínculo. Ver [SharePoint](ficheros-externos.md#sharepoint-microsoft-graph) |
 | **La ficha de una pieza** | Implementada el 22/09/2026: `/parts/{id}` con identidad, carpeta, Cotas, Features y Archivos (`Parts/PartDetailPage.tsx`) |
 | **Adjuntos del feature copiados de la pieza** | No se actualizan si cambian los archivos de la pieza; afecta a la portada CAD y al plano de la fila COTAS. Ver [portadas CAD](portadas-cad.md#origen-del-cad-de-la-portada) |
-| **Concurrencia del asistente** | Pendiente de decidir con el despliegue (proveedor, máquina, usuarios). Ver [asistente](asistente.md#concurrencia-y-despliegue) |
+| **Sustitución del asistente** | Integrado el 18/11: Codex como motor de fondo de la prueba local, mediante puente de Windows y lecturas del backend existente; sin cambios del frontend ni Ollama. Búsqueda por palabras, respuesta completa y una llamada simultánea al modelo. Copilot sigue pendiente como solución final. Ver [asistente](asistente.md#prueba-local-integrada-18112026) |
 | **Correcciones de otras piezas** | Las mediciones ya son genéricas; las correcciones XLS/PPTX solo se interpretan en el 3212. Ejemplos recibidos; faltan resultados esperados revisados y generalizar el lector. Ver [hoja de ruta](hoja-de-ruta.md#pendiente-generalizar-la-importación-de-correcciones-pptx) |
 
 ### Nombre real del fichero en las tarjetas (2026-09-17)

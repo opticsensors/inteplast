@@ -121,8 +121,11 @@ def test_usage_counts_distinct_features_and_blocks_explicit_links(
     db.commit()
     create_random_asset(db, first, part=part)
     create_random_asset(db, first, part=part)
+    # Every piece: other tests add many, and the list is paged by code.
     listed = client.get(
-        f"{settings.API_V1_STR}/parts/", headers=superuser_token_headers
+        f"{settings.API_V1_STR}/parts/",
+        headers=superuser_token_headers,
+        params={"limit": 100000},
     ).json()["data"]
     counts = {row["id"]: row["feature_count"] for row in listed}
     assert counts[str(part.id)] == 2

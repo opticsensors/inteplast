@@ -1,0 +1,173 @@
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
+import { FileText, Loader2, Search } from "lucide-react"
+import { useState } from "react"
+
+import { CatalogService, type DrawingCard, FilesService } from "@/client"
+import { partLabel } from "@/components/Features/parts"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import { absoluteFileUrl, fileErrorMessage } from "@/hooks/useFileAccess"
+
+export type CatalogDrawingsRequest = {
+  q: string
+  partId: string | null
+  featureId: string | null
+  familyId: string | null
+  customerId: string | null
+}
+
+const PAGE = 40
+
+/**
+ * First page of the PDF, drawn by the server once per version of the original. While it
+ * is being drawn, or others are, a placeholder stays and the request is repeated.
+ */
+function DrawingThumbnail({ card }: { card: DrawingCard }) {
+  // An expired or unreachable image shows the drawing icon, never a broken image.
+  const [broken, setBroken] = useState(false)
+  const thumbnail = useQuery({
+    queryKey: ["drawing-thumbnail", card.file.id, card.file.version],
+    queryFn: async () => {
+      const result = await FilesService.prepareThumbnail({
+        fileId: card.file.id,
+      })
+      if (result.state === "busy") throw new Error("busy")
+      return result
+    },
+    retry: (count, error) => error.message === "busy" && count < 20,
+    retryDelay: 1500,
+    staleTime: 10 * 60_000,
+  })
+  if (thumbnail.data?.url && !broken)
+    return (
+      <img
+        src={absoluteFileUrl(thumbnail.data.url)}
+        alt={`Primera página de ${card.name}`}
+        className="size-full object-contain"
+        onError={() => setBroken(true)}
+      />
+    )
+  return (
+    <div
+      className="flex size-full items-center justify-center text-muted-foreground"
+      title={thumbnail.error ? fileErrorMessage(thumbnail.error) : undefined}
+    >
+      {broken || (thumbnail.isError && thumbnail.error.message !== "busy") ? (
+        <FileText className="size-10" aria-label="Sin miniatura" />
+      ) : (
+        <Loader2
+          className="size-6 animate-spin"
+          aria-label="Preparando miniatura"
+        />
+      )}
+    </div>
+  )
+}
+
+function DrawingTile({
+  card,
+  onOpen,
+}: {
+  card: DrawingCard
+  onOpen: (card: DrawingCard) => void
+}) {
+  const label = `${card.name} · ${card.part.code}`
+  return (
+    <div className="relative flex min-w-0 flex-col overflow-hidden rounded-lg border border-t-4 border-t-amber-500/60 transition-colors hover:border-primary/50 hover:bg-accent/50">
+      <button
+        type="button"
+        className="absolute inset-0 z-10 cursor-pointer rounded-lg"
+        onClick={() => onOpen(card)}
+        title={label}
+      >
+        <span className="sr-only">Abrir plano {label}</span>
+      </button>
+      <div className="aspect-[4/3] w-full bg-white p-2">
+        <DrawingThumbnail card={card} />
+      </div>
+      <div className="min-w-0 space-y-0.5 p-3">
+        <h3 className="truncate font-semibold leading-tight" title={card.name}>
+          {card.name}
+        </h3>
+        <p className="truncate text-sm text-muted-foreground">
+          {partLabel(card.part)}
+        </p>
+        {(card.component || card.revision) && (
+          <p className="truncate text-sm text-muted-foreground">
+            {[card.component, card.revision && `rev. ${card.revision}`]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** «Planos»: every drawing of the loaded pieces, always as a grid. */
+export function CatalogDrawings({
+  request,
+  onOpen,
+}: {
+  request: CatalogDrawingsRequest
+  onOpen: (card: DrawingCard) => void
+}) {
+  const result = useInfiniteQuery({
+    queryKey: ["features", "catalog-drawings", request],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
+      CatalogService.readCatalogDrawings({
+        q: request.q,
+        partId: request.partId,
+        featureId: request.featureId,
+        familyId: request.familyId,
+        customerId: request.customerId,
+        skip: pageParam,
+        limit: PAGE,
+      }),
+    getNextPageParam: (last, pages) =>
+      pages.length * PAGE < last.count ? pages.length * PAGE : undefined,
+  })
+  if (result.isPending)
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {[0, 1, 2, 3].map((index) => (
+          <Skeleton key={index} className="aspect-[4/3] w-full" />
+        ))}
+      </div>
+    )
+  if (result.error) return <p role="alert">{fileErrorMessage(result.error)}</p>
+  const cards = (result.data?.pages ?? []).flatMap((page) => page.data)
+  return (
+    <div className="space-y-4">
+      {cards.length ? (
+        <div
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+          data-view="drawings"
+        >
+          {cards.map((card) => (
+            <DrawingTile
+              key={`${card.part.id}-${card.file.id}`}
+              card={card}
+              onOpen={onOpen}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center gap-3 py-12 text-center">
+          <Search className="size-8 text-muted-foreground" />
+          <p className="text-lg font-semibold">No hay planos</p>
+        </div>
+      )}
+      {result.hasNextPage && (
+        <Button
+          variant="outline"
+          disabled={result.isFetchingNextPage}
+          onClick={() => void result.fetchNextPage()}
+        >
+          {result.isFetchingNextPage ? "Cargando…" : "Mostrar más"}
+        </Button>
+      )}
+    </div>
+  )
+}

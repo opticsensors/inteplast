@@ -153,17 +153,17 @@ test("feature pieces contain their own cotas and leave documents on the piece pa
   )
 })
 
-test("shared searchable selectors keep Features filters and support keyboard and cancellation", async (t) => {
+test("shared searchable selectors filter by piece, feature, family and customer, with keyboard and cancellation", async (t) => {
   const page = await mount(t)
-  assert.equal(
-    await page
-      .getByRole("combobox", { name: "Categoría", exact: true })
-      .count(),
-    0,
-  )
   const piece = page.getByRole("combobox", { name: "Pieza", exact: true })
   assert.equal(await piece.count(), 0)
   await page.getByRole("button", { name: "Filtros", exact: true }).click()
+  // Category and tag were removed on 17/11/2026.
+  for (const name of ["Categoría", "Tag"])
+    assert.equal(
+      await page.getByRole("combobox", { name, exact: true }).count(),
+      0,
+    )
   await piece.click()
   const search = page.getByRole("combobox", {
     name: "Buscar pieza",
@@ -188,56 +188,115 @@ test("shared searchable selectors keep Features filters and support keyboard and
     await page.evaluate(() => window.review.location().search.part),
     "part-one",
   )
-  await page.getByRole("combobox", { name: "Categoría", exact: true }).click()
-  const category = page.getByRole("combobox", {
-    name: "Buscar categoría",
+  await page.getByRole("combobox", { name: "Familia", exact: true }).click()
+  const family = page.getByRole("combobox", {
+    name: "Buscar familia",
     exact: true,
   })
-  await category.press("ArrowDown")
-  await category.press("Enter")
+  await family.fill("PUMP")
+  await family.press("Enter")
   assert.equal(
-    await page.evaluate(() => window.review.location().search.category),
-    "hole",
+    await page.evaluate(() => window.review.location().search.family),
+    "family-pump",
   )
-  await page.getByRole("combobox", { name: "Tag", exact: true }).click()
-  const tag = page.getByRole("combobox", { name: "Buscar tag", exact: true })
-  await tag.fill("INYECC")
-  await tag.press("Enter")
+  // Filters choose existing values; adding new ones belongs to the piece editor.
+  await page.getByRole("combobox", { name: "Cliente", exact: true }).click()
+  const customer = page.getByRole("combobox", {
+    name: "Buscar cliente",
+    exact: true,
+  })
+  await customer.fill("Otra empresa")
+  await expect(
+    page
+      .getByRole("dialog", { name: "Selector de cliente" })
+      .getByRole("button", { name: /Añadir/ }),
+  ).toHaveCount(0)
+  await customer.fill("")
+  await customer.press("ArrowDown")
+  await customer.press("Enter")
   assert.equal(
-    await page.evaluate(() => window.review.location().search.tag),
-    "inyeccion",
+    await page.evaluate(() => window.review.location().search.customer),
+    "customer-bosch",
   )
+  await page.waitForFunction(() =>
+    window.review.catalogRequests?.some(
+      (params) =>
+        params.familyId === "family-pump" &&
+        params.customerId === "customer-bosch" &&
+        params.partId === "part-one",
+    ),
+  )
+  await page.getByRole("button", { name: "Abrir 3212 Pump Housing" }).waitFor()
   await page.getByRole("button", { name: "Filtros (3)", exact: true }).click()
   assert.equal(
-    await page.getByRole("combobox", { name: "Tag", exact: true }).count(),
+    await page.getByRole("combobox", { name: "Cliente", exact: true }).count(),
     0,
   )
   await page.getByRole("button", { name: "Filtros (3)", exact: true }).click()
   assert.match(
-    await page.getByRole("combobox", { name: "Tag", exact: true }).innerText(),
-    /inyeccion/,
+    await page
+      .getByRole("combobox", { name: "Cliente", exact: true })
+      .innerText(),
+    /Bosch/,
   )
   await page.getByRole("button", { name: "Filtros (3)", exact: true }).click()
   await page
-    .getByRole("button", { name: "Quitar filtro Tag: inyeccion", exact: true })
+    .getByRole("button", { name: "Quitar filtro Cliente: Bosch", exact: true })
     .click()
   const remaining = await page.evaluate(() => window.review.location().search)
-  assert.equal(remaining.tag, undefined)
+  assert.equal(remaining.customer, undefined)
   assert.equal(remaining.part, "part-one")
-  assert.equal(remaining.category, "hole")
+  assert.equal(remaining.family, "family-pump")
   await page.getByRole("button", { name: "Filtros (2)", exact: true }).waitFor()
   await page
     .getByRole("button", { name: "Limpiar filtros", exact: true })
     .click()
   const cleared = await page.evaluate(() => window.review.location().search)
   assert.equal(cleared.part, undefined)
-  assert.equal(cleared.category, undefined)
+  assert.equal(cleared.family, undefined)
   assert.equal(
     await page
       .getByRole("button", { name: "Limpiar filtros", exact: true })
       .count(),
     0,
   )
+})
+
+test("a family and customer filter hides pieces that do not meet both", async (t) => {
+  const page = await mount(t)
+  await page.evaluate(() => {
+    window.review.parts.push({
+      id: "part-two",
+      code: "3197",
+      name: "Pot",
+      family_id: "family-pot",
+      customer_id: "customer-bosch",
+      characteristic_count: 0,
+    })
+    window.review.families.push({ id: "family-pot", name: "Pot" })
+  })
+  await page.evaluate(() =>
+    window.review.navigate({
+      to: "/features",
+      search: { kind: "part", customer: "customer-bosch" },
+    }),
+  )
+  await page.getByRole("button", { name: "Abrir 3197 Pot" }).waitFor()
+  await page.getByRole("button", { name: "Abrir 3212 Pump Housing" }).waitFor()
+  await page.evaluate(() =>
+    window.review.navigate({
+      to: "/features",
+      search: {
+        kind: "part",
+        customer: "customer-bosch",
+        family: "family-pot",
+      },
+    }),
+  )
+  await page.getByRole("button", { name: "Abrir 3197 Pot" }).waitFor()
+  await expect(
+    page.getByRole("button", { name: "Abrir 3212 Pump Housing" }),
+  ).toHaveCount(0)
 })
 
 test("old home links preserve filters and cards open in read mode", async (t) => {
@@ -248,8 +307,7 @@ test("old home links preserve filters and cards open in read mode", async (t) =>
   const location = await page.evaluate(() => window.review.location())
   assert.equal(location.pathname, "/features")
   assert.equal(String(location.search.q), "3212")
-  assert.equal(location.search.category, "hole")
-  assert.equal(location.search.tag, "inyeccion")
+  // Category and tag no longer exist: old links open the same, ignoring them.
   assert.equal(location.search.part, "part-one")
   assert.equal(location.search.feature, "feature-one")
   assert.equal(
@@ -274,7 +332,7 @@ test("old home links preserve filters and cards open in read mode", async (t) =>
       .inputValue(),
     "3212",
   )
-  await page.getByRole("button", { name: "Filtros (4)", exact: true }).waitFor()
+  await page.getByRole("button", { name: "Filtros (2)", exact: true }).waitFor()
   await page
     .getByRole("button", {
       name: "Quitar filtro Feature: Bolt Eye",
@@ -340,9 +398,11 @@ test("the searchable feature selector keeps the text search and sends an exact I
 test("direct Edit saves into read mode and Back restores the search", async (t) => {
   const page = await mount(t)
   await page.getByPlaceholder("Buscar piezas, features o cotas…").fill("3212")
+  // Pieces sort by code, so the feature card is not the first one any more.
   await page
+    .getByRole("button", { name: "Abrir Bolt Eye" })
+    .locator("..")
     .getByRole("button", { name: /^Editar(?: feature)?$/, exact: true })
-    .first()
     .click()
   await page.getByPlaceholder("Nombre del feature").fill("Bolt Eye revisado")
   await page
@@ -422,7 +482,7 @@ test("deletion is secondary, confirmed, and only offered to owner or admin", asy
   await page.getByRole("menuitem", { name: "Eliminar", exact: true }).click()
   await dialog.getByRole("button", { name: "Eliminar", exact: true }).click()
   await page.getByRole("heading", { name: "Catálogo", exact: true }).waitFor()
-  await page.getByRole("button", { name: "Abrir Pump Housing" }).waitFor()
+  await page.getByRole("button", { name: "Abrir 3212 Pump Housing" }).waitFor()
   assert.equal(
     await page.getByRole("button", { name: "Abrir Bolt Eye" }).count(),
     0,
@@ -443,7 +503,7 @@ test("saving a new feature opens its completed detail and replaces the creation 
 
 test("the initial catalogue mixes cards, filters by type, and cotas appear only when searching", async (t) => {
   const page = await mount(t)
-  await page.getByRole("button", { name: "Abrir Pump Housing" }).waitFor()
+  await page.getByRole("button", { name: "Abrir 3212 Pump Housing" }).waitFor()
   assert.equal(
     await page.getByRole("region", { name: "Cotas encontradas" }).count(),
     0,
@@ -456,10 +516,10 @@ test("the initial catalogue mixes cards, filters by type, and cotas appear only 
   )
   await page.getByRole("button", { name: "Features", exact: true }).click()
   await page
-    .getByRole("button", { name: "Abrir Pump Housing" })
+    .getByRole("button", { name: "Abrir 3212 Pump Housing" })
     .waitFor({ state: "detached" })
   await page.getByRole("button", { name: "Piezas", exact: true }).click()
-  await page.getByRole("button", { name: "Abrir Pump Housing" }).waitFor()
+  await page.getByRole("button", { name: "Abrir 3212 Pump Housing" }).waitFor()
   assert.equal(
     await page.getByRole("button", { name: "Abrir Bolt Eye" }).count(),
     0,
@@ -470,7 +530,7 @@ test("the initial catalogue mixes cards, filters by type, and cotas appear only 
     .getByRole("region", { name: "Cotas encontradas" })
     .getByRole("link")
     .click()
-  await readHeading(page, "Pump Housing")
+  await readHeading(page, "3212 Pump Housing")
   const location = await page.evaluate(() => window.review.location())
   assert.equal(location.pathname, "/parts/part-one")
   assert.equal(location.search.cota, "N170")
@@ -487,8 +547,8 @@ test("the initial catalogue mixes cards, filters by type, and cotas appear only 
 
 test("piece editing saves and cancels header changes, and feature membership works in both directions", async (t) => {
   const page = await mount(t)
-  await page.getByRole("button", { name: "Abrir Pump Housing" }).click()
-  await readHeading(page, "Pump Housing")
+  await page.getByRole("button", { name: "Abrir 3212 Pump Housing" }).click()
+  await readHeading(page, "3212 Pump Housing")
   await page.getByRole("button", { name: "Editar pieza", exact: true }).click()
   await page
     .getByRole("button", { name: "Añadir feature", exact: true })
@@ -501,7 +561,7 @@ test("piece editing saves and cancels header changes, and feature membership wor
     .getByRole("textbox", { name: "Nombre de la pieza" })
     .fill("Discard")
   await page.getByRole("button", { name: "Cancelar", exact: true }).click()
-  await readHeading(page, "Pump Housing")
+  await readHeading(page, "3212 Pump Housing")
   await page.getByRole("button", { name: "Editar pieza", exact: true }).click()
   await page.getByRole("button", { name: "Desvincular Bolt Eye" }).click()
   await page.getByText("Sin features vinculados.").waitFor()
@@ -526,7 +586,7 @@ test("piece editing saves and cancels header changes, and feature membership wor
   await page
     .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
     .click()
-  await readHeading(page, "Pump Housing revisada")
+  await readHeading(page, "3212 Pump Housing revisada")
   await page.getByRole("link", { name: "Abrir Bolt Eye" }).click()
   await readHeading(page)
   await page
@@ -562,8 +622,8 @@ async function referencePiece(t) {
       ],
     }
   })
-  await page.getByRole("button", { name: "Abrir Pump Housing" }).click()
-  await readHeading(page, "Pump Housing")
+  await page.getByRole("button", { name: "Abrir 3212 Pump Housing" }).click()
+  await readHeading(page, "3212 Pump Housing")
   await expect(
     page.getByRole("link", { name: "Descargar original.step", exact: true }),
   ).toBeVisible()
@@ -626,7 +686,7 @@ test("reference changes stay in the draft, survive membership updates and cancel
     0,
   )
   await page.getByRole("button", { name: "Cancelar", exact: true }).click()
-  await readHeading(page, "Pump Housing")
+  await readHeading(page, "3212 Pump Housing")
   await expect(
     page.getByRole("link", { name: "Descargar original.step", exact: true }),
   ).toBeVisible()
@@ -706,7 +766,7 @@ test("reference save failure keeps the draft and retry saves header and files wi
     page.getByRole("button", { name: "Cancelar", exact: true }),
   ).toBeDisabled()
   await page.evaluate(() => window.review.releasePartSave())
-  await readHeading(page, "Updated piece")
+  await readHeading(page, "3212 Updated piece")
   await expect(
     page.getByRole("link", { name: "Descargar replacement.step", exact: true }),
   ).toBeVisible()
@@ -809,3 +869,377 @@ test("warning and lesson accordions reveal their text and stored images in consu
     true,
   )
 })
+
+/** Reload the catalogue in the same page: same origin, same browser storage. */
+async function reload(page, initialPath = "/") {
+  await page.goto("http://component.invalid/")
+  await page.evaluate((value) => {
+    window.catalogInitialPath = value
+  }, initialPath)
+  await page.addScriptTag({ content: bundle })
+  await page.getByRole("heading", { name: "Catálogo", exact: true }).waitFor()
+  await page.getByRole("button", { name: "Abrir Bolt Eye" }).waitFor()
+}
+
+test("the catalogue switches between list and grid, remembers it and fits a phone", async (t) => {
+  const page = await mount(t)
+  const views = page.getByRole("group", { name: "Vista" })
+  const results = page.locator("[data-view]")
+  await expect(views.getByRole("button", { name: "Lista" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  )
+  await expect(results).toHaveAttribute("data-view", "list")
+  await views.getByRole("button", { name: "Cuadrícula" }).click()
+  await expect(results).toHaveAttribute("data-view", "grid")
+  const piece = page.getByRole("button", { name: "Abrir 3212 Pump Housing" })
+  await expect(piece).toBeVisible()
+  await expect(piece.locator("..").getByRole("heading")).toHaveText(
+    "3212 Pump Housing",
+  )
+  await expect(
+    piece.locator("..").getByText("Pump Housing · Bosch", { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page
+      .getByRole("button", { name: "Abrir Bolt Eye" })
+      .locator("..")
+      .getByRole("heading", { name: "Bolt Eye", exact: true }),
+  ).toBeVisible()
+  // Each type keeps the grid.
+  for (const kind of ["Piezas", "Features", "Todo"]) {
+    await page.getByRole("button", { name: kind, exact: true }).click()
+    await expect(results).toHaveAttribute("data-view", "grid")
+  }
+  // Cotas found by the search stay above the grid.
+  await page.getByPlaceholder("Buscar piezas, features o cotas…").fill("170")
+  const cotas = page.getByRole("region", { name: "Cotas encontradas" })
+  await expect(cotas).toBeVisible()
+  const cotasBox = await cotas.boundingBox()
+  const gridBox = await results.boundingBox()
+  assert.ok(cotasBox.y + cotasBox.height <= gridBox.y)
+  await page
+    .getByRole("button", { name: "Limpiar busqueda", exact: true })
+    .click()
+
+  await reload(page)
+  await expect(
+    page.getByRole("group", { name: "Vista" }).getByRole("button", {
+      name: "Cuadrícula",
+    }),
+  ).toHaveAttribute("aria-pressed", "true")
+  await expect(page.locator("[data-view]")).toHaveAttribute("data-view", "grid")
+
+  await page.setViewportSize({ width: 390, height: 900 })
+  const first = await page
+    .getByRole("button", { name: "Abrir 3212 Pump Housing" })
+    .boundingBox()
+  const second = await page
+    .getByRole("button", { name: "Abrir Bolt Eye" })
+    .boundingBox()
+  assert.ok(Math.abs(first.x - second.x) < 2, "one column on a phone")
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  )
+  await views.getByRole("button", { name: "Lista" }).click()
+  await expect(page.locator("[data-view]")).toHaveAttribute("data-view", "list")
+})
+
+test("without browser storage the catalogue opens as a list and still switches", async (t) => {
+  const page = await browser.newPage()
+  const errors = []
+  page.on("pageerror", (error) => errors.push(error.message))
+  page.setDefaultTimeout(5000)
+  t.after(() => page.close())
+  await page.addInitScript(() => {
+    const { getItem, setItem } = Storage.prototype
+    Storage.prototype.getItem = function (key) {
+      if (key === "inteplast.catalog-view") throw new Error("Storage blocked")
+      return getItem.call(this, key)
+    }
+    Storage.prototype.setItem = function (key, value) {
+      if (key === "inteplast.catalog-view") throw new Error("Storage blocked")
+      return setItem.call(this, key, value)
+    }
+  })
+  await page.route("**/*", (route) =>
+    route.request().url() === "http://component.invalid/"
+      ? route.fulfill({
+          contentType: "text/html",
+          body: '<html><body><div id="root"></div></body></html>',
+        })
+      : route.abort(),
+  )
+  await reload(page)
+  await expect(page.locator("[data-view]")).toHaveAttribute("data-view", "list")
+  await page
+    .getByRole("group", { name: "Vista" })
+    .getByRole("button", { name: "Cuadrícula" })
+    .click()
+  await expect(page.locator("[data-view]")).toHaveAttribute("data-view", "grid")
+  assert.deepEqual(errors, [])
+})
+
+/** Click a real node of the graph at its drawn position. */
+async function clickNode(page, id) {
+  const graph = page.getByTestId("catalog-graph")
+  await expect(graph).toHaveAttribute("data-ready", "true")
+  await graph.evaluate((element) => element.scrollIntoView({ block: "center" }))
+  const point = await graph.evaluate((element, nodeId) => {
+    const instance = element.catalogGraph
+    const node = instance.graphData().nodes.find((item) => item.id === nodeId)
+    const screen = instance.graph2ScreenCoords(node.x, node.y)
+    const box = element.getBoundingClientRect()
+    return { x: box.left + screen.x, y: box.top + screen.y }
+  }, id)
+  // force-graph finds the node under the pointer on a later frame: click once it
+  // shows the hand cursor, which it sets only over a node.
+  await page.mouse.move(point.x, point.y)
+  await expect(graph).toHaveCSS("cursor", "pointer")
+  await page.mouse.down()
+  await page.mouse.up()
+}
+
+test("the graph shows the list's results and clicking a real node opens its page", async (t) => {
+  const page = await mount(t)
+  await page
+    .getByRole("group", { name: "Vista" })
+    .getByRole("button", { name: "Grafo" })
+    .click()
+  const graph = page.getByTestId("catalog-graph")
+  // Pieces and features; families and customers are switched off at first.
+  await expect(graph).toHaveAttribute("data-nodes", "2")
+  await clickNode(page, "part:part-one")
+  await readHeading(page, "3212 Pump Housing")
+  await page.evaluate(() => window.review.back())
+  await expect(graph).toHaveAttribute("data-nodes", "2")
+  await clickNode(page, "feature:feature-one")
+  await readHeading(page)
+})
+
+test("graph switches add families and customers, which filter the catalogue", async (t) => {
+  const page = await mount(t)
+  await page
+    .getByRole("group", { name: "Vista" })
+    .getByRole("button", { name: "Grafo" })
+    .click()
+  const graph = page.getByTestId("catalog-graph")
+  await expect(graph).toHaveAttribute("data-nodes", "2")
+  await page.getByRole("checkbox", { name: "Familias" }).click()
+  await expect(graph).toHaveAttribute("data-nodes", "3")
+  await page.getByRole("checkbox", { name: "Clientes" }).click()
+  await expect(graph).toHaveAttribute("data-nodes", "4")
+  await page.getByRole("checkbox", { name: "Clientes" }).click()
+  await expect(graph).toHaveAttribute("data-nodes", "3")
+  await clickNode(page, "family:family-pump")
+  await page.waitForFunction(
+    () => window.review.location().search.family === "family-pump",
+  )
+  await page.waitForFunction(() =>
+    window.review.graphRequests.some(
+      (params) => params.familyId === "family-pump",
+    ),
+  )
+})
+
+test("the graph background follows the theme and a cut graph says so", async (t) => {
+  const page = await mount(t)
+  await page.addStyleTag({
+    content:
+      ":root { --card: rgb(255, 255, 255) } .dark { --card: rgb(17, 17, 17) }",
+  })
+  await page.evaluate(() => {
+    window.review.graphLimit = 1
+  })
+  await page
+    .getByRole("group", { name: "Vista" })
+    .getByRole("button", { name: "Grafo" })
+    .click()
+  const graph = page.getByTestId("catalog-graph")
+  await expect(graph).toHaveAttribute("data-background", "rgb(255, 255, 255)")
+  await page.evaluate(() => document.documentElement.classList.add("dark"))
+  await expect(graph).toHaveAttribute("data-background", "rgb(17, 17, 17)")
+  await page.evaluate(() => document.documentElement.classList.remove("dark"))
+  await expect(graph).toHaveAttribute("data-background", "rgb(255, 255, 255)")
+  // Never a part presented as the whole.
+  await expect(
+    // The total counts the family and the customer of the piece too.
+    page.getByText("Mostrando 1 de 4: filtra para ver el resto", {
+      exact: true,
+    }),
+  ).toBeVisible()
+  await expect(graph).toHaveAttribute("data-nodes", "1")
+})
+
+test("Planos shows every drawing as a grid, with thumbnails, component and revision", async (t) => {
+  const page = await mount(t)
+  // The base thumbnail is served; any other one fails and shows the drawing icon.
+  const png = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+    "base64",
+  )
+  await page.route("**/thumbnails/**", (route) =>
+    route.request().url().includes("drawing-base")
+      ? route.fulfill({ contentType: "image/png", body: png })
+      : route.abort(),
+  )
+  await page.evaluate(() => {
+    const part = window.review.parts[0]
+    window.review.drawings = [
+      {
+        file: { id: "drawing-base", filename: "base.pdf", version: "v1" },
+        name: "base.pdf",
+        primary: true,
+        part,
+        component: "BASE",
+        revision: "07",
+      },
+      {
+        file: { id: "drawing-tapa", filename: "tapa.pdf", version: "v1" },
+        name: "tapa.pdf",
+        primary: false,
+        part,
+        component: null,
+        revision: null,
+      },
+    ]
+    window.review.thumbnailBusy = { "drawing-base": 1 }
+  })
+  await page.getByRole("button", { name: "Planos", exact: true }).click()
+  assert.equal(
+    await page.evaluate(() => window.review.location().search.kind),
+    "drawing",
+  )
+  // Always a grid: no view switch here.
+  await expect(page.getByRole("group", { name: "Vista" })).toHaveCount(0)
+  await expect(page.locator("[data-view=drawings]")).toBeVisible()
+  const base = page.getByRole("button", { name: "Abrir plano base.pdf · 3212" })
+  const tile = base.locator("..")
+  await expect(
+    tile.getByText("3212 - Pump Housing", { exact: true }),
+  ).toBeVisible()
+  await expect(tile.getByText("BASE · rev. 07", { exact: true })).toBeVisible()
+  // Busy once: a placeholder, then the server's thumbnail.
+  await expect(
+    tile.getByRole("img", { name: "Primera página de base.pdf" }),
+  ).toHaveAttribute("src", /thumbnails\/drawing-base\.png$/, { timeout: 8000 })
+  assert.ok(
+    (await page.evaluate(() => window.review.thumbnailRequests)).filter(
+      (id) => id === "drawing-base",
+    ).length >= 2,
+  )
+  const tapa = page
+    .getByRole("button", { name: "Abrir plano tapa.pdf · 3212" })
+    .locator("..")
+  await expect(tapa.getByText(/rev\./)).toHaveCount(0)
+  await expect(tapa.getByLabel("Sin miniatura")).toBeVisible()
+  // Piece filters apply to drawings with the same criterion.
+  await page.evaluate(() =>
+    window.review.navigate({
+      to: "/features",
+      search: { kind: "drawing", family: "family-pump" },
+    }),
+  )
+  await page.waitForFunction(() =>
+    window.review.drawingRequests.some(
+      (params) => params.familyId === "family-pump",
+    ),
+  )
+  await base.click()
+  await page.waitForFunction(
+    () =>
+      window.review.location().pathname ===
+      "/parts/part-one/fichero/drawing-base",
+  )
+})
+
+test("a name with HTML is shown as text in the graph and never runs", async (t) => {
+  const page = await mount(t)
+  const payload = '<img src=x onerror="window.__graphInjected=1">Bolt'
+  await page.evaluate((name) => {
+    window.review.feature.name = name
+    window.review.parts[0].name = name
+  }, payload)
+  await page
+    .getByRole("group", { name: "Vista" })
+    .getByRole("button", { name: "Grafo" })
+    .click()
+  const graph = page.getByTestId("catalog-graph")
+  await expect(graph).toHaveAttribute("data-ready", "true")
+  for (const id of ["feature:feature-one", "part:part-one"]) {
+    await graph.evaluate((element) =>
+      element.scrollIntoView({ block: "center" }),
+    )
+    const point = await graph.evaluate((element, nodeId) => {
+      const instance = element.catalogGraph
+      const node = instance.graphData().nodes.find((item) => item.id === nodeId)
+      const screen = instance.graph2ScreenCoords(node.x, node.y)
+      const box = element.getBoundingClientRect()
+      return { x: box.left + screen.x, y: box.top + screen.y }
+    }, id)
+    await page.mouse.move(point.x, point.y)
+    await expect(graph).toHaveCSS("cursor", "pointer")
+    // The tooltip carries the name as text: no element was created from it.
+    const tooltip = page.locator(".graph-tooltip")
+    await expect(tooltip).toContainText("<img src=x")
+    assert.equal(await tooltip.locator("img").count(), 0)
+  }
+  assert.equal(await page.evaluate(() => window.__graphInjected), undefined)
+})
+
+test("the graph pages the cotas found beyond the first 40", async (t) => {
+  const page = await mount(t)
+  await page.evaluate(() => {
+    window.review.cotaCount = 81
+  })
+  await page
+    .getByRole("group", { name: "Vista" })
+    .getByRole("button", { name: "Grafo" })
+    .click()
+  await page.getByPlaceholder("Buscar piezas, features o cotas…").fill("N1")
+  const cotas = page.getByRole("region", { name: "Cotas encontradas" })
+  await expect(cotas.getByRole("link")).toHaveCount(40)
+  await cotas
+    .getByRole("button", { name: "Mostrar más cotas (40 de 81)" })
+    .click()
+  await expect(cotas.getByRole("link")).toHaveCount(80)
+  await cotas
+    .getByRole("button", { name: "Mostrar más cotas (80 de 81)" })
+    .click()
+  await expect(cotas.getByRole("link")).toHaveCount(81)
+  await expect(cotas.getByRole("button", { name: /Mostrar más/ })).toHaveCount(
+    0,
+  )
+})
+
+for (const view of ["Lista", "Cuadrícula"])
+  test(`${view} still pages pieces when there are no cotas`, async (t) => {
+    const page = await mount(t)
+    await page.evaluate(() => {
+      for (let index = 0; index < 45; index++)
+        window.review.parts.push({
+          id: `extra-${index}`,
+          code: String(5000 + index),
+          name: `Extra ${index}`,
+          characteristic_count: 0,
+        })
+      window.review.navigate({ to: "/features", search: { kind: "part" } })
+    })
+    await page
+      .getByRole("group", { name: "Vista" })
+      .getByRole("button", { name: view })
+      .click()
+    const results = page.locator("[data-view]")
+    const cards = results.getByRole("button", { name: /^Abrir / })
+    await expect(cards).toHaveCount(40)
+    await expect(
+      page.getByRole("region", { name: "Cotas encontradas" }),
+    ).toHaveCount(0)
+    await page.getByRole("button", { name: "Mostrar más", exact: true }).click()
+    await expect(cards).toHaveCount(46)
+    await expect(
+      page.getByRole("button", { name: "Mostrar más", exact: true }),
+    ).toHaveCount(0)
+  })

@@ -17,7 +17,7 @@ from tests.utils.utils import random_lower_string
 def test_create_feature(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
-    data = {"name": "Bolt Eye", "description": "agujero", "tags": ["Bosch", "agujero"]}
+    data = {"name": "Bolt Eye", "description": "agujero"}
     response = client.post(
         f"{settings.API_V1_STR}/features/",
         headers=superuser_token_headers,
@@ -26,7 +26,7 @@ def test_create_feature(
     assert response.status_code == 200
     content = response.json()
     assert content["name"] == data["name"]
-    assert content["tags"] == data["tags"]
+    assert "tags" not in content and "category" not in content
     assert "id" in content
 
 
@@ -122,33 +122,32 @@ def test_read_features_filter_by_part(
     assert response.json()["count"] == 1
 
 
-def test_read_features_filter_by_tag(
+def test_search_without_tags_or_category(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
-    tag = random_lower_string()
-    feature = create_random_feature(db, tags=[tag])
-    create_random_feature(db, tags=[random_lower_string()])
-
-    response = client.get(
-        f"{settings.API_V1_STR}/features/",
+    word = random_lower_string()
+    feature = create_random_feature(db, name=f"Clip {word}")
+    url = f"{settings.API_V1_STR}/features/"
+    found = client.get(url, headers=superuser_token_headers, params={"q": word}).json()
+    assert [item["id"] for item in found["data"]] == [str(feature.id)]
+    assert "tags" not in found["data"][0]
+    # Old links with tag or category are accepted and do not filter anything.
+    old = client.get(
+        url,
         headers=superuser_token_headers,
-        params={"tag": tag},
-    )
-    assert response.status_code == 200
-    content = response.json()
-    assert content["count"] == 1
-    assert content["data"][0]["id"] == str(feature.id)
+        params={"q": word, "tag": "other", "category": "rib"},
+    ).json()
+    assert old == found
 
 
 def test_read_features_selects_exact_feature_and_combines_filters(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
-    tag = random_lower_string()
-    selected = create_random_feature(db, tags=[tag])
-    create_random_feature(db, tags=[tag])
+    selected = create_random_feature(db)
+    create_random_feature(db)
     part = create_random_part(db)
     create_random_asset(db, selected, part=part)
-    params = {"feature_id": str(selected.id), "tag": tag, "part_id": str(part.id)}
+    params = {"feature_id": str(selected.id), "part_id": str(part.id)}
     url = f"{settings.API_V1_STR}/features/"
     response = client.get(url, params=params, headers=superuser_token_headers)
     assert response.status_code == 200
@@ -159,7 +158,6 @@ def test_read_features_selects_exact_feature_and_combines_filters(
         {"feature_id": str(uuid.uuid4())},
         {"part_id": str(uuid.uuid4())},
         {"q": random_lower_string()},
-        {"tag": random_lower_string()},
     ):
         result = client.get(
             url, params={**params, **mismatch}, headers=superuser_token_headers
@@ -174,8 +172,7 @@ def test_read_features_selects_exact_feature_and_combines_filters(
 def test_read_feature_filters(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
-    tag = random_lower_string()
-    feature = create_random_feature(db, tags=[tag])
+    feature = create_random_feature(db)
     part = create_random_part(db)
     create_random_asset(db, feature, kind=AssetKind.mold, part=part)
     # Una pieza que no usa ningun feature no debe salir en los desplegables
@@ -187,11 +184,10 @@ def test_read_feature_filters(
     )
     assert response.status_code == 200
     content = response.json()
-    assert tag in content["tags"]
+    assert "tags" not in content and "categories" not in content
     codes = [item["code"] for item in content["parts"]]
     assert part.code in codes
     assert unused.code not in codes
-    assert "hole" in content["categories"]
     options = {item["id"]: item for item in content["features"]}
     assert options[str(feature.id)]["name"] == feature.name
     assert options[str(feature.id)]["part_ids"] == [str(part.id)]
@@ -205,12 +201,11 @@ def test_update_feature(
     response = client.put(
         f"{settings.API_V1_STR}/features/{feature.id}",
         headers=superuser_token_headers,
-        json={"name": "Nervio", "tags": ["nervio"]},
+        json={"name": "Nervio"},
     )
     assert response.status_code == 200
     content = response.json()
     assert content["name"] == "Nervio"
-    assert content["tags"] == ["nervio"]
     # description no se toca al no venir en el payload
     assert content["description"] == feature.description
 

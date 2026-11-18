@@ -5,7 +5,6 @@ import { SearchField } from "@/components/Common/SearchField"
 import { SearchToolbar } from "@/components/Common/SearchToolbar"
 import { Button } from "@/components/ui/button"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
-import { cn } from "@/lib/utils"
 import { matchesCotaPrefix, normalizeCota } from "./drawingSearchHelpers"
 import PdfViewer from "./PdfViewer"
 
@@ -23,7 +22,6 @@ const ORIGIN_LABELS: Record<Origin, string> = {
   icp_approximate: ".icp · posición aproximada",
   ocr: "OCR · sin verificar",
 }
-const UNVERIFIED: Origin[] = ["ocr", "icp_approximate"]
 type Candidate = DrawingFocus & {
   candidates?: { label: string }[]
   text?: string
@@ -180,7 +178,7 @@ export default function DrawingSearch({
             disabled={working || index.isPending}
             onClick={() => prepare.mutate()}
           >
-            {working ? "Preparando búsqueda…" : "Preparar búsqueda"}
+            {working ? "Localizando cotas…" : "Localizar cotas"}
           </Button>
         </div>
       )}
@@ -194,10 +192,18 @@ export default function DrawingSearch({
       )}
       {data && query.trim() && (
         <div className="flex flex-wrap items-start gap-3">
-          <output className="py-2 text-xs text-muted-foreground">
+          {/* The box on the drawing says it all: the count and origins are only read
+              aloud, and the buttons show up only to move between several matches. */}
+          <output className="sr-only">
             {results.length} {results.length === 1 ? "resultado" : "resultados"}
           </output>
-          <fieldset className="flex max-h-28 min-w-0 flex-1 flex-wrap gap-2 overflow-y-auto p-1">
+          <fieldset
+            className={
+              results.length > 1
+                ? "flex max-h-28 min-w-0 flex-1 flex-wrap gap-2 overflow-y-auto p-1"
+                : "sr-only"
+            }
+          >
             <legend className="sr-only">Coincidencias en el plano</legend>
             {results.map((result) => {
               const repeated = results.filter(
@@ -219,38 +225,12 @@ export default function DrawingSearch({
                   title={`Página ${result.page}`}
                 >
                   {label}
-                  <span
-                    className={cn(
-                      "text-xs font-normal",
-                      UNVERIFIED.includes(result.origin)
-                        ? "text-amber-700 dark:text-amber-400"
-                        : "text-muted-foreground",
-                    )}
-                  >
-                    {ORIGIN_LABELS[result.origin]}
-                  </span>
                 </Button>
               )
             })}
           </fieldset>
         </div>
       )}
-      {data &&
-        query.trim() &&
-        results.some((result) => result.origin === "ocr") && (
-          <p className="text-xs text-muted-foreground">
-            Las lecturas OCR son propuestas automáticas sin verificar. Comprueba
-            el número en el plano antes de utilizarlo.
-          </p>
-        )}
-      {data &&
-        query.trim() &&
-        results.some((result) => result.origin === "icp_approximate") && (
-          <p className="text-xs text-muted-foreground">
-            El número sale del .icp del plano. Su posición es aproximada: este
-            plano no tiene globos dibujados que la confirmen.
-          </p>
-        )}
       <PdfViewer file={file} title={title} focus={selected} />
       {data?.notices?.length ? (
         <details className="text-xs text-muted-foreground">

@@ -7,7 +7,6 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import {
-  type FeatureCategory,
   type FeatureCover3D,
   FeaturesService,
   type FilePublic,
@@ -32,17 +31,9 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
-import { CATEGORIES, CATEGORY_LABELS } from "./constants"
 import {
   EditingSessionContext,
   useEditingSession,
@@ -58,24 +49,13 @@ import { NoteList } from "./NoteList"
 import { PartAssetList } from "./PartAssetList"
 import { featureParts } from "./parts"
 import { featureQueryOptions } from "./queries"
-import { TagInput } from "./TagInput"
-
-const NO_CATEGORY = "none"
 
 const formSchema = z.object({
   name: z.string().min(1, { message: "El nombre es obligatorio" }),
   description: z.string(),
-  category: z.string(),
-  tags: z.string(),
 })
 
 type FormData = z.infer<typeof formSchema>
-
-const parseTags = (value: string) =>
-  value
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter(Boolean)
 
 interface FeatureFormProps {
   /** null = crear uno nuevo. */
@@ -139,8 +119,6 @@ function FeatureFormContent({
     defaultValues: {
       name: "",
       description: "",
-      category: NO_CATEGORY,
-      tags: "",
     },
   })
 
@@ -154,11 +132,6 @@ function FeatureFormContent({
         requestBody: {
           name: values.name.trim() || "Nuevo feature",
           description: values.description || null,
-          category:
-            values.category === NO_CATEGORY
-              ? null
-              : (values.category as FeatureCategory),
-          tags: parseTags(values.tags),
           image_id: imageDraft.current.image?.id ?? null,
         },
       })
@@ -202,8 +175,6 @@ function FeatureFormContent({
         {
           name: feature.name,
           description: feature.description ?? "",
-          category: feature.category ?? NO_CATEGORY,
-          tags: (feature.tags ?? []).join(", "),
         },
         { keepDirtyValues: true },
       )
@@ -228,11 +199,6 @@ function FeatureFormContent({
       const body = {
         name: data.name,
         description: data.description || null,
-        category:
-          data.category === NO_CATEGORY
-            ? null
-            : (data.category as FeatureCategory),
-        tags: parseTags(data.tags),
         image_id: imageDraft.current.image?.id ?? null,
       }
       const savedId = initialFeatureId ?? featureIdRef.current
@@ -244,8 +210,6 @@ function FeatureFormContent({
               ...(dirtyFields.description
                 ? { description: body.description }
                 : {}),
-              ...(dirtyFields.category ? { category: body.category } : {}),
-              ...(dirtyFields.tags ? { tags: body.tags } : {}),
               ...(imageDraft.current.dirty
                 ? {
                     image_id: body.image_id,
@@ -407,57 +371,6 @@ function FeatureFormContent({
                   </FormItem>
                 )}
               />
-
-              <div className="grid gap-3 sm:grid-cols-3">
-                <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Categoría</FormLabel>
-                      {/* 🔴 Radix dispara `onValueChange("")` el solo cuando el
-                        Select vive dentro de un <form> y su lista todavia no
-                        se ha abierto: borraba la categoria y el PUT se iba con
-                        `category: ""` -> 422. Un cambio de verdad nunca trae
-                        cadena vacia (el «Sin categoria» vale "none"). */}
-                      <Select
-                        value={field.value}
-                        onValueChange={(next) => next && field.onChange(next)}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Sin categoria" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value={NO_CATEGORY}>
-                            Sin categoria
-                          </SelectItem>
-                          {CATEGORIES.map((category) => (
-                            <SelectItem key={category} value={category}>
-                              {CATEGORY_LABELS[category]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="tags"
-                  render={({ field }) => (
-                    <FormItem className="sm:col-span-2">
-                      <FormLabel>Tags</FormLabel>
-                      <FormControl>
-                        <TagInput {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
             </div>
           </div>
         </form>

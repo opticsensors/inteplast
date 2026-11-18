@@ -43,6 +43,26 @@ export type CadFaceSelection = {
     face: number;
 };
 
+export type CatalogGraph = {
+    nodes: Array<GraphNode>;
+    links: Array<GraphLink>;
+    total: number;
+    truncated: boolean;
+};
+
+export type CatalogNameCreate = {
+    name: string;
+};
+
+export type CatalogNamePublic = {
+    id: string;
+    name: string;
+};
+
+export type CatalogNamesPublic = {
+    data: Array<CatalogNamePublic>;
+};
+
 export type CatalogPublic = {
     features: Array<FeaturePublic>;
     parts: Array<PartCardPublic>;
@@ -132,6 +152,15 @@ export type DeletionFeature = {
     name: string;
 };
 
+export type DrawingCard = {
+    file: FilePublic;
+    name: string;
+    primary: boolean;
+    part: PartPublic;
+    component?: (string | null);
+    revision?: (string | null);
+};
+
 export type DrawingPublic = {
     state: string;
     message?: (string | null);
@@ -140,6 +169,11 @@ export type DrawingPublic = {
         [key: string]: unknown;
     };
     reviews?: Array<LocationPublic>;
+};
+
+export type DrawingsPublic = {
+    data: Array<DrawingCard>;
+    count: number;
 };
 
 export type EvidenceDocument = {
@@ -186,8 +220,6 @@ export type FeatureAssetUpdate = {
     file_id?: (string | null);
 };
 
-export type FeatureCategory = 'hole' | 'rib' | 'thickness' | 'boss' | 'fillet' | 'draft' | 'other';
-
 /**
  * An annotation tied to exact source bytes and a deterministic tessellation.
  */
@@ -206,16 +238,12 @@ export type FeatureCover3D = {
 export type FeatureCreate = {
     name: string;
     description?: (string | null);
-    category?: (FeatureCategory | null);
-    tags?: Array<(string)>;
     image_id?: (string | null);
 };
 
 export type FeatureDetail = {
     name: string;
     description?: (string | null);
-    category?: (FeatureCategory | null);
-    tags?: Array<(string)>;
     id: string;
     created_at?: (string | null);
     owner_id?: (string | null);
@@ -236,14 +264,10 @@ export type FeatureEvidencePublic = {
 export type FeatureFilterOption = {
     id: string;
     name: string;
-    category?: (FeatureCategory | null);
-    tags?: Array<(string)>;
     part_ids?: Array<(string)>;
 };
 
 export type FeatureFilters = {
-    categories: Array<FeatureCategory>;
-    tags: Array<(string)>;
     parts: Array<PartPublic>;
     features: Array<FeatureFilterOption>;
 };
@@ -284,8 +308,6 @@ export type FeaturePartOrder = {
 export type FeaturePublic = {
     name: string;
     description?: (string | null);
-    category?: (FeatureCategory | null);
-    tags?: Array<(string)>;
     id: string;
     created_at?: (string | null);
     owner_id?: (string | null);
@@ -304,8 +326,6 @@ export type FeaturesPublic = {
 export type FeatureUpdate = {
     name?: string;
     description?: (string | null);
-    category?: (FeatureCategory | null);
-    tags?: Array<(string)>;
     image_id?: (string | null);
     cover_3d?: (FeatureCover3D | null);
 };
@@ -350,6 +370,25 @@ export type FolderDiscovery = {
     code?: string;
     existing_part?: (PartPublic | null);
 };
+
+export type GraphLink = {
+    source: string;
+    target: string;
+    kind: 'feature' | 'family' | 'customer';
+};
+
+export type kind = 'feature' | 'family' | 'customer';
+
+export type GraphNode = {
+    id: string;
+    kind: 'part' | 'feature' | 'family' | 'customer';
+    ref_id: string;
+    label: string;
+    name?: (string | null);
+    image?: (FilePublic | null);
+};
+
+export type kind2 = 'part' | 'feature' | 'family' | 'customer';
 
 export type HTTPValidationError = {
     detail?: Array<ValidationError>;
@@ -490,16 +529,12 @@ export type MetrologyCatalog = {
 export type MetrologyFeature = {
     id: string;
     name: string;
-    category?: (FeatureCategory | null);
-    tags?: Array<(string)>;
     characteristics?: Array<CharacteristicPublic>;
 };
 
 export type MetrologyFeatureChoice = {
     id: string;
     name: string;
-    category?: (FeatureCategory | null);
-    tags?: Array<(string)>;
     part_ids?: Array<(string)>;
 };
 
@@ -537,10 +572,13 @@ export type PartCardPublic = {
     code: string;
     name?: (string | null);
     description?: (string | null);
-    customer?: (string | null);
+    family_id?: (string | null);
+    customer_id?: (string | null);
     folder_path?: (string | null);
     id: string;
     created_at?: (string | null);
+    family?: (CatalogNamePublic | null);
+    customer?: (CatalogNamePublic | null);
     feature_count?: number;
     characteristic_count?: number;
     cad?: (FilePublic | null);
@@ -552,10 +590,13 @@ export type PartCatalogPublic = {
     code: string;
     name?: (string | null);
     description?: (string | null);
-    customer?: (string | null);
+    family_id?: (string | null);
+    customer_id?: (string | null);
     folder_path?: (string | null);
     id: string;
     created_at?: (string | null);
+    family?: (CatalogNamePublic | null);
+    customer?: (CatalogNamePublic | null);
     feature_count: number;
 };
 
@@ -571,7 +612,8 @@ export type PartCreate = {
     code: string;
     name?: (string | null);
     description?: (string | null);
-    customer?: (string | null);
+    family_id?: (string | null);
+    customer_id?: (string | null);
     folder_path?: (string | null);
 };
 
@@ -632,7 +674,7 @@ export type PartFileInput = {
     primary?: boolean;
 };
 
-export type kind = 'part' | 'scan' | 'mold' | 'drawing' | 'moldflow' | 'document';
+export type kind3 = 'part' | 'scan' | 'mold' | 'drawing' | 'moldflow' | 'document';
 
 export type PartFilePublic = {
     kind: 'part' | 'scan' | 'mold' | 'drawing' | 'moldflow' | 'document';
@@ -650,10 +692,13 @@ export type PartPublic = {
     code: string;
     name?: (string | null);
     description?: (string | null);
-    customer?: (string | null);
+    family_id?: (string | null);
+    customer_id?: (string | null);
     folder_path?: (string | null);
     id: string;
     created_at?: (string | null);
+    family?: (CatalogNamePublic | null);
+    customer?: (CatalogNamePublic | null);
 };
 
 export type PartReferencePublic = {
@@ -675,9 +720,10 @@ export type PartRefreshResult = {
 
 export type PartRegistration = {
     folder_path: string;
-    name: string;
+    name?: (string | null);
     code: string;
-    customer: string;
+    family_id?: (string | null);
+    customer_id?: (string | null);
     description?: (string | null);
     files?: Array<PartFileInput>;
     feature_ids?: Array<(string)>;
@@ -702,7 +748,8 @@ export type PartUpdate = {
     code?: string;
     name?: (string | null);
     description?: (string | null);
-    customer?: (string | null);
+    family_id?: (string | null);
+    customer_id?: (string | null);
     folder_path?: (string | null);
     references?: (Array<ReferenceChoice> | null);
     files?: (Array<PartFileInput> | null);
@@ -734,7 +781,7 @@ export type ReferenceChoice = {
     source_version?: (string | null);
 };
 
-export type kind2 = 'part' | 'scan' | 'mold' | 'drawing';
+export type kind4 = 'part' | 'scan' | 'mold' | 'drawing';
 
 export type ReferenceProposal = {
     kind: 'part' | 'scan' | 'mold' | 'drawing';
@@ -772,6 +819,13 @@ export type SourceSheet = {
 export type SourceTable = {
     sheets: Array<SourceSheet>;
 };
+
+export type ThumbnailPublic = {
+    state: 'ready' | 'busy';
+    url?: (string | null);
+};
+
+export type state3 = 'ready' | 'busy';
 
 export type Token = {
     access_token: string;
@@ -848,14 +902,14 @@ export type AssistantChatData = {
 export type AssistantChatResponse = (string);
 
 export type CatalogSearchCatalogData = {
-    category?: (FeatureCategory | null);
+    customerId?: (string | null);
+    familyId?: (string | null);
     featureId?: (string | null);
     kind?: 'all' | 'part' | 'feature';
     limit?: number;
     partId?: (string | null);
     q?: string;
     skip?: number;
-    tag?: (string | null);
 };
 
 export type CatalogSearchCatalogResponse = (CatalogPublic);
@@ -872,6 +926,46 @@ export type CatalogSavePartCoverData = {
 };
 
 export type CatalogSavePartCoverResponse = (FilePublic);
+
+export type CatalogReadCatalogGraphData = {
+    customerId?: (string | null);
+    familyId?: (string | null);
+    featureId?: (string | null);
+    kind?: 'all' | 'part' | 'feature';
+    limit?: number;
+    partId?: (string | null);
+    q?: string;
+};
+
+export type CatalogReadCatalogGraphResponse = (CatalogGraph);
+
+export type CatalogReadCatalogDrawingsData = {
+    customerId?: (string | null);
+    familyId?: (string | null);
+    featureId?: (string | null);
+    limit?: number;
+    partId?: (string | null);
+    q?: string;
+    skip?: number;
+};
+
+export type CatalogReadCatalogDrawingsResponse = (DrawingsPublic);
+
+export type CatalogReadFamiliesResponse = (CatalogNamesPublic);
+
+export type CatalogCreateFamilyData = {
+    requestBody: CatalogNameCreate;
+};
+
+export type CatalogCreateFamilyResponse = (CatalogNamePublic);
+
+export type CatalogReadCustomersResponse = (CatalogNamesPublic);
+
+export type CatalogCreateCustomerData = {
+    requestBody: CatalogNameCreate;
+};
+
+export type CatalogCreateCustomerResponse = (CatalogNamePublic);
 
 export type EvidenceReadMetrologyFiltersResponse = (MetrologyFilters);
 
@@ -960,13 +1054,11 @@ export type EvidenceMeasurementHistoryData = {
 export type EvidenceMeasurementHistoryResponse = (Array<MeasurementImportSummary>);
 
 export type FeaturesReadFeaturesData = {
-    category?: (FeatureCategory | null);
     featureId?: (string | null);
     limit?: number;
     partId?: (string | null);
     q?: (string | null);
     skip?: number;
-    tag?: (string | null);
 };
 
 export type FeaturesReadFeaturesResponse = (FeaturesPublic);
@@ -1133,6 +1225,19 @@ export type FilesReadPreviewData = {
 };
 
 export type FilesReadPreviewResponse = (unknown);
+
+export type FilesPrepareThumbnailData = {
+    fileId: string;
+};
+
+export type FilesPrepareThumbnailResponse = (ThumbnailPublic);
+
+export type FilesReadThumbnailData = {
+    fileId: string;
+    token?: (string | null);
+};
+
+export type FilesReadThumbnailResponse = (unknown);
 
 export type FilesReadFileData = {
     download?: boolean;

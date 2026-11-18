@@ -84,3 +84,23 @@ export const partLabel = (part: PartPublic) => {
     return part.name
   return `${part.code} - ${part.name}`
 }
+
+/**
+ * The optional name shown beside the code, without repeating it: a piece registered
+ * from «3212 Pump Housing» shows «3212» and, beside it, «Pump Housing».
+ */
+export const partName = (part: Pick<PartPublic, "code" | "name">) => {
+  const name = part.name?.trim()
+  if (!name || name === part.code) return ""
+  if (
+    name.startsWith(part.code) &&
+    /^[\s_-]/.test(name.slice(part.code.length))
+  )
+    return name.slice(part.code.length).replace(/^[\s_-]+/, "")
+  return name
+}
+
+/** «Familia · Cliente», with only the ones the piece has. */
+export const partClassification = (
+  part: Pick<PartPublic, "family" | "customer">,
+) => [part.family?.name, part.customer?.name].filter(Boolean).join(" · ")

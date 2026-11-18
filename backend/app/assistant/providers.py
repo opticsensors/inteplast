@@ -98,4 +98,8 @@ class OllamaProvider:
 
 
 def get_provider(settings: AssistantSettings) -> ChatProvider:
+    if settings.provider == "codex":
+        from app.assistant.codex_provider import CodexProvider
+
+        return CodexProvider(settings)
     return OllamaProvider(settings)

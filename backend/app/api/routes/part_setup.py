@@ -7,6 +7,7 @@ from sqlmodel import select
 
 from app import part_setup
 from app.api.deps import CurrentUser, SessionDep
+from app.api.routes.catalog_names import check_names
 from app.api.routes.parts import commit_part, create_part_from_folder, get_part_or_404
 from app.file_sources import SourceError
 from app.models import (
@@ -48,9 +49,11 @@ def read_part_data(
 
 class PartRegistration(BaseModel):
     folder_path: str = Field(min_length=1, max_length=2048)
-    name: str = Field(min_length=1, max_length=255)
+    # The code is the piece's title; the name is optional beside it.
+    name: str | None = Field(default=None, max_length=255)
     code: str = Field(min_length=1, max_length=64)
-    customer: str = Field(min_length=1, max_length=255)
+    family_id: uuid.UUID | None = None
+    customer_id: uuid.UUID | None = None
     description: str | None = Field(default=None, max_length=2000)
     files: list[PartFileInput] = Field(default_factory=list, max_length=200)
     feature_ids: list[uuid.UUID] = Field(default_factory=list, max_length=200)
@@ -76,8 +79,9 @@ def register_part(
                     "part_id": str(existing.id),
                 },
             )
-        if not all(value.strip() for value in (body.name, body.code, body.customer)):
-            raise HTTPException(422, "Completa el título, el código y el cliente.")
+        if not body.code.strip():
+            raise HTTPException(422, "Escribe el código de la pieza.")
+        check_names(session, body.family_id, body.customer_id)
         if session.exec(select(Part).where(Part.code == body.code.strip())).first():
             raise HTTPException(409, "Ya existe una pieza con ese código.")
         features = []
@@ -89,9 +93,10 @@ def register_part(
                 raise HTTPException(404, "Uno de los features ya no existe.")
             features.append(feature)
         part = Part(
-            name=body.name.strip(),
+            name=(body.name or "").strip() or None,
             code=body.code.strip(),
-            customer=body.customer.strip(),
+            family_id=body.family_id,
+            customer_id=body.customer_id,
             description=body.description,
             folder_path=body.folder_path,
         )

@@ -191,8 +191,15 @@ docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bo
   Su cuenta sigue siendo usuario normal; configurar el primer administrador corporativo está pendiente:
   [próxima sesión](docs/proximos-pasos.md#próxima-sesión-de-la-app-final-usuarios-y-prueba-real-de-archivos). Detalle y
   activación en [docs/ficheros-externos.md](docs/ficheros-externos.md#sharepoint-microsoft-graph).
-- **Asistente:** preferencia de Eduard (09/11/2026): a poder ser, **Copilot de empresa mediante un agente**.
-  Es trabajo futuro, junto con el servidor; mientras tanto sigue el chat con Ollama ([docs/asistente.md](docs/asistente.md#concurrencia-y-despliegue)).
+- **Asistente — decisión de Eduard (17/11/2026): Ollama descartado; Copilot de empresa es la solución final.**
+  Antes de llevar la app al servidor, hacer una **prueba de concepto local en este PC con Codex
+  (ChatGPT), usando el modelo más rápido disponible**, como motor de fondo del asistente.
+  No crear un agente para esta prueba: simular cómo consultaría la API de la app
+  el futuro agente de Copilot. Codex es provisional y local; no es la solución de producción.
+  **Integrado el 18/11/2026:** proveedor Codex mediante puente local de Windows, modelo
+  `gpt-reserve` con esfuerzo `low`; chat intacto y búsqueda por palabras sin Ollama.
+  Arranque y límites en [puente Codex](integrations/codex-bridge/README.md).
+  Alcance y secuencia en [docs/asistente.md](docs/asistente.md#decisión-de-eduard-17112026).
   **Demo aparte (12/11/2026):** pestaña Asistente del visor de `conocimiento/`, con Claude Code y Haiku 5.5 sobre la
   suscripción de Eduard. Es solo para uso personal en su portátil, no para la app
   ([README](prototypes/data-explorer/conocimiento/asistente/README.md)).

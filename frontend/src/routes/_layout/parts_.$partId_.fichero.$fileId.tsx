@@ -4,6 +4,7 @@ import { ExternalLink } from "lucide-react"
 import { lazy, Suspense } from "react"
 import { CatalogService, EvidenceService } from "@/client"
 import { FileLink } from "@/components/Common/FileLink"
+import { partLabel } from "@/components/Features/parts"
 import { fileAction, usesWebPreview } from "@/components/Features/viewers"
 import { consultationScope } from "@/components/Parts/consultationEntries"
 import { validatePartSearch } from "@/components/Parts/measurementSelection"
@@ -56,7 +57,7 @@ function PartFile() {
   return (
     <div className="space-y-5">
       <p className="text-sm text-muted-foreground">
-        {result.data?.part.code} · {result.data?.part.name}
+        {result.data ? partLabel(result.data.part) : ""}
       </p>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="break-words text-2xl font-bold tracking-tight">

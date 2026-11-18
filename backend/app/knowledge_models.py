@@ -10,7 +10,7 @@ from sqlalchemy import JSON, Column, DateTime, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 from app.component_models import ComponentDefinition, qualified
-from app.models import FeatureCategory, FilePublic, PartPublic, get_datetime_utc
+from app.models import FilePublic, PartPublic, get_datetime_utc
 
 
 class PartCharacteristic(SQLModel, table=True):
@@ -164,8 +164,6 @@ class EvidenceDocument(FilePublic):
 class MetrologyFeatureInfo(BaseModel):
     id: uuid.UUID
     name: str
-    category: FeatureCategory | None = None
-    tags: list[str] = []
 
 
 class MetrologyFeature(MetrologyFeatureInfo):

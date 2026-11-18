@@ -1,0 +1,11 @@
+# Optional LOCAL proof of concept. Add after the normal application Compose files.
+# Codex runs on the Windows host; the frontend and database are unchanged.
+services:
+  backend:
+    environment:
+      ASSISTANT_ENABLED: "true"
+      ASSISTANT_PROVIDER: codex
+      ASSISTANT_MODEL: ${CODEX_BRIDGE_MODEL:-gpt-reserve}
+      ASSISTANT_CODEX_BRIDGE_URL: ${CODEX_BRIDGE_URL:-http://host.docker.internal:11435}
+      ASSISTANT_CODEX_BRIDGE_TOKEN: ${CODEX_BRIDGE_TOKEN:?Set the private Codex bridge token}
+      ASSISTANT_SEMANTIC_ENABLED: "false"

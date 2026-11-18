@@ -4,7 +4,6 @@ import { Lightbulb, Package2, Pencil, TriangleAlert } from "lucide-react"
 
 import { ApiError, type NoteKind } from "@/client"
 import { CollapsibleSection } from "@/components/Common/CollapsibleSection"
-import { CATEGORY_LABELS } from "@/components/Features/constants"
 import DeleteFeature from "@/components/Features/DeleteFeature"
 import { FeatureCover } from "@/components/Features/FeatureCover"
 import { FeatureForm } from "@/components/Features/FeatureForm"
@@ -16,9 +15,8 @@ import {
 import { FeatureNotFound } from "@/components/Features/FeatureNotFound"
 import { NoteBodyView } from "@/components/Features/NoteBody"
 import { PartAssetList } from "@/components/Features/PartAssetList"
-import { featureParts } from "@/components/Features/parts"
+import { featureParts, partName } from "@/components/Features/parts"
 import { featureQueryOptions } from "@/components/Features/queries"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import useAuth from "@/hooks/useAuth"
@@ -124,7 +122,6 @@ function FeatureDetail() {
   }
 
   const parts = featureParts(feature)
-  const tags = feature.tags ?? []
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
@@ -166,25 +163,6 @@ function FeatureDetail() {
             )}
           </div>
 
-          {(feature.category || tags.length > 0) && (
-            <div className="flex flex-wrap gap-2">
-              {feature.category && (
-                <Badge variant="secondary" className="rounded-full px-3 py-1">
-                  {CATEGORY_LABELS[feature.category]}
-                </Badge>
-              )}
-              {tags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="secondary"
-                  className="rounded-full px-3 py-1"
-                >
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          )}
-
           {parts.length > 0 && (
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
               <Package2 className="size-4 shrink-0" />
@@ -196,7 +174,7 @@ function FeatureDetail() {
                     className="text-primary hover:underline"
                   >
                     <span className="font-medium">{part.code}</span>
-                    {part.name && ` · ${part.name}`}
+                    {partName(part) && ` · ${partName(part)}`}
                   </Link>
                   {index < parts.length - 1 && ","}
                 </span>

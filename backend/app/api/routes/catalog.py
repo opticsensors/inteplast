@@ -26,7 +26,6 @@ from app.knowledge_models import (
 from app.models import (
     AssetKind,
     Feature,
-    FeatureCategory,
     FeaturePublic,
     FilePublic,
     Part,
@@ -125,59 +124,41 @@ def part_card(session: SessionDep, part: Part, count: int) -> PartCardPublic:
     )
 
 
-@router.get("/catalog", response_model=CatalogPublic)
-def search_catalog(
-    session: SessionDep,
-    _current_user: CurrentUser,
-    q: str = "",
-    kind: Literal["all", "part", "feature"] = "all",
-    part_id: uuid.UUID | None = None,
-    feature_id: uuid.UUID | None = None,
-    category: FeatureCategory | None = None,
-    tag: str | None = None,
-    skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=40, ge=1, le=100),
-) -> CatalogPublic:
-    needle = q.strip()
-    features, feature_count = (
-        crud.search_features(
-            session=session,
-            q=needle or None,
-            category=category,
-            tag=tag,
-            part_id=part_id,
-            feature_id=feature_id,
-            skip=skip,
-            limit=limit,
-        )
-        if kind != "part"
-        else ([], 0)
-    )
-    links = feature_membership()
-    scoped_features = select(Feature.id)
-    if feature_id:
-        scoped_features = scoped_features.where(Feature.id == feature_id)
-    if category:
-        scoped_features = scoped_features.where(Feature.category == category)
-    if tag:
-        scoped_features = scoped_features.where(col(Feature.tags).any(tag))  # type: ignore[arg-type]
-    scoped = bool(feature_id or category or tag)
-    part_filters: list[Any] = []
-    if part_id:
-        part_filters.append(Part.id == part_id)
-    if scoped:
-        part_filters.append(
-            col(Part.id).in_(
-                select(links.c.part_id).where(links.c.feature_id.in_(scoped_features))
-            )
-        )
+def _text_patterns(needle: str) -> tuple[str, str, str]:
+    """LIKE pattern for text, LIKE pattern for cota numbers and the compact number."""
     escaped = needle.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
     like = f"%{escaped}%"
     code_query = re.sub(r"\s+", "", needle.upper())
     code_like = (
         f"%{code_query}%" if re.fullmatch(r"N?\d+(?:\.\d+)?", code_query) else like
     )
+    return like, code_like, code_query
+
+
+def _scoped_features(feature_id: uuid.UUID | None) -> Any:
+    scoped = select(Feature.id)
+    return scoped.where(Feature.id == feature_id) if feature_id else scoped
+
+
+def catalog_part_filters(
+    needle: str, piece: list[Any], feature_id: uuid.UUID | None
+) -> list[Any]:
+    """Pieces shown by the catalogue: the list, the grid and the graph use this.
+
+    Every piece filter at once; with a feature, only its pieces; with text, pieces whose
+    code, name, cotas or linked features match it.
+    """
+    links = feature_membership()
+    scoped_features = _scoped_features(feature_id)
+    part_filters: list[Any] = list(piece)
+    if feature_id:
+        part_filters.append(
+            col(Part.id).in_(
+                select(links.c.part_id).where(links.c.feature_id.in_(scoped_features))
+            )
+        )
     if needle:
+        like, code_like, _ = _text_patterns(needle)
         matching_features = scoped_features.where(
             or_(
                 col(Feature.name).ilike(like, escape="\\"),
@@ -190,7 +171,7 @@ def search_catalog(
                 col(PartCharacteristic.title).ilike(like, escape="\\"),
             )
         )
-        if scoped:
+        if feature_id:
             matching_cotas = matching_cotas.join(FeatureCharacteristicLink).where(
                 col(FeatureCharacteristicLink.feature_id).in_(scoped_features)
             )
@@ -206,6 +187,51 @@ def search_catalog(
                 ),
             )
         )
+    return part_filters
+
+
+@router.get("/catalog", response_model=CatalogPublic)
+def search_catalog(
+    session: SessionDep,
+    _current_user: CurrentUser,
+    q: str = "",
+    kind: Literal["all", "part", "feature"] = "all",
+    part_id: uuid.UUID | None = None,
+    feature_id: uuid.UUID | None = None,
+    family_id: uuid.UUID | None = None,
+    customer_id: uuid.UUID | None = None,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=40, ge=1, le=100),
+) -> CatalogPublic:
+    """Pieces, features and cotas that match the search and the filters.
+
+    A piece matches when it meets every piece filter (piece, family, customer). A feature
+    matches when it is linked to at least one piece that meets all of them at once.
+    Old links with `category` or `tag` are accepted and ignored.
+    """
+    needle = q.strip()
+    piece = crud.part_conditions(
+        part_id=part_id, family_id=family_id, customer_id=customer_id
+    )
+    features, feature_count = (
+        crud.search_features(
+            session=session,
+            q=needle or None,
+            part_id=part_id,
+            family_id=family_id,
+            customer_id=customer_id,
+            feature_id=feature_id,
+            skip=skip,
+            limit=limit,
+        )
+        if kind != "part"
+        else ([], 0)
+    )
+    links = feature_membership()
+    scoped_features = _scoped_features(feature_id)
+    scoped = bool(feature_id)
+    part_filters = catalog_part_filters(needle, piece, feature_id)
+    like, code_like, code_query = _text_patterns(needle)
     parts = (
         session.exec(
             select(Part)
@@ -241,8 +267,10 @@ def search_catalog(
                 col(PartCharacteristic.title).ilike(like, escape="\\"),
             )
         ]
-        if part_id:
-            cota_filters.append(PartCharacteristic.part_id == part_id)
+        if piece:
+            cota_filters.append(
+                col(PartCharacteristic.part_id).in_(select(Part.id).where(*piece))
+            )
         if scoped:
             cota_filters.append(
                 col(PartCharacteristic.id).in_(
@@ -353,3 +381,243 @@ def save_part_cover(
         session.add(PartDocument(part_id=part_id, file_id=image.id, kind="derived"))
     session.commit()
     return FilePublic.model_validate(image)
+
+
+# The graph loads every result at once; past this many nodes it says so and stops.
+GRAPH_LIMIT = 500
+NodeKind = Literal["part", "feature", "family", "customer"]
+GroupKind = Literal["family", "customer"]
+
+
+class GraphNode(BaseModel):
+    id: str
+    kind: NodeKind
+    ref_id: uuid.UUID
+    label: str
+    # Pieces only: their optional name and the saved CAD capture, never a new capture.
+    name: str | None = None
+    image: FilePublic | None = None
+
+
+class GraphLink(BaseModel):
+    source: str
+    target: str
+    kind: Literal["feature", "family", "customer"]
+
+
+class CatalogGraph(BaseModel):
+    nodes: list[GraphNode]
+    links: list[GraphLink]
+    total: int
+    truncated: bool
+
+
+@router.get("/catalog/graph", response_model=CatalogGraph)
+def read_catalog_graph(
+    session: SessionDep,
+    _current_user: CurrentUser,
+    q: str = "",
+    kind: Literal["all", "part", "feature"] = "all",
+    part_id: uuid.UUID | None = None,
+    feature_id: uuid.UUID | None = None,
+    family_id: uuid.UUID | None = None,
+    customer_id: uuid.UUID | None = None,
+    limit: int = Query(default=GRAPH_LIMIT, ge=1, le=GRAPH_LIMIT),
+) -> CatalogGraph:
+    """What the list shows with the same search and filters, as nodes and links.
+
+    Every result at once, without pages. Families and customers of the shown pieces come
+    as nodes too. Past `limit` nodes the answer is cut and says so with the real total,
+    so that a part is never presented as the whole.
+    """
+    needle = q.strip()
+    piece = crud.part_conditions(
+        part_id=part_id, family_id=family_id, customer_id=customer_id
+    )
+    parts = (
+        list(
+            session.exec(
+                select(Part)
+                .where(*catalog_part_filters(needle, piece, feature_id))
+                .order_by(Part.code, col(Part.id))
+            ).all()
+        )
+        if kind != "feature"
+        else []
+    )
+    features = (
+        list(
+            session.exec(
+                select(Feature)
+                .where(
+                    *crud.feature_conditions(
+                        q=needle or None,
+                        part_id=part_id,
+                        family_id=family_id,
+                        customer_id=customer_id,
+                        feature_id=feature_id,
+                    )
+                )
+                .order_by(Feature.name, col(Feature.id))
+            ).all()
+        )
+        if kind != "part"
+        else []
+    )
+    candidates: list[tuple[NodeKind, Any]] = [
+        *(("part", part) for part in parts),
+        *(("feature", feature) for feature in features),
+    ]
+    seen: set[str] = set()
+    groups: tuple[GroupKind, ...] = ("family", "customer")
+    for relation in groups:
+        for part in parts:
+            value = getattr(part, relation)
+            if value is not None and f"{relation}:{value.id}" not in seen:
+                seen.add(f"{relation}:{value.id}")
+                candidates.append((relation, value))
+    shown = candidates[:limit]
+    nodes: list[GraphNode] = []
+    for group, item in shown:
+        if group == "part":
+            card = part_card(session, item, 0)
+            nodes.append(
+                GraphNode(
+                    id=f"part:{item.id}",
+                    kind="part",
+                    ref_id=item.id,
+                    label=item.code,
+                    name=item.name,
+                    image=card.image,
+                )
+            )
+        else:
+            nodes.append(
+                GraphNode(
+                    id=f"{group}:{item.id}",
+                    kind=group,
+                    ref_id=item.id,
+                    label=item.name,
+                )
+            )
+    present = {node.id for node in nodes}
+    links: list[GraphLink] = []
+    shown_parts = [item.id for group, item in shown if group == "part"]
+    shown_features = [item.id for group, item in shown if group == "feature"]
+    if shown_parts and shown_features:
+        membership = feature_membership()
+        for linked_part, linked_feature in session.exec(
+            select(membership.c.part_id, membership.c.feature_id)
+            .where(
+                membership.c.part_id.in_(shown_parts),
+                membership.c.feature_id.in_(shown_features),
+            )
+            .distinct()
+        ).all():
+            links.append(
+                GraphLink(
+                    source=f"part:{linked_part}",
+                    target=f"feature:{linked_feature}",
+                    kind="feature",
+                )
+            )
+    for group, item in shown:
+        if group != "part":
+            continue
+        for relation in groups:
+            target = getattr(item, f"{relation}_id")
+            if target and f"{relation}:{target}" in present:
+                links.append(
+                    GraphLink(
+                        source=f"part:{item.id}",
+                        target=f"{relation}:{target}",
+                        kind=relation,
+                    )
+                )
+    links.sort(key=lambda link: (link.source, link.target))
+    return CatalogGraph(
+        nodes=nodes,
+        links=links,
+        total=len(candidates),
+        truncated=len(candidates) > len(shown),
+    )
+
+
+class DrawingCard(BaseModel):
+    file: FilePublic
+    name: str
+    primary: bool
+    part: PartPublic
+    # From «Organizar por componentes», when the drawing is assigned there.
+    component: str | None = None
+    revision: str | None = None
+
+
+class DrawingsPublic(BaseModel):
+    data: list[DrawingCard]
+    count: int
+
+
+def component_of(part: Part, path: str | None) -> tuple[str | None, str | None]:
+    """Component name and revision assigned to this drawing, if any."""
+    for component in part.components or []:
+        for assigned in component.get("files", []):
+            if path and f"{part.folder_path}/{assigned.get('path')}" == path:
+                return component.get("name") or None, assigned.get("revision") or None
+    return None, None
+
+
+@router.get("/catalog/drawings", response_model=DrawingsPublic)
+def read_catalog_drawings(
+    session: SessionDep,
+    _current_user: CurrentUser,
+    q: str = "",
+    part_id: uuid.UUID | None = None,
+    feature_id: uuid.UUID | None = None,
+    family_id: uuid.UUID | None = None,
+    customer_id: uuid.UUID | None = None,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=40, ge=1, le=100),
+) -> DrawingsPublic:
+    """Every drawing of the loaded pieces, not only the principal one.
+
+    The drawings of a piece are the ones its page shows (`read_files`): its managed file
+    list or, for pieces without one, its references and the files attached to features.
+    Pieces follow the catalogue's piece criterion (piece, family, customer and feature);
+    the text matches the file name or the piece's code or name.
+    """
+    piece = crud.part_conditions(
+        part_id=part_id, family_id=family_id, customer_id=customer_id
+    )
+    parts = session.exec(
+        select(Part)
+        .where(*catalog_part_filters("", piece, feature_id))
+        .order_by(col(Part.code), col(Part.id))
+    ).all()
+    needle = " ".join(q.split()).casefold()
+    cards: list[DrawingCard] = []
+    for part in parts:
+        seen: set[uuid.UUID] = set()
+        drawings = [
+            item for item in read_files(session, part) if item.kind == "drawing"
+        ]
+        # The principal first, then the page's order.
+        for item in sorted(drawings, key=lambda item: not item.primary):
+            if item.file.id in seen:
+                continue
+            seen.add(item.file.id)
+            texts = (item.file.filename, item.name, part.code, part.name or "")
+            if needle and not any(needle in text.casefold() for text in texts):
+                continue
+            component, revision = component_of(part, item.path)
+            cards.append(
+                DrawingCard(
+                    file=item.file,
+                    name=item.name,
+                    primary=item.primary,
+                    part=PartPublic.model_validate(part),
+                    component=component,
+                    revision=revision,
+                )
+            )
+    return DrawingsPublic(data=cards[skip : skip + limit], count=len(cards))

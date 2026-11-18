@@ -18,8 +18,11 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
   a la derecha. Features, Metrología, cotas y el visor del plano comparten este componente.
 - Colocar la búsqueda arriba, seguida de filtros horizontales que se apilan en móvil.
   No introducir listas laterales para escoger cotas.
-- En el catálogo, reunir Pieza, Feature, Categoría y Tag bajo «Filtros», junto al buscador.
+- En el catálogo, reunir Pieza, Feature, Familia y Cliente bajo «Filtros», junto al buscador
+  (Categoría y Tag se retiraron el 17/11/2026; sus parámetros en enlaces antiguos se ignoran).
   Los cuatro desplegables usan `Common/SearchSelect` con etiqueta visible y búsqueda interna.
+  Una pieza cumple si cumple a la vez pieza, familia y cliente; un feature, si tiene al menos
+  una pieza que los cumpla todos. El servidor aplica ese criterio.
   Plegar los filtros conserva la selección; el botón cuenta los cuatro criterios activos.
   Mostrar etiquetas eliminables y «Limpiar filtros» solo cuando haya filtros aplicados.
   Limpiar filtros conserva el texto buscado y el tipo de resultado; limpiar la búsqueda
@@ -48,9 +51,9 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
   Al abrirlos aparecen texto e imágenes. En edición se conservan los controles de
   reordenar, título, eliminar y añadir, con el editor de texto e imágenes debajo.
   Plegar una nota conserva su borrador y cualquier subida pendiente.
-- Nombre y descripción tienen etiquetas visibles. Los tags se añaden con Intro, coma
-  o al salir del campo, y se retiran individualmente. Cambiar imagen reutiliza el editor
-  existente de portada, incluida la selección de superficies CAD.
+- Nombre y descripción tienen etiquetas visibles. Los features ya no tienen categoría ni
+  tags (17/11/2026). Cambiar imagen reutiliza el editor existente de portada, incluida la
+  selección de superficies CAD.
 - La ficha de feature muestra las piezas donde aparece y las cotas de cada una dentro
   de una misma subtarjeta con borde, tanto en consulta como en edición. «Ver pieza»
   abre su ficha, donde se consulta la documentación. No repetir documentos ni controles
@@ -91,6 +94,35 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
   composición y tamaño de portada. Etiqueta y borde de color distinguen los tipos.
 - La vista inicial solo muestra piezas y features. Las cotas aparecen al buscar,
   identificadas por pieza y revisión; abren esa consulta dentro de la ficha de pieza.
+- **Vistas (17/11/2026):** junto al buscador, antes de Filtros, el grupo «Vista» con Lista y
+  Cuadrícula (`Catalog/CatalogView.tsx`), para Todo, Piezas y Features. La cuadrícula
+  (`Catalog/CatalogTiles.tsx`) tiene una columna en móvil y más según el ancho; cada celda
+  lleva la portada grande y debajo el código y el nombre, y en piezas la familia y el cliente;
+  en features, el nombre. El borde superior de color distingue el tipo. La vista elegida se
+  guarda en este navegador (`inteplast.catalog-view`); si no se puede leer o guardar, se abre
+  en Lista sin error. Las cotas encontradas siguen arriba en ambas vistas.
+- **Grafo (17–18/11/2026):** tercer botón de «Vista» (`Catalog/CatalogGraph.tsx`, cargado
+  solo al abrirlo). Muestra lo mismo que la lista con la búsqueda y los filtros activos
+  (`GET /catalog/graph`), todo de una vez, hasta 500 nodos; si hay más dice «Mostrando N de
+  M: filtra para ver el resto». Librería `force-graph@1.43.5`, la del visor, fijada en
+  `package.json`. Piezas: círculo con la captura CAD guardada o, sin ella, con el código
+  dentro. Features: píldora con su nombre en el color principal. Familias (ámbar) y
+  clientes (rosa) se añaden con dos casillas, apagadas al empezar, en una leyenda superpuesta arriba a la izquierda del grafo (una por línea, con su color). Sin texto de ayuda encima del grafo. Fondo, texto y uniones
+  salen del tema y se repintan al cambiarlo. Arrastrar, zoom (máximo ×4), nombre al pasar el
+  ratón (el nombre se escapa: la etiqueta emergente de `force-graph` es HTML); clic en
+  pieza o feature abre su ficha y en familia o cliente filtra el catálogo. Las cotas
+  encontradas siguen encima del grafo con «Mostrar más cotas (N de M)»; lista y cuadrícula
+  conservan su «Mostrar más» de piezas y features.
+  No se recorre con teclado: Lista y Cuadrícula son las vistas accesibles. El lienzo va
+  fuera del flujo (`absolute inset-0`) para no ensanchar la página.
+- **Planos (18/11/2026):** cuarto tipo junto a Todo, Piezas y Features
+  (`Catalog/CatalogDrawings.tsx`), siempre en cuadrícula y sin selector de vista. Muestra
+  **todos** los planos de las piezas (no solo el principal) con los filtros de pieza,
+  feature, familia y cliente. Cada celda: miniatura de la primera página, nombre del archivo,
+  código de la pieza y, si están asignados en «Organizar por componentes», componente y
+  revisión. Mientras el servidor dibuja la miniatura aparece un marcador y se reintenta; si
+  no se puede cargar, el icono de plano. Al pulsar se abre el plano en su pieza
+  (`/parts/{id}/fichero/{fileId}`, el visor de planos actual).
 - Cabecera en tres filas: título y acciones; Todo/Piezas/Features con subrayado activo;
   buscador y Filtros. Nuevo feature usa borde y precede a Nueva pieza, en verde sólido.
   Los controles principales tienen 44 px de altura y reutilizan el estilo de Features.
@@ -108,7 +140,19 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
   líneas; el tamaño queda centrado verticalmente junto a los botones.
 - La portada de pieza es una captura de todo el CAD STEP sin superficies marcadas.
   Al pulsarla abre el visor interactivo reutilizado de Features, sin edición de caras.
-- Editar permite cambiar nombre/código y añadir o desvincular features existentes.
+- **Identidad de la pieza (17/11/2026):** el código es el título; el nombre, opcional, va a
+  su lado en tono secundario, sin repetir el código («3212 Pump Housing»). Debajo, una línea
+  «Familia · Cliente» con lo que tenga. La tarjeta del catálogo sigue el mismo orden, y los
+  selectores, enlaces, cotas encontradas y metrología muestran el código primero.
+- En edición, la primera fila tiene **Código** (grande y estrecho) y **Nombre (opcional)**;
+  debajo, **Familia** y **Cliente** con `CatalogNameSelect` (`SearchSelect` con buscador).
+  La última fila del desplegable es siempre «+ Añadir familia» / «+ Añadir cliente», con el
+  mismo botón que «Añadir feature» o «Añadir fichero». Al pulsarla aparece un campo vacío,
+  como en «Añadir cota», relleno con lo ya buscado; Intro o salir del campo lo crea y lo
+  elige, Esc lo cancela. Un nombre que ya existe (otras mayúsculas o espacios) elige el
+  existente sin duplicarlo. Los filtros del catálogo no ofrecen esa fila. En
+  móvil los campos van uno debajo de otro. Solo el código es obligatorio.
+- Editar permite cambiar la identidad y añadir o desvincular features existentes.
   La relación es la misma en ambas direcciones. «Añadir feature» utiliza un botón con
   + y desplegable con buscador, como «Añadir pieza», excluyendo los ya vinculados.
   Guardar/Cancelar afectan a la cabecera y a los archivos de referencia; los vínculos
@@ -126,9 +170,10 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
 - Los selectores de vínculos usan `Common/SearchSelect`, compartido con los filtros del
   catálogo: misma altura y borde, búsqueda interna, teclado, limpieza y opciones con
   desplazamiento. Los filtros de revisión y evaluación usan los controles `Select` de detalle.
-- Feature, Categoría y Tag se filtran en el catálogo. La ficha ofrece todas las cotas de
-  la pieza, incluidas las que no tienen feature; ignora esos filtros en enlaces antiguos
-  y los limpia al seleccionar cotas o abrir el plano desde la consulta.
+- Feature se filtra en el catálogo. La ficha ofrece todas las cotas de la pieza, incluidas
+  las que no tienen feature; ignora ese filtro y los antiguos `category` y `tag` de enlaces
+  previos, y los limpia al seleccionar cotas o abrir el plano desde la consulta. Metrología
+  ofrece Pieza y Feature; «Más filtros» desapareció con Categoría y Tag.
   Las cotas disponibles son botones compactos.
 - «Mostrar más cotas» es un botón con aspecto de enlace gris subrayado, sin negrita.
   Excluir los diagnósticos «Coordenadas» de las opciones y sugerencias de cotas.
@@ -205,15 +250,15 @@ Plano de Cotas. La página muestra el nombre del PDF y reutiliza `DrawingSearch`
 No incrustar el plano en la sección Cotas de la ficha. Atrás recupera la ficha y sus filtros.
 Los enlaces antiguos con `plano=true` redirigen al archivo concreto.
 
-El buscador ocupa todo el ancho disponible. Las coincidencias aparecen debajo como botones en una
-franja que se adapta al ancho disponible, con un contador de resultados. Seleccionar
-una enfoca su ubicación. Conservar las subcotas entre los resultados, sin casilla para
-activarlas. Si el mismo número aparece en varias ubicaciones, distinguirlas con `1/2`, `2/2`.
-Cada botón indica el origen de la lectura: «Revisada» (prevalece sobre las demás), «Texto
-del PDF», «Globo del plano (.icp)», «.icp · posición aproximada» u «OCR · sin verificar».
-Si hay propuestas OCR, un aviso breve bajo la franja recuerda comprobar el número en el
-plano. Si hay globos de un `.icp` con posición aproximada, otro aviso dice que el número es
-el del `.icp` y que el plano no tiene globos dibujados que confirmen la posición.
+El buscador ocupa todo el ancho disponible. **Sin textos en pantalla (Eduard, 18/11/2026):**
+el recuadro en el plano basta para ver si se ha encontrado y dónde. Con una sola coincidencia
+se enmarca directamente, sin botones. Con varias aparecen debajo botones compactos solo con el
+número para pasar de una a otra; si el mismo número aparece en varias ubicaciones, `1/2`,
+`2/2`. Conservar las subcotas entre los resultados, sin casilla para activarlas. No mostrar
+contador, origen de la lectura («Revisada», «Texto del PDF», «.icp», «OCR · sin verificar»)
+ni avisos explicativos: el contador y el origen solo se anuncian a los lectores de pantalla
+(`sr-only` y nombre accesible de cada botón). «Revisada» sigue prevaleciendo al elegir la
+ubicación.
 
 No añadir columna lateral, descarga del original, filtro «Sin lectura», autor o fecha de la
 revisión ni formulario «Número de esta ubicación / Guardar revisión» en esta consulta. Las

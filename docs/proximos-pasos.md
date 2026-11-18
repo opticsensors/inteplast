@@ -17,6 +17,20 @@ pasar a la siguiente y se anota aquí al cerrarla.
 El traslado al servidor va aparte:
 [nombre propuesto por IT](despliegue-servidor.md#nombre-propuesto-por-it-de-eurecat-17112026).
 
+### Estado de las tandas
+
+| Tanda | Estado (17/11/2026) |
+|---|---|
+| **A** | ✅ Cerrada. Migración `o16d92fa1c07` (tablas `partfamily` y `customer`, `Part.family_id`/`customer_id`; sin `Feature.tags`/`category`). API `/families` y `/customers`; filtros `family_id` y `customer_id` con el criterio único (`crud.part_conditions` / `features_of_parts`). Backend completo en BD aislada: 450 pruebas correctas, con las nuevas de migración (variantes de mayúsculas y espacios, empate por la pieza más antigua, vuelta atrás), alta repetida, pieza sin familia, filtros combinados y búsqueda sin tags. Ruff y mypy sin errores; cliente TypeScript regenerado |
+| **B** | ✅ Cerrada. Código como título, nombre opcional al lado, «Familia · Cliente» debajo; `CatalogNameSelect` con «Añadir «texto»»; tarjetas y selectores con el código primero; sin categoría ni tags en features, catálogo y metrología (sin «Más filtros»); `category` y `tag` de enlaces antiguos se ignoran. Componentes del frontend: 159 pruebas, 158 correctas y 1 omitida (la opcional del diálogo de Windows), con las nuevas de familia añadida y reutilizada, filtros por familia y cliente, código primero y móvil. Biome y `tsc` sin errores |
+| **Despliegue A+B** | ✅ 17/11/2026: copia de la BD de trabajo en `C:/Users/eduard.almar/.codex/backups/inteplast/20261117-162532/app-before-families-customers.dump` (comprobado que contiene `{bomba,automoción}` y «Bosch»), migración aplicada y backend y frontend reconstruidos. Resultado: 3212 enlazada al cliente «Bosch»; 3197 sin cliente; ninguna familia (las añaden los usuarios) |
+| **C** | ✅ Cerrada (17/11/2026). Grupo «Vista» junto al buscador; cuadrícula de una columna en móvil y más según el ancho; vista guardada en el navegador y Lista si no se puede guardar; cotas encontradas arriba. Pruebas de navegador: cambio de vista por tipo, recuerdo tras recargar, móvil sin desbordar y almacenamiento bloqueado |
+| **D** | ✅ Cerrada (18/11/2026). `GET /catalog/graph` con el mismo criterio de filtros que la lista (`catalog_part_filters`, `crud.feature_conditions`), tope de 500 nodos con `total` y `truncated`. `force-graph@1.43.5` fijado y cargado solo al abrir el grafo. Pruebas: 3 de API (nodos y uniones con filtros, igual que la lista en 7 combinaciones, corte con total real) y de navegador (clic en un nodo real de pieza y de feature abre su ficha, casillas de familia y cliente, clic en familia filtra, fondo con el tema, aviso del tope). Revisado en capturas claro/oscuro: corregidos repintado en oscuro, código duplicado, zoom excesivo y desbordamiento lateral del lienzo |
+| **E** | ✅ Cerrada (18/11/2026). `GET /catalog/drawings` (todos los planos, con componente y revisión asignados) y miniaturas `POST`/`GET /files/{id}/thumbnail` cacheadas por versión del original. Pruebas: listado y filtros; no regenera si el archivo no cambia y sí si cambia (borra la anterior y el enlace viejo deja de servir); `busy` con los huecos ocupados; solo PDF. Navegador: cuadrícula, marcador y reintento, icono si falla y clic al visor del plano |
+| **Comprobación final C–E** | Backend completo en BD aislada: 456 pruebas correctas. Componentes del frontend: 167 pruebas, 166 correctas y 1 omitida. Ruff, mypy, Biome y `tsc` sin errores; cliente regenerado. Se ajustó `test_usage_counts…` de `test_parts.py`, que dependía de que la pieza saliera en la primera página de `/parts/` |
+| **Entorno (18/11/2026)** | OneDrive había dejado `node_modules` «solo en la nube» y no podía recuperarlo («la red no está disponible»). Con permiso de Eduard se borró y se reinstaló con `npm ci`; la carpeta queda marcada para mantenerse en el equipo |
+| **Revisión externa D–E (18/11/2026)** | Cuatro fallos reproducidos y corregidos con pruebas de regresión: (1) **seguridad**: la etiqueta emergente del grafo interpretaba el nombre como HTML; ahora se escapa (prueba con `<img onerror>` que no se ejecuta); (2) «Planos» solo miraba `PartFile` y dejaba fuera los planos de piezas por referencia o adjunto de feature; ahora usa la misma regla que la ficha (`read_files`); (3) dos peticiones de la misma miniatura podían borrarse el temporal (error 500) y PyMuPDF corría en hilos; ahora proceso hijo con 60 s de límite, bloqueo por documento liberado también tras fallo o timeout y temporal `*.part` fuera de la limpieza; (4) el grafo no permitía cargar más de 40 cotas; ahora «Mostrar más cotas», y lista y cuadrícula conservan su paginación sin cotas |
+
 ### Decisiones de Eduard (17/11/2026)
 
 | Tema | Decisión |
@@ -633,16 +647,29 @@ Detalle y criterios para avanzar: [hoja de ruta](hoja-de-ruta.md#pendiente-gener
 La consulta al cliente debe centrarse en contrastar los casos y su elaboración (A13/A14),
 no en pedir otra vez los ejemplos ya disponibles.
 
-## 2. Asistente: Copilot de empresa, junto con el servidor (trabajo futuro)
+<a id="2-asistente-copilot-de-empresa-junto-con-el-servidor-trabajo-futuro"></a>
+## 2. Asistente: prueba local con Codex antes del servidor; Copilot definitivo
 
-**Preferencia de Eduard (09/11/2026):** si es posible, el asistente será el **Copilot de
-empresa**, mediante un agente que permita usarlo con los datos de la app. Es trabajo futuro,
-que se abordará junto con el servidor. Mientras tanto se mantiene el chat actual con Ollama.
+**Decisión expresa de Eduard (17/11/2026): Ollama descartado. La solución final será
+Copilot de empresa mediante un agente conectado a la API de la app.** Sustituye la
+preferencia provisional del 09/11 y el plan de mantener Ollama mientras tanto.
 
-Acordar con INTEPLAST y su IT proveedor, máquina, usuarios simultáneos y alcance del límite.
-Medir latencia con una consulta y con dos simultáneas antes de dimensionar. La integración
-actual y las alternativas pendientes se mantienen en
-[asistente, concurrencia y despliegue](asistente.md#concurrencia-y-despliegue).
+Antes de llevar la app al servidor, hacer una **prueba de concepto en este PC con Codex
+(ChatGPT), usando el modelo más rápido disponible como motor de fondo**. No crear
+un agente para esta prueba: simular cómo consultaría y respondería un agente conectado a la API
+de la aplicación. Codex sirve para salir del paso y evaluar respuestas, fuentes y latencia;
+es provisional y local, no la solución de producción.
+
+**Integrado el 18/11/2026, después de A–E.** Puente local de Windows con `codex exec`, modelo
+`gpt-reserve` y esfuerzo `low`; mismo frontend y lecturas del backend. La búsqueda por palabras
+sustituye la dependencia semántica de Ollama en esta prueba. Pasan 83 pruebas aisladas;
+resta evaluar la calidad con preguntas representativas. Arranque y límites en el
+[puente Codex](../integrations/codex-bridge/README.md). Después, acordar con IT
+la integración final de Copilot, sus permisos, usuarios simultáneos y límites. No pedir
+Ollama ni dimensionar el servidor para ejecutar sus modelos.
+
+Alcance y estado en [decisión del asistente](asistente.md#decisión-de-eduard-17112026)
+y [concurrencia y despliegue](asistente.md#concurrencia-y-despliegue).
 Los acuerdos de IT constan en el [acta del 24/09](acta-reunion-2026-09-24.md).
 
 ## 3. Otras tareas abiertas

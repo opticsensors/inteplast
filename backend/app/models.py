@@ -11,7 +11,7 @@ from pydantic import (
     StringConstraints,
     model_validator,
 )
-from sqlalchemy import ARRAY, JSON, Column, DateTime, String
+from sqlalchemy import JSON, Column, DateTime
 from sqlmodel import AutoString, Field, Relationship, SQLModel
 
 
@@ -221,17 +221,6 @@ class FilePreviewPublic(SQLModel):
 # ---------------------------------------------------------------------------
 
 
-# Tipos geometricos comunes con los que se clasifica un feature
-class FeatureCategory(str, Enum):
-    hole = "hole"
-    rib = "rib"
-    thickness = "thickness"
-    boss = "boss"
-    fillet = "fillet"
-    draft = "draft"
-    other = "other"
-
-
 # Un mismo tipo de nota sirve para advertencias y lecciones aprendidas
 class NoteKind(str, Enum):
     warning = "warning"
@@ -253,11 +242,53 @@ class AssetKind(str, Enum):
 # ---------------------------------------------------------------------------
 
 
+def catalog_key(name: str) -> str:
+    """Identity of a family or customer name: no case, no extra spaces.
+
+    «Bosch», «bosch» and «Bosch » are the same entry; «Robert Bosch» is another one.
+    """
+    return " ".join(name.split()).casefold()
+
+
+class CatalogNameCreate(SQLModel):
+    name: str = Field(min_length=1, max_length=255)
+
+
+class CatalogNamePublic(SQLModel):
+    id: uuid.UUID
+    name: str
+
+
+class CatalogNamesPublic(SQLModel):
+    data: list[CatalogNamePublic]
+
+
+class PartFamily(SQLModel, table=True):
+    """Kind of piece (Pump Housing, Pot…), shared list that users extend."""
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    name: str = Field(min_length=1, max_length=255)
+    key: str = Field(max_length=255, unique=True, index=True)
+
+
+class Customer(SQLModel, table=True):
+    """Company that orders the piece from INTEPLAST, shared list that users extend."""
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    name: str = Field(min_length=1, max_length=255)
+    key: str = Field(max_length=255, unique=True, index=True)
+
+
 class PartBase(SQLModel):
     code: str = Field(min_length=1, max_length=64, unique=True, index=True)
     name: str | None = Field(default=None, max_length=255)
     description: str | None = Field(default=None, max_length=2000)
-    customer: str | None = Field(default=None, max_length=255)
+    family_id: uuid.UUID | None = Field(
+        default=None, foreign_key="partfamily.id", index=True, ondelete="RESTRICT"
+    )
+    customer_id: uuid.UUID | None = Field(
+        default=None, foreign_key="customer.id", index=True, ondelete="RESTRICT"
+    )
     # Relative to the configured source; never an absolute workstation path.
     folder_path: str | None = Field(
         default=None, max_length=2048, unique=True, index=True
@@ -297,7 +328,9 @@ class PartUpdate(SQLModel):
     code: str = Field(default=None, min_length=1, max_length=64)
     name: str | None = Field(default=None, max_length=255)
     description: str | None = Field(default=None, max_length=2000)
-    customer: str | None = Field(default=None, max_length=255)
+    # Omitted keeps the value; null leaves the piece without family or customer.
+    family_id: uuid.UUID | None = None
+    customer_id: uuid.UUID | None = None
     folder_path: str | None = Field(default=None, max_length=2048)
     references: list[ReferenceChoice] | None = Field(default=None, max_length=4)
     files: list[PartFileInput] | None = Field(default=None, max_length=200)
@@ -350,11 +383,15 @@ class Part(PartBase, table=True):
     features: list["Feature"] = Relationship(
         back_populates="parts", link_model=FeaturePartLink
     )
+    family: PartFamily | None = Relationship()
+    customer: Customer | None = Relationship()
 
 
 class PartPublic(PartBase):
     id: uuid.UUID
     created_at: datetime | None = None
+    family: CatalogNamePublic | None = None
+    customer: CatalogNamePublic | None = None
 
 
 class PartCatalogPublic(PartPublic):
@@ -370,13 +407,6 @@ class PartsPublic(SQLModel):
 class FeatureBase(SQLModel):
     name: str = Field(min_length=1, max_length=255, index=True)
     description: str | None = Field(default=None, max_length=2000)
-    category: FeatureCategory | None = Field(
-        default=None, index=True, sa_type=AutoString
-    )
-    tags: list[str] = Field(
-        default_factory=list,
-        sa_type=ARRAY(String),  # type: ignore
-    )
 
 
 # Properties to receive on feature creation
@@ -440,8 +470,6 @@ class FeatureUpdate(SQLModel):
     # Omitted fields stay unchanged; explicit null is only valid for nullable columns.
     name: str = Field(default=None, min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=2000)
-    category: FeatureCategory | None = None
-    tags: list[str] = Field(default=None)
     image_id: uuid.UUID | None = None
     cover_3d: FeatureCover3D | None = None
 
@@ -599,14 +627,10 @@ class FeaturesPublic(SQLModel):
 class FeatureFilterOption(SQLModel):
     id: uuid.UUID
     name: str
-    category: FeatureCategory | None = None
-    tags: list[str] = Field(default_factory=list)
     part_ids: list[uuid.UUID] = Field(default_factory=list)
 
 
 class FeatureFilters(SQLModel):
-    categories: list[FeatureCategory]
-    tags: list[str]
     parts: list[PartPublic]
     features: list[FeatureFilterOption]
 

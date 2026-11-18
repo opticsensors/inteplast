@@ -11,6 +11,7 @@ from sqlmodel import Session, select
 
 from app.assistant import router as assistant_router
 from app.assistant.config import AssistantSettings, get_settings
+from app.assistant.knowledge import GLOSSARY
 from app.assistant.providers import ModelChunk, OllamaProvider, ProviderError
 from app.assistant.retrieval import initial_read
 from app.assistant.schemas import ChatRequest
@@ -259,6 +260,7 @@ def test_requested_piece_is_grounded_even_when_model_does_not_call_a_tool(
             assert "series_summaries" not in data
             assert "rows" not in data
             assert not tools  # Complete exact data goes straight to drafting.
+            assert GLOSSARY in messages[0]["content"]
             assert data["summary"]["tolerances"] == [
                 {"unit": "mm", "nominal": 4, "lower": 3.9, "upper": 4}
             ]
@@ -321,6 +323,7 @@ def test_stream_executes_tools_and_emits_sources(
     class Provider:
         async def stream(self, messages, tools):
             seen.append(messages.copy())
+            assert GLOSSARY in messages[0]["content"]
             if len(seen) == 1:
                 yield ModelChunk(
                     tool_calls=[

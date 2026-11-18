@@ -392,7 +392,7 @@ test("adding a part creates an open editable block, selects its default name and
     ]),
     [true, 0, "2820 Pump Housing".length],
   )
-  const toggle = page.getByRole("button", { name: /2820 2820 Pump Housing/ })
+  const toggle = page.getByRole("button", { name: /2820 Pump Housing/ })
   assert.equal(await toggle.getAttribute("aria-expanded"), "true")
   assert.equal(await page.getByRole("dialog").count(), 0)
   assert.equal(await page.getByRole("listbox").count(), 0)
@@ -1145,25 +1145,6 @@ test("dropping an unsupported file into the feature image is rejected", async (t
     })
     .waitFor()
   assert.deepEqual(await page.evaluate(() => window.review.uploadRequests), [])
-})
-
-test("tags are removable and a pending tag is committed before Save", async (t) => {
-  const { page } = await mount(t)
-  const tags = page.getByPlaceholder("Añadir tag…")
-  await tags.fill("Bosch,pump")
-  await tags.press("Enter")
-  await page
-    .getByRole("button", { name: "Quitar tag Bosch", exact: true })
-    .click()
-  await tags.fill("nuevo")
-  await page
-    .getByRole("button", { name: "Guardar cambios", exact: true })
-    .click()
-  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
-  assert.deepEqual(await page.evaluate(() => window.review.feature.tags), [
-    "pump",
-    "nuevo",
-  ])
 })
 
 test("note images survive folding during upload and Save waits for their reference", async (t) => {

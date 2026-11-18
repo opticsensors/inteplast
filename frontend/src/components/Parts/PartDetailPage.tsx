@@ -28,6 +28,11 @@ import {
   FeatureBreadcrumb,
   FeatureSection,
 } from "@/components/Features/FeatureLayout"
+import {
+  partClassification,
+  partLabel,
+  partName,
+} from "@/components/Features/parts"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -46,6 +51,7 @@ import useAuth from "@/hooks/useAuth"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
 import { pickSourcePath } from "@/lib/sourcePicker"
 import { AddFeatureButton } from "./AddFeatureButton"
+import { CatalogNameSelect } from "./CatalogNameSelect"
 import { DeletePart } from "./DeletePart"
 import { FeaturePartEvidence } from "./FeaturePartEvidence"
 import { MetrologyPage } from "./MetrologyPage"
@@ -111,14 +117,16 @@ function PartPage({
     name: part?.name ?? "",
     description: part?.description ?? "",
     code: part?.code ?? "",
-    customer: part?.customer ?? "",
+    familyId: part?.family_id ?? null,
+    customerId: part?.customer_id ?? null,
     folder: part?.folder_path ?? "",
     files: savedFiles(data),
   }).current
   const [name, setName] = useState(initial.name)
   const [description, setDescription] = useState(initial.description)
   const [code, setCode] = useState(initial.code)
-  const [customer, setCustomer] = useState(initial.customer)
+  const [familyId, setFamilyId] = useState(initial.familyId)
+  const [customerId, setCustomerId] = useState(initial.customerId)
   const [folder, setFolder] = useState(initial.folder)
   const [organizeBeforeReading, setOrganizeBeforeReading] = useState(false)
   const [files, setFiles] = useState(initial.files)
@@ -138,7 +146,8 @@ function PartPage({
     (name !== initial.name ||
       description !== initial.description ||
       code !== initial.code ||
-      customer !== initial.customer ||
+      familyId !== initial.familyId ||
+      customerId !== initial.customerId ||
       folder !== initial.folder ||
       JSON.stringify(fileRequest(files)) !==
         JSON.stringify(fileRequest(initial.files)) ||
@@ -171,10 +180,11 @@ function PartPage({
   const save = useMutation({
     mutationFn: () => {
       const values = {
-        name: name.trim(),
+        name: name.trim() || null,
         description: description.trim() || null,
         code: code.trim(),
-        customer: customer.trim(),
+        family_id: familyId,
+        customer_id: customerId,
         folder_path: folder || null,
         files: fileRequest(files),
       }
@@ -285,7 +295,7 @@ function PartPage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <FeatureBreadcrumb
           kind="part"
-          name={part ? (part.name ?? part.code) : "Nueva pieza"}
+          name={part ? partLabel(part) : "Nueva pieza"}
         />
         <div className="flex flex-wrap items-center gap-2">
           {editing ? (
@@ -302,8 +312,6 @@ function PartPage({
                   busy ||
                   Boolean(duplicate) ||
                   (!folder && (!part || Boolean(initial.folder))) ||
-                  (!part && !customer.trim()) ||
-                  !name.trim() ||
                   !code.trim() ||
                   files.some((file) => !file.name.trim())
                 }
@@ -363,16 +371,52 @@ function PartPage({
         <div className="min-w-0 flex-1 space-y-3">
           {editing ? (
             <>
-              <div className="grid gap-2">
-                <Label htmlFor="piece-name">Título</Label>
-                <Input
-                  id="piece-name"
-                  aria-label="Nombre de la pieza"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  maxLength={255}
-                  placeholder="Nombre de la pieza"
-                  className="text-lg md:text-lg"
+              {/* El código es el título; el nombre, opcional, va a su lado. */}
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,11rem)_minmax(0,1fr)]">
+                <div className="grid gap-2">
+                  <Label htmlFor="piece-code">Código</Label>
+                  <Input
+                    id="piece-code"
+                    aria-label="Código de la pieza"
+                    value={code}
+                    onChange={(event) => setCode(event.target.value)}
+                    maxLength={64}
+                    placeholder="3212"
+                    className="h-11 font-semibold text-lg md:text-lg"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="piece-name">
+                    Nombre{" "}
+                    <span className="font-normal text-muted-foreground">
+                      (opcional)
+                    </span>
+                  </Label>
+                  <Input
+                    id="piece-name"
+                    aria-label="Nombre de la pieza"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    maxLength={255}
+                    placeholder="Nombre de la pieza"
+                    className="h-11 text-lg md:text-lg"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <CatalogNameSelect
+                  kind="families"
+                  value={familyId}
+                  selected={part?.family}
+                  onChange={setFamilyId}
+                  disabled={busy}
+                />
+                <CatalogNameSelect
+                  kind="customers"
+                  value={customerId}
+                  selected={part?.customer}
+                  onChange={setCustomerId}
+                  disabled={busy}
                 />
               </div>
               <div className="grid gap-2">
@@ -391,64 +435,30 @@ function PartPage({
                   className="min-h-16"
                 />
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="piece-code">Código</Label>
-                  <Input
-                    id="piece-code"
-                    aria-label="Código de la pieza"
-                    value={code}
-                    onChange={(event) => setCode(event.target.value)}
-                    maxLength={64}
-                    placeholder="Código de la pieza"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="piece-customer">Cliente</Label>
-                  <Input
-                    id="piece-customer"
-                    value={customer}
-                    onChange={(event) => setCustomer(event.target.value)}
-                    maxLength={255}
-                    placeholder="Nombre de la empresa"
-                  />
-                </div>
-              </div>
             </>
           ) : (
             <>
               <h1 className="break-words text-2xl font-bold tracking-tight sm:text-3xl">
-                {part?.name ?? part?.code}
+                {part?.code}
+                {part && partName(part) && (
+                  <>
+                    {" "}
+                    <span className="ml-1 font-normal text-muted-foreground">
+                      {partName(part)}
+                    </span>
+                  </>
+                )}
               </h1>
+              {part && partClassification(part) && (
+                <p className="break-words text-sm text-muted-foreground">
+                  {partClassification(part)}
+                </p>
+              )}
               {part?.description && (
                 <p className="whitespace-pre-wrap break-words text-muted-foreground">
                   {part.description}
                 </p>
               )}
-              <dl className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
-                <div className="flex min-w-0 items-baseline gap-1.5">
-                  <dt className="shrink-0 text-muted-foreground">Código:</dt>
-                  <dd className="min-w-0 break-words">
-                    {part?.code}
-                    {part?.customer?.trim() && (
-                      <span
-                        aria-hidden="true"
-                        className="ml-3 text-muted-foreground"
-                      >
-                        ·
-                      </span>
-                    )}
-                  </dd>
-                </div>
-                {part?.customer?.trim() && (
-                  <div className="flex min-w-0 items-baseline gap-1.5">
-                    <dt className="shrink-0 text-muted-foreground">Cliente:</dt>
-                    <dd className="min-w-0 break-words">
-                      {part.customer.trim()}
-                    </dd>
-                  </div>
-                )}
-              </dl>
             </>
           )}
         </div>
@@ -560,7 +570,8 @@ function PartPage({
         )}
         {duplicate && (
           <p role="alert" className="mt-2 text-sm">
-            Esta carpeta ya pertenece a {duplicate.name ?? duplicate.code}.{" "}
+            Esta carpeta ya pertenece a{" "}
+            {duplicate.code ? partLabel(duplicate) : duplicate.name}.{" "}
             <Link
               to="/parts/$partId"
               params={{ partId: duplicate.id }}

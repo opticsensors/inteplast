@@ -22,7 +22,6 @@ def create(client, headers, folder, **extra):
             "folder_path": folder,
             "name": "Housing",
             "code": str(uuid.uuid4())[:12],
-            "customer": "Company",
             **extra,
         },
     )
@@ -55,7 +54,6 @@ def test_discovery_and_registration_never_overwrite_an_existing_piece(
             "folder_path": folder,
             "name": "Must not overwrite",
             "code": "another",
-            "customer": "other",
         },
     )
     assert response.status_code == 409
@@ -112,20 +110,23 @@ def test_named_multiple_files_primary_switch_and_removal_keep_sources(
     choices.append(
         {"path": f"{folder}/sub/report.xlsx", "kind": "document", "name": "Report"}
     )
+    customer = client.post(
+        f"{settings.API_V1_STR}/customers", headers=headers, json={"name": "Client"}
+    ).json()
     response = client.put(
         url,
         headers=headers,
         json={
             "name": "Edited",
             "description": "Optional",
-            "customer": "Client",
+            "customer_id": customer["id"],
             "files": choices,
         },
     )
     assert response.status_code == 200, response.text
     updated = client.get(f"{url}/detail", headers=headers).json()
     assert updated["part"]["cad"]["filename"] == "two.step"
-    assert updated["part"]["customer"] == "Client"
+    assert updated["part"]["customer"] == {"id": customer["id"], "name": "Client"}
     assert updated["files"][-1]["name"] == "Report"
     evidence = client.get(
         f"{settings.API_V1_STR}/evidence/parts/{part['id']}", headers=headers
@@ -184,7 +185,6 @@ def test_invalid_files_rollback_header_and_registration(
             "folder_path": empty,
             "code": str(uuid.uuid4()),
             "name": "Invalid",
-            "customer": "Client",
             "files": choices,
         },
     )

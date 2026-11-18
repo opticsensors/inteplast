@@ -23,6 +23,7 @@ export default defineConfig(({ mode }) => {
         "three/examples/jsm/loaders/STLLoader.js",
         "three/examples/jsm/loaders/OBJLoader.js",
         "three/examples/jsm/loaders/PLYLoader.js",
+        "force-graph",
       ],
     },
     resolve: {

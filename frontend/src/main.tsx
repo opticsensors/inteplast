@@ -17,6 +17,29 @@ import { Toaster } from "./components/ui/sonner"
 import "./index.css"
 import { routeTree } from "./routeTree.gen"
 
+/**
+ * A tab opened before a rebuild still asks for chunks of the previous build (3D viewer,
+ * cover editor…), which no longer exist. Reload once to get the new build instead of
+ * showing the error page; never twice in a row, so a real failure still shows.
+ */
+const RELOADED_AT = "inteplast.chunk-reload"
+window.addEventListener("vite:preloadError", (event) => {
+  let last = 0
+  try {
+    last = Number(sessionStorage.getItem(RELOADED_AT) ?? 0)
+  } catch {
+    // Without storage, reloading once per error is still better than a dead page.
+  }
+  if (Date.now() - last < 30_000) return
+  event.preventDefault()
+  try {
+    sessionStorage.setItem(RELOADED_AT, String(Date.now()))
+  } catch {
+    // Same as above.
+  }
+  window.location.reload()
+})
+
 OpenAPI.BASE = import.meta.env.VITE_API_URL
 OpenAPI.TOKEN = async () => {
   return localStorage.getItem("access_token") || ""

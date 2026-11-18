@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AssistantStatusResponse, AssistantChatData, AssistantChatResponse, CatalogSearchCatalogData, CatalogSearchCatalogResponse, CatalogReadPartDetailData, CatalogReadPartDetailResponse, CatalogSavePartCoverData, CatalogSavePartCoverResponse, EvidenceReadMetrologyFiltersResponse, EvidenceReadMetrologyData, EvidenceReadMetrologyResponse, EvidenceReadPartEvidenceData, EvidenceReadPartEvidenceResponse, EvidenceImportPartEvidenceData, EvidenceImportPartEvidenceResponse, EvidenceReadFeatureEvidenceData, EvidenceReadFeatureEvidenceResponse, EvidenceAssignCharacteristicData, EvidenceAssignCharacteristicResponse, EvidenceUnassignCharacteristicData, EvidenceUnassignCharacteristicResponse, EvidenceReadDrawingIndexData, EvidenceReadDrawingIndexResponse, EvidenceIndexDrawingData, EvidenceIndexDrawingResponse, EvidenceReviewDrawingLocationData, EvidenceReviewDrawingLocationResponse, EvidencePreviewMeasurementsData, EvidencePreviewMeasurementsResponse, EvidenceImportMeasurementsData, EvidenceImportMeasurementsResponse, EvidenceMeasurementHistoryData, EvidenceMeasurementHistoryResponse, FeaturesReadFeaturesData, FeaturesReadFeaturesResponse, FeaturesCreateFeatureData, FeaturesCreateFeatureResponse, FeaturesReadFeatureFiltersResponse, FeaturesReadFeatureData, FeaturesReadFeatureResponse, FeaturesUpdateFeatureData, FeaturesUpdateFeatureResponse, FeaturesDeleteFeatureData, FeaturesDeleteFeatureResponse, FeaturesReorderFeatureNotesData, FeaturesReorderFeatureNotesResponse, FeaturesReorderFeatureAssetsData, FeaturesReorderFeatureAssetsResponse, FeaturesCreateFeatureNoteData, FeaturesCreateFeatureNoteResponse, FeaturesUpdateFeatureNoteData, FeaturesUpdateFeatureNoteResponse, FeaturesDeleteFeatureNoteData, FeaturesDeleteFeatureNoteResponse, FeaturesReorderFeaturePartsData, FeaturesReorderFeaturePartsResponse, FeaturesLinkFeaturePartData, FeaturesLinkFeaturePartResponse, FeaturesUnlinkFeaturePartData, FeaturesUnlinkFeaturePartResponse, FeaturesCreateFeatureAssetData, FeaturesCreateFeatureAssetResponse, FeaturesUpdateFeatureAssetData, FeaturesUpdateFeatureAssetResponse, FeaturesDeleteFeatureAssetData, FeaturesDeleteFeatureAssetResponse, FilesListSourceData, FilesListSourceResponse, FilesReferenceFileData, FilesReferenceFileResponse, FilesRelinkFileData, FilesRelinkFileResponse, FilesReadSourceTableData, FilesReadSourceTableResponse, FilesFileStatusData, FilesFileStatusResponse, FilesUploadFileData, FilesUploadFileResponse, FilesCreateFileAccessUrlData, FilesCreateFileAccessUrlResponse, FilesPreparePreviewData, FilesPreparePreviewResponse, FilesReadPreviewData, FilesReadPreviewResponse, FilesReadFileData, FilesReadFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, LoginLoginMethodsResponse, LoginStartMicrosoftLoginResponse, LoginCompleteMicrosoftLoginData, LoginCompleteMicrosoftLoginResponse, LoginRedeemMicrosoftTicketData, LoginRedeemMicrosoftTicketResponse, LoginMicrosoftLogoutResponse, PartsReadPartDataReportData, PartsReadPartDataReportResponse, PartsReadPartDataData, PartsReadPartDataResponse, PartsRegisterPartData, PartsRegisterPartResponse, PartsDiscoverPartFolderData, PartsDiscoverPartFolderResponse, PartsSetupPartData, PartsSetupPartResponse, PartsRefreshPartDataData, PartsRefreshPartDataResponse, PartsReadPartsData, PartsReadPartsResponse, PartsCreatePartData, PartsCreatePartResponse, PartsCreatePartFromFolderData, PartsCreatePartFromFolderResponse, PartsUpdatePartData, PartsUpdatePartResponse, PartsDeletePartData, PartsDeletePartResponse, PartsReadPartDeletionData, PartsReadPartDeletionResponse, PartsReadComponentOptionsData, PartsReadComponentOptionsResponse, PartsSaveComponentOrganizationData, PartsSaveComponentOrganizationResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { AssistantStatusResponse, AssistantChatData, AssistantChatResponse, CatalogSearchCatalogData, CatalogSearchCatalogResponse, CatalogReadPartDetailData, CatalogReadPartDetailResponse, CatalogSavePartCoverData, CatalogSavePartCoverResponse, CatalogReadCatalogGraphData, CatalogReadCatalogGraphResponse, CatalogReadCatalogDrawingsData, CatalogReadCatalogDrawingsResponse, CatalogReadFamiliesResponse, CatalogCreateFamilyData, CatalogCreateFamilyResponse, CatalogReadCustomersResponse, CatalogCreateCustomerData, CatalogCreateCustomerResponse, EvidenceReadMetrologyFiltersResponse, EvidenceReadMetrologyData, EvidenceReadMetrologyResponse, EvidenceReadPartEvidenceData, EvidenceReadPartEvidenceResponse, EvidenceImportPartEvidenceData, EvidenceImportPartEvidenceResponse, EvidenceReadFeatureEvidenceData, EvidenceReadFeatureEvidenceResponse, EvidenceAssignCharacteristicData, EvidenceAssignCharacteristicResponse, EvidenceUnassignCharacteristicData, EvidenceUnassignCharacteristicResponse, EvidenceReadDrawingIndexData, EvidenceReadDrawingIndexResponse, EvidenceIndexDrawingData, EvidenceIndexDrawingResponse, EvidenceReviewDrawingLocationData, EvidenceReviewDrawingLocationResponse, EvidencePreviewMeasurementsData, EvidencePreviewMeasurementsResponse, EvidenceImportMeasurementsData, EvidenceImportMeasurementsResponse, EvidenceMeasurementHistoryData, EvidenceMeasurementHistoryResponse, FeaturesReadFeaturesData, FeaturesReadFeaturesResponse, FeaturesCreateFeatureData, FeaturesCreateFeatureResponse, FeaturesReadFeatureFiltersResponse, FeaturesReadFeatureData, FeaturesReadFeatureResponse, FeaturesUpdateFeatureData, FeaturesUpdateFeatureResponse, FeaturesDeleteFeatureData, FeaturesDeleteFeatureResponse, FeaturesReorderFeatureNotesData, FeaturesReorderFeatureNotesResponse, FeaturesReorderFeatureAssetsData, FeaturesReorderFeatureAssetsResponse, FeaturesCreateFeatureNoteData, FeaturesCreateFeatureNoteResponse, FeaturesUpdateFeatureNoteData, FeaturesUpdateFeatureNoteResponse, FeaturesDeleteFeatureNoteData, FeaturesDeleteFeatureNoteResponse, FeaturesReorderFeaturePartsData, FeaturesReorderFeaturePartsResponse, FeaturesLinkFeaturePartData, FeaturesLinkFeaturePartResponse, FeaturesUnlinkFeaturePartData, FeaturesUnlinkFeaturePartResponse, FeaturesCreateFeatureAssetData, FeaturesCreateFeatureAssetResponse, FeaturesUpdateFeatureAssetData, FeaturesUpdateFeatureAssetResponse, FeaturesDeleteFeatureAssetData, FeaturesDeleteFeatureAssetResponse, FilesListSourceData, FilesListSourceResponse, FilesReferenceFileData, FilesReferenceFileResponse, FilesRelinkFileData, FilesRelinkFileResponse, FilesReadSourceTableData, FilesReadSourceTableResponse, FilesFileStatusData, FilesFileStatusResponse, FilesUploadFileData, FilesUploadFileResponse, FilesCreateFileAccessUrlData, FilesCreateFileAccessUrlResponse, FilesPreparePreviewData, FilesPreparePreviewResponse, FilesReadPreviewData, FilesReadPreviewResponse, FilesPrepareThumbnailData, FilesPrepareThumbnailResponse, FilesReadThumbnailData, FilesReadThumbnailResponse, FilesReadFileData, FilesReadFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, LoginLoginMethodsResponse, LoginStartMicrosoftLoginResponse, LoginCompleteMicrosoftLoginData, LoginCompleteMicrosoftLoginResponse, LoginRedeemMicrosoftTicketData, LoginRedeemMicrosoftTicketResponse, LoginMicrosoftLogoutResponse, PartsReadPartDataReportData, PartsReadPartDataReportResponse, PartsReadPartDataData, PartsReadPartDataResponse, PartsRegisterPartData, PartsRegisterPartResponse, PartsDiscoverPartFolderData, PartsDiscoverPartFolderResponse, PartsSetupPartData, PartsSetupPartResponse, PartsRefreshPartDataData, PartsRefreshPartDataResponse, PartsReadPartsData, PartsReadPartsResponse, PartsCreatePartData, PartsCreatePartResponse, PartsCreatePartFromFolderData, PartsCreatePartFromFolderResponse, PartsUpdatePartData, PartsUpdatePartResponse, PartsDeletePartData, PartsDeletePartResponse, PartsReadPartDeletionData, PartsReadPartDeletionResponse, PartsReadComponentOptionsData, PartsReadComponentOptionsResponse, PartsSaveComponentOrganizationData, PartsSaveComponentOrganizationResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class AssistantService {
     /**
@@ -42,13 +42,18 @@ export class AssistantService {
 export class CatalogService {
     /**
      * Search Catalog
+     * Pieces, features and cotas that match the search and the filters.
+     *
+     * A piece matches when it meets every piece filter (piece, family, customer). A feature
+     * matches when it is linked to at least one piece that meets all of them at once.
+     * Old links with `category` or `tag` are accepted and ignored.
      * @param data The data for the request.
      * @param data.q
      * @param data.kind
      * @param data.partId
      * @param data.featureId
-     * @param data.category
-     * @param data.tag
+     * @param data.familyId
+     * @param data.customerId
      * @param data.skip
      * @param data.limit
      * @returns CatalogPublic Successful Response
@@ -63,8 +68,8 @@ export class CatalogService {
                 kind: data.kind,
                 part_id: data.partId,
                 feature_id: data.featureId,
-                category: data.category,
-                tag: data.tag,
+                family_id: data.familyId,
+                customer_id: data.customerId,
                 skip: data.skip,
                 limit: data.limit
             },
@@ -109,6 +114,147 @@ export class CatalogService {
             path: {
                 part_id: data.partId
             },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Catalog Graph
+     * What the list shows with the same search and filters, as nodes and links.
+     *
+     * Every result at once, without pages. Families and customers of the shown pieces come
+     * as nodes too. Past `limit` nodes the answer is cut and says so with the real total,
+     * so that a part is never presented as the whole.
+     * @param data The data for the request.
+     * @param data.q
+     * @param data.kind
+     * @param data.partId
+     * @param data.featureId
+     * @param data.familyId
+     * @param data.customerId
+     * @param data.limit
+     * @returns CatalogGraph Successful Response
+     * @throws ApiError
+     */
+    public static readCatalogGraph(data: CatalogReadCatalogGraphData = {}): CancelablePromise<CatalogReadCatalogGraphResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/catalog/graph',
+            query: {
+                q: data.q,
+                kind: data.kind,
+                part_id: data.partId,
+                feature_id: data.featureId,
+                family_id: data.familyId,
+                customer_id: data.customerId,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Catalog Drawings
+     * Every drawing of the loaded pieces, not only the principal one.
+     *
+     * The drawings of a piece are the ones its page shows (`read_files`): its managed file
+     * list or, for pieces without one, its references and the files attached to features.
+     * Pieces follow the catalogue's piece criterion (piece, family, customer and feature);
+     * the text matches the file name or the piece's code or name.
+     * @param data The data for the request.
+     * @param data.q
+     * @param data.partId
+     * @param data.featureId
+     * @param data.familyId
+     * @param data.customerId
+     * @param data.skip
+     * @param data.limit
+     * @returns DrawingsPublic Successful Response
+     * @throws ApiError
+     */
+    public static readCatalogDrawings(data: CatalogReadCatalogDrawingsData = {}): CancelablePromise<CatalogReadCatalogDrawingsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/catalog/drawings',
+            query: {
+                q: data.q,
+                part_id: data.partId,
+                feature_id: data.featureId,
+                family_id: data.familyId,
+                customer_id: data.customerId,
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Families
+     * Piece families, by name.
+     * @returns CatalogNamesPublic Successful Response
+     * @throws ApiError
+     */
+    public static readFamilies(): CancelablePromise<CatalogReadFamiliesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/families'
+        });
+    }
+    
+    /**
+     * Create Family
+     * Add a family, or return the one with the same name.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns CatalogNamePublic Successful Response
+     * @throws ApiError
+     */
+    public static createFamily(data: CatalogCreateFamilyData): CancelablePromise<CatalogCreateFamilyResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/families',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Customers
+     * Customers, by name.
+     * @returns CatalogNamesPublic Successful Response
+     * @throws ApiError
+     */
+    public static readCustomers(): CancelablePromise<CatalogReadCustomersResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/customers'
+        });
+    }
+    
+    /**
+     * Create Customer
+     * Add a customer, or return the one with the same name.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns CatalogNamePublic Successful Response
+     * @throws ApiError
+     */
+    public static createCustomer(data: CatalogCreateCustomerData): CancelablePromise<CatalogCreateCustomerResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/customers',
             body: data.requestBody,
             mediaType: 'application/json',
             errors: {
@@ -407,13 +553,11 @@ export class FeaturesService {
      * Read Features
      * Buscar features.
      *
-     * `q` busca a la vez en nombre, descripcion, tags, codigo y nombre de las
-     * piezas, nombres de los adjuntos, y texto de warnings y lessons learned.
-     * `category`, `tag`, `part_id` y `feature_id` se combinan con la búsqueda.
+     * `q` busca a la vez en nombre, descripcion, codigo y nombre de las piezas,
+     * nombres de los adjuntos, y texto de warnings y lessons learned.
+     * `part_id` y `feature_id` se combinan con la búsqueda.
      * @param data The data for the request.
      * @param data.q
-     * @param data.category
-     * @param data.tag
      * @param data.partId
      * @param data.featureId
      * @param data.skip
@@ -427,8 +571,6 @@ export class FeaturesService {
             url: '/api/v1/features/',
             query: {
                 q: data.q,
-                category: data.category,
-                tag: data.tag,
                 part_id: data.partId,
                 feature_id: data.featureId,
                 skip: data.skip,
@@ -1011,6 +1153,53 @@ export class FilesService {
     }
     
     /**
+     * Prepare Thumbnail
+     * First page of a PDF as a small PNG, made once per version of the original.
+     *
+     * "busy" means that other thumbnails are being drawn: show a placeholder and ask again.
+     * @param data The data for the request.
+     * @param data.fileId
+     * @returns ThumbnailPublic Successful Response
+     * @throws ApiError
+     */
+    public static prepareThumbnail(data: FilesPrepareThumbnailData): CancelablePromise<FilesPrepareThumbnailResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/files/{file_id}/thumbnail',
+            path: {
+                file_id: data.fileId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Thumbnail
+     * @param data The data for the request.
+     * @param data.fileId
+     * @param data.token
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static readThumbnail(data: FilesReadThumbnailData): CancelablePromise<FilesReadThumbnailResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/files/{file_id}/thumbnail',
+            path: {
+                file_id: data.fileId
+            },
+            query: {
+                token: data.token
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
      * Read File
      * Servir un fichero por id.
      *
@@ -1532,7 +1721,7 @@ export class PartsService {
     
     /**
      * Update Part
-     * Editar el codigo o el nombre de una pieza.
+     * Editar el codigo, el nombre, la familia o el cliente de una pieza.
      * @param data The data for the request.
      * @param data.partId
      * @param data.requestBody
@@ -1582,7 +1771,7 @@ export class PartsService {
             }
         });
     }
-
+    
     /**
      * Read Part Deletion
      * Alcance del borrado de una pieza: lo que se elimina y lo que se conserva.
@@ -1604,7 +1793,7 @@ export class PartsService {
             }
         });
     }
-
+    
     /**
      * Read Component Options
      * @param data The data for the request.
@@ -1624,7 +1813,7 @@ export class PartsService {
             }
         });
     }
-
+    
     /**
      * Save Component Organization
      * @param data The data for the request.

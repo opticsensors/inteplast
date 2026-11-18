@@ -9,8 +9,6 @@ export const Route = createFileRoute("/_layout/parts")({
       search: {
         q: search.q ?? search.cota,
         feature: search.feature,
-        category: search.category,
-        tag: search.tag,
         kind: "part",
       },
       replace: true,

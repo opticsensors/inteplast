@@ -5,7 +5,7 @@ import { lazy, Suspense } from "react"
 
 import { ApiError, FeaturesService } from "@/client"
 import { FeatureNotFound } from "@/components/Features/FeatureNotFound"
-import { assetName } from "@/components/Features/parts"
+import { assetName, partName } from "@/components/Features/parts"
 import { featureQueryOptions } from "@/components/Features/queries"
 import { SourceFilePicker } from "@/components/Features/SourceFilePicker"
 import { fileAction, usesWebPreview } from "@/components/Features/viewers"
@@ -129,7 +129,7 @@ function AssetDetail() {
               <>
                 {" · "}
                 <span className="font-mono">{asset.part.code}</span>
-                {asset.part.name && ` ${asset.part.name}`}
+                {partName(asset.part) && ` ${partName(asset.part)}`}
               </>
             )}
           </p>

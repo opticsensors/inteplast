@@ -5,7 +5,7 @@ from sqlmodel import Session
 
 from app.core.config import settings
 from app.knowledge_models import FeatureCharacteristicLink, PartCharacteristic
-from app.models import FeatureAsset, FeatureCategory, FeaturePartLink
+from app.models import FeatureAsset, FeaturePartLink
 from tests.utils.feature import create_random_feature, create_random_part
 
 API = f"{settings.API_V1_STR}/evidence"
@@ -17,8 +17,6 @@ def test_metrology_search_preserves_piece_feature_and_cota_scope(
     token = uuid.uuid4().hex[:12]
     bolt, other = create_random_feature(db), create_random_feature(db)
     bolt.name, other.name = f"Bolt Eye {token}", f"Rib {token}"
-    bolt.category, bolt.tags = FeatureCategory.hole, ["critical"]
-    other.category, other.tags = FeatureCategory.rib, ["stiffness"]
     parts = [create_random_part(db) for _ in range(3)]
     for i, part in enumerate(parts):
         part.name = f"Housing {token} {i}"
@@ -46,7 +44,7 @@ def test_metrology_search_preserves_piece_feature_and_cota_scope(
     option = next(f for f in choices["features"] if f["id"] == str(bolt.id))
     assert set(option["part_ids"]) == {str(p.id) for p in parts[:2]}
     assert len(option["part_ids"]) == 2
-    assert option["category"] == "hole" and option["tags"] == ["critical"]
+    assert "category" not in option and "tags" not in option
     assert "characteristics" not in option
     assert str(parts[2].id) in {p["id"] for p in choices["parts"]}
     feature_choices = client.get(
@@ -93,9 +91,7 @@ def test_metrology_search_preserves_piece_feature_and_cota_scope(
     assert {c["code"] for c in detail["characteristics"]} == {"N170", "N240"}
     assert {f["id"] for f in detail["features"]} == {str(bolt.id), str(other.id)}
     assert all(len(f["characteristics"]) == 1 for f in detail["features"])
-    assert next(f for f in detail["features"] if f["id"] == str(bolt.id))["tags"] == [
-        "critical"
-    ]
+    assert "tags" not in next(f for f in detail["features"] if f["id"] == str(bolt.id))
     assert (
         client.get(f"{API}/metrology", params={"limit": 0}, headers=headers).status_code
         == 422

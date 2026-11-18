@@ -10,6 +10,7 @@ from sqlmodel import col, func, select
 
 from app import crud, part_deletion
 from app.api.deps import CurrentUser, SessionDep
+from app.api.routes.catalog_names import check_names
 from app.core.config import settings
 from app.file_sources import SourceError, source_item
 from app.models import (
@@ -115,6 +116,7 @@ def create_part(
         raise HTTPException(
             status_code=409, detail="Ya existe una pieza con ese codigo"
         )
+    check_names(session, part_in.family_id, part_in.customer_id)
     if part_in.folder_path is not None:
         name = folder_name(part_in.folder_path)
         if not part_in.name or part_in.name == "Nueva pieza":
@@ -181,7 +183,7 @@ def update_part(
     part_in: PartUpdate,
 ) -> Any:
     """
-    Editar el codigo o el nombre de una pieza.
+    Editar el codigo, el nombre, la familia o el cliente de una pieza.
     """
     part = get_part_or_404(session, part_id)
     if part_in.code and part_in.code != part.code:
@@ -191,6 +193,7 @@ def update_part(
                 status_code=409, detail="Ya existe una pieza con ese codigo"
             )
     changes = part_in.model_dump(exclude_unset=True, exclude={"references", "files"})
+    check_names(session, changes.get("family_id"), changes.get("customer_id"))
     if (
         part.files_managed
         and "folder_path" in changes
@@ -295,11 +298,13 @@ def delete_part(
     session.commit()
     from app.api.routes.files import storage_path
     from app.previews import delete_preview
+    from app.thumbnails import delete_thumbnails
 
     for document in removed:
         if document.source == "upload":
             storage_path(document.id).unlink(missing_ok=True)
         delete_preview(document.id)
+        delete_thumbnails(document.id)
     return PartDeletionResult(message="Part deleted successfully", scope=deleted)
 
 

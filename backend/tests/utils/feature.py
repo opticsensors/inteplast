@@ -6,7 +6,6 @@ from app.models import (
     Feature,
     FeatureAsset,
     FeatureAssetCreate,
-    FeatureCategory,
     FeatureCreate,
     FeatureNote,
     FeatureNoteCreate,
@@ -21,14 +20,9 @@ def create_random_feature(
     db: Session,
     *,
     name: str | None = None,
-    category: FeatureCategory | None = FeatureCategory.hole,
-    tags: list[str] | None = None,
 ) -> Feature:
     feature_in = FeatureCreate(
-        name=name or random_lower_string(),
-        description=random_lower_string(),
-        category=category,
-        tags=tags if tags is not None else [random_lower_string()],
+        name=name or random_lower_string(), description=random_lower_string()
     )
     return crud.create_feature(session=db, feature_in=feature_in)
 

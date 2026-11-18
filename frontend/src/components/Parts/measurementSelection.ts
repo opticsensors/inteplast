@@ -1,5 +1,3 @@
-import type { FeatureCategory } from "@/client"
-import { CATEGORIES } from "@/components/Features/constants"
 import { matchesCotaPrefix } from "@/components/Features/drawingSearchHelpers"
 import type { Entry, Series, Study } from "./types"
 
@@ -12,8 +10,6 @@ export type PartSearch = {
   revision?: string
   snapshot?: string
   feature?: string
-  category?: FeatureCategory
-  tag?: string
   element?: string
   height?: string
   evaluation?: string
@@ -49,11 +45,8 @@ export function validatePartSearch(
     cota: text(search.cota) ?? text(search.caso),
     revision: text(search.revision),
     snapshot: text(search.snapshot),
+    // Old links with `category` or `tag` open the same, ignoring them.
     feature: text(search.feature),
-    category: CATEGORIES.includes(search.category as FeatureCategory)
-      ? (search.category as FeatureCategory)
-      : undefined,
-    tag: text(search.tag),
     element: text(search.element),
     height: text(search.height),
     evaluation: text(search.evaluation),
@@ -221,3 +214,14 @@ export function findEntries(entries: Entry[], query: string) {
         : 0,
     )
 }
+
+/**
+ * Old links may still carry `category` or `tag`, removed on 17/11/2026. The root route
+ * passes unknown parameters through, so they are dropped explicitly when navigating.
+ */
+export const withoutLegacyFilters = (search: PartSearch): PartSearch =>
+  Object.fromEntries(
+    Object.entries(search).filter(
+      ([key]) => key !== "category" && key !== "tag",
+    ),
+  ) as PartSearch

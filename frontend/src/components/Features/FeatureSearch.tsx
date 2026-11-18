@@ -1,30 +1,30 @@
 import { useQuery } from "@tanstack/react-query"
 import { SlidersHorizontal, X } from "lucide-react"
-import { useId, useState } from "react"
+import { type ReactNode, useId, useState } from "react"
 
-import { EvidenceService, type FeatureCategory } from "@/client"
+import { EvidenceService, type PartPublic } from "@/client"
 import { SearchField } from "@/components/Common/SearchField"
 import { SearchSelect } from "@/components/Common/SearchSelect"
 import { SearchToolbar } from "@/components/Common/SearchToolbar"
+import { catalogNamesQueryOptions } from "@/components/Parts/CatalogNameSelect"
 import { Button } from "@/components/ui/button"
-import { CATEGORIES, CATEGORY_LABELS } from "./constants"
 import { partLabel } from "./parts"
 import { featureFiltersQueryOptions } from "./queries"
 
 export interface FeatureSearchState {
   q: string
-  category: FeatureCategory | null
-  tag: string | null
   partId: string | null
   featureId: string | null
+  familyId: string | null
+  customerId: string | null
 }
 
 export const EMPTY_SEARCH: FeatureSearchState = {
   q: "",
-  category: null,
-  tag: null,
   partId: null,
   featureId: null,
+  familyId: null,
+  customerId: null,
 }
 
 /**
@@ -33,16 +33,17 @@ export const EMPTY_SEARCH: FeatureSearchState = {
  * busqueda se puede compartir o guardar en favoritos.
  */
 export interface FeatureSearchParams {
-  kind?: "all" | "part" | "feature"
+  kind?: "all" | "part" | "feature" | "drawing"
   q?: string
-  category?: FeatureCategory
-  tag?: string
   part?: string
   feature?: string
+  family?: string
+  customer?: string
 }
 
 /**
- * Nadie garantiza lo que llega en la URL: lo que no cuadre, fuera.
+ * Nadie garantiza lo que llega en la URL: lo que no cuadre, fuera. Los enlaces
+ * antiguos con `category` o `tag` se abren igual, sin esos filtros.
  *
  * 🔴 El router pasa cada valor por `JSON.parse`, asi que `?q=3212` llega aqui
  * como el **numero** 3212 — y buscar codigos de pieza es justo el caso normal.
@@ -57,20 +58,19 @@ export const validateFeatureSearch = (
     typeof value === "boolean"
       ? String(value) || undefined
       : undefined
-  const category = text(search.category)
 
   return {
     kind:
-      search.kind === "part" || search.kind === "feature"
+      search.kind === "part" ||
+      search.kind === "feature" ||
+      search.kind === "drawing"
         ? search.kind
         : undefined,
     q: text(search.q),
-    category: CATEGORIES.includes(category as FeatureCategory)
-      ? (category as FeatureCategory)
-      : undefined,
-    tag: text(search.tag),
     part: text(search.part),
     feature: text(search.feature),
+    family: text(search.family),
+    customer: text(search.customer),
   }
 }
 
@@ -78,34 +78,46 @@ export const toSearchState = (
   params: FeatureSearchParams,
 ): FeatureSearchState => ({
   q: params.q ?? "",
-  category: params.category ?? null,
-  tag: params.tag ?? null,
   partId: params.part ?? null,
   featureId: params.feature ?? null,
+  familyId: params.family ?? null,
+  customerId: params.customer ?? null,
 })
 
-/** Los vacios se omiten para no arrastrar un `?q=&tag=` por toda la app. */
+/** Los vacios se omiten para no arrastrar un `?q=&part=` por toda la app. */
 export const toSearchParams = (
   state: FeatureSearchState,
 ): FeatureSearchParams => ({
   q: state.q || undefined,
-  category: state.category ?? undefined,
-  tag: state.tag ?? undefined,
   part: state.partId ?? undefined,
   feature: state.featureId ?? undefined,
+  family: state.familyId ?? undefined,
+  customer: state.customerId ?? undefined,
 })
+
+/** The same piece criterion as the server: every active piece filter at once. */
+const pieceMatches = (
+  part: Pick<PartPublic, "id" | "family_id" | "customer_id">,
+  value: Pick<FeatureSearchState, "partId" | "familyId" | "customerId">,
+) =>
+  (!value.partId || part.id === value.partId) &&
+  (!value.familyId || part.family_id === value.familyId) &&
+  (!value.customerId || part.customer_id === value.customerId)
 
 interface FeatureSearchProps {
   value: FeatureSearchState
   onChange: (value: FeatureSearchState) => void
   catalog?: boolean
+  /** Controls placed beside the search, before Filtros (the catalogue's views). */
+  actions?: ReactNode
 }
 
-/** Buscador global + filtros por pieza, feature, categoria y tag. */
+/** Buscador global + filtros por pieza, feature, familia y cliente. */
 export function FeatureSearch({
   value,
   onChange,
   catalog = false,
+  actions,
 }: FeatureSearchProps) {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const filtersId = useId()
@@ -116,31 +128,54 @@ export function FeatureSearch({
     queryFn: () => EvidenceService.readMetrologyFilters(),
     enabled: catalog,
   })
+  const families = useQuery(catalogNamesQueryOptions("families"))
+  const customers = useQuery(catalogNamesQueryOptions("customers"))
   const filters =
     catalog && all.data ? { ...featureFilters, ...all.data } : featureFilters
 
+  const allParts = filters?.parts ?? []
   const features = filters?.features ?? []
+  const pieceFilters = Boolean(
+    value.partId || value.familyId || value.customerId,
+  )
+  const matchingParts = new Set(
+    allParts.filter((part) => pieceMatches(part, value)).map((part) => part.id),
+  )
   const availableFeatures = features.filter(
     (feature) =>
-      (!value.partId || feature.part_ids?.includes(value.partId)) &&
-      (!value.category || feature.category === value.category) &&
-      (!value.tag || feature.tags?.includes(value.tag)),
+      !pieceFilters ||
+      (feature.part_ids ?? []).some((id) => matchingParts.has(id)),
   )
   const selectedFeature = features.find(
     (feature) => feature.id === value.featureId,
   )
-  const selectedPart = filters?.parts.find((part) => part.id === value.partId)
-  const parts = (filters?.parts ?? []).filter(
-    (part) => !value.featureId || selectedFeature?.part_ids?.includes(part.id),
+  const selectedPart = allParts.find((part) => part.id === value.partId)
+  const parts = allParts.filter(
+    (part) =>
+      pieceMatches(part, { ...value, partId: null }) &&
+      (!value.featureId || selectedFeature?.part_ids?.includes(part.id)),
   )
+  const familyName = families.data?.data.find(
+    (item) => item.id === value.familyId,
+  )?.name
+  const customerName = customers.data?.data.find(
+    (item) => item.id === value.customerId,
+  )?.name
   const set = (patch: Partial<FeatureSearchState>) => {
     const next = { ...value, ...patch }
+    const part = allParts.find((item) => item.id === next.partId)
+    if (part && !pieceMatches(part, { ...next, partId: null }))
+      next.partId = null
     const selected = features.find((feature) => feature.id === next.featureId)
+    const stillMatching = new Set(
+      allParts
+        .filter((item) => pieceMatches(item, next))
+        .map((item) => item.id),
+    )
     if (
       selected &&
-      ((next.partId && !selected.part_ids?.includes(next.partId)) ||
-        (next.category && selected.category !== next.category) ||
-        (next.tag && !selected.tags?.includes(next.tag)))
+      (next.partId || next.familyId || next.customerId) &&
+      !(selected.part_ids ?? []).some((id) => stillMatching.has(id))
     )
       next.featureId = null
     onChange(next)
@@ -157,28 +192,35 @@ export function FeatureSearch({
       text: selectedFeature?.name ?? "Selección no disponible",
     },
     {
-      key: "category" as const,
-      label: "Categoría",
-      text: value.category ? CATEGORY_LABELS[value.category] : "",
+      key: "familyId" as const,
+      label: "Familia",
+      text: familyName ?? "Selección no disponible",
     },
-    { key: "tag" as const, label: "Tag", text: value.tag },
+    {
+      key: "customerId" as const,
+      label: "Cliente",
+      text: customerName ?? "Selección no disponible",
+    },
   ].filter((filter) => value[filter.key])
 
   return (
     <div className="space-y-3">
       <SearchToolbar
         action={
-          <Button
-            type="button"
-            variant="outline"
-            className="h-11 shrink-0"
-            aria-expanded={filtersOpen}
-            aria-controls={filtersId}
-            onClick={() => setFiltersOpen(!filtersOpen)}
-          >
-            <SlidersHorizontal className="size-4" /> Filtros
-            {activeFilters.length ? ` (${activeFilters.length})` : ""}
-          </Button>
+          <div className="flex shrink-0 items-start gap-2">
+            {actions}
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 shrink-0"
+              aria-expanded={filtersOpen}
+              aria-controls={filtersId}
+              onClick={() => setFiltersOpen(!filtersOpen)}
+            >
+              <SlidersHorizontal className="size-4" /> Filtros
+              {activeFilters.length ? ` (${activeFilters.length})` : ""}
+            </Button>
+          </div>
         }
       >
         <SearchField
@@ -188,7 +230,7 @@ export function FeatureSearch({
           placeholder={
             catalog
               ? "Buscar piezas, features o cotas…"
-              : "Feature / pieza / codigo / tag..."
+              : "Feature / pieza / codigo..."
           }
           onClear={() => set({ q: "" })}
         />
@@ -255,29 +297,29 @@ export function FeatureSearch({
           />
           <SearchSelect
             showLabel
-            label="Categoría"
-            value={value.category}
-            placeholder="Todas las categorías"
-            emptyLabel="Todas las categorías"
-            options={(filters?.categories ?? []).map((category) => ({
-              value: category,
-              label: CATEGORY_LABELS[category],
+            label="Familia"
+            value={value.familyId}
+            selectedLabel={familyName}
+            placeholder="Todas las familias"
+            emptyLabel="Todas las familias"
+            options={(families.data?.data ?? []).map((item) => ({
+              value: item.id,
+              label: item.name,
             }))}
-            onChange={(category) =>
-              set({ category: (category as FeatureCategory) ?? null })
-            }
+            onChange={(familyId) => set({ familyId: familyId ?? null })}
           />
           <SearchSelect
             showLabel
-            label="Tag"
-            value={value.tag}
-            placeholder="Todos los tags"
-            emptyLabel="Todos los tags"
-            options={(filters?.tags ?? []).map((tag) => ({
-              value: tag,
-              label: tag,
+            label="Cliente"
+            value={value.customerId}
+            selectedLabel={customerName}
+            placeholder="Todos los clientes"
+            emptyLabel="Todos los clientes"
+            options={(customers.data?.data ?? []).map((item) => ({
+              value: item.id,
+              label: item.name,
             }))}
-            onChange={(tag) => set({ tag: tag ?? null })}
+            onChange={(customerId) => set({ customerId: customerId ?? null })}
           />
         </div>
       )}

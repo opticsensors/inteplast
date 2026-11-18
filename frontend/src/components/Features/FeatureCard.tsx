@@ -5,7 +5,6 @@ import type { FeaturePublic } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { useFileAccess } from "@/hooks/useFileAccess"
 import { cn } from "@/lib/utils"
-import { CATEGORY_LABELS } from "./constants"
 import { featureParts, partLabel } from "./parts"
 import { isPreviewableImage } from "./viewers"
 
@@ -88,15 +87,13 @@ interface FeatureCardProps {
   showKind?: boolean
 }
 
-/** Tarjeta de resultado: imagen, nombre, descripcion, tags y piezas. */
+/** Tarjeta de resultado: imagen, nombre, descripcion y piezas. */
 export function FeatureCard({
   feature,
   onSelect,
   actions,
   showKind = false,
 }: FeatureCardProps) {
-  const tags = feature.tags ?? []
-
   return (
     <div
       className={cn(
@@ -141,16 +138,6 @@ export function FeatureCard({
               Feature
             </Badge>
           )}
-          {feature.category && (
-            <Badge variant="secondary">
-              {CATEGORY_LABELS[feature.category]}
-            </Badge>
-          )}
-          {tags.map((tag) => (
-            <Badge key={tag} variant="outline">
-              {tag}
-            </Badge>
-          ))}
         </div>
         <PartSummary feature={feature} />
       </div>

@@ -52,7 +52,10 @@ test("a remote revision regenerates the thumbnail despite unchanged CAD IDs; una
   )
   await page.goto("http://component.invalid/")
   await page.addScriptTag({ content: result.outputFiles[0].text })
-  const image = page.getByRole("img", { name: "Test piece", exact: true })
+  const image = page.getByRole("img", {
+    name: "3212 - Test piece",
+    exact: true,
+  })
   await expect(image).toHaveAttribute("src", /image-1\.png$/)
   await page.getByRole("button", { name: "Cambiar CAD remoto" }).click()
   await expect(image).toHaveAttribute("src", /image-2\.png$/)

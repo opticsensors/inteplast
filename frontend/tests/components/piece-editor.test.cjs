@@ -25,7 +25,11 @@ before(async () => {
     root: frontend,
     logLevel: "error",
     cacheDir: path.join(artifacts, "vite", String(process.pid)),
-    optimizeDeps: { entries: [path.join(__dirname, "fixtures/catalog.jsx")] },
+    optimizeDeps: {
+      entries: [path.join(__dirname, "fixtures/catalog.jsx")],
+      // Loaded lazily with the graph view: declared so that Vite does not reload.
+      include: ["force-graph"],
+    },
     esbuild: { jsx: "automatic" },
     resolve: {
       alias: [
@@ -95,7 +99,6 @@ async function choose(page, selected = "9001 New housing") {
   await expect(page.getByLabel("Nombre de la pieza")).toHaveValue(
     selected.split("/").pop(),
   )
-  await page.getByLabel("Cliente", { exact: true }).fill("Example company")
 }
 
 test("a multi-component piece opens Componentes on creation and reads its data when closed", async (t) => {
@@ -472,7 +475,7 @@ test("new piece is an empty labelled page; folder proposals, arbitrary named fil
   })
   await page.getByRole("button", { name: "Crear pieza", exact: true }).click()
   await expect(
-    page.getByRole("heading", { name: "New Housing", exact: true }),
+    page.getByRole("heading", { name: "9001 New Housing", exact: true }),
   ).toBeVisible()
   await expect(
     page.getByText("Leyendo los datos de la carpeta…", { exact: true }),
@@ -659,7 +662,7 @@ test("changing an existing piece's folder keeps its edited name and code", async
     .getByRole("button", { name: "Guardar cambios", exact: true })
     .click()
   await expect(
-    page.getByRole("heading", { name: "Custom part name", exact: true }),
+    page.getByRole("heading", { name: "9001 Custom part name", exact: true }),
   ).toBeVisible()
   const saved = await page.evaluate(() =>
     window.review.requests.filter((request) => request.kind === "part"),
@@ -778,4 +781,215 @@ test("only an administrator deletes a piece, after reviewing its scope and typin
   await expect
     .poll(() => page.evaluate(() => window.review.location().pathname))
     .toBe("/features")
+})
+
+test("a family added from the dropdown is shared with other pieces, which show the code first", async (t) => {
+  const page = await mount(t)
+  await choose(page)
+  const family = page.getByRole("combobox", { name: "Familia", exact: true })
+  await family.click()
+  const search = page.getByRole("combobox", {
+    name: "Buscar familia",
+    exact: true,
+  })
+  // The last row adds one, like «Añadir pieza»: always there, even without text.
+  const add = page.getByRole("button", { name: "Añadir familia", exact: true })
+  await expect(add).toBeVisible()
+  await expect(add.locator("svg")).toHaveCount(1)
+  await page.screenshot({ path: path.join(artifacts, "family-dropdown.png") })
+  // An existing name, with other case and spaces, selects it instead of duplicating.
+  await add.click()
+  const name = page.getByRole("textbox", {
+    name: "Añadir familia",
+    exact: true,
+  })
+  await expect(name).toBeFocused()
+  await page.screenshot({ path: path.join(artifacts, "family-adding.png") })
+  await name.fill("  pump   HOUSING ")
+  await name.press("Enter")
+  await expect(family).toHaveText("Pump Housing")
+  assert.equal((await page.evaluate(() => window.review.families)).length, 1)
+  // Escape cancels without adding anything.
+  await family.click()
+  await add.click()
+  await name.fill("Descartada")
+  await name.press("Escape")
+  await expect(name).toHaveCount(0)
+  await expect(add).toBeVisible()
+  // The text already searched fills the new name.
+  await search.fill("Tapa  roscada")
+  await add.click()
+  await expect(name).toHaveValue("Tapa roscada")
+  await name.press("Enter")
+  await expect(family).toHaveText("Tapa roscada")
+  assert.ok(
+    !(await page.evaluate(() => window.review.families)).some(
+      (item) => item.name === "Descartada",
+    ),
+  )
+  // The name is optional now; the customer is not required either.
+  await page.getByLabel("Nombre de la pieza").fill("")
+  await page.evaluate(() => {
+    window.review.holdRefresh = false
+  })
+  await page.getByRole("button", { name: "Crear pieza", exact: true }).click()
+  await expect(
+    page.getByRole("heading", { name: "9001", exact: true }),
+  ).toBeVisible()
+  await expect(page.getByText("Tapa roscada", { exact: true })).toBeVisible()
+  const registration = await page.evaluate(() =>
+    window.review.registrationRequests.at(-1),
+  )
+  assert.equal(registration.name, null)
+  assert.equal(registration.customer_id, null)
+  const families = await page.evaluate(() => window.review.families)
+  const added = families.find((item) => item.name === "Tapa roscada")
+  assert.equal(registration.family_id, added.id)
+
+  // The same family is offered to another piece, without adding it twice.
+  await page.evaluate(() =>
+    window.review.navigate({
+      to: "/parts/$partId",
+      params: { partId: "part-one" },
+      search: { editar: true },
+    }),
+  )
+  await expect(page.getByLabel("Código de la pieza")).toHaveValue("3212")
+  await family.click()
+  await search.fill("TAPA ROSCADA")
+  await search.press("Enter")
+  await expect(family).toHaveText("Tapa roscada")
+  await page
+    .getByRole("button", { name: "Guardar cambios", exact: true })
+    .click()
+  await expect(
+    page.getByRole("heading", { name: "3212 Pump Housing", exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByText("Tapa roscada · Bosch", { exact: true }),
+  ).toBeVisible()
+  const update = await page.evaluate(() =>
+    window.review.requests.filter((request) => request.kind === "part").at(-1),
+  )
+  assert.equal(update.patch.family_id, added.id)
+  assert.equal(
+    (await page.evaluate(() => window.review.families)).filter(
+      (item) => item.name === "Tapa roscada",
+    ).length,
+    1,
+  )
+
+  // Catalogue card: code as title, name beside it, then «Familia · Cliente».
+  await page.evaluate(() =>
+    window.review.navigate({ to: "/features", search: { kind: "part" } }),
+  )
+  const card = page
+    .getByRole("button", { name: "Abrir 3212 Pump Housing" })
+    .locator("..")
+  await expect(card.getByRole("heading", { level: 3 })).toHaveText(
+    "3212 Pump Housing",
+  )
+  await expect(
+    card.getByText("Tapa roscada · Bosch", { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page
+      .getByRole("button", { name: "Abrir 9001" })
+      .locator("..")
+      .getByText("Tapa roscada", { exact: true }),
+  ).toBeVisible()
+})
+
+test("on a phone the identity fields are stacked without horizontal scroll", async (t) => {
+  const page = await mount(t)
+  await page.setViewportSize({ width: 390, height: 900 })
+  const code = await page.getByLabel("Código de la pieza").boundingBox()
+  const name = await page.getByLabel("Nombre de la pieza").boundingBox()
+  const family = await page
+    .getByRole("combobox", { name: "Familia", exact: true })
+    .boundingBox()
+  const customer = await page
+    .getByRole("combobox", { name: "Cliente", exact: true })
+    .boundingBox()
+  assert.ok(code.y + code.height <= name.y, "Nombre goes below Código")
+  assert.ok(Math.abs(code.x - name.x) < 2, "Código and Nombre are aligned")
+  assert.ok(family.y + family.height <= customer.y, "Cliente below Familia")
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  )
+  await page.screenshot({
+    path: path.join(artifacts, "identity-mobile.png"),
+    fullPage: true,
+  })
+})
+
+test("the catalogue graph is drawn with the theme colours, light and dark", async (t) => {
+  const page = await mount(t)
+  await page.evaluate(() =>
+    window.review.navigate({ to: "/features", search: {} }),
+  )
+  await page
+    .getByRole("group", { name: "Vista" })
+    .getByRole("button", { name: "Grafo" })
+    .click()
+  const graph = page.getByTestId("catalog-graph")
+  await expect(graph).toHaveAttribute("data-ready", "true")
+  await page.getByRole("checkbox", { name: "Familias" }).click()
+  await page.getByRole("checkbox", { name: "Clientes" }).click()
+  await expect(graph).toHaveAttribute("data-nodes", "4")
+  await expect(graph).toHaveAttribute("data-ready", "true")
+  // The canvas has a fixed pixel width: it must never widen the page.
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  )
+  const light = await graph.getAttribute("data-background")
+  await page.screenshot({ path: path.join(artifacts, "graph-light.png") })
+  await page.evaluate(() => document.documentElement.classList.add("dark"))
+  await expect(graph).not.toHaveAttribute("data-background", light)
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: path.join(artifacts, "graph-dark.png") })
+  assert.equal((await page.locator("canvas").count()) > 0, true)
+})
+
+test("grid and drawings views fit the page, on desktop and phone", async (t) => {
+  const page = await mount(t)
+  await page.evaluate(() => {
+    const part = window.review.parts[0]
+    window.review.drawings = ["base.pdf", "tapa.pdf", "conjunto.pdf"].map(
+      (name, index) => ({
+        file: { id: `drawing-${index}`, filename: name, version: "v1" },
+        name,
+        primary: index === 0,
+        part,
+        component: index === 0 ? "BASE" : null,
+        revision: index === 0 ? "07" : null,
+      }),
+    )
+    window.review.navigate({ to: "/features", search: {} })
+  })
+  await page
+    .getByRole("group", { name: "Vista" })
+    .getByRole("button", { name: "Cuadrícula" })
+    .click()
+  await expect(page.locator("[data-view=grid]")).toBeVisible()
+  const fits = () =>
+    page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    )
+  assert.ok(await fits())
+  await page.screenshot({ path: path.join(artifacts, "catalog-grid.png") })
+  await page.getByRole("button", { name: "Planos", exact: true }).click()
+  await expect(page.locator("[data-view=drawings]")).toBeVisible()
+  assert.ok(await fits())
+  await page.screenshot({ path: path.join(artifacts, "catalog-drawings.png") })
+  await page.setViewportSize({ width: 390, height: 900 })
+  assert.ok(await fits())
+  await page.screenshot({
+    path: path.join(artifacts, "catalog-drawings-mobile.png"),
+    fullPage: true,
+  })
 })

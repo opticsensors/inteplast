@@ -1,12 +1,20 @@
-import { Check, ChevronDown } from "lucide-react"
+import { Check, ChevronDown, Loader2, Plus } from "lucide-react"
 import { useEffect, useId, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { SearchField } from "./SearchField"
 
 export type SearchOption = { value: string; label: string }
 
-/** The shared filter style, with text search and keyboard selection inside. */
+/**
+ * The shared filter style, with text search and keyboard selection inside.
+ *
+ * With `onCreate`, the last row is «+ Añadir …» (`createLabel`), styled like «Añadir
+ * pieza» and «Añadir feature». It opens an empty field, as «Añadir cota» does, filled with
+ * the text already searched; Enter or leaving the field saves it, Escape cancels.
+ * `onCreate` returns the value to select (an existing one when the name already exists).
+ */
 export function SearchSelect({
   label,
   value,
@@ -19,6 +27,8 @@ export function SearchSelect({
   compact = false,
   defaultOpen = false,
   showLabel = false,
+  onCreate,
+  createLabel = "Añadir",
 }: {
   label: string
   value?: string | null
@@ -31,6 +41,8 @@ export function SearchSelect({
   compact?: boolean
   defaultOpen?: boolean
   showLabel?: boolean
+  onCreate?: (text: string) => Promise<string>
+  createLabel?: string
 }) {
   const id = useId()
   const root = useRef<HTMLFieldSetElement>(null)
@@ -39,13 +51,22 @@ export function SearchSelect({
   const [open, setOpen] = useState(defaultOpen)
   const [query, setQuery] = useState("")
   const [active, setActive] = useState(0)
+  const [adding, setAdding] = useState(false)
+  const cancelled = useRef(false)
+  const [draft, setDraft] = useState("")
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState("")
   const normalize = (text: string) =>
     text
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLocaleLowerCase()
+      .split(/\s+/)
+      .filter(Boolean)
+      .join(" ")
+  const typed = query.trim().replace(/\s+/g, " ")
   const choices = [{ value: "", label: emptyLabel }, ...options].filter(
-    (item) => normalize(item.label).includes(normalize(query.trim())),
+    (item) => normalize(item.label).includes(normalize(typed)),
   )
   const current = Math.min(active, Math.max(0, choices.length - 1))
   const selected = options.find((item) => item.value === value)
@@ -64,6 +85,25 @@ export function SearchSelect({
         .getElementById(`${id}-option-${current}`)
         ?.scrollIntoView({ block: "nearest" })
   }, [open, current, id])
+  const save = () => {
+    const name = draft.trim().replace(/\s+/g, " ")
+    if (!onCreate || creating) return
+    if (!name) {
+      setAdding(false)
+      return
+    }
+    setCreating(true)
+    setCreateError("")
+    onCreate(name)
+      .then((created) => {
+        onChange(created)
+        setAdding(false)
+        setOpen(false)
+        trigger.current?.focus()
+      })
+      .catch(() => setCreateError("No se ha podido añadir. Reinténtalo."))
+      .finally(() => setCreating(false))
+  }
   const choose = (next: string) => {
     if (next !== (value ?? "")) onChange(next || undefined)
     setOpen(false)
@@ -97,6 +137,8 @@ export function SearchSelect({
         onClick={() => {
           setQuery("")
           setActive(0)
+          setAdding(false)
+          setCreateError("")
           setOpen(!open)
         }}
         onKeyDown={(event) => {
@@ -204,6 +246,67 @@ export function SearchSelect({
               </p>
             )}
           </div>
+          {onCreate && (
+            <div className="mt-1 border-t p-1 pt-2">
+              {adding ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    autoFocus
+                    aria-label={createLabel}
+                    placeholder="Nombre"
+                    value={draft}
+                    disabled={creating}
+                    onChange={(event) => setDraft(event.target.value)}
+                    onBlur={() => {
+                      // Leaving the field saves, unless Escape has just cancelled it.
+                      if (cancelled.current) cancelled.current = false
+                      else save()
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault()
+                        save()
+                      }
+                      if (event.key === "Escape") {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        cancelled.current = true
+                        setAdding(false)
+                        setCreateError("")
+                        input.current?.focus()
+                      }
+                    }}
+                    className="h-8"
+                  />
+                  {creating && (
+                    <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
+                  )}
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setDraft(typed)
+                    setCreateError("")
+                    setAdding(true)
+                  }}
+                >
+                  <Plus className="mr-1 size-3.5" />
+                  {createLabel}
+                </Button>
+              )}
+              {createError && (
+                <p
+                  role="alert"
+                  className="px-1 pt-1.5 text-sm text-destructive"
+                >
+                  {createError}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
     </fieldset>

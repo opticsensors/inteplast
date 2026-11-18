@@ -1,19 +1,6 @@
 import { Box, FileText, Package, ScanLine, Waves } from "lucide-react"
 
-import type { AssetKind, FeatureCategory, NoteKind } from "@/client"
-
-/** Tipos geometricos comunes con los que se clasifica un feature. */
-export const CATEGORY_LABELS: Record<FeatureCategory, string> = {
-  hole: "Agujero",
-  rib: "Nervio",
-  thickness: "Espesor",
-  boss: "Boss",
-  fillet: "Radio",
-  draft: "Angulo de desmoldeo",
-  other: "Otro",
-}
-
-export const CATEGORIES = Object.keys(CATEGORY_LABELS) as FeatureCategory[]
+import type { AssetKind, NoteKind } from "@/client"
 
 /**
  * Los cinco ficheros que puede aportar una pieza. El orden es el de las filas

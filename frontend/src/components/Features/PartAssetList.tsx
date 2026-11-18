@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
 import { PartActions } from "./PartActions"
 import { PartIdentityEditor } from "./PartIdentityEditor"
-import { featureParts, type PartRow, partRows } from "./parts"
+import { featureParts, type PartRow, partName, partRows } from "./parts"
 import { SaveStatus } from "./SaveStatus"
 import { useAutosave } from "./useAutosave"
 
@@ -68,9 +68,9 @@ function PartGroup({
               <span className="shrink-0 text-lg font-semibold">
                 {row.part.code}
               </span>{" "}
-              {row.part.name && (
+              {partName(row.part) && (
                 <span className="min-w-0 truncate text-muted-foreground">
-                  {row.part.name}
+                  {partName(row.part)}
                 </span>
               )}
             </span>

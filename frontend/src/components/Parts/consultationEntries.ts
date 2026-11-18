@@ -2,18 +2,14 @@ import type { CharacteristicPublic, MetrologyFeature } from "@/client"
 import type { PartSearch } from "./measurementSelection"
 import type { Entry, Study } from "./types"
 
-export const hasFeatureFilters = (search: PartSearch) =>
-  Boolean(search.feature || search.category || search.tag)
+export const hasFeatureFilters = (search: PartSearch) => Boolean(search.feature)
 
 export const matchesFeatureFilters = (
-  feature: Pick<MetrologyFeature, "id" | "name" | "category" | "tags">,
+  feature: Pick<MetrologyFeature, "id" | "name">,
   search: PartSearch,
-) =>
-  (!search.feature || feature.id === search.feature) &&
-  (!search.category || feature.category === search.category) &&
-  (!search.tag || feature.tags?.includes(search.tag))
+) => !search.feature || feature.id === search.feature
 
-/** Category and tag must match the same feature, then use only its real cota links. */
+/** The chosen feature, with only its real cota links. */
 export function consultationScope(
   features: MetrologyFeature[],
   search: PartSearch,

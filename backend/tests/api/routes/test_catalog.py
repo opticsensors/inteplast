@@ -51,9 +51,6 @@ def test_catalog_scopes_cotas_to_the_same_feature_and_part(
 ) -> None:
     part, other = create_random_part(db), create_random_part(db)
     feature = create_random_feature(db)
-    feature.category = "hole"
-    feature.tags = ["critical"]
-    db.add(feature)
     linked = PartCharacteristic(part_id=part.id, code="N170", revision="06")
     unlinked = PartCharacteristic(part_id=part.id, code="N171", revision="06")
     unrelated = PartCharacteristic(part_id=other.id, code="N170", revision="04")
@@ -63,12 +60,7 @@ def test_catalog_scopes_cotas_to_the_same_feature_and_part(
         FeatureCharacteristicLink(feature_id=feature.id, characteristic_id=linked.id)
     )
     db.commit()
-    params = {
-        "q": "17",
-        "feature_id": str(feature.id),
-        "category": "hole",
-        "tag": "critical",
-    }
+    params = {"q": "17", "feature_id": str(feature.id)}
     result = client.get(
         f"{BASE}/catalog", headers=superuser_token_headers, params=params
     )
@@ -76,14 +68,14 @@ def test_catalog_scopes_cotas_to_the_same_feature_and_part(
     data = result.json()
     assert [c["id"] for c in data["cotas"]] == [str(linked.id)]
     assert data["parts"][0]["feature_count"] == 1
-    assert (
-        client.get(
-            f"{BASE}/catalog",
-            headers=superuser_token_headers,
-            params={**params, "tag": "different"},
-        ).json()["cotas"]
-        == []
+    # Old links with category or tag open the same, ignoring those filters.
+    old = client.get(
+        f"{BASE}/catalog",
+        headers=superuser_token_headers,
+        params={**params, "category": "rib", "tag": "different"},
     )
+    assert old.status_code == 200
+    assert [c["id"] for c in old.json()["cotas"]] == [str(linked.id)]
 
 
 def test_part_detail_uses_the_existing_bidirectional_membership(

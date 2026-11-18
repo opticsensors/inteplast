@@ -180,11 +180,10 @@ export function DeletePart({
         {data && (
           <div className="space-y-4 text-sm">
             <p>
-              <span className="font-medium">{data.name ?? data.code}</span>
-              <span className="text-muted-foreground">
-                {" "}
-                · Código {data.code}
-              </span>
+              <span className="font-medium">{data.code}</span>
+              {data.name && data.name !== data.code && (
+                <span className="text-muted-foreground"> · {data.name}</span>
+              )}
             </p>
             <section aria-label="Se elimina">
               <h3 className="mb-1 font-medium">Se elimina</h3>

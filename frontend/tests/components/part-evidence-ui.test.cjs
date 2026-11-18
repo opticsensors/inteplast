@@ -151,7 +151,7 @@ test("a single consultation can start with a feature and then choose its piece",
   const page = await mount(t, "/parts")
   await expect(page.getByRole("heading", { name: "Catálogo" })).toBeVisible()
   await expect(
-    page.getByRole("button", { name: "Abrir Pump Housing" }),
+    page.getByRole("button", { name: "Abrir 3212 Pump Housing" }),
   ).toBeVisible()
   await expect(
     page.getByRole("combobox", { name: "Buscar cota", exact: true }),
@@ -164,9 +164,9 @@ test("a single consultation can start with a feature and then choose its piece",
   })
   await featureSearch.fill("bolt")
   await featureSearch.press("Enter")
-  await page.getByRole("button", { name: "Abrir Pump Housing" }).click()
+  await page.getByRole("button", { name: "Abrir 3212 Pump Housing" }).click()
   await expect(
-    page.getByRole("heading", { name: "Pump Housing", exact: true }),
+    page.getByRole("heading", { name: "3212 Pump Housing", exact: true }),
   ).toBeVisible()
   await expect(page.getByRole("combobox", { name: "Buscar cota" })).toHaveValue(
     "",
@@ -354,7 +354,7 @@ test("identical numbers in another piece do not use an incompatible measurement 
     "/parts/part-two?feature=bolt-eye&cota=N170&revision=04",
   )
   await expect(
-    page.getByRole("heading", { name: "Connector", exact: true }),
+    page.getByRole("heading", { name: "3197 Connector", exact: true }),
   ).toBeVisible()
   assert.equal((await state(page)).revision, "04")
   await expect(
@@ -405,7 +405,7 @@ test("the piece's drawing file opens its own page and Back restores the piece", 
   ).toHaveValue("")
   await page.evaluate(() => window.review.back())
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "Pump Housing",
+    "3212 Pump Housing",
   )
   assert.deepEqual(await state(page), previous)
 })
@@ -804,7 +804,7 @@ test("changing pieces clears the measurement and browser Back restores the previ
   ).toHaveCount(0)
   await page.evaluate(() => window.review.back())
   await expect(
-    page.getByRole("heading", { name: "Pump Housing", exact: true }),
+    page.getByRole("heading", { name: "3212 Pump Housing", exact: true }),
   ).toBeVisible()
   await expect(
     page.getByRole("button", { name: "Tramo intern.03 a intern.05" }),
@@ -1289,7 +1289,8 @@ for (const mobile of [false, true]) {
     const notice = page.getByText(
       "Las lecturas OCR son propuestas automáticas sin verificar.",
     )
-    await expect(notice).toBeVisible()
+    // No explanatory text on the drawing (Eduard, 18/11/2026).
+    await expect(notice).toHaveCount(0)
     assert.ok(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -1367,7 +1368,7 @@ for (const mobile of [false, true]) {
         exact: true,
       }),
     ).toBeVisible()
-    await expect(approximateNotice).toBeVisible()
+    await expect(approximateNotice).toHaveCount(0)
     await expect(ocrNotice).toHaveCount(0)
   })
 
@@ -1415,9 +1416,14 @@ for (const mobile of [false, true]) {
     ]) {
       await search.fill(label)
       await expect(page.getByRole("status")).toHaveText("1 resultado")
-      await page
-        .getByRole("button", { name: `${label} · Revisada`, exact: true })
-        .click()
+      // A single match is framed on the drawing at once, without a button to press.
+      await expect(
+        page.getByRole("button", { name: `${label} · Revisada`, exact: true }),
+      ).not.toBeInViewport()
+      await page.waitForFunction(
+        (expected) => window.review.drawingFocus?.id === expected,
+        id,
+      )
       const focus = await page.evaluate(() => window.review.drawingFocus)
       assert.equal(focus.id, id)
       assert.equal(focus.page, number)

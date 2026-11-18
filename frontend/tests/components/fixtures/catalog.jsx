@@ -33,8 +33,6 @@ window.review = {
     name: "Bolt Eye",
     description: "Referencia de diseño para el 3212 Pump Housing",
     owner_id: "test-user",
-    category: "hole",
-    tags: ["inyeccion"],
     image: null,
     notes: [],
     parts: [{ id: "part-one", code: "3212", name: "Pump Housing" }],
@@ -50,9 +48,13 @@ window.review = {
       id: "part-one",
       code: "3212",
       name: "Pump Housing",
+      family_id: "family-pump",
+      customer_id: "customer-bosch",
       characteristic_count: 2,
     },
   ],
+  families: [{ id: "family-pump", name: "Pump Housing" }],
+  customers: [{ id: "customer-bosch", name: "Bosch" }],
 }
 const clone = (value) => structuredClone(value)
 FeaturesService.readFeatures = async (params = {}) => {
@@ -68,15 +70,11 @@ FeaturesService.readFeatures = async (params = {}) => {
   }
 }
 FeaturesService.readFeatureFilters = async () => ({
-  parts: clone(window.review.feature.parts),
-  categories: ["hole"],
-  tags: ["inyeccion"],
+  parts: clone(window.review.parts),
   features: [
     {
       id: window.review.feature.id,
       name: window.review.feature.name,
-      category: window.review.feature.category,
-      tags: clone(window.review.feature.tags),
       part_ids: window.review.feature.parts.map((part) => part.id),
     },
   ],
@@ -101,6 +99,22 @@ EvidenceService.readPartEvidence = async ({ partId }) => ({
 const originalSearch = CatalogService.searchCatalog
 CatalogService.searchCatalog = async (params) => {
   const result = await originalSearch(params)
+  // `window.review.cotaCount`: that many matching cotas, paged like the server.
+  if (window.review.cotaCount && params.q && params.kind !== "feature") {
+    const all = Array.from({ length: window.review.cotaCount }, (_, index) => ({
+      id: `cota-${index}`,
+      code: `N${1000 + index}`,
+      title: "",
+      revision: "06",
+      part: clone(window.review.parts[0]),
+    }))
+    const skip = params.skip ?? 0
+    return {
+      ...result,
+      cotas: all.slice(skip, skip + (params.limit ?? 40)),
+      cota_count: all.length,
+    }
+  }
   const cotas =
     params.q?.toUpperCase().includes("170") && params.kind !== "feature"
       ? [
@@ -139,6 +153,7 @@ const router = createRouter({
   stringifySearch: stringifySearchWith(JSON.stringify),
 })
 window.review.location = () => router.state.location
+window.review.navigate = (options) => router.navigate(options)
 window.review.back = () => router.history.back()
 window.review.refreshUser = () =>
   client.invalidateQueries({ queryKey: ["currentUser"] })

@@ -11,6 +11,7 @@ import { CoverButton } from "@/components/Features/CoverButton"
 import { CoverDialog } from "@/components/Features/CoverDialog"
 import { CoverLoading } from "@/components/Features/CoverLoading"
 import { FeatureThumbnail } from "@/components/Features/FeatureCard"
+import { partLabel } from "@/components/Features/parts"
 import {
   Dialog,
   DialogHeader,
@@ -88,18 +89,20 @@ function usePartImage(part: PartCardPublic) {
 export function PartThumbnail({
   part,
   className,
+  wrapperClassName = "relative shrink-0 self-center",
 }: {
   part: PartCardPublic
   className?: string
+  wrapperClassName?: string
 }) {
   const { image, loading, error } = usePartImage(part)
   return (
     <div
-      className="relative shrink-0 self-center"
+      className={wrapperClassName}
       title={error ? fileErrorMessage(error) : undefined}
     >
       <FeatureThumbnail
-        feature={{ name: part.name ?? part.code, image }}
+        feature={{ name: partLabel(part), image }}
         className={className}
         fit="contain"
       />
@@ -118,7 +121,7 @@ export function PartCover({ part }: { part: PartCardPublic }) {
   const { image, loading } = usePartImage(part)
   const cad =
     part.cad && /\.(step|stp)$/i.test(part.cad.filename) ? part.cad : undefined
-  const name = part.name ?? part.code
+  const name = partLabel(part)
   const fallback = (
     <FeatureThumbnail
       feature={{ name, image }}

@@ -56,7 +56,6 @@ def test_test_routes_require_isolated_local_database(
     ("resource", "field"),
     [
         ("feature", "name"),
-        ("feature", "tags"),
         ("note", "title"),
         ("note", "kind"),
         ("note", "position"),
