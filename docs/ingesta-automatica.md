@@ -9,6 +9,16 @@
 
 ## La respuesta corta
 
+El lector `automatic-tables-v9` revisa además bloques de informes PPAP en hojas
+antes omitidas. Busca una referencia compatible con la pieza, cota explícita en la
+fila, nominal, cavidades rotuladas, equipo y contexto de lote o tratamiento. Guarda
+el texto y la celda de ese contexto junto al origen del valor. Conserva la prioridad
+de CSV y las exclusiones de fórmulas y valores impuestos. Una serie coincidente en
+varias cavidades de otra hoja o de otro informe de la pieza queda pendiente de
+confirmar con ambos localizadores.
+Los formatos con cavidades sin identificar, comparativas y condiciones sin
+interpretar siguen pendientes.
+
 **Actualización del 13/11/2026, sin IA:** `automatic-tables-v6` deja de descartar
 los informes Excel de metrología del 3212. El adaptador específico de ese piloto
 se ocupa de casos de corrección, no sustituye todos sus informes dimensionales.

@@ -32,6 +32,7 @@ from app.ingestion.measurement_tables import (
     cavity_label,
     conditions,
     csv_rows,
+    flag_repeated_reports,
     report_rows,
     workbook,
 )
@@ -40,7 +41,7 @@ from app.measurement_models import MeasurementImport
 from app.models import Part
 from app.pilot import is_pilot
 
-READER = "automatic-tables-v8"
+READER = "automatic-tables-v9"
 logger = logging.getLogger(__name__)
 Context = tuple[str, str, str]
 # Report sheets with a Nominal header whose measurement columns cannot be identified.
@@ -203,6 +204,10 @@ def collect(
                             labels.append("identificadores no admitidos")
                         if "reversed_tolerances" in reasons:
                             labels.append("tolerancias invertidas")
+                        if "unverified_measuring_device" in reasons:
+                            labels.append("equipo de medida sin verificar")
+                        if "derived_result" in reasons:
+                            labels.append("resultados derivados")
                         file_issues[sheet_key(relative, sheet_info["sheet"])] = (
                             f"Pendiente: {len(rejected)} filas descartadas ({', '.join(labels)}); filas {locations}"
                             + ("…" if len(rejected) > 8 else "")
@@ -286,6 +291,13 @@ def collect(
             revisions[context["sample"]].add(revision)
         sources.append((relative, context, revision, rows, version))
         diagnostic.update(status="read" if rows else "empty", observations=len(rows))
+    flag_repeated_reports(
+        {
+            relative: rows
+            for relative, _, _, rows, _ in sources
+            if rows and rows[0].get("_report")
+        }
+    )
     all_revisions = set().union(*revisions.values()) if revisions else set()
     groups: dict[Context, list[dict[str, Any]]] = defaultdict(list)
     for relative, context, revision, rows, version in sources:
@@ -311,7 +323,9 @@ def collect(
                 else f"Línea {row['line']} · {row['title']}",
             }
             row_revision = (
-                (row.get("_revision") or revision) if components else revision
+                (row.get("_revision") or revision)
+                if components or "measurement_context" in row
+                else revision
             )
             groups[row_revision, sample, cavity].append(row)
     for key, rows in groups.items():

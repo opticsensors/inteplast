@@ -8,6 +8,9 @@ import re
 import unicodedata
 import xml.etree.ElementTree as ET
 from collections import defaultdict
+from collections.abc import Iterator
+from dataclasses import dataclass
+from itertools import groupby
 from pathlib import Path
 from typing import Any
 from zipfile import ZipFile
@@ -375,6 +378,218 @@ def identity_flags(
     return flags, warnings
 
 
+SUPPORTED_REPORT = re.compile(r"DR\b|DR[_(-]|CAV[._ ]*\d|100%", re.I)
+MEASURING_DEVICE = re.compile(
+    r"\b(?:CMM|CT[ -]?SCAN|CALIPER|MICROMETER|MICR[ÓO]METRO|IMPOSED)\b", re.I
+)
+DERIVED = re.compile(
+    r"diffe?renc|difer[eè]nc|delta|forecast|previsi|prediction|simula|"
+    r"theoret|te[oó]ric|compar|resumen|summary|\b(?:max|min|average|mean|target|OK)\b",
+    re.I,
+)
+TRIAL_CONTEXT = re.compile(
+    r"\b(?:batch|lote?|lot)\s*[:#-]?\s*\d+\b|humidif|\d+\s*(?:bar\b|[º°]\s*C\b)", re.I
+)
+
+
+@dataclass(frozen=True)
+class ReportBlock:
+    header: int
+    end: int
+    code_column: int
+    context: str
+    context_cell: str
+
+
+def report_blocks(
+    sheets: list[tuple[str, list[list[Any]]]],
+    part_code: str,
+) -> Iterator[tuple[str, list[list[Any]], ReportBlock | None]]:
+    """Recover explicit PPAP blocks. Unknown conventions stay in the diagnostics."""
+    for name, grid in sheets:
+        if SUPPORTED_REPORT.match(name) or DERIVED.search(name.replace("_", " ")):
+            yield name, grid, None
+            continue
+        # Require an explicit reference to this piece in the report header.
+        identity = False
+        conflict = False
+        for row in grid[:12]:
+            for col, value in enumerate(row):
+                key = re.sub(r"[^a-z]", "", header_label(value))
+                if key not in {"itpref", "refitp", "partrefitp", "ppapref", "refppap"}:
+                    continue
+                field = next(
+                    (
+                        str(v).strip()
+                        for v in row[col + 1 :]
+                        if v is not None and str(v).strip()
+                    ),
+                    "",
+                )
+                if "itp" in key:
+                    match = re.fullmatch(
+                        r"7(\d{4})\d{4}",
+                        field.removesuffix(".0").replace(".", "").replace(" ", ""),
+                    )
+                else:
+                    match = re.match(r"(\d{4})-\d{2}[_-]", field)
+                if match:
+                    identity |= match[1] == part_code
+                    conflict |= match[1] != part_code
+        found = False
+        if identity and not conflict:
+            for i in range(1, len(grid)):
+                labels = [header_label(v) for v in grid[i]]
+                if "nominal" not in labels or "equipment" not in labels:
+                    continue
+                upper = grid[i - 1]
+                codes = {
+                    j
+                    for line in (grid[i], upper)
+                    for j, v in enumerate(line)
+                    if header_label(v).strip(".:")
+                    in {"nr", "no", "number", "numero", "nº"}
+                }
+                cavities = [j for j, v in enumerate(grid[i]) if cavity_label(str(v))[0]]
+                if (
+                    len(codes) != 1
+                    or not cavities
+                    or cavities != list(range(cavities[0], cavities[-1] + 1))
+                ):
+                    continue
+                if len({cavity_label(str(grid[i][j]))[0] for j in cavities}) != len(
+                    cavities
+                ):
+                    continue
+                contexts = [
+                    (j, str(upper[j]).strip())
+                    for j in cavities
+                    if j < len(upper) and upper[j] is not None and str(upper[j]).strip()
+                ]
+                if len(contexts) != 1 or contexts[0][0] != cavities[0]:
+                    continue
+                col, context = contexts[0]
+                if not TRIAL_CONTEXT.search(context) or DERIVED.search(
+                    " ".join(str(v) for v in upper)
+                ):
+                    continue
+                end = i + 1
+                code_col = next(iter(codes))
+                while end < len(grid):
+                    line = grid[end]
+                    if not any(v is not None and str(v).strip() for v in line):
+                        break
+                    code = str(line[code_col]).strip() if code_col < len(line) else ""
+                    if code and not re.fullmatch(r"N?\d+(?:[.-]\d+)*", code, re.I):
+                        break
+                    if any(
+                        header_label(v)
+                        in {"nominal", "min", "max", "average", "summary"}
+                        for v in line
+                    ):
+                        break
+                    if not code and any(isinstance(v, str) and v.strip() for v in line):
+                        break
+                    end += 1
+                if end > i + 1:
+                    found = True
+                    yield (
+                        name,
+                        grid,
+                        ReportBlock(
+                            i, end, code_col, context, f"{excel_column(col)}{i}"
+                        ),
+                    )
+        if not found:
+            yield name, grid, None
+
+
+def cavity_series(
+    rows: list[dict[str, Any]],
+) -> Iterator[tuple[tuple[Any, ...], list[dict[str, Any]]]]:
+    # report_rows emits the cells of each physical row together.
+    for _, cells in groupby(
+        rows,
+        key=lambda r: (r["_sheet"], r["_cell"].lstrip("ABCDEFGHIJKLMNOPQRSTUVWXYZ")),
+    ):
+        group = list(cells)
+        if len({r["value"] for r in group if r["value"] is not None}) < 4:
+            continue
+        fingerprint = tuple(
+            (
+                tuple(r["numbers"]),
+                r["nominal"],
+                r["element"],
+                r["unit"],
+                r["evaluation"],
+                r["_cavity"],
+                r["value"],
+            )
+            for r in group
+        )
+        yield fingerprint, group
+
+
+def flag_repeated_results(rows: list[dict[str, Any]]) -> None:
+    """An entire matching multi-cavity series in another sheet is uncertain evidence.
+
+    Preserve the measurements from the established reader and keep both locators.
+    Distinct lot names do not prove that repeated values came from independent tests.
+    """
+    if not any("measurement_context" in row for row in rows):
+        return
+    seen: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
+    for fingerprint, group in sorted(
+        cavity_series(rows), key=lambda pair: "measurement_context" in pair[1][0]
+    ):
+        prior = seen.setdefault(fingerprint, group)
+        if (
+            prior[0]["_sheet"] == group[0]["_sheet"]
+            or "measurement_context" not in group[0]
+        ):
+            continue
+        for row, other in zip(group, prior, strict=True):
+            if row["provenance_state"] == "medicion":
+                row["provenance_state"] = "sin_confirmar"
+                row["flags"].append("serie_repetida_en_otra_hoja")
+                row["comparison_origin"] = {
+                    "sheet": other["_sheet"],
+                    "cell": other["_cell"],
+                }
+
+
+def flag_repeated_reports(reports: dict[str, list[dict[str, Any]]]) -> None:
+    """Compare only newly eligible series against the other books of the same piece.
+
+    An identical multi-cavity vector under different report/lot labels does not
+    establish an independent measurement. Keep both paths available for review.
+    """
+    targets: dict[tuple[Any, ...], list[tuple[str, list[dict[str, Any]]]]] = (
+        defaultdict(list)
+    )
+    for path, rows in reports.items():
+        recovered = [r for r in rows if "measurement_context" in r]
+        for signature, group in cavity_series(recovered):
+            if any(r["provenance_state"] == "medicion" for r in group):
+                targets[signature].append((path, group))
+    if not targets:
+        return
+    for path, rows in reports.items():
+        for signature, other in cavity_series(rows):
+            for target_path, group in targets.get(signature, []):
+                if path == target_path:
+                    continue
+                for row, origin in zip(group, other, strict=True):
+                    if row["provenance_state"] == "medicion":
+                        row["provenance_state"] = "sin_confirmar"
+                        row["flags"].append("serie_repetida_en_otro_informe")
+                        row["comparison_origin"] = {
+                            "path": path,
+                            "sheet": origin["_sheet"],
+                            "cell": origin["_cell"],
+                        }
+
+
 def report_rows(
     sheets: list[tuple[str, list[list[Any]]]],
     *,
@@ -385,7 +600,7 @@ def report_rows(
     revisions = set()
     output: list[dict[str, Any]] = []
     structures = {}
-    for sheet, grid in sheets:
+    for sheet, grid, block in report_blocks(sheets, part_code):
         diagnostic: dict[str, Any] = {
             "sheet": sheet,
             "status": "skipped",
@@ -422,28 +637,32 @@ def report_rows(
                         if not identity:
                             revisions.add(following)
                             sheet_revisions.add(following)
-        if omitted_sheet_review(grid) == "empty_dimensional_template":
+        if block is None and omitted_sheet_review(grid) == "empty_dimensional_template":
             diagnostic.update(
                 status="excluded",
                 reason="empty_dimensional_template",
                 review="empty_dimensional_template",
             )
             continue
-        if not re.match(r"DR\b|DR[_(-]|CAV[._ ]*\d|100%", sheet, re.I):
+        if block is None and not SUPPORTED_REPORT.match(sheet):
             diagnostic["review"] = omitted_sheet_review(grid)
             continue
-        header = next(
-            (
-                r
-                for r, row in enumerate(grid[:30])
-                if any(header_label(v) == "nominal" for v in row)
-                and (
-                    any(cavity_label(str(v))[0] for v in row)
-                    or re.match(r"CAV[._ ]*\d", sheet, re.I)
-                    or (component_sheets is not None and sheet in component_sheets)
-                )
-            ),
-            None,
+        header = (
+            block.header
+            if block
+            else next(
+                (
+                    r
+                    for r, row in enumerate(grid[:30])
+                    if any(header_label(v) == "nominal" for v in row)
+                    and (
+                        any(cavity_label(str(v))[0] for v in row)
+                        or re.match(r"CAV[._ ]*\d", sheet, re.I)
+                        or (component_sheets is not None and sheet in component_sheets)
+                    )
+                ),
+                None,
+            )
         )
         if header is None:
             diagnostic["reason"] = "no_recognized_header_or_cavities"
@@ -456,6 +675,8 @@ def report_rows(
         for i, label in enumerate(labels):
             if label:
                 columns.setdefault(label, i)
+        if block:
+            columns["number"] = block.code_column
         cavities = [
             (i, cavity_label(str(v)))
             for i, v in enumerate(grid[header])
@@ -525,7 +746,7 @@ def report_rows(
                 if header > 0 and c < len(grid[header - 1])
                 else ""
             )
-            group = conditions(text) or group
+            group = block.context if block else conditions(text) or group
             groups[c] = group
             if secondary and not group:
                 secondary_columns.add(c)
@@ -552,7 +773,7 @@ def report_rows(
         ]
         counts: dict[str, int] = defaultdict(int)
         ncode, shot = "", ""
-        for r in range(header + 1, len(grid)):
+        for r in range(header + 1, block.end if block else len(grid)):
             row = grid[r]
 
             def cell(
@@ -566,6 +787,8 @@ def report_rows(
                 shot = "shot" + marker[1]
             code_column = columns.get("number", 0)
             raw_code = str(row[code_column]).strip() if len(row) > code_column else ""
+            if block and not raw_code:
+                continue
             if raw_code:
                 match = re.fullmatch(r"N?(\d+(?:[.-]\d+)*)", raw_code, re.I)
                 ncode = "N" + match[1].removesuffix(".0") if match else ""
@@ -592,6 +815,15 @@ def report_rows(
                     )
                 continue
             evaluation = str(cell("type") or "")
+            if block:
+                reason = None
+                if DERIVED.search(" ".join(str(v) for v in row[: cavities[0][0]])):
+                    reason = "derived_result"
+                elif not MEASURING_DEVICE.match(str(cell("equipment") or "").strip()):
+                    reason = "unverified_measuring_device"
+                if reason:
+                    diagnostic["rejected_rows"].append({"row": r + 1, "reason": reason})
+                    continue
             counts[ncode] += 1
             idx = counts[ncode]
             title = f"{ncode} {nominal:g} {evaluation}".strip()
@@ -612,7 +844,13 @@ def report_rows(
                     continue
                 flags = list(info.get("flags", []))
                 state = info.get("provenance_state", "medicion")
-                if str(cell("equipment")).strip().upper() == "IMPOSED":
+                if block and info and state == "medicion":
+                    state = "sin_confirmar"
+                    flags.append("formula_en_bloque_recuperado")
+                equipment = str(cell("equipment")).strip().upper()
+                if equipment == "IMPOSED" or (
+                    block and re.match(r"IMPOSED\b", equipment)
+                ):
                     flags.append("valor_impuesto")
                     if state != "generado":
                         state = "sin_confirmar"
@@ -678,10 +916,21 @@ def report_rows(
                         else "",
                         "_cell": f"{excel_column(column)}{r + 1}",
                         "_report": True,
+                        **(
+                            {
+                                "measurement_context": {
+                                    "text": block.context,
+                                    "cell": block.context_cell,
+                                }
+                            }
+                            if block
+                            else {}
+                        ),
                     }
                 )
         diagnostic["observations"] = len(output) - output_start
     mark_copied_cells(output, structures)
+    flag_repeated_results(output)
     return (next(iter(revisions)) if len(revisions) == 1 else ""), output
 
 
