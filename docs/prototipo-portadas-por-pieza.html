@@ -1,0 +1,364 @@
+<!doctype html>
+<!-- Prototipo del plan docs/plan-portadas-por-pieza-2026-11-18.md (18/11/2026). Datos de ejemplo. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipos Bolt Eye</title>
+<style>
+/* Layout: estilo de la app INTEPLAST (shadcn: grises neutros, primario verde azulado, radio 10px, iconos lucide).
+   Secciones: resaltado → tarjeta → ficha con dos variantes de carrusel. */
+:root{
+  --page:#fafafa; --bg:#ffffff; --ink:#0a0a0a; --muted-fg:#737373; --line:#e5e5e5; --muted:#f5f5f5; --hover:#f5f5f5;
+  --primary:#0e9688; --sel:#ecf7f5;
+  --part:#8e9bab; --edge:#4f5b6b; --ghost:#d6dce3; --ghost-edge:#b4bdc8;
+  --hl:#e0312b; --hl-edge:#a81d18; --badge-bg:#171717; --badge-fg:#fafafa;
+  --scrim:rgba(0,0,0,.5); --shadow-sm:0 1px 2px rgba(0,0,0,.06); --shadow-lg:0 10px 30px rgba(0,0,0,.18);
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --page:#0a0a0a; --bg:#171717; --ink:#fafafa; --muted-fg:#a1a1a1; --line:rgba(255,255,255,.1); --muted:#262626; --hover:#262626;
+  --primary:#2aa596; --sel:#16302d;
+  --part:#6f7d8e; --edge:#b9c4d0; --ghost:#333d48; --ghost-edge:#4a5562;
+  --hl:#ff4a3d; --hl-edge:#ff8a80; --badge-bg:#fafafa; --badge-fg:#171717;
+  --scrim:rgba(0,0,0,.6); --shadow-sm:0 1px 2px rgba(0,0,0,.4); --shadow-lg:0 10px 30px rgba(0,0,0,.6);
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --page:#0a0a0a; --bg:#171717; --ink:#fafafa; --muted-fg:#a1a1a1; --line:rgba(255,255,255,.1); --muted:#262626; --hover:#262626;
+  --primary:#2aa596; --sel:#16302d;
+  --part:#6f7d8e; --edge:#b9c4d0; --ghost:#333d48; --ghost-edge:#4a5562;
+  --hl:#ff4a3d; --hl-edge:#ff8a80; --badge-bg:#fafafa; --badge-fg:#171717;
+  --scrim:rgba(0,0,0,.6); --shadow-sm:0 1px 2px rgba(0,0,0,.4); --shadow-lg:0 10px 30px rgba(0,0,0,.6);
+  color-scheme:dark}
+
+body{background:var(--page);color:var(--ink);font-family:var(--sans);font-size:14px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 48px}
+.wrap{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:36px}
+header{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+h1{font-size:22px;font-weight:600;margin:0}
+.chip{font-family:var(--mono);font-size:11px;color:var(--muted-fg);border:1px solid var(--line);border-radius:6px;padding:2px 6px}
+section{display:flex;flex-direction:column;gap:12px}
+h2{font-size:15px;font-weight:600;margin:0;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+h2 .n{font-family:var(--mono);color:var(--muted-fg);font-weight:500}
+h2 .hint{font-weight:400;color:var(--muted-fg);font-size:13px}
+.row,.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
+.col{display:flex;flex-direction:column;gap:16px}
+.variant{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.vname{font-family:var(--mono);font-size:13px;font-weight:500}
+.vname b{color:var(--primary);font-weight:600}
+button{font:inherit;color:inherit}
+svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;display:block}
+svg.i.s{width:14px;height:14px}
+
+/* miniaturas (secciones 1 y 2) */
+.view{position:relative;background:var(--muted);border-radius:8px;border:1px solid var(--line);aspect-ratio:200/140;max-width:100%;overflow:hidden}
+.view svg,.stage svg.pc{display:block;width:100%;height:100%}
+
+/* pieza */
+svg .b{fill:var(--part);stroke:var(--edge);stroke-width:1.5}
+svg .rib{fill:none;stroke:var(--edge);stroke-width:1;opacity:.55}
+svg .e{fill:var(--part);stroke:var(--edge);stroke-width:1.5}
+svg .h{fill:var(--muted);stroke:var(--edge);stroke-width:1.2}
+svg .m{display:none;fill:none;stroke:var(--hl);stroke-width:2.5}
+.s-circulo .m{display:inline}
+.s-relleno .e{fill:var(--hl);stroke:var(--hl-edge)}
+.s-relleno .eh{stroke:var(--hl-edge)}
+.s-foco .b{fill:var(--ghost);stroke:var(--ghost-edge)}
+.s-foco .rib{stroke:var(--ghost-edge)}
+.s-foco .h{stroke:var(--ghost-edge)}
+.s-foco .e{fill:var(--hl);stroke:var(--hl-edge)}
+.s-foco .eh{stroke:var(--hl-edge)}
+
+:where(button,.car,input):focus-visible{outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 45%,transparent)}
+
+/* 1 · resaltado */
+.pick{cursor:pointer;text-align:left}
+.pick:hover{border-color:var(--muted-fg)}
+.pick.on{border-color:var(--primary);box-shadow:0 0 0 1px var(--primary)}
+
+/* 2 · tarjeta */
+.card{display:flex;flex-direction:column;gap:8px;max-width:260px;width:100%}
+.ctitle{font-weight:600;font-size:14px}
+.ccode{font-family:var(--mono);font-size:12px;color:var(--muted-fg)}
+.badge{position:absolute;top:8px;right:8px;background:var(--badge-bg);color:var(--badge-fg);font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;font-variant-numeric:tabular-nums}
+.stack{position:relative;margin:8px 8px 0 0}
+.stack::before,.stack::after{content:"";position:absolute;inset:0;border:1px solid var(--line);background:var(--muted);border-radius:8px}
+.stack::before{transform:translate(8px,-8px)}
+.stack::after{transform:translate(4px,-4px)}
+.stack .view{z-index:1}
+.bar{position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--line)}
+.bar i{display:block;height:100%;background:var(--primary)}
+
+/* 3 · ficha (cabecera como la app: portada a la izquierda, datos a la derecha) */
+.fh{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:start}
+.fdata{display:flex;flex-direction:column;gap:6px;min-width:0}
+.crumb{font-size:13px;color:var(--muted-fg)}
+.fdata h3{margin:0;font-size:22px;font-weight:600}
+.desc{margin:0;color:var(--muted-fg);font-size:14px;max-width:60ch}
+.ps{font-size:14px;color:var(--muted-fg)}
+.ps .code{font-family:var(--mono)}
+
+.car{position:relative;width:300px;aspect-ratio:1;max-width:100%;background:var(--muted);border:1px solid var(--line);border-radius:8px;overflow:hidden;user-select:none}
+.stage{position:absolute;inset:0;cursor:zoom-in;touch-action:pan-y}
+.rot{width:100%;height:100%;transform-origin:center}
+.ov{position:absolute;z-index:2;background:color-mix(in srgb,var(--bg) 92%,transparent);border:1px solid var(--line);border-radius:6px;box-shadow:var(--shadow-sm)}
+.codechip{top:8px;left:8px;padding:2px 6px;font-family:var(--mono);font-size:12px;pointer-events:none}
+.cnt{top:8px;right:8px;padding:2px 6px;font-size:12px;font-variant-numeric:tabular-nums;cursor:pointer}
+.cnt:hover{background:var(--hover)}
+.ib{width:32px;height:32px;display:grid;place-items:center;cursor:pointer;padding:0}
+.ib:hover{background:var(--hover)}
+.arr{top:50%;transform:translateY(-50%)}
+.arr.l{left:8px}.arr.r{right:8px}
+.br{right:8px;bottom:8px}
+span.ib{cursor:inherit;pointer-events:none}
+.hov{opacity:0;transition:opacity .15s}
+.car:hover .hov,.car:focus-within .hov,.mcar .hov{opacity:1}
+@media (hover:none){.hov{opacity:1}}
+/* barra tipo visor de planos */
+.tb{top:8px;right:8px;display:flex;align-items:center;gap:2px;padding:3px}
+.tb button{width:30px;height:30px;border:0;background:none;border-radius:6px;display:grid;place-items:center;cursor:pointer;padding:0}
+.tb button:hover{background:var(--hover)}
+.tb .num{width:auto;padding:0 4px;font-size:12px;font-variant-numeric:tabular-nums}
+.enc{display:flex !important;align-items:center;gap:4px;width:auto !important;padding:0 8px !important;font-size:12px}
+.encb{right:8px;bottom:8px;height:30px;padding:0 8px;display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer}
+.encb:hover{background:var(--hover)}
+
+/* lista al pulsar el número */
+.pop{position:absolute;z-index:3;top:44px;right:8px;width:min(260px,calc(100% - 16px));max-height:calc(100% - 52px);background:var(--bg);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-lg);display:flex;flex-direction:column;overflow:hidden}
+.search{border:none;border-bottom:1px solid var(--line);padding:8px 10px;font:inherit;font-size:13px;background:var(--bg);color:var(--ink);outline:none}
+.list{overflow-y:auto;display:flex;flex-direction:column;padding:4px}
+.rowi{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:center;padding:6px 8px;border:none;border-radius:6px;background:none;text-align:left;cursor:pointer;font-size:13px}
+.rowi:hover{background:var(--hover)}
+.rowi.on{background:var(--sel)}
+.rowi .code{font-family:var(--mono);font-size:12px}
+.rowi .nm{color:var(--muted-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.empty{padding:10px;color:var(--muted-fg);font-size:13px}
+
+/* modal (como CoverDialog de la app) */
+.overlay{position:fixed;inset:0;background:var(--scrim);z-index:20;display:grid;place-items:center;overflow-y:auto;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.dlg{--cs:min(720px,75vh,calc(100vw - 4rem - 2px));position:relative;background:var(--bg);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-lg);padding:16px;display:grid;gap:12px}
+.dlg h4{margin:0;font-size:18px;font-weight:600;padding-right:28px}
+.dlg .x{position:absolute;top:14px;right:14px;border:0;background:none;opacity:.7;cursor:pointer;padding:2px;border-radius:4px}
+.dlg .x:hover{opacity:1}
+.mcar{width:var(--cs)}
+.mcar .stage{cursor:grab;touch-action:none}
+.mcar .stage.drag{cursor:grabbing}
+
+@media (max-width:640px){.fh{grid-template-columns:minmax(0,1fr)}.car:not(.mcar){width:100%}}
+@media (prefers-reduced-motion:reduce){.hov{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Bolt eye</h1>
+    <span class="chip">ejemplo · 24 piezas</span>
+  </header>
+
+  <section>
+    <h2><span class="n">1</span>Resaltado <span class="hint">clic para aplicar abajo</span></h2>
+    <div class="row" id="secR"></div>
+  </section>
+
+  <section>
+    <h2><span class="n">2</span>Tarjeta en lista / cuadrícula</h2>
+    <div class="cards" id="secT"></div>
+  </section>
+
+  <section>
+    <h2><span class="n">3</span>Ficha del feature</h2>
+    <div class="col">
+      <div class="variant"><div class="vname"><b>A</b> · Flechas a los lados</div><div id="fA"></div></div>
+      <div class="variant"><div class="vname"><b>B</b> · Barra como el visor de planos</div><div id="fB"></div></div>
+    </div>
+  </section>
+</div>
+
+<div class="overlay" id="ov" hidden>
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlgT">
+    <h4 id="dlgT">Bolt eye</h4>
+    <button class="x" data-act="close" aria-label="Cerrar"><svg class="i" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    <div class="car mcar" id="carM" tabindex="-1"></div>
+  </div>
+</div>
+
+<script>
+/* ---------- iconos lucide ---------- */
+const I={
+  l:'<svg class="i" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>',
+  r:'<svg class="i" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>',
+  max:'<svg class="i s" viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" x2="14" y1="3" y2="10"/><line x1="3" x2="10" y1="21" y2="14"/></svg>',
+  rot:'<svg class="i s" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>'
+};
+
+/* ---------- piezas de ejemplo ---------- */
+const tri=(a,d)=>[100+d*Math.cos(a*Math.PI/180),70+d*Math.sin(a*Math.PI/180)];
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const R=rng(7), pick=a=>a[Math.floor(R()*a.length)], r1=n=>Math.round(n*10)/10;
+const E=10.5;
+const T={
+  carcasa(){const w=r1(100+R()*30),h=r1(60+R()*24),x=r1(100-w/2),y=r1(70-h/2);
+    const opts=[[x-15,y+14,E,x+6,y+14],[x+w+15,y+h-14,E,x+w-6,y+h-14],[x-15,y+h-14,E,x+6,y+h-14],[x+w+15,y+14,E,x+w-6,y+14]];
+    const k=1+Math.floor(R()*4);
+    return{body:`<rect class="b" x="${x}" y="${y}" width="${w}" height="${h}" rx="12"/><rect class="rib" x="${x+14}" y="${y+14}" width="${w-28}" height="${h-28}" rx="7"/><circle class="h" cx="${r1(x+w*.3)}" cy="70" r="4"/><circle class="h" cx="${r1(x+w*.7)}" cy="70" r="4"/>`,eyes:opts.slice(0,k)}},
+  soporte(){const t=Math.round(30+R()*14),e=Math.round(148+R()*20);
+    const opts=pick([[0],[1],[0,1]]);const all=[[51,t-16,E,51,t+6],[e+15,101,E,e-6,101]];
+    return{body:`<path class="b" d="M36 ${t}H66V88H${e-4}Q${e} 88 ${e} 92V110Q${e} 114 ${e-4} 114H40Q36 114 36 110Z"/><circle class="h" cx="${r1(66+(e-66)*.4)}" cy="101" r="4.5"/><circle class="h" cx="${r1(66+(e-66)*.75)}" cy="101" r="4.5"/>`,eyes:opts.map(i=>all[i])}},
+  tapa(){const r=r1(34+R()*6),k=pick([2,3,4,6]),off=Math.round(R()*90);
+    return{body:`<circle class="b" cx="100" cy="70" r="${r}"/><circle class="rib" cx="100" cy="70" r="${r-11}"/><circle class="h" cx="100" cy="70" r="11"/>`,
+      eyes:Array.from({length:k},(_,i)=>{const a=off+i*360/k;return[...tri(a,r+13).map(r1),9.5,...tri(a,r-8).map(r1)]})}},
+  placa(){const L=[24,70,E,48,70],Rr=[176,70,E,152,70],U=[100,36,E,100,62];
+    return{body:'<rect class="b" x="42" y="56" width="116" height="28" rx="8"/><circle class="h" cx="70" cy="70" r="4"/><circle class="h" cx="100" cy="70" r="4"/><circle class="h" cx="130" cy="70" r="4"/>',eyes:pick([[L,Rr],[L,Rr,U],[U],[L]])}}
+};
+const P=[
+  {name:'Carcasa superior',body:'<rect class="b" x="40" y="28" width="120" height="84" rx="14"/><rect class="rib" x="54" y="42" width="92" height="56" rx="8"/><circle class="h" cx="72" cy="70" r="4"/><circle class="h" cx="128" cy="70" r="4"/>',eyes:[[24,44,11,46,44],[176,96,11,154,96]]},
+  {name:'Soporte motor',body:'<path class="b" d="M36 34H66V88H168Q172 88 172 92V110Q172 114 168 114H40Q36 114 36 110Z"/><circle class="h" cx="104" cy="101" r="4.5"/><circle class="h" cx="140" cy="101" r="4.5"/>',eyes:[[51,18,11,51,40]]},
+  {name:'Tapa lateral',body:'<circle class="b" cx="100" cy="70" r="42"/><circle class="rib" cx="100" cy="70" r="30"/><circle class="h" cx="100" cy="70" r="12"/>',eyes:[45,135,225,315].map(a=>[...tri(a,56),10,...tri(a,34)])}
+];
+['Carcasa inferior','Brida de unión','Soporte bomba','Tapa trasera','Carcasa filtro','Soporte sensor','Placa base','Tapa de registro',
+ 'Soporte brazo','Carcasa válvula','Brida de salida','Tapa frontal','Soporte cuadro','Carcasa ventilador','Placa de anclaje','Soporte tubo',
+ 'Tapa de inspección','Carcasa conector','Brida de entrada','Soporte pedal','Placa de refuerzo']
+ .forEach(n=>{const w=n.split(' ')[0].toLowerCase();P.push({name:n,...T[w==='brida'?'placa':w]()})});
+P.forEach((p,i)=>{p.code=String(4100+i*7);p.cad=i%5!==3});
+const N=P.length;
+
+/* ---------- dibujo ---------- */
+const STY=[['circulo','R1','Círculo'],['relleno','R2','Relleno'],['foco','R3','Foco']];
+let S='foco';
+const st={t3:0,pop:null};
+const idx={carA:0,carB:0,carM:0};
+const modal={src:'carA'};
+let cam={ax:0,ay:0,z:1,tx:0,ty:0};
+function tab(x,y,r,ax,ay){const dx=x-ax,dy=y-ay,L=Math.hypot(dx,dy),k=r*.85,nx=-dy/L*k,ny=dx/L*k;
+  return `<polygon class="e" points="${ax+nx},${ay+ny} ${x+nx},${y+ny} ${x-nx},${y-ny} ${ax-nx},${ay-ny}"/>`}
+function svg(p,s){
+  const tabs=p.eyes.map(e=>tab(...e)).join('');
+  const rings=p.eyes.map(([x,y,r])=>`<circle class="e" cx="${x}" cy="${y}" r="${r}"/><circle class="h eh" cx="${x}" cy="${y}" r="${(r*.45).toFixed(1)}"/>`).join('');
+  const marks=p.eyes.map(([x,y,r])=>`<circle class="m" cx="${x}" cy="${y}" r="${r+6}"/>`).join('');
+  return `<svg viewBox="0 0 200 140" class="pc s-${s}" role="img" aria-label="${p.code}">${tabs}${p.body}${rings}${marks}</svg>`}
+const view=(p,extra='')=>`<div class="view">${svg(p,S)}${extra}</div>`;
+const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const match=(p,q)=>!q||norm(p.code+' '+p.name).includes(norm(q));
+const $=id=>document.getElementById(id);
+
+function renderR(){
+  $('secR').innerHTML=STY.map(([k,c,n])=>
+    `<button class="variant pick${S===k?' on':''}" data-act="sty" data-k="${k}"><div class="vname"><b>${c}</b> · ${n}</div><div class="view">${svg(P[2],k)}</div></button>`).join('');
+}
+function t3view(){const i=st.t3;return view(P[i],`<span class="badge">${i+1}/${N}</span><div class="bar"><i style="width:${(i+1)/N*100}%"></i></div>`)}
+function renderT(){
+  const h='<div class="ctitle">Bolt eye</div>';
+  const t1=`<div class="card">${view(P[0],`<span class="badge">${N} piezas</span>`)}${h}</div>`;
+  const t2=`<div class="card"><div class="stack">${view(P[0],`<span class="badge">${N}</span>`)}</div>${h}</div>`;
+  const t3=`<div class="card" id="t3card">${t3view()}${h}</div>`;
+  $('secT').innerHTML=[['T1','Badge con número',t1],['T2','Pila + número',t2],['T3','Rota al pasar el ratón',t3]]
+    .map(([c,n,x])=>`<div class="variant"><div class="vname"><b>${c}</b> · ${n}</div>${x}</div>`).join('');
+}
+
+/* ---------- ficha ---------- */
+function fichaShell(id){
+  const codes=P.slice(0,4).map(p=>p.code).join(', ');
+  return `<div class="fh"><div class="car" id="${id}" tabindex="0" aria-label="Capturas de las piezas"></div>
+    <div class="fdata"><div class="crumb">Catálogo / Features / Bolt eye</div><h3>Bolt eye</h3>
+    <p class="desc">Alojamiento del tornillo de fijación de la pieza.</p>
+    <div class="ps">${N} piezas · <span class="code">${codes}</span>, +${N-4} más</div></div></div>`;
+}
+const mode=id=>id==='carM'?(modal.src==='carA'?'A':'B'):(id==='carA'?'A':'B');
+function camCss(p){return p.cad?`perspective(1100px) rotateX(${cam.ax}deg) rotateY(${cam.ay}deg) scale(${cam.z})`:`translate(${cam.tx}px,${cam.ty}px) scale(${cam.z})`}
+function renderCar(id){
+  const el=$(id); if(!el)return;
+  const m=id==='carM', i=idx[id], p=P[i], md=mode(id);
+  const num=`${i+1} / ${N}`;
+  let ui=`<span class="ov codechip">${p.code}</span>`;
+  if(md==='A'){
+    ui+=`<button class="ov cnt" data-act="list" aria-haspopup="listbox" aria-label="Pieza ${num}">${num}</button>
+      <button class="ov ib arr l hov" data-act="prev" aria-label="Pieza anterior">${I.l}</button>
+      <button class="ov ib arr r hov" data-act="next" aria-label="Pieza siguiente">${I.r}</button>`;
+    ui+=m?`<button class="ov encb" data-act="reset">${I.rot}Encuadrar</button>`:`<span class="ov ib br hov" aria-hidden="true">${I.max}</span>`;
+  }else{
+    ui+=`<div class="ov tb"><button data-act="prev" aria-label="Pieza anterior">${I.l}</button><button class="num" data-act="list" aria-haspopup="listbox" aria-label="Pieza ${num}">${num}</button><button data-act="next" aria-label="Pieza siguiente">${I.r}</button>${m?`<button class="enc" data-act="reset">${I.rot}Encuadrar</button>`:''}</div>`;
+    if(!m)ui+=`<span class="ov ib br hov" aria-hidden="true">${I.max}</span>`;
+  }
+  el.innerHTML=`<div class="stage"${m?'':' data-act="zoom" title="Ampliar"'}><div class="rot" style="transform:${m?camCss(p):'none'}">${svg(p,S)}</div></div>${ui}<div class="pop" hidden></div>`;
+  if(st.pop===id)renderPop(id,true);
+}
+function renderPop(id,focus){
+  const pop=$(id)&&$(id).querySelector('.pop'); if(!pop)return;
+  if(st.pop!==id){pop.hidden=true;pop.innerHTML='';return}
+  pop.hidden=false;
+  pop.innerHTML=`<input class="search" placeholder="Buscar pieza" autocomplete="off" aria-label="Buscar pieza"><div class="list" role="listbox"></div>`;
+  fillList(pop,'',id);
+  if(focus)pop.querySelector('.search').focus();
+}
+function fillList(pop,q,id){
+  const rows=P.map((p,j)=>[p,j]).filter(([p])=>match(p,q));
+  pop.querySelector('.list').innerHTML=rows.length?rows.map(([p,j])=>`<button class="rowi${j===idx[id]?' on':''}" role="option" aria-selected="${j===idx[id]}" data-act="go" data-i="${j}"><span class="code">${p.code}</span><span class="nm">${p.name}</span></button>`).join(''):'<div class="empty">Sin resultados</div>';
+  const on=pop.querySelector('.rowi.on'); if(on&&!q)on.scrollIntoView({block:'nearest'});
+}
+const modalOpen=()=>!$('ov').hidden;
+function go(id,i){
+  idx[id]=(i+N)%N; st.pop=null; cam={ax:0,ay:0,z:1,tx:0,ty:0};
+  if(id==='carM'){idx[modal.src]=idx.carM;renderCar(modal.src)}
+  renderCar(id);
+}
+function renderAll(){renderR();renderT();renderCar('carA');renderCar('carB');if(modalOpen())renderCar('carM')}
+
+let lastFocus=null;
+function openModal(src){lastFocus=document.activeElement;modal.src=src;idx.carM=idx[src];st.pop=null;cam={ax:0,ay:0,z:1,tx:0,ty:0};
+  $('ov').hidden=false;document.body.style.overflow='hidden';renderCar('carM');$('carM').focus()}
+function closeModal(){$('ov').hidden=true;document.body.style.overflow='';st.pop=null;renderCar(modal.src);(lastFocus&&lastFocus.focus)?lastFocus.focus():$(modal.src).focus()}
+
+let swiped=false;
+document.addEventListener('click',e=>{
+  if(st.pop&&!e.target.closest('.pop')&&!e.target.closest('[data-act="list"]')){const id=st.pop;st.pop=null;renderPop(id);if(!e.target.closest('[data-act]'))return}
+  if(e.target===$('ov')){closeModal();return}
+  const b=e.target.closest('[data-act]'); if(!b)return;
+  const a=b.dataset.act, car=b.closest('.car'), id=car&&car.id;
+  if(a==='sty'){S=b.dataset.k;renderAll()}
+  else if(a==='prev')go(id,idx[id]-1);
+  else if(a==='next')go(id,idx[id]+1);
+  else if(a==='go')go(id,+b.dataset.i);
+  else if(a==='list'){const was=st.pop===id;st.pop=was?null:id;renderPop(id,!was)}
+  else if(a==='zoom'){if(swiped){swiped=false;return}openModal(id)}
+  else if(a==='reset'){cam={ax:0,ay:0,z:1,tx:0,ty:0};applyCam()}
+  else if(a==='close')closeModal();
+});
+document.addEventListener('input',e=>{const pop=e.target.closest&&e.target.closest('.pop');if(pop)fillList(pop,e.target.value,pop.closest('.car').id)});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){if(st.pop){const id=st.pop;st.pop=null;renderPop(id);return}if(modalOpen())closeModal();return}
+  if(e.target.tagName==='INPUT')return;
+  const ae=document.activeElement, car=modalOpen()?$('carM'):(ae&&ae.closest&&ae.closest('.car'));
+  if(!car)return;
+  if(e.key==='ArrowLeft'){e.preventDefault();go(car.id,idx[car.id]-1)}
+  if(e.key==='ArrowRight'){e.preventDefault();go(car.id,idx[car.id]+1)}
+});
+
+/* deslizar con el dedo en la ficha */
+let sx=null;
+document.addEventListener('pointerdown',e=>{const c=e.target.closest('.car:not(.mcar)');if(c&&e.pointerType!=='mouse'&&e.target.closest('.stage'))sx={x:e.clientX,id:c.id}});
+document.addEventListener('pointerup',e=>{if(!sx)return;const dx=e.clientX-sx.x,id=sx.id;sx=null;if(Math.abs(dx)>40){swiped=true;go(id,idx[id]+(dx<0?1:-1));setTimeout(()=>swiped=false,350)}});
+
+/* visor del modal: arrastrar = girar (3D) o mover (imagen), rueda = zoom */
+function applyCam(){const r=$('carM').querySelector('.rot');if(r)r.style.transform=camCss(P[idx.carM])}
+let drag=null;
+$('carM').addEventListener('pointerdown',e=>{const s=e.target.closest('.stage');if(!s)return;drag={x:e.clientX,y:e.clientY,c:{...cam}};s.classList.add('drag');s.setPointerCapture(e.pointerId)});
+$('carM').addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+  if(P[idx.carM].cad){cam.ay=drag.c.ay+dx*.35;cam.ax=Math.max(-65,Math.min(65,drag.c.ax-dy*.35))}else{cam.tx=drag.c.tx+dx;cam.ty=drag.c.ty+dy}applyCam()});
+const endDrag=()=>{if(!drag)return;drag=null;const s=$('carM').querySelector('.stage');s&&s.classList.remove('drag')};
+$('carM').addEventListener('pointerup',endDrag);$('carM').addEventListener('pointercancel',endDrag);
+$('carM').addEventListener('wheel',e=>{if(!e.target.closest('.stage'))return;e.preventDefault();cam.z=Math.max(.6,Math.min(3.5,cam.z*(e.deltaY<0?1.12:1/1.12)));applyCam()},{passive:false});
+
+/* T3: rota al pasar el ratón */
+let timer=null;
+document.addEventListener('mouseover',e=>{
+  const c=e.target.closest('#t3card'); if(!c||timer)return;
+  timer=setInterval(()=>{st.t3=(st.t3+1)%N;const card=$('t3card');if(card)card.querySelector('.view').outerHTML=t3view()},650);
+});
+document.addEventListener('mouseout',e=>{
+  const c=e.target.closest('#t3card'); if(!c||c.contains(e.relatedTarget))return;
+  clearInterval(timer);timer=null;st.t3=0;renderT();
+});
+
+$('fA').innerHTML=fichaShell('carA');
+$('fB').innerHTML=fichaShell('carB');
+renderAll();
+</script>

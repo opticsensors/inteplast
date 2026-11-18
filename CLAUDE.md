@@ -81,6 +81,11 @@ Cliente final: **Robert Bosch** (división BueP). Informes en formato **PPAP / Q
 
 ## Foco actual
 
+🔴 **Próxima sesión (Eduard, 18/11/2026): primero el
+[plan de portadas por pieza](docs/plan-portadas-por-pieza-2026-11-18.md) y después el
+[plan de carga del catálogo](docs/plan-carga-catalogo-2026-11-18.md).** Orden en
+[próximos pasos](docs/proximos-pasos.md).
+
 **La app sigue con el piloto `3212 Pump Housing`** (Bolt Eye): adaptador de correcciones,
 previsiones y casos revisados solo para él. El cierre y la posible existencia de retoques
 posteriores siguen pendientes de confirmar.

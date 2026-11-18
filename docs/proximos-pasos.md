@@ -9,6 +9,13 @@ La implementación de protecciones y criterios de aceptación para todas las pie
 > pendientes; el contrato y las limitaciones de cada tema viven en el documento enlazado.
 > Las pruebas de una fecha anterior no se presentan como validaciones de esta revisión.
 
+## 🔴 Orden para la próxima sesión (decidido por Eduard el 18/11/2026)
+
+1. **Primero:** [portadas por pieza](plan-portadas-por-pieza-2026-11-18.md). Carrusel en la ficha
+   del feature, pila con número en lista y cuadrícula, y una captura por pieza.
+2. **Después:** [carga de las 21 piezas y los 8 features](plan-carga-catalogo-2026-11-18.md).
+   No empezar la carga hasta cerrar y comprobar el plan anterior.
+
 ## Pendiente ahora (18/11/2026)
 
 Lo abierto tras cerrar el plan del catálogo (tandas A–E) y las dos tandas de etiquetas,
