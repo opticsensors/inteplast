@@ -38,9 +38,6 @@ export function normalizePrimaries(files: FileDraft[]): FileDraft[] {
   for (const file of files)
     if (canBePrimary(file.kind) && file.primary && !chosen.has(file.kind))
       chosen.set(file.kind, file.key)
-  for (const file of files)
-    if (canBePrimary(file.kind) && !chosen.has(file.kind))
-      chosen.set(file.kind, file.key)
   return files.map((file) => ({
     ...file,
     primary: chosen.get(file.kind) === file.key,
@@ -73,17 +70,20 @@ export function discoveredFiles(folder: FolderDiscovery): FileDraft[] {
   return folder.references.flatMap(
     ({ kind, path, source_version, candidates }) => {
       // Keep all drawing candidates; the chosen reference remains the primary.
-      // A null choice is an explicit removal and must not be restored.
-      if (!path) return []
+      // A new folder may have several drawings and no provable main drawing.
+      // An existing piece already records the user's selection, including removals.
+      if (!path && (kind !== "drawing" || folder.existing_part)) return []
       const choices =
         kind === "drawing"
           ? [
-              { path, source_version },
+              ...(path ? [{ path, source_version }] : []),
               ...(candidates ?? []).filter(
                 (candidate) => candidate.path !== path,
               ),
             ]
-          : [{ path, source_version }]
+          : path
+            ? [{ path, source_version }]
+            : []
       return choices.map((choice) => ({
         key: newFileKey(),
         kind,

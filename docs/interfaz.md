@@ -348,10 +348,10 @@ plantillas vacías de pendientes relevantes. No se muestra en la ficha de pieza.
 
 La estrella de Archivos sigue indicando un único principal por tipo y pieza. No certifica
 el documento ni representa un principal por componente. Los enlaces de las cotas usan la
-asignación guardada de componente y revisión. Desde el 17/11/2026 la propuesta inicial del
-plano principal es el primero por ruta de los que tienen un `.icp` en su carpeta, y si no hay
-ninguno, el primero por ruta. Sigue siendo una propuesta que el usuario revisa; no debe
-describirse como selección automática del plano correcto.
+asignación guardada de componente y revisión. Al elegir carpeta, la ficha conserva los
+planos reconocidos. Si hay varias alternativas, la estrella queda vacía al guardar y
+reabrir. Un único `.icp` vecino puede desempatar copias del plano idénticas en contenido.
+En edición, la estrella permite elegir o retirar el principal.
 
 La lectura del 26/10/2026 ha contrastado `CatalogPage`, `FeatureSearch`, `FeatureForm`,
 `NoteList`, `FeaturePartEvidence`, `PartDetailPage`, `PartFiles`, `MetrologyPage`,

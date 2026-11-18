@@ -102,7 +102,9 @@ export function PartFiles({
             path,
             kind: kind ?? guessFileKind(path),
             name: filename,
-            primary: false,
+            primary: !files.some(
+              (file) => file.kind === (kind ?? guessFileKind(path)),
+            ),
           }
       if (!current) focus.current = draft.key
       onChange(
@@ -162,7 +164,7 @@ export function PartFiles({
                           onChange(
                             normalizePrimaries(
                               files.map((row) =>
-                                row.key === file.key
+                                row.key === file.key && row.kind !== kind
                                   ? { ...row, kind, primary: false }
                                   : row,
                               ),
@@ -247,7 +249,7 @@ export function PartFiles({
             )}
             {editing ? (
               <>
-                {multiple && (
+                {canBePrimary(file.kind) && (
                   <Button
                     type="button"
                     variant="ghost"
@@ -262,7 +264,10 @@ export function PartFiles({
                       onChange(
                         files.map((row) =>
                           row.kind === file.kind
-                            ? { ...row, primary: row.key === file.key }
+                            ? {
+                                ...row,
+                                primary: row.key === file.key && !file.primary,
+                              }
                             : row,
                         ),
                       )

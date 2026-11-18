@@ -117,9 +117,11 @@ def test_proposed_drawing_prefers_one_beside_an_icp(piece, db: Session) -> None:
     clean.mkdir()
     (clean / "A plano 2D.pdf").write_bytes(b"%PDF clean")
     proposal = {r.kind: r for r in discover(db, folder).references}
-    # Without projects, the first one by path.
-    assert proposal["drawing"].path == f"{folder}/1- 2D y 3D pieza/A plano 2D.pdf"
+    assert proposal["drawing"].path is None
     (root / "Ballooned" / "plan.icp").write_bytes(b"icp")
+    proposal = {r.kind: r for r in discover(db, folder).references}
+    assert proposal["drawing"].path is None
+    (clean / "A plano 2D.pdf").write_bytes(DRAWING)
     proposal = {r.kind: r for r in discover(db, folder).references}
     assert proposal["drawing"].path == f"{folder}/Ballooned/plan_balloned.pdf"
     # All drawings stay as candidates for the user to choose.

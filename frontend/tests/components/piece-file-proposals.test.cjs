@@ -21,6 +21,25 @@ new Function("module", "exports", "require", result.outputFiles[0].text)(
 )
 const { discoveredFiles } = compiled.exports
 
+test("a new folder retains ambiguous drawings without a primary through editing", () => {
+  const files = discoveredFiles({
+    references: [
+      {
+        kind: "drawing",
+        path: null,
+        candidates: [{ path: "p/base.pdf" }, { path: "p/tapa.pdf" }],
+      },
+    ],
+  })
+  assert.deepEqual(
+    compiled.exports.normalizePrimaries(files).map((f) => [f.path, f.primary]),
+    [
+      ["p/base.pdf", false],
+      ["p/tapa.pdf", false],
+    ],
+  )
+})
+
 test("all drawing candidates are proposed, with one chosen primary and no duplication", () => {
   const files = discoveredFiles({
     references: [
@@ -53,6 +72,7 @@ test("all drawing candidates are proposed, with one chosen primary and no duplic
 test("explicitly removed drawings are not restored from candidates", () => {
   assert.deepEqual(
     discoveredFiles({
+      existing_part: { id: "existing" },
       references: [
         {
           kind: "drawing",

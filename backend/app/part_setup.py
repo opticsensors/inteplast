@@ -3,6 +3,7 @@
 import hashlib
 import os
 import re
+import subprocess
 import unicodedata
 import uuid
 from collections import defaultdict
@@ -18,6 +19,7 @@ from app.file_sources import (
     SourceError,
     SourceItem,
     inside,
+    item_file,
     local_path,
     source_item,
 )
@@ -34,6 +36,14 @@ from app.models import (
     StoredFile,
 )
 from app.pilot import is_pilot
+from app.reference_selection import (
+    AUXILIARY,
+    DRAWING_NAME,
+    MOLD_ASSEMBLY,
+    conflicting_product_numbers,
+    digest_for,
+    page_evidence,
+)
 
 KINDS: tuple[ReferenceKind, ...] = ("part", "scan", "mold", "drawing")
 LABELS = {"part": "CAD", "scan": "Escaneo", "mold": "Molde", "drawing": "Plano"}
@@ -204,15 +214,22 @@ def reference_candidates(
         for item in files
         if item.suffix == ".icp"
     }
+    extra_pdfs: list[ReferenceCandidate] = []
     for item in files:
         kind = reference_kind(item.relative_to(folder_path))
-        if not kind:
+        inspect_pdf = (
+            not kind
+            and item.suffix == ".pdf"
+            and DRAWING_NAME.search(PurePosixPath(item.name).stem)
+        )
+        if not kind and not inspect_pdf:
             continue
         relative = f"{folder_path}/{item.relative_to(folder_path)}"
         try:
             # Local walks are validated per candidate, as when linking them.
             checked = item if item.version is not None else source_item(relative)
-            candidates[kind].append(
+            target = candidates[kind] if kind else extra_pdfs
+            target.append(
                 ReferenceCandidate(
                     path=relative,
                     source_version=checked.version or "",
@@ -221,30 +238,134 @@ def reference_candidates(
             )
         except SourceError:
             notices.append(f"No se puede vincular todavía: {relative}.")
+    # Only inspect newly discovered PDFs. A byte-identical document already classified
+    # as a drawing or a drawing identifier on its technical page corroborates the name.
+    recognized = list(candidates.get("drawing", []))
+    for pdf in extra_pdfs:
+        try:
+            same_size = [other for other in recognized if other.size == pdf.size]
+            name = PurePosixPath(pdf.path).name
+            peers = [
+                c
+                for c in recognized
+                if PurePosixPath(c.path).name.casefold() == name.casefold()
+                and c.size <= 32 * 1024 * 1024
+            ]
+            local = (
+                item_file(source_item(pdf.path))
+                if pdf.size <= 32 * 1024 * 1024
+                else None
+            )
+            if local and (
+                any(
+                    digest_for(pdf.path, pdf.source_version)
+                    == digest_for(other.path, other.source_version)
+                    for other in same_size
+                )
+                or page_evidence(local, pdf.source_version, PurePosixPath(name).stem)
+                is True
+                or (
+                    peers
+                    and (visible := page_evidence(local, pdf.source_version))
+                    and any(
+                        visible
+                        == page_evidence(
+                            item_file(source_item(c.path)), c.source_version
+                        )
+                        for c in peers
+                    )
+                )
+            ):
+                candidates["drawing"].append(pdf)
+                continue
+        except (OSError, SourceError, subprocess.TimeoutExpired):
+            pass
+        notices.append(f"Revisa si este PDF es un plano: {pdf.path}.")
     for choices in candidates.values():
         choices.sort(key=lambda item: item.path.casefold())
     return candidates, notices, icp_folders
 
 
 def proposed_reference(
-    kind: str, choices: list[ReferenceCandidate], icp_folders: set[str]
+    kind: str,
+    choices: list[ReferenceCandidate],
+    icp_folders: set[str],
+    *,
+    folder_path: str,
+    part_choices: list[ReferenceCandidate],
 ) -> ReferenceCandidate | None:
-    """A deterministic first approximation, explicitly reviewed before saving.
-
-    The first one by path. For the drawing, one with an `.icp` beside it goes first:
-    it is the one whose balloons the index can number.
-    """
-    if kind == "drawing":
-        beside = [
-            item
-            for item in choices
-            if PurePosixPath(item.path).parent.as_posix() in icp_folders
+    """Only a coherent single scope can receive a star. Order is for display."""
+    if (
+        kind == "part"
+        and len(choices) == 1
+        and re.search(
+            r"(?:^|[^a-z0-9])(?:electrodes?|electrodos?|tool[ _-]*mark|core|utillaje)(?:$|[^a-z0-9])",
+            PurePosixPath(choices[0].path).relative_to(folder_path).as_posix(),
+            re.I,
+        )
+    ):
+        return None
+    if kind == "mold":
+        eligible = [
+            c
+            for c in choices
+            if not AUXILIARY.search(
+                PurePosixPath(c.path).relative_to(folder_path).as_posix()
+            )
         ]
-        choices = beside or choices
-    return choices[0] if choices else None
+        if len(choices) > 1:
+            eligible = [
+                c for c in eligible if MOLD_ASSEMBLY.search(PurePosixPath(c.path).stem)
+            ]
+        choices = eligible
+    if kind == "scan":
+        code = re.match(r"^(\d{4})(?:\D|$)", PurePosixPath(folder_path).name)
+        if code:
+            choices = [
+                c
+                for c in choices
+                if not (
+                    (
+                        marked := re.match(
+                            r"^(\d{4})-\d{2}\b", PurePosixPath(c.path).stem
+                        )
+                    )
+                    and marked[1] != code[1]
+                )
+            ]
+    if kind == "drawing" and choices:
+        if len(choices) > 1:
+            beside = [
+                c
+                for c in choices
+                if PurePosixPath(c.path).parent.as_posix() in icp_folders
+            ]
+            if (
+                len(beside) != 1
+                or len({c.size for c in choices}) != 1
+                or choices[0].size > 32 * 1024 * 1024
+            ):
+                return None
+            try:
+                if len({digest_for(c.path, c.source_version) for c in choices}) != 1:
+                    return None
+            except (OSError, SourceError):
+                return None
+            choices = beside
+        name = PurePosixPath(choices[0].path).stem
+        if re.search(r"draft|pendent accept|pending approval|borrador", name, re.I):
+            return None
+        if len(part_choices) == 1:
+            if conflicting_product_numbers(
+                PurePosixPath(part_choices[0].path).stem, name
+            ):
+                return None
+    return choices[0] if len(choices) == 1 else None
 
 
 def discover(session: Session, folder_path: str) -> FolderDiscovery:
+    from app.part_files import primary_files
+
     if not folder_path:
         raise HTTPException(
             422, "Selecciona la carpeta de una pieza dentro del origen."
@@ -252,15 +373,21 @@ def discover(session: Session, folder_path: str) -> FolderDiscovery:
     root = source_item(folder_path, directory=True)
     candidates, notices, icp_folders = reference_candidates(folder_path)
     part = session.exec(select(Part).where(Part.folder_path == folder_path)).first()
-    current = references(session, part.id) if part else {}
+    current = primary_files(session, part.id) if part else {}
     chosen = reference_choices(session, part.id) if part else {}
     proposals = []
     for kind in KINDS:
         choices = sorted(candidates[kind], key=lambda item: item.path.casefold())
         existing = current.get(kind)
         selected = (
-            proposed_reference(kind, choices, icp_folders)
-            if kind not in chosen
+            proposed_reference(
+                kind,
+                choices,
+                icp_folders,
+                folder_path=folder_path,
+                part_choices=candidates["part"],
+            )
+            if kind not in chosen and not existing
             else None
         )
         proposals.append(
@@ -279,9 +406,9 @@ def discover(session: Session, folder_path: str) -> FolderDiscovery:
                 candidates=choices,
             )
         )
-        if len(choices) > 1 and not existing:
+        if choices and not selected and not existing and kind not in chosen:
             notices.append(
-                f"Hay varios archivos para {LABELS[kind]}. Revisa la propuesta."
+                f"{LABELS[kind]} sin principal verificable. Puedes elegirlo en la ficha."
             )
     return FolderDiscovery(
         folder_path=folder_path,
@@ -426,7 +553,7 @@ def save_references(
             for choice in choices
             if choice.path
         )
-        save_files(session, part, retained, folder_path=part.folder_path)
+        save_files(session, part, retained, folder_path=part.folder_path, promote=False)
         return
     if not part.folder_path and any(choice.path for choice in choices):
         raise HTTPException(422, "Vincula primero la carpeta de esta pieza.")

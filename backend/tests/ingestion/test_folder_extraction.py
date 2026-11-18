@@ -38,6 +38,29 @@ def test_reference_discovery_keeps_all_drawings(tmp_path, monkeypatch):
     assert not notices
 
 
+def test_auxiliary_moulds_never_replace_the_assembly_when_order_changes():
+    from app.part_setup import ReferenceCandidate, proposed_reference
+
+    parts = [
+        ReferenceCandidate(path=f"9000/mold/{name}.stp", size=10, source_version="1")
+        for name in (
+            "Electrode/A01",
+            "full_mold_rev01",
+            "injection-side",
+            "transport bar",
+        )
+    ]
+
+    def proposal(choices):
+        return proposed_reference(
+            "mold", choices, set(), folder_path="9000", part_choices=[]
+        )
+
+    assert proposal(parts) == proposal(list(reversed(parts))) == parts[1]
+    assert proposal(parts[2:]) is None
+    assert proposal(parts[:1]) is None
+
+
 def test_methods_are_not_read_or_counted_towards_measurement_limits(
     tmp_path, monkeypatch
 ):

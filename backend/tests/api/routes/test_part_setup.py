@@ -104,9 +104,9 @@ def test_edit_references_saves_with_header_without_importing_or_changing_feature
     originals = ["cad/part.step", "drawing/DRW.pdf", "scan.stl"]
     for name in originals:
         write(root, name)
-    write(root, "cad/replacement.step", b"new CAD")
     headers = normal_user_token_headers
     part, _ = register_piece(client, headers, folder)
+    write(root, "cad/replacement.step", b"new CAD")
     url = f"{API}/{part['id']}"
     feature = create_random_feature(db)
     feature_url = f"{settings.API_V1_STR}/features/{feature.id}"

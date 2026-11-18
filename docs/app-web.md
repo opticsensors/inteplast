@@ -15,6 +15,11 @@
 
 ## Qué hay implementado
 
+«Usar carpeta de la pieza» conserva los planos reconocidos aunque falte evidencia para
+elegir el principal. En carpetas de soporte o corrección también comprueba los PDF
+identificados por `DRW` o `ballooned` mediante el identificador del dibujo o una copia
+contrastada. Al guardar se respeta la selección explícita de la estrella, incluso vacía.
+
 **22/09/2026:** **Catálogo** reúne piezas y features en `/features`, con cotas solo cuando
 se escribe en el buscador. Nueva pieza y Nuevo feature están juntos. Cada pieza tiene ficha
 con código (título), nombre opcional, familia, cliente y descripción, features vinculados y la consulta de metrología

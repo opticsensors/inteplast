@@ -87,8 +87,8 @@ def save_files(
 ) -> None:
     """Replace the piece's files.
 
-    With `promote`, the first file of a kind without principal becomes the principal.
-    Assigning files to components passes False: it never chooses the principal.
+    Legacy inputs that omit the primary field can promote the first file of a kind.
+    Explicit false choices and component assignments preserve an empty primary.
     """
     session.exec(select(Part).where(Part.id == part.id).with_for_update()).one()
     existing = {item.file.id for item in read_files(session, part)}
@@ -102,6 +102,7 @@ def save_files(
     used_ids: set[uuid.UUID] = set()
     used_paths: set[str] = set()
     primary_kinds: set[str] = set()
+    explicit_kinds = {c.kind for c in choices if "primary" in c.model_fields_set}
     for choice in choices:
         choice.name = choice.name.strip()
         if not choice.name:
@@ -211,6 +212,7 @@ def save_files(
             choice.primary
             or (
                 promote
+                and choice.kind not in explicit_kinds
                 and choice.kind not in primary_kinds
                 and choice.kind not in principals
             )

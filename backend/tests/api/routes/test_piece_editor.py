@@ -66,6 +66,41 @@ def test_discovery_and_registration_never_overwrite_an_existing_piece(
     )
 
 
+def test_ambiguous_drawings_survive_save_and_reopening_without_star(
+    client, normal_user_token_headers, source
+):
+    headers = normal_user_token_headers
+    folder, root = source
+    for name in ("drawing/base.pdf", "drawing/cover.pdf", "drawing/index.icp"):
+        write(root, name, name.encode())
+    group = next(
+        r
+        for r in client.post(
+            f"{API}/discover", headers=headers, json={"folder_path": folder}
+        ).json()["references"]
+        if r["kind"] == "drawing"
+    )
+    assert group["path"] is None and len(group["candidates"]) == 2
+    files = [
+        {
+            "kind": "drawing",
+            "name": c["path"].split("/")[-1],
+            "path": c["path"],
+            "primary": False,
+        }
+        for c in group["candidates"]
+    ]
+    part = create(client, headers, folder, files=files)
+    url = f"{API}/{part['id']}"
+    for _ in range(2):
+        saved = client.get(f"{url}/detail", headers=headers).json()["files"]
+        assert {f["name"] for f in saved} == {"base.pdf", "cover.pdf"}
+        assert not any(f["primary"] for f in saved)
+        assert (
+            client.put(url, headers=headers, json={"files": files}).status_code == 200
+        )
+
+
 def test_named_multiple_files_primary_switch_and_removal_keep_sources(
     client, db, normal_user_token_headers, source
 ):

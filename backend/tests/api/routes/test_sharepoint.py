@@ -109,6 +109,32 @@ def graph(monkeypatch: pytest.MonkeyPatch) -> FakeGraph:
     return fake
 
 
+def test_discover_remote_drawings_uses_evidence_and_respects_a_changed_version(
+    client: TestClient, superuser_token_headers: dict[str, str], graph: FakeGraph
+) -> None:
+    primary = f"{PIECE}/drawing/drawing.pdf"
+    extra = f"{PIECE}/support/part_DRW.pdf"
+    for path in (primary, extra):
+        graph.files[path] = b"same drawing"
+        graph.versions[path] = 1
+
+    def proposal():
+        response = client.post(
+            f"{API}/parts/discover",
+            headers=superuser_token_headers,
+            json={"folder_path": PIECE},
+        )
+        assert response.status_code == 200, response.text
+        return next(p for p in response.json()["references"] if p["kind"] == "drawing")
+
+    drawings = proposal()
+    assert drawings["path"] is None
+    assert {c["path"] for c in drawings["candidates"]} == {primary, extra}
+    graph.files[extra] = b"not a drawing after revision"
+    graph.versions[extra] += 1
+    assert [c["path"] for c in proposal()["candidates"]] == [primary]
+
+
 def test_sharepoint_browses_links_and_serves_latest_version(
     client: TestClient, superuser_token_headers: dict[str, str], graph: FakeGraph
 ) -> None:
