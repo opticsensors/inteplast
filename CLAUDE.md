@@ -354,6 +354,7 @@ Amplía las consultas en castellano con un glosario multilingüe y se evalúa co
 | Documento | Léelo cuando… |
 |---|---|
 | [conocimiento/comparativa.md](conocimiento/comparativa.md) | quieras saber **en qué se parecen y se diferencian** los 8 features y sus piezas (esqueleto, formatos, plantillas) |
+| 🔑 [conocimiento/cotas-por-feature.md](conocimiento/cotas-por-feature.md) | necesites **qué cotas forman cada feature en cada pieza**: referencia de trabajo (ground truth) del 18/11/2026, con evidencia y confianza; sin validar por INTEPLAST |
 | [conocimiento/incongruencias.md](conocimiento/incongruencias.md) | busques **lo que no cuadra** o haya que pedir a INTEPLAST, con evidencia |
 | [conocimiento/identidad-piezas.md](conocimiento/identidad-piezas.md) | necesites **cliente, plano, nº de cliente o ITP** de una pieza (generado; el cliente de los informes es poco fiable, I-005) |
 | `rag.py exacto cadena --pieza P --cota N` | quieras saber **qué pasó con una cota tras su corrección** en cualquier pieza: muestreo de origen y de validación (secuencia, no causa) |

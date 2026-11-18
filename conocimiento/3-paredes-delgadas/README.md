@@ -19,8 +19,10 @@ demuestra por sí solo el número físico de cavidades del molde.
 
 ## Qué es el feature aquí
 
-Paredes del orden de **0,25 mm** (característica `1-1` de los export SupplyOn: nominal 0,25, valores
-0,225–0,272) y espesores de laminación (`Measuring_comparison_313117181A_INTEPLAST_END_LAMINATION…xlsx`,
+Paredes de **0,4 mm** acotadas en el plano: 3237/123, 3238/148 y 3233/520, con su evidencia en
+[cotas por feature](../cotas-por-feature.md#3-paredes-muy-delgadas) (18/11/2026). La característica
+`1-1` de los export SupplyOn (nominal 0,25, valores 0,225–0,272) **no es un espesor**: en el plano del
+3237 es el radio R0,25 ±0,1 de la sección J–J. También hay espesores de laminación (`Measuring_comparison_313117181A_INTEPLAST_END_LAMINATION…xlsx`,
 *Thickness* 0,3 ±0,05 por CMM, en el 3233). Las correcciones van en la línea de **dar más espesor**:
 *«Tool correction 1.5 Increase the thickness of the part»* (3237) y 1.7 (3238).
 

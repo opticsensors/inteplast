@@ -20,7 +20,10 @@ controlado. Ejemplos:
   espesores medidos en pieza (filas a–f × columnas 1–4, ~0,83–1,03 mm) con los teóricos del diseño del
   molde, y la de marzo repite la tabla *«after correction»* con pares antes–después.
 - 3167: las correcciones citan pockets concretos (*«POCKET 2 to 10»*, *«Only touch the pockets from 2-10»*,
-  *«Touch only the pocket 13»*) y el PPAP del cliente etiqueta cotas como `Pocket 6` (cota 2730, 39,31 +0,2/−0,1).
+  *«Touch only the pocket 13»*) y el PPAP del cliente etiqueta cada subpunto con su pocket: 2730/2740
+  (39,31 +0,2/−0,1): 2730 en P1–P3 de los pockets 6–13 y 2740 en P4–P6 de los pockets 1–6 y 8–13;
+  el pocket 6 es 2730–2730.2 y 2740.15–.17.
+  Todas las cotas de pocket por pieza en [cotas por feature](../cotas-por-feature.md#6-pockets).
 - 🔑 **Posibilidad de aceptación**, no concesión formal acreditada: *«The customer can accepted the deviation
   for the pocket 1 and 13 but need to correct the…»* (3167, `20240214_Mold correction_2_P3167.pptx`,
   diapositiva 4, acción 2.3). El plan recoge esa posibilidad; no basta para dar por aprobadas cotas NOK.

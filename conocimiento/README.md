@@ -40,6 +40,7 @@ segunda explicación en prosa.
 | Tema | Referencia que se actualiza |
 |---|---|
 | Inventario y diferencias entre familias | [Comparativa](comparativa.md); detalles propios en cada ficha de familia/pieza |
+| 🔑 **Qué cotas forman cada feature en cada pieza** (referencia de trabajo, 18/11/2026) | [Cotas por feature](cotas-por-feature.md): evidencia, confianza y preguntas a INTEPLAST |
 | Identidad, cabeceras PPAP y cavidades del 3212 | [Metrología: cabecera y excepciones](0-bolt-eye/3212/4-metrologia.md#la-cabecera--contrastar-las-hojas-del-mismo-libro) |
 | Revisión del plano 3212, fechas y limitaciones del escaneo | [Definición de pieza](0-bolt-eye/3212/1-pieza-2d-3d.md) |
 | Correspondencia IGES/DXF/TXT y fechas de adquisición | [Metrología: soportes geométricos](0-bolt-eye/3212/4-metrologia.md#rectificación-dxf-equivalente-con-redondeo-iges-con-z-aplanada) |
