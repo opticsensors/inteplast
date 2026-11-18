@@ -8,6 +8,8 @@ from functools import lru_cache
 from pathlib import Path
 
 INDEX_VERSION = 5
+# This notice is also present in stored v5 indexes which omitted weak numbered marks.
+FEW_NUMBERED_MARKS = "Marcas No./N° insuficientes para confirmar el estilo de numeración; no se ofrecen posiciones automáticas."
 MODEL = Path(__file__).with_name("models") / "lector_globos.onnx"
 
 # Provisional thresholds (29/10/2026), chosen on the prototype's development drawings with at most

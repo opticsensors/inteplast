@@ -2,7 +2,12 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { FileText, Loader2, Search } from "lucide-react"
 import { useState } from "react"
 
-import { CatalogService, type DrawingCard, FilesService } from "@/client"
+import {
+  CatalogService,
+  type DrawingCard,
+  EvidenceService,
+  FilesService,
+} from "@/client"
 import { partLabel } from "@/components/Features/parts"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -66,13 +71,19 @@ function DrawingThumbnail({ card }: { card: DrawingCard }) {
   )
 }
 
-/**
- * «Globos verificados con .icp»: one project of the drawing passes the strict check.
- * Positive only; while the server checks, or if it does not pass, there is no label.
- */
-function IcpBadge({ card }: { card: DrawingCard }) {
+const markLabels = {
+  pending: "Leyendo plano…",
+  unavailable: "Lectura no disponible",
+  balloons: "Globos detectados",
+  numbered: "Numeración detectada",
+  icp_marks: "Marcas del archivo .icp",
+  inconclusive: "Marcas sin identificar",
+  none: "Sin marcas detectadas",
+}
+
+function DrawingMarkBadge({ card }: { card: DrawingCard }) {
   const check = useQuery({
-    queryKey: ["drawing-icp-check", card.file.id],
+    queryKey: ["drawing-icp-check", card.file.id, card.file.version],
     queryFn: () => FilesService.checkDrawingIcp({ fileId: card.file.id }),
     // The server knows the current .icp of the drawing, the browser does not: ask again
     // each time Planos opens, never showing a remembered label meanwhile.
@@ -84,13 +95,30 @@ function IcpBadge({ card }: { card: DrawingCard }) {
       query.state.data?.state === "busy" ? BUSY_RETRY_MS : false,
     refetchIntervalInBackground: true,
   })
-  if (check.data?.state !== "ready" || !check.data.verified) return null
+  const verified =
+    check.isSuccess && check.data.state === "ready" && check.data.verified
+  const readMarks =
+    check.isError || (check.data?.state === "ready" && !verified)
+  const marks = useQuery({
+    queryKey: ["drawing-marks", card.file.id, card.file.version],
+    queryFn: () =>
+      EvidenceService.prepareDrawingMarks({ fileId: card.file.id }),
+    enabled: readMarks,
+    staleTime: 0,
+    gcTime: 0,
+    refetchInterval: (query) =>
+      query.state.data === "pending" ? BUSY_RETRY_MS : false,
+  })
+  const status = marks.isError ? "unavailable" : (marks.data ?? "pending")
+  const label = verified
+    ? "Globos verificados con .icp"
+    : markLabels[readMarks ? status : "pending"]
   return (
     <Badge
       variant="outline"
-      className="max-w-full truncate border-emerald-500/40 font-normal text-emerald-700 dark:text-emerald-300"
+      className={`max-w-full truncate font-normal ${verified ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-300" : "text-muted-foreground"}`}
     >
-      Globos verificados con .icp
+      {label}
     </Badge>
   )
 }
@@ -123,7 +151,7 @@ function DrawingTile({
         <p className="truncate text-sm text-muted-foreground">
           {partLabel(card.part)}
         </p>
-        <IcpBadge card={card} />
+        <DrawingMarkBadge card={card} />
         {(card.component || card.revision) && (
           <p className="truncate text-sm text-muted-foreground">
             {[card.component, card.revision && `rev. ${card.revision}`]

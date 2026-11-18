@@ -36,7 +36,7 @@ from app.ingestion.balloon_reader import (  # noqa: F401  (public names of this 
     read_balloons_combined,
     text_crop,
 )
-from app.ingestion.drawing_version import INDEX_VERSION, reader_id
+from app.ingestion.drawing_version import FEW_NUMBERED_MARKS, INDEX_VERSION, reader_id
 
 logger = logging.getLogger(__name__)
 Image.MAX_IMAGE_PIXELS = None  # 300–800 dpi rasters of up to 14,000 px per side
@@ -204,9 +204,7 @@ def build_index(
     if len(numbered) >= numbered_marks.MIN_MARKS:
         data["balloons"].extend(numbered)
     elif numbered:
-        notices.append(
-            "Marcas No./N° insuficientes para confirmar el estilo de numeración; no se ofrecen posiciones automáticas."
-        )
+        notices.append(FEW_NUMBERED_MARKS)
     return data
 
 

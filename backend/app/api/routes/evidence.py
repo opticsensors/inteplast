@@ -8,12 +8,13 @@ from app import measurement_imports
 from app.api.deps import CurrentUser, SessionDep
 from app.api.routes.parts import get_part_or_404
 from app.component_models import ComponentDefinition, qualified, split_code
-from app.evidence import drawing_key, job_id, queue, study_key
+from app.evidence import drawing_key, drawing_mark_status, job_id, queue, study_key
 from app.file_sources import SourceError, document_check
 from app.knowledge_models import (
     CharacteristicAssignment,
     CharacteristicPublic,
     DrawingLocation,
+    DrawingMarkStatus,
     DrawingPublic,
     EvidenceDocument,
     EvidenceJob,
@@ -367,6 +368,23 @@ def index_drawing(
             source_user=current_user.id,
         )
     )
+
+
+@router.post("/drawings/{file_id}/marks", response_model=DrawingMarkStatus)
+def prepare_drawing_marks(
+    session: SessionDep, current_user: CurrentUser, file_id: uuid.UUID
+) -> DrawingMarkStatus:
+    """Mark detection for the catalogue. Prepare a missing or outdated index once."""
+    document = drawing_document(session, file_id)
+    job = queue(
+        session,
+        "drawing",
+        file_id,
+        drawing_key(document),
+        source_user=current_user.id,
+        retry_failed=False,
+    )
+    return drawing_mark_status(job)
 
 
 @router.put("/drawings/{file_id}/review", response_model=LocationPublic)

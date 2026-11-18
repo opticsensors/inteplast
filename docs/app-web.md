@@ -222,6 +222,7 @@ Todo bajo `/api/v1`. Documentación interactiva en `http://localhost:8000/docs`.
 | `PUT` | `/features/{id}/assets/order` | Ordenar los ficheros de una pieza (`part_id`, `asset_ids`) |
 | `POST` | `/features/{id}/assets` | Adjuntar el fichero de una pieza |
 | `PUT` `DELETE` | `/features/assets/{id}` | Editar / quitar un adjunto |
+| `POST` | `/evidence/drawings/{id}/marks` | Etiqueta de lectura de la tarjeta de plano. Prepara un índice de búsqueda ausente o desactualizado en el trabajador de evidencia y devuelve `pending` mientras se procesa. La respuesta contiene solo el estado de las marcas. La verificación estricta del proyecto se consulta con `icp-check`. |
 | `POST` | `/parts/from-folder` | Registrar o reutilizar una carpeta de pieza existente, sin duplicados |
 | `GET` `POST` | `/parts/` | Listar (incluye `feature_count` por pieza) y dar de alta piezas |
 | `PUT` | `/parts/{id}` | Editar código, nombre, descripción, `family_id`, `customer_id` (omitido conserva, `null` quita), carpeta y archivos/referencias según `PartUpdate`. El código es único: choque → `409`; familia o cliente inexistente → `422` |

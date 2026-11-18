@@ -221,7 +221,11 @@ reconstrucción de backend y frontend van en el mismo paso.
 - Renombrar y fusionar familias o clientes; se hará al corregir el idioma.
 - Uniones entre piezas por archivos idénticos (el visor las calcula con el SHA-256 de cada
   fichero; la web no lo guarda).
-- Tags de plano del visor (tipo de plano y si tiene datos).
+- Los tags de plano del visor quedaron fuera del plan inicial. El catálogo ya muestra el
+  resultado del lector de cada PDF, descrito en [la interfaz](interfaz.md).
+  La prueba con las carpetas originales en una instalación aislada dio «Globos detectados»
+  en el 3212 (114 números leídos de 262 aros) y «Sin marcas detectadas» en el 3197.
+  «Cotas con datos» sigue pendiente de acreditar la relación entre cota, plano y revisión.
 - Rellenar familias o clientes de las piezas: lo hacen los usuarios, no el agente.
 
 ### Revisión (17/11/2026)

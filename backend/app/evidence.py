@@ -34,8 +34,9 @@ from app.file_sources import (
     local_path,
     stamp,
 )
-from app.ingestion.drawing_version import reader_id
+from app.ingestion.drawing_version import FEW_NUMBERED_MARKS, reader_id
 from app.knowledge_models import (
+    DrawingMarkStatus,
     EvidenceJob,
     PartCharacteristic,
     PartDocument,
@@ -184,6 +185,31 @@ def study_key(part: Part) -> str:
     return digest([RECIPE, part.folder_path, sorted(manifest)])
 
 
+def drawing_mark_status(job: EvidenceJob) -> DrawingMarkStatus:
+    """Summarise the current search index without sending its OCR payload to the grid."""
+    if job.state in {"queued", "processing"}:
+        return "pending"
+    data = job.payload
+    if job.state != "ready" or not data.get("pages"):
+        return "unavailable"
+    marks = data.get("balloons", [])
+    if any(mark.get("method") == "icp" for mark in marks):
+        return "icp_marks"
+    # A series of circles with readable numbers distinguishes balloons from coloured
+    # dimension highlights. Use the thresholds measured on the original drawings.
+    rings = [mark for mark in marks if mark.get("circle")]
+    read = sum(bool(mark.get("candidates")) for mark in rings)
+    if len(rings) >= 20 and read >= 0.4 * len(rings):
+        return "balloons"
+    if any(mark.get("method") == "numbered" for mark in marks):
+        return "numbered"
+    if not data.get("signature", {}).get("lector"):
+        return "unavailable"
+    if rings or FEW_NUMBERED_MARKS in data.get("notices", []):
+        return "inconclusive"
+    return "none"
+
+
 def queue(
     session: Session,
     kind: str,
@@ -192,6 +218,7 @@ def queue(
     *,
     requested_by: uuid.UUID | None = None,
     source_user: uuid.UUID | None = None,
+    retry_failed: bool = True,
 ) -> EvidenceJob:
     # Serialize creation/update for this identity, including concurrent requests.
     session.execute(
@@ -207,7 +234,7 @@ def queue(
             part_id=target if kind == "study" else None,
             file_id=target if kind == "drawing" else None,
         )
-    elif job.cache_key == key and job.state != "error":
+    elif job.cache_key == key and (job.state != "error" or not retry_failed):
         return job
     job.cache_key, job.state, job.message = key, "queued", None
     if requested_by is not None:

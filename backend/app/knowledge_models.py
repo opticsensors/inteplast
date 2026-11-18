@@ -225,3 +225,14 @@ class LocationPublic(BaseModel):
 
 class DrawingPublic(JobPublic):
     reviews: list[LocationPublic] = []
+
+
+DrawingMarkStatus = Literal[
+    "pending",
+    "unavailable",
+    "balloons",
+    "numbered",
+    "icp_marks",
+    "inconclusive",
+    "none",
+]

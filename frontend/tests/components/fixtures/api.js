@@ -2,6 +2,11 @@
 export const OpenAPI = { BASE: "https://files.invalid" }
 export class ApiError extends Error {}
 export const EvidenceService = {
+  prepareDrawingMarks: async ({ fileId }) => {
+    const sequence = state().drawingMarks?.[fileId]
+    if (!sequence?.length) return "none"
+    return sequence.length > 1 ? sequence.shift() : sequence[0]
+  },
   readMetrologyFilters: async () => FeaturesService.readFeatureFilters(),
   readFeatureEvidence: async ({ partId }) => ({
     characteristics: clone(

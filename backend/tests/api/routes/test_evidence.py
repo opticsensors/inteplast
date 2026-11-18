@@ -1,5 +1,6 @@
 import uuid
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -7,7 +8,8 @@ from sqlmodel import Session, select
 
 from app.api.routes.evidence import attach_reviews
 from app.core.config import settings
-from app.evidence import drawing_key, job_id, publish_study, queue
+from app.evidence import drawing_key, drawing_mark_status, job_id, publish_study, queue
+from app.ingestion.drawing_version import FEW_NUMBERED_MARKS
 from app.knowledge_models import (
     DrawingLocation,
     EvidenceJob,
@@ -118,6 +120,81 @@ def drawing(db: Session) -> StoredFile:
     )
     db.commit()
     return document
+
+
+@pytest.mark.parametrize(
+    ("read", "empty", "extra", "expected"),
+    [
+        (8, 12, [], "balloons"),
+        (7, 13, [], "inconclusive"),
+        (0, 125, [], "inconclusive"),
+        (0, 0, [{"method": "numbered"}], "numbered"),
+        (0, 0, [{"method": "icp", "drawn": False}], "icp_marks"),
+        (0, 0, [], "none"),
+    ],
+)
+def test_drawing_mark_status_uses_the_indexed_marks(
+    read: int, empty: int, extra: list[dict[str, Any]], expected: str
+) -> None:
+    job = EvidenceJob(
+        state="ready",
+        payload={
+            "pages": [{"number": 1}],
+            "signature": {"lector": "reader"},
+            "balloons": [{"circle": [1, 2, 3], "candidates": [{"label": "N10"}]}] * read
+            + [{"circle": [1, 2, 3], "candidates": []}] * empty
+            + extra,
+            "words": [{"text": "25"}],
+        },
+    )
+    assert drawing_mark_status(job) == expected
+
+
+def test_too_few_numbered_marks_are_inconclusive_in_an_existing_index() -> None:
+    job = EvidenceJob(
+        state="ready",
+        payload={
+            "pages": [{"number": 1}],
+            "signature": {"lector": "reader"},
+            "balloons": [],
+            "notices": [FEW_NUMBERED_MARKS],
+        },
+    )
+    assert drawing_mark_status(job) == "inconclusive"
+
+
+def test_catalogue_prepares_current_marks_and_stops_polling_on_failure(
+    client: TestClient,
+    db: Session,
+    drawing: StoredFile,
+    normal_user_token_headers: dict[str, str],
+) -> None:
+    url = f"{API}/drawings/{drawing.id}/marks"
+    assert client.post(url).status_code == 401
+    job = db.get(EvidenceJob, job_id("drawing", drawing.id))
+    assert job
+    job.cache_key = "old-reader"
+    job.payload = {"pages": [{}], "balloons": [{"method": "numbered"}]}
+    db.commit()
+    for _ in range(2):
+        assert client.post(url, headers=normal_user_token_headers).json() == "pending"
+    db.refresh(job)
+    assert job.cache_key == drawing_key(drawing)
+    job.state = "ready"
+    job.payload = {"pages": [{}], "balloons": []}
+    db.commit()
+    assert client.post(url, headers=normal_user_token_headers).json() == "unavailable"
+    job.payload = {**job.payload, "signature": {"lector": "reader"}}
+    db.commit()
+    assert client.post(url, headers=normal_user_token_headers).json() == "none"
+    job.state = "error"
+    db.commit()
+    assert client.post(url, headers=normal_user_token_headers).json() == "unavailable"
+    # An explicit retry in the drawing viewer remains available.
+    response = client.post(
+        f"{API}/drawings/{drawing.id}/index", headers=normal_user_token_headers
+    )
+    assert response.json()["state"] == "queued"
 
 
 def test_review_is_shared_and_bound_to_bytes(

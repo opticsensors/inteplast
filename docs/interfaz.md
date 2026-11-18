@@ -135,7 +135,14 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
   revisión. Mientras el servidor dibuja la miniatura aparece un marcador y se reintenta; si
   no se puede cargar, el icono de plano. «Globos verificados con .icp» aparece cuando un
   `.icp` del plano pasa la comprobación estricta (ajuste 1:1 y aros detectados de forma
-  independiente, y el lector del plano la asocia a ese `.icp`; nunca en PDF de varias páginas); si no la pasa o aún se está comprobando, no hay etiqueta. Se pregunta al servidor cada vez que se abre Planos, sin mostrar un resultado recordado, y mientras responda «busy» se vuelve a preguntar cada 3 s, sin límite, mientras la página siga abierta. Al pulsar se abre el plano en su pieza
+  independiente, con asociación del mismo proyecto por el lector en un PDF de una página).
+  Para los demás planos se consulta el índice de búsqueda. La tarjeta muestra «Marcas del
+  archivo .icp» si el lector ha situado sellos del proyecto, «Globos detectados» si encuentra
+  una serie de aros con números legibles o «Numeración detectada» si reconoce marcas No./N°.
+  Si solo encuentra aros dudosos muestra «Marcas sin identificar». «Sin marcas detectadas»
+  requiere una lectura completa. Al abrir Planos se comprueban las versiones y se prepara
+  cualquier índice pendiente. Mientras tanto aparece «Leyendo plano…». Si falla la lectura,
+  aparece «Lectura no disponible». Al pulsar se abre el plano en su pieza
   (`/parts/{id}/fichero/{fileId}`, el visor de planos actual).
 - Cabecera en tres filas: título y acciones; Todo/Piezas/Features con subrayado activo;
   buscador y Filtros. Nuevo feature usa borde y precede a Nueva pieza, en verde sólido.

@@ -1039,6 +1039,12 @@ export type EvidenceIndexDrawingData = {
 
 export type EvidenceIndexDrawingResponse = (JobPublic);
 
+export type EvidencePrepareDrawingMarksData = {
+    fileId: string;
+};
+
+export type EvidencePrepareDrawingMarksResponse = ('pending' | 'unavailable' | 'balloons' | 'numbered' | 'icp_marks' | 'inconclusive' | 'none');
+
 export type EvidenceReviewDrawingLocationData = {
     fileId: string;
     requestBody: LocationReview;

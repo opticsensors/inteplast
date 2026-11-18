@@ -1136,11 +1136,12 @@ test("Planos shows every drawing as a grid, with thumbnails, component and revis
     .getByRole("button", { name: "Abrir plano tapa.pdf · 3212" })
     .locator("..")
   await expect(tapa.getByText(/rev\./)).toHaveCount(0)
-  // Verified with .icp after one "busy" answer; the other drawing has no label at all.
+  // Strict verification takes priority over the ordinary mark detection.
   await expect(
     tile.getByText("Globos verificados con .icp", { exact: true }),
   ).toBeVisible({ timeout: 8000 })
   await expect(tapa.getByText(/\.icp/)).toHaveCount(0)
+  await expect(tapa.getByText("Sin marcas detectadas")).toBeVisible()
   await expect(tapa.getByLabel("Sin miniatura")).toBeVisible()
   // Piece filters apply to drawings with the same criterion.
   await page.evaluate(() =>
@@ -1319,6 +1320,27 @@ const drawingsFixture = () => {
     },
   ]
 }
+
+test("a drawing gets its detected label only after reading finishes", async (t) => {
+  const page = await mount(t)
+  await page.evaluate(drawingsFixture)
+  await page.evaluate(() => {
+    window.review.drawingMarks = { "drawing-base": ["pending", "balloons"] }
+  })
+  await page.getByRole("button", { name: "Planos", exact: true }).click()
+  await expect(page.getByText("Leyendo plano…")).toBeVisible()
+  await expect(page.getByText("Sin marcas detectadas")).toHaveCount(0)
+  await expect(page.getByText("Globos detectados")).toBeVisible({
+    timeout: 8000,
+  })
+  await page.getByRole("button", { name: "Todo", exact: true }).click()
+  await page.evaluate(() => {
+    window.review.drawingMarks = { "drawing-base": ["unavailable"] }
+  })
+  await page.getByRole("button", { name: "Planos", exact: true }).click()
+  await expect(page.getByText("Lectura no disponible")).toBeVisible()
+  await expect(page.getByText("Sin marcas detectadas")).toHaveCount(0)
+})
 
 test("a .icp label removed on the server is gone when Planos opens again", async (t) => {
   const page = await mount(t)
