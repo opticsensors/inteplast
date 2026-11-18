@@ -232,6 +232,17 @@ export const FeaturesService = {
 }
 
 export const FilesService = {
+  /** `window.review.icpVerified[fileId]`; `icpBusy[fileId]` answers "busy" first. */
+  checkDrawingIcp: async ({ fileId }) => {
+    state().icpRequests ??= []
+    state().icpRequests.push(fileId)
+    const busy = state().icpBusy ?? {}
+    if (busy[fileId] > 0) {
+      busy[fileId]--
+      return { state: "busy", verified: null }
+    }
+    return { state: "ready", verified: Boolean(state().icpVerified?.[fileId]) }
+  },
   /** `window.review.thumbnailBusy[fileId]`: how many times to answer "busy" first. */
   prepareThumbnail: async ({ fileId }) => {
     state().thumbnailRequests ??= []

@@ -69,3 +69,15 @@ def measurement_status(session: Session, part: Part) -> MeasurementStatus | None
     if any(item.group == "measurements" for item in report.files):
         return "pending"
     return "none"
+
+
+def corrections_documented(session: Session, part: Part) -> bool:
+    """«Documentación de retoques»: the read found correction documents.
+
+    Only availability: whether a proposal was understood, or executed, is not claimed.
+    False before the piece is read.
+    """
+    from app.part_reading import read_report
+
+    report = read_report(session, part)
+    return report is not None and report.corrections_state != "empty"

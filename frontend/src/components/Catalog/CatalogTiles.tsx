@@ -2,7 +2,10 @@ import type { ReactNode } from "react"
 import type { FeaturePublic, PartCardPublic } from "@/client"
 import { FeatureThumbnail } from "@/components/Features/FeatureCard"
 import { partClassification, partName } from "@/components/Features/parts"
-import { MeasurementBadge } from "@/components/Parts/MeasurementBadge"
+import {
+  CorrectionsBadge,
+  MeasurementBadge,
+} from "@/components/Parts/MeasurementBadge"
 import { PartThumbnail } from "@/components/Parts/PartCover"
 import { cn } from "@/lib/utils"
 
@@ -85,10 +88,16 @@ export function PartTile({
           {classification}
         </p>
       )}
-      <MeasurementBadge
-        status={part.measurement_status}
-        className="mt-1 max-w-full truncate"
-      />
+      <div className="mt-1 flex min-w-0 flex-wrap gap-1">
+        <MeasurementBadge
+          status={part.measurement_status}
+          className="max-w-full truncate"
+        />
+        <CorrectionsBadge
+          documented={part.corrections_documented}
+          className="max-w-full truncate"
+        />
+      </div>
     </Tile>
   )
 }

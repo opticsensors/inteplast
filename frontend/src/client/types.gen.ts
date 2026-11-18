@@ -400,6 +400,13 @@ export type HTTPValidationError = {
     detail?: Array<ValidationError>;
 };
 
+export type IcpCheckPublic = {
+    state: 'ready' | 'busy';
+    verified?: (boolean | null);
+};
+
+export type state3 = 'ready' | 'busy';
+
 export type ItemCreate = {
     title: string;
     description?: (string | null);
@@ -591,6 +598,7 @@ export type PartCardPublic = {
     cad_cache_key?: (string | null);
     image?: (FilePublic | null);
     measurement_status?: ('detected' | 'pending' | 'none' | null);
+    corrections_documented?: boolean;
 };
 
 export type PartCatalogPublic = {
@@ -831,8 +839,6 @@ export type ThumbnailPublic = {
     state: 'ready' | 'busy';
     url?: (string | null);
 };
-
-export type state3 = 'ready' | 'busy';
 
 export type Token = {
     access_token: string;
@@ -1232,6 +1238,12 @@ export type FilesReadPreviewData = {
 };
 
 export type FilesReadPreviewResponse = (unknown);
+
+export type FilesCheckDrawingIcpData = {
+    fileId: string;
+};
+
+export type FilesCheckDrawingIcpResponse = (IcpCheckPublic);
 
 export type FilesPrepareThumbnailData = {
     fileId: string;

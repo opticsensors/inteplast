@@ -1106,6 +1106,8 @@ test("Planos shows every drawing as a grid, with thumbnails, component and revis
       },
     ]
     window.review.thumbnailBusy = { "drawing-base": 1 }
+    window.review.icpVerified = { "drawing-base": true }
+    window.review.icpBusy = { "drawing-base": 1 }
   })
   await page.getByRole("button", { name: "Planos", exact: true }).click()
   assert.equal(
@@ -1134,6 +1136,11 @@ test("Planos shows every drawing as a grid, with thumbnails, component and revis
     .getByRole("button", { name: "Abrir plano tapa.pdf · 3212" })
     .locator("..")
   await expect(tapa.getByText(/rev\./)).toHaveCount(0)
+  // Verified with .icp after one "busy" answer; the other drawing has no label at all.
+  await expect(
+    tile.getByText("Globos verificados con .icp", { exact: true }),
+  ).toBeVisible({ timeout: 8000 })
+  await expect(tapa.getByText(/\.icp/)).toHaveCount(0)
   await expect(tapa.getByLabel("Sin miniatura")).toBeVisible()
   // Piece filters apply to drawings with the same criterion.
   await page.evaluate(() =>
@@ -1248,6 +1255,7 @@ test("cards and grid show what the app read of each piece's measurements", async
   const page = await mount(t)
   await page.evaluate(() => {
     window.review.parts[0].measurement_status = "detected"
+    window.review.parts[0].corrections_documented = true
     const piece = (id, code, status) => ({
       id,
       code,
@@ -1279,6 +1287,16 @@ test("cards and grid show what the app read of each piece's measurements", async
         .locator("..")
       await expect(card.getByText(label, { exact: true })).toBeVisible()
     }
+    // Correction documents: only where the read found them.
+    await expect(
+      page
+        .getByRole("button", { name: "Abrir 3212 Pump Housing", exact: true })
+        .locator("..")
+        .getByText("Documentación de retoques", { exact: true }),
+    ).toBeVisible()
+    await expect(
+      page.getByText("Documentación de retoques", { exact: true }),
+    ).toHaveCount(1)
     // Not read yet: no label at all.
     const unread = page
       .getByRole("button", { name: "Abrir 9999", exact: true })
@@ -1286,4 +1304,77 @@ test("cards and grid show what the app read of each piece's measurements", async
     for (const label of labels)
       await expect(unread.getByText(label, { exact: true })).toHaveCount(0)
   }
+})
+
+const drawingsFixture = () => {
+  const part = window.review.parts[0]
+  window.review.drawings = [
+    {
+      file: { id: "drawing-base", filename: "base.pdf", version: "v1" },
+      name: "base.pdf",
+      primary: true,
+      part,
+      component: null,
+      revision: null,
+    },
+  ]
+}
+
+test("a .icp label removed on the server is gone when Planos opens again", async (t) => {
+  const page = await mount(t)
+  await page.evaluate(drawingsFixture)
+  await page.evaluate(() => {
+    window.review.icpVerified = { "drawing-base": true }
+  })
+  await page.getByRole("button", { name: "Planos", exact: true }).click()
+  const label = page.getByText("Globos verificados con .icp", { exact: true })
+  await expect(label).toBeVisible()
+  // The .icp is withdrawn: the drawing PDF itself has not changed.
+  await page.evaluate(() => {
+    window.review.icpVerified = { "drawing-base": false }
+  })
+  await page.getByRole("button", { name: "Todo", exact: true }).click()
+  await expect(label).toHaveCount(0)
+  await page.getByRole("button", { name: "Planos", exact: true }).click()
+  await expect(
+    page.getByRole("button", { name: "Abrir plano base.pdf · 3212" }),
+  ).toBeVisible()
+  await page.waitForFunction(
+    () =>
+      window.review.icpRequests.filter((id) => id === "drawing-base").length >=
+      2,
+  )
+  await expect(label).toHaveCount(0)
+})
+
+test("a drawing queued for minutes still shows its .icp result while the page is open", async (t) => {
+  const page = await browser.newPage()
+  page.setDefaultTimeout(5000)
+  t.after(() => page.close())
+  await page.clock.install()
+  await page.route("**/*", (route) =>
+    route.request().url() === "http://component.invalid/"
+      ? route.fulfill({
+          contentType: "text/html",
+          body: '<html><body><div id="root"></div></body></html>',
+        })
+      : route.abort(),
+  )
+  await reload(page)
+  await page.evaluate(drawingsFixture)
+  await page.evaluate(() => {
+    window.review.icpVerified = { "drawing-base": true }
+    // About five minutes of "busy" at one answer every three seconds.
+    window.review.icpBusy = { "drawing-base": 100 }
+  })
+  await page.getByRole("button", { name: "Planos", exact: true }).click()
+  const label = page.getByText("Globos verificados con .icp", { exact: true })
+  await expect(label).toHaveCount(0)
+  await page.clock.runFor(320_000)
+  await expect(label).toBeVisible()
+  const asked = await page.evaluate(
+    () =>
+      window.review.icpRequests.filter((id) => id === "drawing-base").length,
+  )
+  assert.ok(asked > 100, `asked ${asked} times`)
 })

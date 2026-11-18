@@ -27,6 +27,8 @@ from app.file_sources import (
     source_item,
     stamp,
 )
+from app.icp_checks import delete_checks
+from app.icp_checks import prepare as prepare_icp_check
 from app.models import (
     FeatureAsset,
     FileAccessPublic,
@@ -455,6 +457,29 @@ class ThumbnailPublic(BaseModel):
     url: str | None = None
 
 
+class IcpCheckPublic(BaseModel):
+    state: Literal["ready", "busy"]
+    # True only when one .icp of the drawing passes the strict check on some page.
+    verified: bool | None = None
+
+
+@router.post("/{file_id}/icp-check", response_model=IcpCheckPublic)
+def check_drawing_icp(
+    session: SessionDep, _current_user: CurrentUser, file_id: uuid.UUID
+) -> IcpCheckPublic:
+    """«Globos verificados con .icp»: strict check of a drawing, once per version.
+
+    "busy" means that the drawing or others are being checked: ask again later.
+    """
+    document = session.get(StoredFile, file_id)
+    if document is None:
+        raise HTTPException(status_code=404, detail="File not found")
+    state, result = prepare_icp_check(document)
+    if state == "busy" or result is None:
+        return IcpCheckPublic(state="busy")
+    return IcpCheckPublic(state="ready", verified=bool(result["verified"]))
+
+
 @router.post("/{file_id}/thumbnail", response_model=ThumbnailPublic)
 def prepare_thumbnail(
     session: SessionDep, current_user: CurrentUser, file_id: uuid.UUID
@@ -603,4 +628,5 @@ def delete_file(
         storage_path(file_id).unlink(missing_ok=True)
     delete_preview(file_id)
     delete_thumbnails(file_id)
+    delete_checks(file_id)
     return Message(message="File deleted successfully")

@@ -1909,6 +1909,30 @@ export const HTTPValidationErrorSchema = {
     title: 'HTTPValidationError'
 } as const;
 
+export const IcpCheckPublicSchema = {
+    properties: {
+        state: {
+            type: 'string',
+            enum: ['ready', 'busy'],
+            title: 'State'
+        },
+        verified: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Verified'
+        }
+    },
+    type: 'object',
+    required: ['state'],
+    title: 'IcpCheckPublic'
+} as const;
+
 export const ItemCreateSchema = {
     properties: {
         title: {
@@ -2821,6 +2845,11 @@ export const PartCardPublicSchema = {
                 }
             ],
             title: 'Measurement Status'
+        },
+        corrections_documented: {
+            type: 'boolean',
+            title: 'Corrections Documented',
+            default: false
         }
     },
     type: 'object',

@@ -4,6 +4,7 @@ import { useState } from "react"
 
 import { CatalogService, type DrawingCard, FilesService } from "@/client"
 import { partLabel } from "@/components/Features/parts"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { absoluteFileUrl, fileErrorMessage } from "@/hooks/useFileAccess"
@@ -17,6 +18,7 @@ export type CatalogDrawingsRequest = {
 }
 
 const PAGE = 40
+const BUSY_RETRY_MS = 3000
 
 /**
  * First page of the PDF, drawn by the server once per version of the original. While it
@@ -64,6 +66,35 @@ function DrawingThumbnail({ card }: { card: DrawingCard }) {
   )
 }
 
+/**
+ * «Globos verificados con .icp»: one project of the drawing passes the strict check.
+ * Positive only; while the server checks, or if it does not pass, there is no label.
+ */
+function IcpBadge({ card }: { card: DrawingCard }) {
+  const check = useQuery({
+    queryKey: ["drawing-icp-check", card.file.id],
+    queryFn: () => FilesService.checkDrawingIcp({ fileId: card.file.id }),
+    // The server knows the current .icp of the drawing, the browser does not: ask again
+    // each time Planos opens, never showing a remembered label meanwhile.
+    staleTime: 0,
+    gcTime: 0,
+    // Queued behind other checks: keep asking while the page is open, without a limit
+    // shorter than the server's own time per check.
+    refetchInterval: (query) =>
+      query.state.data?.state === "busy" ? BUSY_RETRY_MS : false,
+    refetchIntervalInBackground: true,
+  })
+  if (check.data?.state !== "ready" || !check.data.verified) return null
+  return (
+    <Badge
+      variant="outline"
+      className="max-w-full truncate border-emerald-500/40 font-normal text-emerald-700 dark:text-emerald-300"
+    >
+      Globos verificados con .icp
+    </Badge>
+  )
+}
+
 function DrawingTile({
   card,
   onOpen,
@@ -92,6 +123,7 @@ function DrawingTile({
         <p className="truncate text-sm text-muted-foreground">
           {partLabel(card.part)}
         </p>
+        <IcpBadge card={card} />
         {(card.component || card.revision) && (
           <p className="truncate text-sm text-muted-foreground">
             {[card.component, card.revision && `rev. ${card.revision}`]

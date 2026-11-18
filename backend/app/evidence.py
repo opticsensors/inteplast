@@ -100,6 +100,22 @@ def drawing_project_versions(document: StoredFile) -> list[list[str]]:
     return [[item.path, item.version or ""] for item in drawing_projects_of(document)]
 
 
+def drawing_project_snapshot(
+    document: StoredFile,
+) -> tuple[list[list[str]], list[list[str]]]:
+    """Readable files and versions of the drawing's projects, from one single listing.
+
+    A check keyed by the versions must read exactly those projects: two listings could
+    see a project arrive or change in between.
+    """
+    items = drawing_projects_of(document)
+    names = distinct_names([item.path for item in items])
+    return (
+        [[name, str(item_file(item))] for name, item in zip(names, items, strict=True)],
+        [[item.path, item.version or ""] for item in items],
+    )
+
+
 def drawing_project_files(document: StoredFile) -> list[list[str]]:
     """Original name and a readable copy of each project, for the reader process.
 

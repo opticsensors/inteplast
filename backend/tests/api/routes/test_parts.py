@@ -40,8 +40,11 @@ def test_read_parts(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
     part = create_random_part(db)
+    # Every piece: other tests add many, and the list is paged by code.
     response = client.get(
-        f"{settings.API_V1_STR}/parts/", headers=superuser_token_headers
+        f"{settings.API_V1_STR}/parts/",
+        headers=superuser_token_headers,
+        params={"limit": 100000},
     )
     assert response.status_code == 200
     content = response.json()
@@ -166,7 +169,9 @@ def test_delete_unused_part_removes_only_catalog_entry(
     assert db.get(StoredFile, document_id) is not None
     assert original.read_bytes() == b"synthetic original"
     listed = client.get(
-        f"{settings.API_V1_STR}/parts/", headers=superuser_token_headers
+        f"{settings.API_V1_STR}/parts/",
+        headers=superuser_token_headers,
+        params={"limit": 100000},
     ).json()["data"]
     assert str(part_id) not in {row["id"] for row in listed}
     assert (

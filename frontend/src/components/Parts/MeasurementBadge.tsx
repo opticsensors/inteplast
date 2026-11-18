@@ -36,3 +36,25 @@ export function MeasurementBadge({
     </Badge>
   )
 }
+
+/** «Documentación de retoques»: the read found correction documents. Positive only. */
+export function CorrectionsBadge({
+  documented,
+  className,
+}: {
+  documented: PartCardPublic["corrections_documented"]
+  className?: string
+}) {
+  if (!documented) return null
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "shrink-0 border-violet-500/40 font-normal text-violet-700 dark:text-violet-300",
+        className,
+      )}
+    >
+      Documentación de retoques
+    </Badge>
+  )
+}

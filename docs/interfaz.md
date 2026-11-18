@@ -102,6 +102,8 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
   siga en curso), «Informe pendiente de interpretar» (lectura terminada con un informe de
   medidas que no se pudo leer) o «Sin medidas detectadas» (lectura terminada sin informes).
   Sin etiqueta mientras la pieza no se ha leído o la lectura sigue sin valores.
+  «Documentación de retoques» se añade cuando la lectura encontró documentos de
+  correcciones; solo indica disponibilidad (no que se haya entendido o ejecutado un retoque).
 - La vista inicial solo muestra piezas y features. Las cotas aparecen al buscar,
   identificadas por pieza y revisión; abren esa consulta dentro de la ficha de pieza.
 - **Vistas (17/11/2026):** junto al buscador, antes de Filtros, el grupo «Vista» con Lista y
@@ -131,7 +133,9 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
   feature, familia y cliente. Cada celda: miniatura de la primera página, nombre del archivo,
   código de la pieza y, si están asignados en «Organizar por componentes», componente y
   revisión. Mientras el servidor dibuja la miniatura aparece un marcador y se reintenta; si
-  no se puede cargar, el icono de plano. Al pulsar se abre el plano en su pieza
+  no se puede cargar, el icono de plano. «Globos verificados con .icp» aparece cuando un
+  `.icp` del plano pasa la comprobación estricta (ajuste 1:1 y aros detectados de forma
+  independiente, y el lector del plano la asocia a ese `.icp`; nunca en PDF de varias páginas); si no la pasa o aún se está comprobando, no hay etiqueta. Se pregunta al servidor cada vez que se abre Planos, sin mostrar un resultado recordado, y mientras responda «busy» se vuelve a preguntar cada 3 s, sin límite, mientras la página siga abierta. Al pulsar se abre el plano en su pieza
   (`/parts/{id}/fichero/{fileId}`, el visor de planos actual).
 - Cabecera en tres filas: título y acciones; Todo/Piezas/Features con subrayado activo;
   buscador y Filtros. Nuevo feature usa borde y precede a Nueva pieza, en verde sólido.

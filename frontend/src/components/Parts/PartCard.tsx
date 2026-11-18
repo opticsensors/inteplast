@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 import type { PartCardPublic } from "@/client"
 import { partClassification, partName } from "@/components/Features/parts"
 import { Badge } from "@/components/ui/badge"
-import { MeasurementBadge } from "./MeasurementBadge"
+import { CorrectionsBadge, MeasurementBadge } from "./MeasurementBadge"
 import { PartThumbnail } from "./PartCover"
 
 /** Código como título, el nombre al lado y debajo «Familia · Cliente». */
@@ -65,6 +65,7 @@ export function PartCard({
             Pieza
           </Badge>
           <MeasurementBadge status={part.measurement_status} />
+          <CorrectionsBadge documented={part.corrections_documented} />
           <p className="truncate text-sm text-muted-foreground">
             {part.feature_count} features · {part.characteristic_count} cotas
           </p>

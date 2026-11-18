@@ -297,6 +297,7 @@ def delete_part(
     deleted, removed = part_deletion.delete(session, part, confirm)
     session.commit()
     from app.api.routes.files import storage_path
+    from app.icp_checks import delete_checks
     from app.previews import delete_preview
     from app.thumbnails import delete_thumbnails
 
@@ -305,6 +306,7 @@ def delete_part(
             storage_path(document.id).unlink(missing_ok=True)
         delete_preview(document.id)
         delete_thumbnails(document.id)
+        delete_checks(document.id)
     return PartDeletionResult(message="Part deleted successfully", scope=deleted)
 
 
