@@ -22,7 +22,8 @@ todo ya en `main` (`7b471c0`). El detalle de cada tanda está en
 | **Primer administrador corporativo** | Sin él, nadie con sesión de Microsoft ve «⋯ → Eliminar» en la ficha de pieza | [Próxima sesión](#próxima-sesión-de-la-app-final-usuarios-y-prueba-real-de-archivos) |
 | **Secretos de la instalación** | La instalación local usa los valores de ejemplo `changethis` (`SECRET_KEY`, contraseñas). Cambiarlos antes de llevarla al servidor | `.env`, [despliegue](despliegue-servidor.md) |
 | **Etiquetas no incorporadas** | «Propuesta de retoque detectada»: solo cuando se pueda mostrar la frase original (3 de 20 piezas en el ensayo). «Cotas con datos»: en espera, porque los originales no acreditan el enlace plano–revisión–medida (caso 3288: plano REV.02, informes de revisión 1) | Ensayo del revisor, `C:/Users/eduard.almar/.codex/workspaces/inteplast-ensayo-etiquetas-20261118/resultado.json` |
-| **Plan «principales y tablas»** | `docs/plan-principales-y-tablas-2026-11-18.md` existe sin seguimiento en Git y se ha dejado fuera de los commits: decidir si se versiona | Ese archivo |
+
+El [plan de archivos principales y tablas de medidas](plan-principales-y-tablas-2026-11-18.md) recoge los criterios de aceptación de las mejoras incorporadas a `main`.
 
 Límite conocido, no pendiente: «Globos verificados con .icp» nunca marca una hoja de un PDF
 de varias páginas (sin lecturas, el lector solo asocia PDF de una página).
