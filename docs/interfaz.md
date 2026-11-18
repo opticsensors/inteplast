@@ -76,6 +76,11 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
   con Nueva pieza y mediante «Actualizar datos». Aquí se eligen las cotas del feature.
 - Nueva pieza abre `/parts/nueva`, con la misma estructura que Editar pieza y los campos
   etiquetados como en Features. Cancelar descarta el borrador sin registrar la pieza.
+  Al elegir la carpeta, si una carpeta superior se llama exactamente como un feature del
+  catálogo (sin su prefijo de orden: «0- Bolt Eye» → «Bolt Eye»), ese feature aparece ya
+  en Features como propuesta, con su papelera para quitarlo. Se guarda exactamente la
+  selección al crear; elegir otra carpeta cambia solo las propuestas, no lo elegido a mano
+  (un feature añadido a mano sigue aunque una carpeta lo sugiera y otra no).
 - Actualizar datos es un icono en la esquina superior derecha del título Cotas; su ayuda
   al pasar el ratón explica la lectura. No tiene panel vacío. El progreso aparece solo
   durante la lectura. El resultado, las incidencias y los archivos usados se conservan
@@ -92,6 +97,11 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
 
 - El menú **Catálogo** abre `/features`: tarjetas de piezas y features con la misma
   composición y tamaño de portada. Etiqueta y borde de color distinguen los tipos.
+- **Medidas (18/11/2026):** tarjeta y celda de pieza llevan una etiqueta con lo que la app
+  ha leído: «Medidas detectadas» (algún valor válido con cota y fuente, aunque la lectura
+  siga en curso), «Informe pendiente de interpretar» (lectura terminada con un informe de
+  medidas que no se pudo leer) o «Sin medidas detectadas» (lectura terminada sin informes).
+  Sin etiqueta mientras la pieza no se ha leído o la lectura sigue sin valores.
 - La vista inicial solo muestra piezas y features. Las cotas aparecen al buscar,
   identificadas por pieza y revisión; abren esa consulta dentro de la ficha de pieza.
 - **Vistas (17/11/2026):** junto al buscador, antes de Filtros, el grupo «Vista» con Lista y

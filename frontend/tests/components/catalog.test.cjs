@@ -1243,3 +1243,47 @@ for (const view of ["Lista", "Cuadrícula"])
       page.getByRole("button", { name: "Mostrar más", exact: true }),
     ).toHaveCount(0)
   })
+
+test("cards and grid show what the app read of each piece's measurements", async (t) => {
+  const page = await mount(t)
+  await page.evaluate(() => {
+    window.review.parts[0].measurement_status = "detected"
+    const piece = (id, code, status) => ({
+      id,
+      code,
+      name: null,
+      characteristic_count: 0,
+      measurement_status: status,
+    })
+    window.review.parts.push(
+      piece("pending-piece", "3226", "pending"),
+      piece("empty-piece", "2820", "none"),
+      piece("unread-piece", "9999", null),
+    )
+    window.review.navigate({ to: "/features", search: { kind: "part" } })
+  })
+  const expected = {
+    "3212 Pump Housing": "Medidas detectadas",
+    3226: "Informe pendiente de interpretar",
+    2820: "Sin medidas detectadas",
+  }
+  const labels = Object.values(expected)
+  for (const view of ["Lista", "Cuadrícula"]) {
+    await page
+      .getByRole("group", { name: "Vista" })
+      .getByRole("button", { name: view })
+      .click()
+    for (const [identity, label] of Object.entries(expected)) {
+      const card = page
+        .getByRole("button", { name: `Abrir ${identity}`, exact: true })
+        .locator("..")
+      await expect(card.getByText(label, { exact: true })).toBeVisible()
+    }
+    // Not read yet: no label at all.
+    const unread = page
+      .getByRole("button", { name: "Abrir 9999", exact: true })
+      .locator("..")
+    for (const label of labels)
+      await expect(unread.getByText(label, { exact: true })).toHaveCount(0)
+  }
+})

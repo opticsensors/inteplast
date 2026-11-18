@@ -23,6 +23,7 @@ from app.knowledge_models import (
     PartCharacteristic,
     PartDocument,
 )
+from app.measurement_status import MeasurementStatus, measurement_status
 from app.models import (
     AssetKind,
     Feature,
@@ -43,6 +44,8 @@ class PartCardPublic(PartPublic):
     cad: FilePublic | None = None
     cad_cache_key: str | None = None
     image: FilePublic | None = None
+    # Catalogue label: detected / pending / none; no label until the piece is read.
+    measurement_status: MeasurementStatus | None = None
 
 
 class PartReferencePublic(BaseModel):
@@ -120,6 +123,7 @@ def part_card(session: SessionDep, part: Part, count: int) -> PartCardPublic:
             "cad": FilePublic.model_validate(cad) if cad else None,
             "cad_cache_key": cad_key,
             "image": FilePublic.model_validate(image) if image else None,
+            "measurement_status": measurement_status(session, part),
         },
     )
 

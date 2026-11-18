@@ -323,6 +323,11 @@ export type FeaturesPublic = {
     count: number;
 };
 
+export type FeatureSuggestion = {
+    id: string;
+    name: string;
+};
+
 export type FeatureUpdate = {
     name?: string;
     description?: (string | null);
@@ -369,6 +374,7 @@ export type FolderDiscovery = {
     notices?: Array<(string)>;
     code?: string;
     existing_part?: (PartPublic | null);
+    suggested_features?: Array<FeatureSuggestion>;
 };
 
 export type GraphLink = {
@@ -584,6 +590,7 @@ export type PartCardPublic = {
     cad?: (FilePublic | null);
     cad_cache_key?: (string | null);
     image?: (FilePublic | null);
+    measurement_status?: ('detected' | 'pending' | 'none' | null);
 };
 
 export type PartCatalogPublic = {

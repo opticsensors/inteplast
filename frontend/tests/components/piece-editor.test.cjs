@@ -993,3 +993,87 @@ test("grid and drawings views fit the page, on desktop and phone", async (t) => 
     fullPage: true,
   })
 })
+
+test("a feature suggested by the folder can be kept or removed before creating the piece", async (t) => {
+  const page = await mount(t)
+  await choose(page, "0- Bolt Eye/9001 New housing")
+  const suggestion = page.getByRole("button", {
+    name: "Desvincular Bolt Eye",
+    exact: true,
+  })
+  await expect(suggestion).toBeVisible()
+  // Removed before creating: the piece is created without it.
+  await suggestion.click()
+  await expect(suggestion).toHaveCount(0)
+  await page.getByRole("button", { name: "Crear pieza", exact: true }).click()
+  await page.waitForFunction(
+    () => window.review.registrationRequests?.length === 1,
+  )
+  const removed = await page.evaluate(
+    () => window.review.registrationRequests[0],
+  )
+  assert.deepEqual(removed.feature_ids, [])
+})
+
+test("a kept folder suggestion is saved exactly as selected", async (t) => {
+  const page = await mount(t)
+  await choose(page, "0- Bolt Eye/9002 Other housing")
+  await expect(
+    page.getByRole("button", { name: "Desvincular Bolt Eye", exact: true }),
+  ).toBeVisible()
+  await page.getByRole("button", { name: "Crear pieza", exact: true }).click()
+  await page.waitForFunction(
+    () => window.review.registrationRequests?.length === 1,
+  )
+  const kept = await page.evaluate(() => window.review.registrationRequests[0])
+  assert.deepEqual(kept.feature_ids, ["feature-one"])
+})
+
+test("a feature added by hand survives a folder that suggests it and another that does not", async (t) => {
+  const page = await mount(t)
+  // Chosen by hand before any folder.
+  await page
+    .getByRole("button", { name: "Añadir feature", exact: true })
+    .click()
+  await page.getByRole("menuitem", { name: "Bolt Eye", exact: true }).click()
+  const linked = page.getByRole("button", {
+    name: "Desvincular Bolt Eye",
+    exact: true,
+  })
+  await expect(linked).toBeVisible()
+  // A folder that suggests it too, then one that suggests nothing.
+  await choose(page, "0- Bolt Eye/9001 New housing")
+  await expect(linked).toHaveCount(1)
+  await page.route("**/__native-picker", (route) =>
+    route.fulfill({ json: { path: "9002 Other housing" } }),
+  )
+  await page
+    .getByRole("button", { name: "Cambiar carpeta de la pieza", exact: true })
+    .click()
+  await expect(page.getByLabel("Nombre de la pieza")).toHaveValue(
+    "9002 Other housing",
+  )
+  await expect(linked).toHaveCount(1)
+  await page.getByRole("button", { name: "Crear pieza", exact: true }).click()
+  await page.waitForFunction(
+    () => window.review.registrationRequests?.length === 1,
+  )
+  const request = await page.evaluate(
+    () => window.review.registrationRequests[0],
+  )
+  assert.deepEqual(request.feature_ids, ["feature-one"])
+  assert.equal(request.folder_path, "9002 Other housing")
+  // Saved and reopened: the piece is still linked to it.
+  const partId = await page.evaluate(() => window.review.parts.at(-1).id)
+  await page.evaluate(() =>
+    window.review.navigate({ to: "/features", search: { kind: "part" } }),
+  )
+  await page.evaluate(
+    (id) =>
+      window.review.navigate({ to: "/parts/$partId", params: { partId: id } }),
+    partId,
+  )
+  await expect(
+    page.getByRole("link", { name: "Abrir Bolt Eye", exact: true }),
+  ).toBeVisible()
+})

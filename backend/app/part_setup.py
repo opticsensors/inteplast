@@ -3,6 +3,7 @@
 import hashlib
 import os
 import re
+import unicodedata
 import uuid
 from collections import defaultdict
 from pathlib import Path, PurePosixPath
@@ -24,7 +25,14 @@ from app.knowledge_models import PartDocument, PartReference
 from app.measurement_models import (
     MeasurementPreview,
 )
-from app.models import Part, PartPublic, ReferenceChoice, ReferenceKind, StoredFile
+from app.models import (
+    Feature,
+    Part,
+    PartPublic,
+    ReferenceChoice,
+    ReferenceKind,
+    StoredFile,
+)
 from app.pilot import is_pilot
 
 KINDS: tuple[ReferenceKind, ...] = ("part", "scan", "mold", "drawing")
@@ -41,6 +49,11 @@ class ReferenceProposal(ReferenceChoice):
     candidates: list[ReferenceCandidate] = []
 
 
+class FeatureSuggestion(BaseModel):
+    id: uuid.UUID
+    name: str
+
+
 class FolderDiscovery(BaseModel):
     folder_path: str
     name: str
@@ -48,6 +61,8 @@ class FolderDiscovery(BaseModel):
     notices: list[str] = []
     code: str = ""
     existing_part: PartPublic | None = None
+    # Features named like a folder above the piece: a proposal the user can remove.
+    suggested_features: list[FeatureSuggestion] = []
 
 
 class PartSetupRequest(BaseModel):
@@ -276,7 +291,44 @@ def discover(session: Session, folder_path: str) -> FolderDiscovery:
         notices=notices,
         code=part.code if part else proposed_code(folder_path),
         existing_part=PartPublic.model_validate(part) if part else None,
+        suggested_features=suggested_features(session, folder_path),
     )
+
+
+# Organisational order in front of a folder name: «0- Bolt Eye», «1. Clips en Piezas».
+ORDER_PREFIX = re.compile(r"^\d+\s*[-–.]\s*")
+
+
+def feature_key(name: str) -> str:
+    """Same name ignoring case, accents and separators; nothing else is equated."""
+    folded = "".join(
+        char
+        for char in unicodedata.normalize("NFKD", name.casefold())
+        if not unicodedata.combining(char)
+    )
+    return " ".join(re.findall(r"[a-z0-9]+", folded))
+
+
+def suggested_features(session: Session, folder_path: str) -> list[FeatureSuggestion]:
+    """Catalogue features named exactly like a folder above the piece, once each.
+
+    Every folder between the source root and the piece counts, without its order
+    prefix («0- Bolt Eye/3212», «1- Clips en Piezas/Tipo A/3174»). A name shared by two
+    features of the catalogue suggests neither. No piece is linked until it is created
+    with the user's own selection.
+    """
+    folders = PurePosixPath(folder_path).parts[:-1]
+    if not folders:
+        return []
+    by_key: dict[str, list[Feature]] = defaultdict(list)
+    for feature in session.exec(select(Feature)).all():
+        by_key[feature_key(feature.name)].append(feature)
+    found: list[Feature] = []
+    for folder in folders:
+        matches = by_key.get(feature_key(ORDER_PREFIX.sub("", folder)), [])
+        if len(matches) == 1 and matches[0] not in found:
+            found.append(matches[0])
+    return [FeatureSuggestion(id=feature.id, name=feature.name) for feature in found]
 
 
 def proposed_code(folder_path: str) -> str:

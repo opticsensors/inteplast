@@ -140,6 +140,7 @@ function PartPage({
   const [duplicate, setDuplicate] = useState<PartPublic>()
   const picker = useRef<AbortController | null>(null)
   const suggestedIdentity = useRef({ name: "", code: "" })
+  const suggestedFeatures = useRef<string[]>([])
   const bypass = useRef(false)
   const dirty =
     editing &&
@@ -272,6 +273,21 @@ function PartPage({
           name: proposal.name,
           code: proposal.code ?? "",
         }
+        // Features named like a folder above the piece: proposed, removable, and
+        // replaced only when another folder is chosen. Manual choices stay.
+        // Only what the suggestion itself added is replaced later: a feature the user
+        // had already chosen stays theirs even if a folder also suggests it.
+        const proposed = proposal.suggested_features ?? []
+        const previous = suggestedFeatures.current
+        setSelectedFeatures((current) => {
+          const kept = current.filter((item) => !previous.includes(item.id))
+          const added = proposed.filter(
+            (item) => !kept.some((chosen) => chosen.id === item.id),
+          )
+          // Same result if React calls this twice: it depends only on `current`.
+          suggestedFeatures.current = added.map((item) => item.id)
+          return [...kept, ...added.map(({ id, name }) => ({ id, name }))]
+        })
       }
     } catch (error) {
       if (!controller.signal.aborted) setFolderError(fileErrorMessage(error))

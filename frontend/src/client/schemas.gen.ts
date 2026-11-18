@@ -1545,6 +1545,23 @@ export const FeaturePublicSchema = {
     title: 'FeaturePublic'
 } as const;
 
+export const FeatureSuggestionSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        }
+    },
+    type: 'object',
+    required: ['id', 'name'],
+    title: 'FeatureSuggestion'
+} as const;
+
 export const FeatureUpdateSchema = {
     properties: {
         name: {
@@ -1795,6 +1812,14 @@ export const FolderDiscoverySchema = {
                     type: 'null'
                 }
             ]
+        },
+        suggested_features: {
+            items: {
+                '$ref': '#/components/schemas/FeatureSuggestion'
+            },
+            type: 'array',
+            title: 'Suggested Features',
+            default: []
         }
     },
     type: 'object',
@@ -2784,6 +2809,18 @@ export const PartCardPublicSchema = {
                     type: 'null'
                 }
             ]
+        },
+        measurement_status: {
+            anyOf: [
+                {
+                    type: 'string',
+                    enum: ['detected', 'pending', 'none']
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Measurement Status'
         }
     },
     type: 'object',

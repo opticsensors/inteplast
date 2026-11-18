@@ -404,6 +404,13 @@ export const PartsService = {
       source_version: "1:10",
     })),
     notices: [],
+    // Like the server: a folder above the piece named like a catalogue feature.
+    suggested_features: requestBody.folder_path
+      .split("/")
+      .slice(0, -1)
+      .map((folder) => folder.replace(/^\d+\s*[-–.]\s*/, ""))
+      .filter((label) => label === state().feature?.name)
+      .map(() => ({ id: state().feature.id, name: state().feature.name })),
   }),
   registerPart: async ({ requestBody }) => {
     state().registrationRequests ??= []
