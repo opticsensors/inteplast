@@ -94,6 +94,8 @@ def _own_file_ids(session: Session, part_id: uuid.UUID) -> set[uuid.UUID]:
         select(PartFile.file_id).where(PartFile.part_id == part_id),
         select(PartReference.file_id).where(PartReference.part_id == part_id),
         select(FeatureAsset.file_id).where(FeatureAsset.part_id == part_id),
+        # Covers of features on this piece: they go with their links.
+        select(FeaturePartLink.image_id).where(FeaturePartLink.part_id == part_id),
     ]
     return {
         file_id
@@ -128,6 +130,10 @@ def _shared_file_ids(
             ),
         ),
         select(Feature.image_id).where(col(Feature.image_id).in_(ids)),
+        select(FeaturePartLink.image_id).where(
+            col(FeaturePartLink.image_id).in_(ids),
+            col(FeaturePartLink.part_id) != part_id,
+        ),
     ]
     shared = {
         file_id
@@ -168,19 +174,16 @@ def _removed_assets(session: Session, part_id: uuid.UUID) -> list[FeatureAsset]:
     )
 
 
-def _covers_to_reset(
-    features: list[Feature], part_id: uuid.UUID, assets: list[FeatureAsset]
-) -> list[Feature]:
-    asset_ids = {str(asset.id) for asset in assets}
-    return [
-        feature
-        for feature in features
-        if feature.cover_3d
-        and (
-            feature.cover_3d.get("asset_id") in asset_ids
-            or feature.cover_3d.get("part_id") == str(part_id)
-        )
-    ]
+def _covers_removed(session: Session, part_id: uuid.UUID) -> int:
+    """Feature covers made on this piece. They live on its links and go with them;
+    the covers of the feature on other pieces are not touched."""
+    return _count(
+        session,
+        select(FeaturePartLink.feature_id).where(
+            FeaturePartLink.part_id == part_id,
+            col(FeaturePartLink.image_id).is_not(None),
+        ),
+    )
 
 
 def scope(session: Session, part: Part) -> PartDeletionScope:
@@ -237,7 +240,7 @@ def scope(session: Session, part: Part) -> PartDeletionScope:
             select(MeasurementImport.id).where(MeasurementImport.part_id == part_id),
         ),
         feature_assets=len(assets),
-        covers_reset=len(_covers_to_reset(features, part_id, assets)),
+        covers_reset=_covers_removed(session, part_id),
         files_removed=len(removed_files),
         uploads_removed=sum(1 for f in removed_files if f.source == "upload"),
         files_kept=len(own & shared),
@@ -257,6 +260,9 @@ def scope(session: Session, part: Part) -> PartDeletionScope:
         "scope": result.model_dump(mode="json", exclude={"key"}),
         "assets": _rows(
             session, select(FeatureAsset).where(FeatureAsset.part_id == part_id)
+        ),
+        "feature_links": _rows(
+            session, select(FeaturePartLink).where(FeaturePartLink.part_id == part_id)
         ),
         "removed": [str(file_id) for file_id in removed],
         "kept": sorted(str(file_id) for file_id in own & shared),
@@ -311,6 +317,20 @@ def delete(
     Returns the scope and the removed documents, so that uploaded bytes and previews
     can be cleaned once the transaction is committed.
     """
+    # Lock the features of the piece first, like a cover save does, so that no cover
+    # lands on its links between the confirmed scope and the deletion.
+    feature_ids = _feature_ids(session, part.id)
+    session.exec(
+        select(Feature.id)
+        .where(
+            or_(
+                col(Feature.id).in_(list(feature_ids)),
+                cast(Feature.part_order, String).contains(str(part.id)),
+            )
+        )
+        .order_by(col(Feature.id))
+        .with_for_update()
+    ).all()
     current = scope(session, part)
     if current.key != key:
         raise HTTPException(
@@ -331,8 +351,6 @@ def delete(
                 select(Feature).where(col(Feature.id).in_(list(feature_ids)))
             ).all()
         )
-    for feature in _covers_to_reset(list(features.values()), part_id, assets):
-        feature.cover_3d = None
     for feature in features.values():
         feature.part_order = [
             item for item in feature.part_order if item != str(part_id)

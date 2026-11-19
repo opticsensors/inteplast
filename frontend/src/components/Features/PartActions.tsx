@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
@@ -60,17 +61,26 @@ export function PartActions({
     )
     .sort((a, b) => a.label.localeCompare(b.label, "es", { numeric: true }))
 
+  // Several pieces can be ticked and added at once (plan de portadas, Interfaz).
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
+  const toggle = (partId: string) =>
+    setSelected((current) => {
+      const next = new Set(current)
+      if (!next.delete(partId)) next.add(partId)
+      return next
+    })
   const add = useMutation({
-    mutationFn: async (choice: PartChoice) => {
+    mutationFn: async (partIds: string[]) => {
       const targetFeatureId = ensureFeatureId
         ? await ensureFeatureId()
         : feature.id
-      const partId = choice.part!.id
-      await FeaturesService.linkFeaturePart({
-        featureId: targetFeatureId,
-        partId,
-      })
-      return partId
+      // One by one: linking is idempotent, so a retry after a failure is safe.
+      for (const partId of partIds)
+        await FeaturesService.linkFeaturePart({
+          featureId: targetFeatureId,
+          partId,
+        })
+      return partIds[partIds.length - 1]
     },
     onSuccess: onAdded,
     onError: handleError.bind(showErrorToast),
@@ -81,7 +91,11 @@ export function PartActions({
       ])
     },
   })
-  const adding = usePendingTask((choice: PartChoice) => add.mutateAsync(choice))
+  const adding = usePendingTask((partIds: string[]) => add.mutateAsync(partIds))
+  // Everything ticked, also what the current search hides; never a piece already in.
+  const chosen = choices
+    .map((choice) => choice.part!.id)
+    .filter((partId) => selected.has(partId) && !linkedIds.has(partId))
   const remove = useMutation({
     mutationFn: (partId: string) => PartsService.deletePart({ partId }),
     onError: handleError.bind(showErrorToast),
@@ -100,6 +114,7 @@ export function PartActions({
           setOpen(open)
           if (open) {
             setSearch("")
+            setSelected(new Set())
             void queryClient.invalidateQueries({ queryKey: ["parts"] })
           }
         }}
@@ -164,16 +179,19 @@ export function PartActions({
                   : "Eliminar pieza del catálogo"
               return (
                 <div key={part!.id} className="flex items-center gap-1">
-                  <DropdownMenuItem
+                  <DropdownMenuCheckboxItem
                     className="min-w-0 flex-1 flex-col items-start gap-0.5"
                     aria-label={choice.label}
+                    checked={selected.has(part!.id)}
                     disabled={
                       adding.pending ||
                       remove.isPending ||
                       catalog.isLoading ||
                       catalog.isError
                     }
-                    onSelect={() => void adding.run(choice)}
+                    // Ticking keeps the menu open to choose more pieces.
+                    onSelect={(event) => event.preventDefault()}
+                    onCheckedChange={() => toggle(part!.id)}
                   >
                     <span className="flex max-w-full items-center gap-2">
                       <span className="truncate">{choice.label}</span>
@@ -184,7 +202,7 @@ export function PartActions({
                         {part.feature_count === 1 ? "" : "s"}
                       </span>
                     )}
-                  </DropdownMenuItem>
+                  </DropdownMenuCheckboxItem>
                   {part && (
                     <span title={reason}>
                       <DropdownMenuItem
@@ -216,6 +234,24 @@ export function PartActions({
               </p>
             )}
           </div>
+          {(available.length > 0 || chosen.length > 0) && (
+            <div className="border-t p-2">
+              <Button
+                type="button"
+                size="sm"
+                className="w-full"
+                disabled={!chosen.length || adding.pending || remove.isPending}
+                onClick={() => {
+                  setOpen(false)
+                  void adding.run(chosen)
+                }}
+              >
+                {chosen.length === 1
+                  ? "Añadir 1 pieza"
+                  : `Añadir ${chosen.length} piezas`}
+              </Button>
+            </div>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
       <SaveStatus

@@ -239,8 +239,7 @@ def test_removing_legacy_uploaded_cad_needs_no_source_folder(
     from tests.api.routes.test_cad_covers import cover_example
 
     headers = normal_user_token_headers
-    _, body = cover_example(client, headers, db)
-    part_id = body["cover_3d"]["part_id"]
+    _, part_id, body = cover_example(client, headers, db)
     url = f"{API}/{part_id}"
     before = client.get(f"{url}/detail", headers=headers).json()
     assert before["part"]["folder_path"] is None

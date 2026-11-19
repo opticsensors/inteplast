@@ -101,15 +101,19 @@ async function mount(t, addParts = true) {
     await page
       .getByRole("button", { name: "Añadir pieza", exact: true })
       .click()
-    await page
-      .getByRole("menuitem", {
-        name: index === 0 ? "2820 Pump Housing" : "3051 Pump Housing",
-        exact: true,
-      })
-      .click()
+    await pickParts(page, [
+      index === 0 ? "2820 Pump Housing" : "3051 Pump Housing",
+    ])
     await expect(page.locator("[data-part-id]")).toHaveCount(index + 2)
   }
   return page
+}
+
+/** Tick pieces in the open «Añadir pieza» menu and add them together. */
+async function pickParts(page, names) {
+  for (const name of names)
+    await page.getByRole("menuitemcheckbox", { name, exact: true }).click()
+  await page.getByRole("button", { name: /^Añadir \d+ piezas?$/ }).click()
 }
 
 async function cotas(page) {
@@ -352,7 +356,7 @@ test("piece choices stay compact and linked pieces do not expose folder manageme
   const page = await mount(t)
   await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
   await expect(
-    page.getByRole("menuitem", { name: "3197 Pot", exact: true }),
+    page.getByRole("menuitemcheckbox", { name: "3197 Pot", exact: true }),
   ).toBeVisible()
   await page.getByRole("menu").screenshot({
     path: path.join(artifacts, "folder-choices.png"),
@@ -392,9 +396,7 @@ test("new feature exposes every section and keeps cotas inside their piece", asy
     animations: "disabled",
   })
   await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
-  await page
-    .getByRole("menuitem", { name: "2820 Pump Housing", exact: true })
-    .click()
+  await pickParts(page, ["2820 Pump Housing"])
   const piece = page.getByRole("region", { name: "Pieza 2820", exact: true })
   await expect(
     piece.getByRole("heading", { name: "Cotas", exact: true }),
@@ -625,7 +627,10 @@ test("catalog deletion is direct, keeps the menu open and preserves the current 
   ).toHaveAttribute("aria-disabled", "true")
   await page.evaluate(() => window.review.releasePartDelete())
   await expect(
-    page.getByRole("menuitem", { name: "TEST - Pieza de prueba", exact: true }),
+    page.getByRole("menuitemcheckbox", {
+      name: "TEST - Pieza de prueba",
+      exact: true,
+    }),
   ).toHaveCount(0)
   await expect(page.getByRole("menu")).toBeVisible()
   await expect(page.getByRole("textbox", { name: "Buscar pieza" })).toHaveValue(
@@ -654,9 +659,7 @@ test("catalog shows usage, blocks deletion and still allows reusing shared parts
     path: path.join(artifacts, "catalog-deletion.png"),
     animations: "disabled",
   })
-  await page
-    .getByRole("menuitem", { name: "REAL - Pieza compartida", exact: true })
-    .click()
+  await pickParts(page, ["REAL - Pieza compartida"])
   await page.waitForFunction(() => window.review.feature.parts.length === 4)
   assert.deepEqual(
     await page.evaluate(() => window.review.partDeleteRequests ?? []),

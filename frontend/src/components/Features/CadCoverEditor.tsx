@@ -19,6 +19,7 @@ const StepCoverCanvas = lazy(() => import("./StepCoverCanvas"))
 
 export function CadCoverEditor({
   feature,
+  partId,
   initial,
   image,
   setBusy,
@@ -26,13 +27,17 @@ export function CadCoverEditor({
   close,
 }: {
   feature?: FeaturePublic
+  /** The piece is chosen by the carousel: only its STEP files are offered. */
+  partId?: string
   image: FilePublic | null
   initial: FeatureCover3D | null
   setBusy: (busy: boolean) => void
   onSaved: (image: FilePublic, cover: FeatureCover3D) => void
   close: () => void
 }) {
-  const assets = coverAssets(feature)
+  const assets = partId
+    ? coverAssets(feature).filter((item) => item.part?.id === partId)
+    : []
   const [assetId, setAssetId] = useState(
     initial?.asset_id ?? assets[0]?.id ?? "",
   )
@@ -85,30 +90,35 @@ export function CadCoverEditor({
 
   return (
     <div className={COVER_EDITOR_ROWS}>
-      <select
-        aria-label="CAD para la portada"
-        className="h-9 w-full min-w-0 rounded-md border bg-background px-2 text-sm"
-        value={asset?.id ?? ""}
-        disabled={save.pending || !assets.length}
-        onChange={(event) => {
-          setAssetId(event.target.value)
-          setUseSaved(true)
-          setError("")
-          setReady(false)
-          setCount(0)
-        }}
-      >
-        {!asset && (
-          <option value="">
-            {assets.length ? "Selecciona el CAD vinculado" : "Sin piezas CAD"}
-          </option>
-        )}
-        {assets.map((item) => (
-          <option key={item.id} value={item.id}>
-            {item.part?.code} · {item.name}
-          </option>
-        ))}
-      </select>
+      {assets.length > 1 ? (
+        <select
+          aria-label="CAD para la portada"
+          className="h-9 w-full min-w-0 rounded-md border bg-background px-2 text-sm"
+          value={asset?.id ?? ""}
+          disabled={save.pending}
+          onChange={(event) => {
+            setAssetId(event.target.value)
+            setUseSaved(true)
+            setError("")
+            setReady(false)
+            setCount(0)
+          }}
+        >
+          {!asset && <option value="">Selecciona el CAD vinculado</option>}
+          {assets.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <p
+          className="flex min-w-0 items-center truncate text-sm text-muted-foreground"
+          title={asset?.name}
+        >
+          {asset?.name}
+        </p>
+      )}
       <div
         data-slot="cover-surface"
         className={
@@ -154,7 +164,7 @@ export function CadCoverEditor({
             <p role="alert" className="text-sm">
               {assets.length
                 ? "Selecciona un CAD."
-                : feature
+                : partId
                   ? "Vincula el CAD desde la ficha de la pieza."
                   : "Añade una pieza que tenga un CAD vinculado."}
             </p>

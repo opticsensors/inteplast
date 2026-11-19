@@ -208,13 +208,20 @@ async function mount(t, { mobile = false, busyWorker = false } = {}) {
   await page.evaluate(
     async ({ annotation, size }) => {
       const feature = window.review.feature
-      feature.image = {
-        id: "saved-image",
-        filename: "cover.png",
-        content_type: "image/png",
-        size: 128,
-      }
-      feature.cover_3d = annotation
+      // The feature's own CAD cover on its only piece.
+      feature.part_covers = [
+        {
+          part_id: "part-one",
+          image: {
+            id: "saved-image",
+            filename: "cover.png",
+            content_type: "image/png",
+            size: 128,
+          },
+          cover_3d: annotation,
+          auto_image: null,
+        },
+      ]
       feature.assets[0].kind = "part"
       feature.assets[0].file = {
         id: "part-step",
@@ -408,7 +415,8 @@ for (const mobile of [false, true]) {
 test("the same clear control recovers an obsolete saved selection on the current geometry", async (t) => {
   const page = await mount(t)
   await page.evaluate(async () => {
-    window.review.feature.cover_3d.geometry_key = "obsolete-geometry"
+    window.review.feature.part_covers[0].cover_3d.geometry_key =
+      "obsolete-geometry"
     await window.review.refetch()
   })
   await page

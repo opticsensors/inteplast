@@ -98,12 +98,14 @@ PartFamily / Customer         listas compartidas (17/11/2026)
   id, name, key (UNIQUE: sin mayúsculas ni espacios sobrantes)
 
 Feature                       la ficha del feature
-  id, name, description, owner_id, image_id → StoredFile, cover_3d (JSON)
+  id, name, description, owner_id, image_id → StoredFile (solo sin piezas),
+  cover_3d (JSON, sin uso desde el 19/11/2026)
   ├─ FeatureNote (n)          kind = warning | lesson
   │    title, body (markdown reducido), position
   ├─ FeatureAsset (n)         kind = mold | part | scan | drawing | moldflow
   │    name, position, part_id → Part, file_id → StoredFile
   └─ FeaturePartLink (n:n)    → Part   embrión de INSTANCIA_EN_PROYECTO
+       image_id → StoredFile, cover_3d (JSON): portada de este feature en esa pieza
 ```
 
 Los modelos están en [models.py](../backend/app/models.py),
@@ -212,8 +214,8 @@ Todo bajo `/api/v1`. Documentación interactiva en `http://localhost:8000/docs`.
 | `GET` | `/features/filters` | Features con sus vínculos y piezas **que algún feature usa**, para los desplegables |
 | `GET` `POST` | `/families`, `/customers` | Listar y añadir familias y clientes, con usuario autenticado. Añadir un nombre existente (otras mayúsculas o espacios) devuelve el existente |
 | `POST` | `/features/` | Crear |
-| `GET` | `/features/{id}` | Ficha completa: + `notes` + `assets` |
-| `PUT` `DELETE` | `/features/{id}` | Editar / borrar |
+| `GET` | `/features/{id}` | Ficha completa: + `notes` + `assets` + `part_covers` (una por pieza, en su orden definitivo) |
+| `PUT` `DELETE` | `/features/{id}` | Editar / borrar. `PUT` guarda la cabecera y las portadas cambiadas (`part_covers`) en una sola transacción; una pieza retirada mientras tanto da 409 y rechaza `cover_3d` suelto con 422. Ver [portadas CAD](portadas-cad.md#una-portada-por-pieza-19112026) |
 | `POST` | `/features/{id}/notes` | Añadir warning o lesson learned |
 | `PUT` `DELETE` | `/features/notes/{id}` | Editar / borrar una nota |
 | `POST` `DELETE` | `/features/{id}/parts/{part_id}` | Vincular una pieza / quitar su tarjeta y adjuntos del feature |

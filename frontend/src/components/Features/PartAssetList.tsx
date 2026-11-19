@@ -3,7 +3,7 @@ import { isSortable, useSortable } from "@dnd-kit/react/sortable"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { ChevronRight, GripVertical, Trash2 } from "lucide-react"
-import { type ReactNode, useMemo, useState } from "react"
+import { type ReactNode, useContext, useMemo, useState } from "react"
 
 import { type FeaturePublic, FeaturesService } from "@/client"
 import { CollapsibleSection } from "@/components/Common/CollapsibleSection"
@@ -15,6 +15,7 @@ import { handleError } from "@/utils"
 import { PartActions } from "./PartActions"
 import { PartIdentityEditor } from "./PartIdentityEditor"
 import { featureParts, type PartRow, partName, partRows } from "./parts"
+import { PartUnlinkedContext } from "./partUnlinked"
 import { SaveStatus } from "./SaveStatus"
 import { useAutosave } from "./useAutosave"
 
@@ -36,6 +37,7 @@ function PartGroup({
 }) {
   const queryClient = useQueryClient()
   const { showErrorToast } = useCustomToast()
+  const onUnlinked = useContext(PartUnlinkedContext)
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["features"] })
@@ -44,6 +46,7 @@ function PartGroup({
   const unlink = useMutation({
     mutationFn: (partId: string) =>
       FeaturesService.unlinkFeaturePart({ featureId: feature.id, partId }),
+    onSuccess: (_, partId) => onUnlinked(partId),
     onError: handleError.bind(showErrorToast),
     onSettled: invalidate,
   })

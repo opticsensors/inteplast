@@ -99,9 +99,10 @@ def test_part_detail_uses_the_existing_bidirectional_membership(
 def test_whole_part_cover_is_shared_and_invalidated_when_cad_changes(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
-    _, feature_cover = cover_example(client, superuser_token_headers, db)
+    feature_id, part_id, feature_cover = cover_example(
+        client, superuser_token_headers, db
+    )
     source = feature_cover["cover_3d"]
-    part_id = source["part_id"]
     body = {key: source[key] for key in ("file_id", "file_version", "source_sha256")}
     body["image_id"] = feature_cover["image_id"]
     url = f"{BASE}/parts/{part_id}/cover"
@@ -115,6 +116,13 @@ def test_whole_part_cover_is_shared_and_invalidated_when_cad_changes(
     ).json()["parts"][0]
     assert card["image"]["id"] == detail["part"]["image"]["id"] == body["image_id"]
     assert card["cad"]["id"] == body["file_id"]
+    # A feature without its own capture on the piece shows the piece's CAD capture.
+    feature = client.get(
+        f"{BASE}/features/{feature_id}", headers=superuser_token_headers
+    ).json()
+    assert feature["part_covers"][0]["image"] is None
+    assert feature["part_covers"][0]["auto_image"]["id"] == body["image_id"]
+    assert feature["cover_image"]["id"] == body["image_id"]
     other = create_random_part(db)
     assert (
         client.put(
@@ -133,6 +141,11 @@ def test_whole_part_cover_is_shared_and_invalidated_when_cad_changes(
         ).json()["part"]["image"]
         is None
     )
+    # An outdated capture is not shown on the feature either.
+    feature = client.get(
+        f"{BASE}/features/{feature_id}", headers=superuser_token_headers
+    ).json()
+    assert feature["part_covers"][0]["auto_image"] is None
     assert (
         client.put(url, headers=superuser_token_headers, json=body).status_code == 409
     )

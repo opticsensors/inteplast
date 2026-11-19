@@ -347,7 +347,7 @@ def remote_cover(
     db: Session,
     graph: FakeGraph,
 ) -> dict[str, Any]:
-    _, example = cover_example(client, superuser_token_headers, db)
+    _, _, example = cover_example(client, superuser_token_headers, db)
     source = example["cover_3d"]
     document = db.get(StoredFile, uuid.UUID(source["file_id"]))
     assert document is not None

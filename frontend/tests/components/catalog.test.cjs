@@ -1252,6 +1252,44 @@ for (const view of ["Lista", "Cuadrícula"])
     ).toHaveCount(0)
   })
 
+test("a feature in several pieces shows a stack with their number; in one, a single capture", async (t) => {
+  const page = await mount(t)
+  await page.evaluate(() => {
+    window.review.feature.part_count = 3
+    window.review.navigate({ to: "/features", search: { kind: "feature" } })
+  })
+  const card = () =>
+    page
+      .getByRole("button", { name: "Abrir Bolt Eye", exact: true })
+      .locator("..")
+  for (const view of ["Lista", "Cuadrícula"]) {
+    await page
+      .getByRole("group", { name: "Vista" })
+      .getByRole("button", { name: view })
+      .click()
+    const stack = card().locator('[data-slot="cover-stack"]')
+    await expect(stack).toHaveCount(1)
+    await expect(stack).toContainText("3")
+    // No navigation on the card: it opens the feature page.
+    await expect(card().getByRole("button", { name: /^Pieza / })).toHaveCount(0)
+  }
+  await page.evaluate(() => {
+    window.review.feature.part_count = 1
+    window.review.navigate({ to: "/features", search: { kind: "part" } })
+  })
+  await page.evaluate(() =>
+    window.review.navigate({ to: "/features", search: { kind: "feature" } }),
+  )
+  for (const view of ["Lista", "Cuadrícula"]) {
+    await page
+      .getByRole("group", { name: "Vista" })
+      .getByRole("button", { name: view })
+      .click()
+    await expect(card()).toBeVisible()
+    await expect(card().locator('[data-slot="cover-stack"]')).toHaveCount(0)
+  }
+})
+
 test("cards and grid show what the app read of each piece's measurements", async (t) => {
   const page = await mount(t)
   await page.evaluate(() => {

@@ -248,11 +248,13 @@ export type FeatureDetail = {
     created_at?: (string | null);
     owner_id?: (string | null);
     image?: (FilePublic | null);
-    cover_3d?: (FeatureCover3D | null);
     part_order?: Array<(string)>;
     assets?: Array<FeatureAssetPublic>;
     parts?: Array<PartPublic>;
+    cover_image?: (FilePublic | null);
+    part_count?: number;
     notes?: Array<FeatureNotePublic>;
+    part_covers?: Array<FeaturePartCoverPublic>;
 };
 
 export type FeatureEvidencePublic = {
@@ -301,6 +303,31 @@ export type FeatureNoteUpdate = {
     position?: number;
 };
 
+/**
+ * The new cover of the feature in one piece.
+ *
+ * An image, optionally made on the piece's CAD; no image removes the own cover and the
+ * piece shows its CAD capture again.
+ */
+export type FeaturePartCoverChange = {
+    part_id: string;
+    image_id?: (string | null);
+    cover_3d?: (FeatureCover3D | null);
+};
+
+/**
+ * What the cover shows for one piece of the feature.
+ *
+ * `image` and `cover_3d` are the capture made for this feature; `auto_image` is the
+ * saved catalogue capture of the piece's CAD, shown when there is no own capture.
+ */
+export type FeaturePartCoverPublic = {
+    part_id: string;
+    image?: (FilePublic | null);
+    cover_3d?: (FeatureCover3D | null);
+    auto_image?: (FilePublic | null);
+};
+
 export type FeaturePartOrder = {
     part_ids: Array<(string)>;
 };
@@ -312,10 +339,11 @@ export type FeaturePublic = {
     created_at?: (string | null);
     owner_id?: (string | null);
     image?: (FilePublic | null);
-    cover_3d?: (FeatureCover3D | null);
     part_order?: Array<(string)>;
     assets?: Array<FeatureAssetPublic>;
     parts?: Array<PartPublic>;
+    cover_image?: (FilePublic | null);
+    part_count?: number;
 };
 
 export type FeaturesPublic = {
@@ -332,7 +360,7 @@ export type FeatureUpdate = {
     name?: string;
     description?: (string | null);
     image_id?: (string | null);
-    cover_3d?: (FeatureCover3D | null);
+    part_covers?: (Array<FeaturePartCoverChange> | null);
 };
 
 export type FileAccessPublic = {

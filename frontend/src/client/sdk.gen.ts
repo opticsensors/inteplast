@@ -661,6 +661,9 @@ export class FeaturesService {
      * Update Feature
      * Editar un feature. Cualquier usuario autenticado puede hacerlo: la base de
      * conocimiento es colaborativa.
+     *
+     * `part_covers` guarda las portadas cambiadas de algunas piezas junto con la
+     * cabecera, en una sola transaccion: si una falla, no se guarda nada.
      * @param data The data for the request.
      * @param data.featureId
      * @param data.requestBody
@@ -870,8 +873,9 @@ export class FeaturesService {
     
     /**
      * Unlink Feature Part
-     * Quitar la tarjeta y sus adjuntos de este feature. La pieza compartida y
-     * los documentos originales se conservan.
+     * Quitar la tarjeta, sus adjuntos y su portada de este feature. La pieza
+     * compartida, los documentos originales y las portadas de las demas piezas se
+     * conservan.
      * @param data The data for the request.
      * @param data.featureId
      * @param data.partId
@@ -944,6 +948,7 @@ export class FeaturesService {
     /**
      * Delete Feature Asset
      * Quitar un fichero adjunto del feature. El fichero subido no se borra.
+     * Una portada hecha sobre ese STEP se queda como imagen, sin las caras.
      * @param data The data for the request.
      * @param data.assetId
      * @returns Message Successful Response

@@ -169,6 +169,7 @@ export const FeaturesService = {
     return clone(state().feature)
   },
   unlinkFeaturePart: async ({ partId }) => {
+    if (state().failUnlink) throw new Error("Simulated unlink failure")
     state().feature.parts = state().feature.parts.filter(
       (part) => part.id !== partId,
     )
@@ -229,9 +230,69 @@ export const FeaturesService = {
     if (asset.file) asset.name = asset.file.filename
     return clone(asset)
   },
+  /**
+   * Header and `part_covers` in one transaction, as the API: all or nothing.
+   * `failCoverPart` refuses that piece's cover; a piece no longer linked is a 409.
+   */
   updateFeature: async ({ requestBody }) => {
     state().requests.push({ kind: "feature", patch: clone(requestBody) })
-    Object.assign(state().feature, requestBody)
+    state().beforeFeatureUpdate?.()
+    const { part_covers: changes = [], ...header } = requestBody
+    const linked = new Set(
+      [
+        ...(state().feature.parts ?? []),
+        ...(state().feature.assets ?? []).map((asset) => asset.part),
+      ]
+        .filter(Boolean)
+        .map((part) => part.id),
+    )
+    for (const change of changes) {
+      if (!linked.has(change.part_id))
+        throw Object.assign(
+          new ApiError("La pieza ya no está en este feature."),
+          {
+            status: 409,
+            body: { detail: "La pieza ya no está en este feature." },
+          },
+        )
+      if (state().changedCadPart === change.part_id)
+        throw Object.assign(
+          new ApiError(
+            "El CAD ha cambiado. Revisa la portada antes de guardarla.",
+          ),
+          {
+            status: 409,
+            body: {
+              detail:
+                "El CAD ha cambiado. Revisa la portada antes de guardarla.",
+            },
+          },
+        )
+      if (state().failCoverPart === change.part_id)
+        throw Object.assign(new ApiError("La portada debe ser una imagen."), {
+          status: 422,
+          body: { detail: "La portada debe ser una imagen." },
+        })
+    }
+    state().feature.part_covers ??= []
+    const covers = state().feature.part_covers
+    for (const change of changes) {
+      let cover = covers.find((item) => item.part_id === change.part_id)
+      if (!cover) {
+        cover = { part_id: change.part_id, auto_image: null }
+        covers.push(cover)
+      }
+      cover.image = change.image_id
+        ? {
+            id: change.image_id,
+            filename: "cover.png",
+            content_type: "image/png",
+            size: 128,
+          }
+        : null
+      cover.cover_3d = change.image_id ? (change.cover_3d ?? null) : null
+    }
+    Object.assign(state().feature, header)
     return clone(state().feature)
   },
 }

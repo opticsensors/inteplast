@@ -89,7 +89,14 @@ async function addPart(page, folder = "2820 Pump Housing") {
     await window.review.refetchParts()
   }, folder)
   await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
-  await page.getByRole("menuitem", { name: folder, exact: true }).click()
+  await pickParts(page, [folder])
+}
+
+/** Tick pieces in the open «Añadir pieza» menu and add them together. */
+async function pickParts(page, names) {
+  for (const name of names)
+    await page.getByRole("menuitemcheckbox", { name, exact: true }).click()
+  await page.getByRole("button", { name: /^Añadir \d+ piezas?$/ }).click()
 }
 
 test("new feature shows all sections immediately and opening/cancelling creates nothing", async (t) => {
@@ -135,9 +142,7 @@ test("new feature accepts notes and existing pieces before the first Save", asyn
     .click()
   await expect(page.getByPlaceholder("Titulo de la nota")).toHaveCount(2)
   await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
-  await page
-    .getByRole("menuitem", { name: "3212 - Pump Housing", exact: true })
-    .click()
+  await pickParts(page, ["3212 - Pump Housing"])
   await page
     .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
     .click()
@@ -227,7 +232,7 @@ test("part menu searches registered pieces and existing folders without blank cr
   })
   await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
   await page.getByRole("textbox", { name: "Buscar pieza" }).fill("pot")
-  await page.getByRole("menuitem", { name: "3197 - Pot", exact: true }).click()
+  await pickParts(page, ["3197 - Pot"])
   await page
     .getByRole("textbox", { name: "Nombre de la pieza", exact: true })
     .last()
@@ -241,7 +246,7 @@ test("part menu searches registered pieces and existing folders without blank cr
   await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
   assert.equal(
     await page
-      .getByRole("menuitem", { name: "3197 - Pot", exact: true })
+      .getByRole("menuitemcheckbox", { name: "3197 - Pot", exact: true })
       .count(),
     0,
   )
@@ -250,7 +255,10 @@ test("part menu searches registered pieces and existing folders without blank cr
   ).toHaveCount(0)
   await page.getByRole("textbox", { name: "Buscar pieza" }).fill("2820")
   await expect(
-    page.getByRole("menuitem", { name: "2820 Pump Housing", exact: true }),
+    page.getByRole("menuitemcheckbox", {
+      name: "2820 Pump Housing",
+      exact: true,
+    }),
   ).toHaveCount(0)
 })
 
@@ -271,9 +279,7 @@ test("registered-piece search preserves names without listing the source folders
   })
   await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
   await page.getByRole("textbox", { name: "Buscar pieza" }).fill("CUSTOM")
-  await page
-    .getByRole("menuitem", { name: "CUSTOM - Custom housing", exact: true })
-    .click()
+  await pickParts(page, ["CUSTOM - Custom housing"])
   await page.waitForFunction(() =>
     window.review.feature.parts.some((part) => part.id === "renamed"),
   )
@@ -299,9 +305,7 @@ test("registered pieces remain selectable while the original folder is unavailab
   await expect(
     page.getByText("No se ha podido cargar toda la lista de piezas."),
   ).toHaveCount(0)
-  await page
-    .getByRole("menuitem", { name: "LEGACY - Existing piece", exact: true })
-    .click()
+  await pickParts(page, ["LEGACY - Existing piece"])
   await page.waitForFunction(() =>
     window.review.feature.parts.some((part) => part.id === "legacy"),
   )
@@ -325,9 +329,7 @@ test("removing a part removes its full card but leaves the part reusable", async
   )
   assert.equal(await page.evaluate(() => window.review.parts.length), 1)
   await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
-  await page
-    .getByRole("menuitem", { name: "3212 - Pump Housing", exact: true })
-    .click()
+  await pickParts(page, ["3212 - Pump Housing"])
   await page
     .getByRole("textbox", { name: "Nombre de la pieza", exact: true })
     .waitFor()
@@ -511,9 +513,7 @@ test("existing parts can still be linked without creating another part", async (
     await window.review.refetchParts()
   })
   await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
-  await page
-    .getByRole("menuitem", { name: "9999 - Existing part", exact: true })
-    .click()
+  await pickParts(page, ["9999 - Existing part"])
   await page.waitForFunction(() => window.review.feature.parts.length === 2)
   assert.equal(await page.evaluate(() => window.review.parts.length), 2)
   assert.equal(
@@ -525,6 +525,43 @@ test("existing parts can still be linked without creating another part", async (
   )
 })
 
+test("several pieces are ticked and added together", async (t) => {
+  const { page } = await mount(t)
+  await page.evaluate(async () => {
+    window.review.parts.push(
+      { id: "first-extra", code: "7001", name: "First extra" },
+      { id: "second-extra", code: "7002", name: "Second extra" },
+    )
+    await window.review.refetchParts()
+  })
+  await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
+  const add = page.getByRole("button", { name: /^Añadir \d+ piezas?$/ })
+  await expect(add).toBeDisabled()
+  // Ticking keeps the menu open; a new search does not forget what was ticked.
+  const search = page.getByRole("textbox", { name: "Buscar pieza" })
+  await search.fill("7001")
+  await page
+    .getByRole("menuitemcheckbox", { name: "7001 - First extra", exact: true })
+    .click()
+  await search.fill("7002")
+  await expect(
+    page.getByRole("menuitemcheckbox", { name: "7001 - First extra" }),
+  ).toHaveCount(0)
+  await page
+    .getByRole("menuitemcheckbox", { name: "7002 - Second extra", exact: true })
+    .click()
+  await expect(add).toHaveText("Añadir 2 piezas")
+  await add.click()
+  await page.waitForFunction(() => window.review.feature.parts.length === 3)
+  assert.deepEqual(
+    await page.evaluate(() =>
+      window.review.feature.parts.map((part) => part.id).slice(1),
+    ),
+    ["first-extra", "second-extra"],
+  )
+  await expect(page.getByRole("menu")).toHaveCount(0)
+})
+
 async function applyCover(page) {
   await page
     .getByRole("dialog")
@@ -533,16 +570,21 @@ async function applyCover(page) {
   await page.getByRole("dialog").waitFor({ state: "hidden" })
 }
 
+/** The feature's own cover on its only piece, as the API returns it. */
 async function setCover(page, cad = false) {
   await page.evaluate(async (withCad) => {
     const feature = window.review.feature
-    feature.image = {
-      id: "saved-image",
-      filename: "cover.png",
-      content_type: "image/png",
-      size: 128,
+    const cover = {
+      part_id: "part-one",
+      image: {
+        id: "saved-image",
+        filename: "cover.png",
+        content_type: "image/png",
+        size: 128,
+      },
+      cover_3d: null,
+      auto_image: null,
     }
-    feature.image_id = "saved-image"
     if (withCad) {
       const asset = feature.assets[0]
       asset.kind = "part"
@@ -553,7 +595,7 @@ async function setCover(page, cad = false) {
         size: 128,
         version: "v1",
       }
-      feature.cover_3d = {
+      cover.cover_3d = {
         asset_id: asset.id,
         part_id: asset.part.id,
         file_id: asset.file.id,
@@ -562,9 +604,450 @@ async function setCover(page, cad = false) {
         camera: { position: [10, -10, 10], target: [0, 0, 0], up: [0, 0, 1] },
       }
     }
+    feature.part_covers = [cover]
     await window.review.refetch()
   }, cad)
 }
+
+/** What the API keeps as the cover of the feature on its piece `part-one`. */
+const partCover = (page) =>
+  page.evaluate(
+    () =>
+      (window.review.feature.part_covers ?? []).find(
+        (cover) => cover.part_id === "part-one",
+      ) ?? null,
+  )
+
+/** Three pieces: an own cover, only the piece's CAD capture, and nothing. */
+async function setThreePieces(page) {
+  await page.evaluate(async () => {
+    const feature = window.review.feature
+    const image = (id) => ({
+      id,
+      filename: `${id}.png`,
+      content_type: "image/png",
+      size: 128,
+    })
+    feature.parts = [
+      { id: "part-one", code: "3212", name: "Pump Housing" },
+      { id: "part-two", code: "3197", name: "Cover" },
+      { id: "part-three", code: "2820", name: "Base" },
+    ]
+    feature.part_order = ["part-one", "part-two", "part-three"]
+    feature.part_covers = [
+      {
+        part_id: "part-one",
+        image: image("saved-image"),
+        cover_3d: null,
+        auto_image: null,
+      },
+      {
+        part_id: "part-two",
+        image: null,
+        cover_3d: null,
+        auto_image: image("uploaded-image"),
+      },
+      { part_id: "part-three", image: null, cover_3d: null, auto_image: null },
+    ]
+    await window.review.refetch()
+  })
+}
+
+const coverSection = (page) => page.locator('section[aria-label^="Captura"]')
+
+test("with several pieces the cover steps through them; with one it shows only the code", async (t) => {
+  const { page } = await mount(t)
+  await setThreePieces(page)
+  await page.evaluate(() => window.review.navigate("/cover"))
+  const section = coverSection(page)
+  await expect(section).toContainText("3212")
+  await expect(section).toContainText("1 / 3")
+  // Keyboard on the focused capture, then the arrow buttons, wrapping around.
+  await page.getByRole("button", { name: "Ampliar portada" }).focus()
+  await page.keyboard.press("ArrowRight")
+  await expect(section).toContainText("3197")
+  await expect(section).toContainText("2 / 3")
+  await page.getByRole("button", { name: "Pieza siguiente" }).click()
+  await expect(section).toContainText("3 / 3")
+  // A piece without any capture shows the icon, with nothing to enlarge.
+  await expect(
+    page.getByRole("button", { name: "Ampliar portada" }),
+  ).toHaveCount(0)
+  await page.getByRole("button", { name: "Pieza siguiente" }).click()
+  await expect(section).toContainText("1 / 3")
+  await page.getByRole("button", { name: "Pieza anterior" }).click()
+  await expect(section).toContainText("2820")
+
+  // A finger swipe to the left goes to the next piece without opening anything.
+  const swipe = (from, to, target = section) =>
+    target.evaluate(
+      (element, [start, end]) => {
+        const touch = (x) =>
+          new Touch({ identifier: 1, target: element, clientX: x, clientY: 50 })
+        element.dispatchEvent(
+          new TouchEvent("touchstart", {
+            bubbles: true,
+            touches: [touch(start)],
+            changedTouches: [touch(start)],
+          }),
+        )
+        element.dispatchEvent(
+          new TouchEvent("touchend", {
+            bubbles: true,
+            touches: [],
+            changedTouches: [touch(end)],
+          }),
+        )
+      },
+      [from, to],
+    )
+  await swipe(200, 100)
+  await expect(section).toContainText("1 / 3")
+  // Only a click right after the gesture is swallowed, never a later tap.
+  await page.waitForTimeout(450)
+
+  // The viewer has the same pieces and moves the page carousel with it.
+  await page.getByRole("button", { name: "Ampliar portada" }).click()
+  const dialog = page.getByRole("dialog")
+  await expect(dialog).toContainText("3212")
+  await expect(dialog).toContainText("1 / 3")
+  await dialog.getByRole("button", { name: "Pieza siguiente" }).click()
+  await expect(dialog).toContainText("2 / 3")
+  // Over a still image the finger also changes piece in the viewer.
+  await swipe(100, 250, dialog.locator('[data-slot="cover-surface"]'))
+  await expect(dialog).toContainText("1 / 3")
+  await page.waitForTimeout(450)
+  await dialog.getByRole("button", { name: "Pieza siguiente" }).click()
+  await expect(dialog).toContainText("2 / 3")
+  await page.keyboard.press("Escape")
+  await expect(section).toContainText("2 / 3")
+
+  await page.evaluate(async () => {
+    const feature = window.review.feature
+    feature.parts = feature.parts.slice(0, 1)
+    feature.part_order = ["part-one"]
+    feature.part_covers = feature.part_covers.slice(0, 1)
+    await window.review.navigate("/away")
+    await window.review.navigate("/cover")
+  })
+  await expect(coverSection(page)).toContainText("3212")
+  await expect(coverSection(page)).not.toContainText("/")
+  await expect(page.getByRole("button", { name: /^Pieza / })).toHaveCount(0)
+})
+
+/** In the open cover editor: upload an image and apply it to the visible piece. */
+async function uploadAndApply(page) {
+  await page
+    .getByRole("dialog")
+    .locator('input[type="file"]')
+    .setInputFiles({
+      name: "piece.png",
+      mimeType: "image/png",
+      buffer: Buffer.from("image"),
+    })
+  const apply = page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Aplicar", exact: true })
+  await expect(apply).toBeEnabled()
+  await apply.click()
+  // With several pieces the editor stays open for the next one.
+  await expect(apply).toBeDisabled()
+}
+
+/** Edit-mode covers of the first `count` pieces with uploaded images, then close. */
+async function draftCovers(page, count) {
+  await page
+    .getByRole("button", { name: "Editar portada", exact: true })
+    .click()
+  const dialog = page.getByRole("dialog")
+  await page.getByRole("tab", { name: "Imagen", exact: true }).click()
+  for (let index = 0; index < count; index++) {
+    if (index) {
+      await dialog.getByRole("button", { name: "Pieza siguiente" }).click()
+      await expect(dialog).toContainText(`${index + 1} / 3`)
+      await page.getByRole("tab", { name: "Imagen", exact: true }).click()
+    }
+    await uploadAndApply(page)
+  }
+  await dialog.getByRole("button", { name: "Close", exact: true }).click()
+  await expect(dialog).toHaveCount(0)
+}
+
+/** The covers each «Guardar» sent, as [piece, image] per request. */
+const sentCovers = (page) =>
+  page.evaluate(() =>
+    window.review.requests
+      .filter((item) => item.kind === "feature" && item.patch.part_covers)
+      .map((item) =>
+        item.patch.part_covers.map((cover) => [cover.part_id, cover.image_id]),
+      ),
+  )
+
+const save = (page) =>
+  page
+    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .click()
+
+test("series editing keeps one draft per piece, saves them all at once and Cancel drops them", async (t) => {
+  const { page } = await mount(t)
+  await setThreePieces(page)
+  await page
+    .getByRole("button", { name: "Editar portada", exact: true })
+    .click()
+  const dialog = page.getByRole("dialog")
+  await expect(dialog).toContainText("3212")
+  await expect(dialog).toContainText("1 / 3")
+  await page.getByRole("tab", { name: "Imagen", exact: true }).click()
+  await uploadAndApply(page)
+  await dialog.getByRole("button", { name: "Pieza siguiente" }).click()
+  await expect(dialog).toContainText("2 / 3")
+  // No CAD selector: the piece is the one in the carousel.
+  await page.getByRole("tab", { name: "CAD", exact: true }).click()
+  await expect(dialog.getByRole("combobox")).toHaveCount(0)
+  await page.getByRole("tab", { name: "Imagen", exact: true }).click()
+  await uploadAndApply(page)
+  await dialog.getByRole("button", { name: "Close", exact: true }).click()
+  assert.deepEqual(await sentCovers(page), [])
+  await save(page)
+  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
+  // One request with the header and both covers.
+  assert.deepEqual(await sentCovers(page), [
+    [
+      ["part-one", "uploaded-image"],
+      ["part-two", "uploaded-image"],
+    ],
+  ])
+
+  // Cancelling the page drops every draft.
+  await page.evaluate(() => {
+    window.review.requests = []
+    return window.review.navigate("/")
+  })
+  await draftCovers(page, 1)
+  await page.getByRole("button", { name: "Cancelar", exact: true }).click()
+  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
+  assert.deepEqual(await sentCovers(page), [])
+})
+
+test("a refused second cover saves nothing: neither the title nor the first cover", async (t) => {
+  const { page } = await mount(t)
+  await setThreePieces(page)
+  await page.getByPlaceholder("Nombre del feature").fill("New title")
+  await draftCovers(page, 2)
+  await page.evaluate(() => {
+    window.review.failCoverPart = "part-two"
+  })
+  await save(page)
+  await page.getByText("La portada debe ser una imagen.").first().waitFor()
+  await page.getByRole("button", { name: "Cancelar", exact: true }).click()
+  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
+  const feature = await page.evaluate(() => window.review.feature)
+  assert.equal(feature.name, "Original header")
+  assert.equal(feature.part_covers[0].image.id, "saved-image")
+  assert.equal(feature.part_covers[1].image, null)
+})
+
+test("unlinking a piece drops its draft only when the server confirms it", async (t) => {
+  const { page } = await mount(t)
+  await setThreePieces(page)
+  await draftCovers(page, 2)
+  // A failed unlink keeps the piece and its draft.
+  await page.evaluate(() => {
+    window.review.failUnlink = true
+  })
+  await page.getByRole("button", { name: "Quitar 3197", exact: true }).click()
+  await page.getByText("Simulated unlink failure").first().waitFor()
+  await page.evaluate(() => {
+    window.review.failUnlink = false
+  })
+  await page.getByRole("button", { name: "Quitar 3197", exact: true }).click()
+  await page.waitForFunction(() =>
+    window.review.feature.parts.every((part) => part.id !== "part-two"),
+  )
+  await expect(
+    page.getByRole("button", { name: "Quitar 3197", exact: true }),
+  ).toHaveCount(0)
+  await save(page)
+  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
+  // The other draft is saved; nothing for the removed piece, so no conflict.
+  assert.deepEqual(await sentCovers(page), [[["part-one", "uploaded-image"]]])
+})
+
+test("a piece removed by someone else is a conflict; the retry keeps the other changes", async (t) => {
+  const { page } = await mount(t)
+  await setThreePieces(page)
+  await page.getByPlaceholder("Nombre del feature").fill("Title kept for retry")
+  await draftCovers(page, 2)
+  // Another user unlinks 3197 while this page still shows it.
+  await page.evaluate(() => {
+    const feature = window.review.feature
+    feature.parts = feature.parts.filter((part) => part.id !== "part-two")
+    feature.part_covers = feature.part_covers.filter(
+      (cover) => cover.part_id !== "part-two",
+    )
+  })
+  await save(page)
+  // The warning names the piece; nothing is sent, the page stays.
+  await page
+    .getByText(/^La pieza 3197 ya no está en este feature/)
+    .first()
+    .waitFor()
+  assert.deepEqual(await sentCovers(page), [])
+  let feature = await page.evaluate(() => window.review.feature)
+  assert.equal(feature.name, "Original header")
+  assert.equal(feature.part_covers[0].image.id, "saved-image")
+  // The page refreshes without 3197 and keeps the title and the 3212 draft.
+  await expect(
+    page.getByRole("button", { name: "Quitar 3197", exact: true }),
+  ).toHaveCount(0)
+  await save(page)
+  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
+  feature = await page.evaluate(() => window.review.feature)
+  assert.equal(feature.name, "Title kept for retry")
+  assert.deepEqual((await sentCovers(page)).at(-1), [
+    ["part-one", "uploaded-image"],
+  ])
+})
+
+test("a piece unlinked between the last read and the save only needs one retry", async (t) => {
+  const { page } = await mount(t)
+  await setThreePieces(page)
+  await page.getByPlaceholder("Nombre del feature").fill("Title kept for retry")
+  await draftCovers(page, 2)
+  await page.evaluate(() => {
+    window.review.beforeFeatureUpdate = () => {
+      delete window.review.beforeFeatureUpdate
+      const feature = window.review.feature
+      feature.parts = feature.parts.filter((part) => part.id !== "part-two")
+      feature.part_covers = feature.part_covers.filter(
+        (cover) => cover.part_id !== "part-two",
+      )
+    }
+  })
+  await save(page)
+  await page
+    .getByText(/^La pieza 3197 ya no está en este feature/)
+    .first()
+    .waitFor()
+  let feature = await page.evaluate(() => window.review.feature)
+  assert.equal(feature.name, "Original header")
+  assert.equal(feature.part_covers[0].image.id, "saved-image")
+  await save(page)
+  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
+  feature = await page.evaluate(() => window.review.feature)
+  assert.equal(feature.name, "Title kept for retry")
+  assert.deepEqual(await sentCovers(page), [
+    [
+      ["part-one", "uploaded-image"],
+      ["part-two", "uploaded-image"],
+    ],
+    [["part-one", "uploaded-image"]],
+  ])
+})
+
+test("an earlier conflict of another kind never hides a piece removed later", async (t) => {
+  const { page } = await mount(t)
+  await setThreePieces(page)
+  await draftCovers(page, 2)
+  // First refusal: the CAD of 3212 changed.
+  await page.evaluate(() => {
+    window.review.changedCadPart = "part-one"
+  })
+  await save(page)
+  await page
+    .getByText("El CAD ha cambiado.", { exact: false })
+    .first()
+    .waitFor()
+  // Another user unlinks 3197 and the open page refreshes before the next save.
+  await page.evaluate(() => {
+    const feature = window.review.feature
+    feature.parts = feature.parts.filter((part) => part.id !== "part-two")
+    feature.part_covers = feature.part_covers.filter(
+      (cover) => cover.part_id !== "part-two",
+    )
+    return window.review.refetch()
+  })
+  await expect(
+    page.getByRole("button", { name: "Quitar 3197", exact: true }),
+  ).toHaveCount(0)
+  await save(page)
+  await page
+    .getByText(/^La pieza 3197 ya no está en este feature/)
+    .first()
+    .waitFor()
+  // Still editing: nothing saved, the page did not close.
+  await expect(page.getByPlaceholder("Nombre del feature")).toBeVisible()
+  assert.equal(
+    await page.evaluate(() => window.review.feature.part_covers[0].image.id),
+    "saved-image",
+  )
+  // With the CAD of 3212 back, the retry saves its draft and nothing for 3197.
+  await page.evaluate(() => {
+    window.review.changedCadPart = null
+  })
+  await save(page)
+  await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
+  assert.deepEqual((await sentCovers(page)).at(-1), [
+    ["part-one", "uploaded-image"],
+  ])
+})
+
+test("a piece without capture shows the icon, never the feature's own old image", async (t) => {
+  const { page } = await mount(t)
+  await page.evaluate(() => {
+    const feature = window.review.feature
+    feature.image = {
+      id: "saved-image",
+      filename: "old.png",
+      content_type: "image/png",
+      size: 128,
+    }
+    feature.part_covers = [
+      { part_id: "part-one", image: null, cover_3d: null, auto_image: null },
+    ]
+    return window.review.navigate("/cover")
+  })
+  const section = coverSection(page)
+  await expect(section).toContainText("3212")
+  await expect(section.locator("img")).toHaveCount(0)
+  await expect(
+    page.getByRole("button", { name: "Ampliar portada" }),
+  ).toHaveCount(0)
+})
+
+test("removing an own cover in the editor shows the piece's CAD capture again", async (t) => {
+  const { page } = await mount(t)
+  await page.evaluate(async () => {
+    const image = (id) => ({
+      id,
+      filename: `${id}.png`,
+      content_type: "image/png",
+      size: 128,
+    })
+    window.review.feature.part_covers = [
+      {
+        part_id: "part-one",
+        image: image("saved-image"),
+        cover_3d: null,
+        auto_image: image("uploaded-image"),
+      },
+    ]
+    await window.review.refetch()
+  })
+  await openCover(page)
+  await page.getByRole("button", { name: "Quitar imagen" }).click()
+  await page.getByRole("button", { name: "Quitar portada" }).click()
+  await page.getByRole("dialog").waitFor({ state: "hidden" })
+  // The pencil still has a capture to show: the CAD one, not the empty state.
+  await expect(
+    page.getByRole("button", { name: "Editar portada", exact: true }),
+  ).toBeVisible()
+  await expect(
+    page
+      .getByRole("button", { name: "Editar portada", exact: true })
+      .locator("img"),
+  ).toHaveAttribute("src", /uploaded-image/)
+})
 
 test("the full image opens one modal, with only the corner close action and keyboard focus restored", async (t) => {
   const { page } = await mount(t)
@@ -674,8 +1157,9 @@ test("closing an image draft leaves the previous cover and unsaved header intact
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   const feature = await page.evaluate(() => window.review.feature)
   assert.equal(feature.name, "Keep my header")
-  assert.equal(feature.image_id, "saved-image")
-  assert.deepEqual(feature.cover_3d.faces, [{ mesh: 0, face: 1 }])
+  const cover = await partCover(page)
+  assert.equal(cover.image.id, "saved-image")
+  assert.deepEqual(cover.cover_3d.faces, [{ mesh: 0, face: 1 }])
 })
 
 test("CAD editing stays in one modal, retains selection across tabs and cancels without applying", async (t) => {
@@ -704,16 +1188,14 @@ test("removing a CAD cover is a draft until the feature is saved", async (t) => 
   await page.getByRole("button", { name: "Quitar imagen" }).click()
   await page.getByRole("button", { name: "Quitar portada" }).click()
   await page.getByRole("button", { name: "Añadir portada" }).waitFor()
-  assert.equal(
-    await page.evaluate(() => window.review.feature.image_id),
-    "saved-image",
-  )
+  assert.equal((await partCover(page)).image.id, "saved-image")
   await page
     .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
     .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
-  assert.equal(await page.evaluate(() => window.review.feature.image_id), null)
-  assert.equal(await page.evaluate(() => window.review.feature.cover_3d), null)
+  const cover = await partCover(page)
+  assert.equal(cover.image, null)
+  assert.equal(cover.cover_3d, null)
 })
 
 test("a failed upload can be cancelled without blocking the feature or replacing its cover", async (t) => {
@@ -738,10 +1220,7 @@ test("a failed upload can be cancelled without blocking the feature or replacing
     .click()
   await page.getByRole("link", { name: "Otra pagina", exact: true }).click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
-  assert.equal(
-    await page.evaluate(() => window.review.feature.image_id),
-    "saved-image",
-  )
+  assert.equal((await partCover(page)).image.id, "saved-image")
 })
 
 test("note refresh preserves dirty header fields", async (t) => {
@@ -843,18 +1322,12 @@ test("cover waits for the upload, applies a draft and saves its reference with t
   await page.evaluate(() => window.review.releaseUpload())
   await page.getByRole("button", { name: "Aplicar", exact: true }).waitFor()
   await applyCover(page)
-  assert.equal(
-    await page.evaluate(() => window.review.feature.image_id),
-    undefined,
-  )
+  assert.equal(await partCover(page), null)
   await page
     .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
     .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
-  assert.equal(
-    await page.evaluate(() => window.review.feature.image_id),
-    "uploaded-image",
-  )
+  assert.equal((await partCover(page)).image.id, "uploaded-image")
 })
 
 test("navigation with dirty header offers saving without discarding the draft", async (t) => {
@@ -1012,10 +1485,7 @@ test("CAD cover uploads its image but waits for Save to persist the annotation a
   await page.getByRole("button", { name: "Marcar superficie" }).click()
   await page.getByRole("button", { name: "Aplicar" }).click()
   await page.waitForFunction(() => !document.querySelector('[role="dialog"]'))
-  assert.equal(
-    await page.evaluate(() => window.review.feature.cover_3d),
-    undefined,
-  )
+  assert.equal(await partCover(page), null)
   await page.evaluate(async () => {
     await window.review.refetch()
   })
@@ -1025,16 +1495,19 @@ test("CAD cover uploads its image but waits for Save to persist the annotation a
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   const feature = await page.evaluate(() => window.review.feature)
   assert.equal(feature.name, "Pending CAD header")
-  assert.equal(feature.image_id, "uploaded-image")
-  assert.equal(feature.cover_3d.asset_id, "asset-one")
-  assert.equal(feature.cover_3d.file_id, "part-step")
-  assert.deepEqual(feature.cover_3d.faces, [{ mesh: 0, face: 1 }])
+  const cover = await partCover(page)
+  assert.equal(cover.image.id, "uploaded-image")
+  assert.equal(cover.cover_3d.asset_id, "asset-one")
+  assert.equal(cover.cover_3d.part_id, "part-one")
+  assert.equal(cover.cover_3d.file_id, "part-step")
+  assert.deepEqual(cover.cover_3d.faces, [{ mesh: 0, face: 1 }])
 })
 
 test("pasting a local image replaces a CAD cover and leaves text fields alone", async (t) => {
   const { page } = await mount(t)
+  await setCover(page)
   await page.evaluate(async () => {
-    window.review.feature.cover_3d = { asset_id: "old-asset" }
+    window.review.feature.part_covers[0].cover_3d = { asset_id: "old-asset" }
     await window.review.refetch()
   })
   const paste = async (selector) =>
@@ -1061,11 +1534,9 @@ test("pasting a local image replaces a CAD cover and leaves text fields alone", 
     .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
     .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
-  assert.equal(await page.evaluate(() => window.review.feature.cover_3d), null)
-  assert.equal(
-    await page.evaluate(() => window.review.feature.image_id),
-    "uploaded-image",
-  )
+  const cover = await partCover(page)
+  assert.equal(cover.cover_3d, null)
+  assert.equal(cover.image.id, "uploaded-image")
 })
 
 test("dropping an image updates the cover through the same upload flow", async (t) => {
@@ -1090,10 +1561,7 @@ test("dropping an image updates the cover through the same upload flow", async (
     .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
     .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
-  assert.equal(
-    await page.evaluate(() => window.review.feature.image_id),
-    "uploaded-image",
-  )
+  assert.equal((await partCover(page)).image.id, "uploaded-image")
 })
 
 test("feature image picker rejects SVG before uploading", async (t) => {

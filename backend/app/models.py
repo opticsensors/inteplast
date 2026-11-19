@@ -355,6 +355,8 @@ class FeaturePartLink(SQLModel, table=True):
 
     Embrion de INSTANCIA_EN_PROYECTO (docs/modelo-datos.md): aqui colgaran los
     N-numbers y las tolerancias con que cada pieza materializa el feature.
+    Tambien guarda la portada de este feature en esta pieza: la captura y, si se
+    hizo sobre el CAD, sus caras y su encuadre (docs/plan-portadas-por-pieza-2026-11-18.md).
     """
 
     feature_id: uuid.UUID = Field(
@@ -362,6 +364,12 @@ class FeaturePartLink(SQLModel, table=True):
     )
     part_id: uuid.UUID = Field(
         foreign_key="part.id", primary_key=True, ondelete="CASCADE"
+    )
+    image_id: uuid.UUID | None = Field(
+        default=None, foreign_key="storedfile.id", ondelete="SET NULL"
+    )
+    cover_3d: dict[str, Any] | None = Field(
+        default=None, sa_column=Column(JSON, nullable=True)
     )
 
 
@@ -465,13 +473,40 @@ class FeatureCover3D(BaseModel):
         return self
 
 
+class FeaturePartCoverChange(BaseModel):
+    """The new cover of the feature in one piece.
+
+    An image, optionally made on the piece's CAD; no image removes the own cover and the
+    piece shows its CAD capture again.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    part_id: uuid.UUID
+    image_id: uuid.UUID | None = None
+    cover_3d: FeatureCover3D | None = None
+
+
 # Properties to receive on feature update
 class FeatureUpdate(SQLModel):
     # Omitted fields stay unchanged; explicit null is only valid for nullable columns.
     name: str = Field(default=None, min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=2000)
+    # Image of the feature itself: only shown while it has no pieces.
     image_id: uuid.UUID | None = None
-    cover_3d: FeatureCover3D | None = None
+    # Covers changed on some pieces, saved with the header in one transaction.
+    part_covers: list[FeaturePartCoverChange] | None = Field(
+        default=None, max_length=500
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def no_feature_cad_cover(cls, data: Any) -> Any:
+        # A page opened before covers per piece would lose its faces silently.
+        if isinstance(data, dict) and "cover_3d" in data:
+            raise ValueError(
+                "La portada CAD se guarda por pieza, en part_covers. Recarga la ficha."
+            )
+        return data
 
 
 # Database model, database table inferred from class name
@@ -490,6 +525,8 @@ class Feature(FeatureBase, table=True):
         default=None, foreign_key="storedfile.id", ondelete="SET NULL"
     )
     image: StoredFile | None = Relationship()
+    # No longer written: the CAD cover lives on each FeaturePartLink since the
+    # migration p27ea3fbd174. Kept one batch so that its downgrade can restore it.
     cover_3d: dict[str, Any] | None = Field(
         default=None, sa_column=Column(JSON, nullable=True)
     )
@@ -601,21 +638,40 @@ class FeatureAssetPublic(FeatureAssetBase):
     file: FilePublic | None = None
 
 
+class FeaturePartCoverPublic(BaseModel):
+    """What the cover shows for one piece of the feature.
+
+    `image` and `cover_3d` are the capture made for this feature; `auto_image` is the
+    saved catalogue capture of the piece's CAD, shown when there is no own capture.
+    """
+
+    part_id: uuid.UUID
+    image: FilePublic | None = None
+    cover_3d: FeatureCover3D | None = None
+    auto_image: FilePublic | None = None
+
+
 # Lo que se pinta en una tarjeta de resultado
 class FeaturePublic(FeatureBase):
     id: uuid.UUID
     created_at: datetime | None = None
     owner_id: uuid.UUID | None = None
+    # Image of the feature itself, without piece: only shown while it has none.
     image: FilePublic | None = None
-    cover_3d: FeatureCover3D | None = None
     part_order: list[uuid.UUID] = Field(default_factory=list)
     assets: list[FeatureAssetPublic] = []
     parts: list[PartPublic] = []
+    # Card: the cover of the first piece (own capture, else the CAD one), or the
+    # feature image when it has no pieces; and how many pieces it has.
+    cover_image: FilePublic | None = None
+    part_count: int = 0
 
 
 # Lo que se pinta en la modal de detalle
 class FeatureDetail(FeaturePublic):
     notes: list[FeatureNotePublic] = []
+    # One per piece, in the order of the piece list.
+    part_covers: list[FeaturePartCoverPublic] = []
 
 
 class FeaturesPublic(SQLModel):

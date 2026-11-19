@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import type { FeaturePublic, PartCardPublic } from "@/client"
-import { FeatureThumbnail } from "@/components/Features/FeatureCard"
+import { FeatureCoverStack } from "@/components/Features/FeatureCard"
 import { partClassification, partName } from "@/components/Features/parts"
 import {
   CorrectionsBadge,
@@ -118,9 +118,10 @@ export function FeatureTile({
       actions={actions}
       className="border-t-primary/60"
       cover={
-        <FeatureThumbnail
+        <FeatureCoverStack
           feature={feature}
-          className="size-full border-0 bg-transparent"
+          className="size-full"
+          flatClassName="border-0 bg-transparent"
         />
       }
     >

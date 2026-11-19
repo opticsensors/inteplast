@@ -13,8 +13,14 @@ La implementación de protecciones y criterios de aceptación para todas las pie
 
 1. **Primero:** [portadas por pieza](plan-portadas-por-pieza-2026-11-18.md). Carrusel en la ficha
    del feature, pila con número en lista y cuadrícula, y una captura por pieza.
+   **Desplegado en la instalación local el 19/11/2026.** Copia restaurada en una BD temporal,
+   migración aplicada y aplicación reconstruida. Bolt Eye y Nervios conservan su imagen y su
+   selección CAD en la pieza 3212. **Tanda 5 cerrada.** Eduard confirmó en la web que
+   las dos fichas se ven correctamente. La ubicación de la copia consta en el plan.
+   **Después de la tanda 5:** limpieza de imágenes subidas que ya no usa nadie (por ejemplo, la
+   portada de una pieza desvinculada, cuyo fichero se conserva). Decisión de Eduard, 19/11/2026.
 2. **Después:** [carga de las 21 piezas y los 8 features](plan-carga-catalogo-2026-11-18.md).
-   No empezar la carga hasta cerrar y comprobar el plan anterior.
+   La carga es el siguiente trabajo previsto.
 
 ## Pendiente ahora (18/11/2026)
 

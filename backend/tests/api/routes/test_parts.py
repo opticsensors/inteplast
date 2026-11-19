@@ -209,8 +209,13 @@ def _piece_with_data(db: Session, tmp_path: Path) -> dict[str, Any]:
     )
     upload = StoredFile(filename="photo.png", source="upload", content_type="image/png")
     shared = StoredFile(filename="shared.step", source="local", source_path="x.step")
+    # Covers of the first feature: one on this piece, one on the other piece.
+    cover = StoredFile(filename="cover.png", source="upload", content_type="image/png")
+    other_cover = StoredFile(
+        filename="other.png", source="upload", content_type="image/png"
+    )
     first, second = create_random_feature(db), create_random_feature(db)
-    db.add_all([part, own, upload, shared])
+    db.add_all([part, own, upload, shared, cover, other_cover])
     db.flush()
     uploaded = settings.uploads_path / str(upload.id)
     uploaded.parent.mkdir(parents=True, exist_ok=True)
@@ -224,8 +229,15 @@ def _piece_with_data(db: Session, tmp_path: Path) -> dict[str, Any]:
     )
     db.add_all(
         [
-            FeaturePartLink(feature_id=first.id, part_id=part.id),
-            FeaturePartLink(feature_id=first.id, part_id=other.id),
+            FeaturePartLink(
+                feature_id=first.id,
+                part_id=part.id,
+                image_id=cover.id,
+                cover_3d={"asset_id": str(asset.id), "part_id": str(part.id)},
+            ),
+            FeaturePartLink(
+                feature_id=first.id, part_id=other.id, image_id=other_cover.id
+            ),
             FeatureCharacteristicLink(feature_id=first.id, characteristic_id=cota.id),
             FeatureCharacteristicLink(
                 feature_id=first.id, characteristic_id=other_cota.id
@@ -262,7 +274,6 @@ def _piece_with_data(db: Session, tmp_path: Path) -> dict[str, Any]:
     )
     db.flush()
     first.part_order = [str(other.id), str(part.id)]
-    first.cover_3d = {"asset_id": str(asset.id), "part_id": str(part.id)}
     second.part_order = [str(part.id)]
     db.add_all([first, second])
     db.add(FeatureAsset(feature_id=second.id, part_id=part.id, kind="mold", name="m"))
@@ -275,6 +286,8 @@ def _piece_with_data(db: Session, tmp_path: Path) -> dict[str, Any]:
         "own": own.id,
         "upload": upload.id,
         "shared": shared.id,
+        "cover": cover.id,
+        "other_cover": other_cover.id,
         "cota": cota.id,
         "other_cota": other_cota.id,
         "original": original,
@@ -318,8 +331,9 @@ def test_deletion_scope_and_full_deletion_keep_features_and_originals(
     assert scope["measurement_imports"] == 1
     assert scope["feature_assets"] == 2
     assert scope["covers_reset"] == 1
-    assert scope["files_removed"] == 2  # The drawing reference and the upload.
-    assert scope["uploads_removed"] == 1
+    # The drawing reference, the upload and the feature cover made on this piece.
+    assert scope["files_removed"] == 3
+    assert scope["uploads_removed"] == 2
     assert scope["files_kept"] == 1  # Also used by another piece.
     assert scope["reviewed_locations"] == 1
     assert scope["jobs"] == 2
@@ -353,8 +367,10 @@ def test_deletion_scope_and_full_deletion_keep_features_and_originals(
     first, second = db.get(Feature, ids["first"]), db.get(Feature, ids["second"])
     assert first is not None and second is not None
     assert first.part_order == [str(ids["other"])] and second.part_order == []
-    assert first.cover_3d is None
-    assert db.get(FeaturePartLink, (ids["first"], ids["other"])) is not None
+    kept = db.get(FeaturePartLink, (ids["first"], ids["other"]))
+    assert kept is not None and kept.image_id == ids["other_cover"]
+    assert db.get(StoredFile, ids["cover"]) is None
+    assert db.get(StoredFile, ids["other_cover"]) is not None
     assert db.get(PartCharacteristic, ids["other_cota"]) is not None
     assert db.get(FeatureCharacteristicLink, (ids["first"], ids["other_cota"]))
     assert db.get(FeatureCharacteristicLink, (ids["first"], ids["cota"])) is None

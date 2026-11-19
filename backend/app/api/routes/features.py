@@ -1,13 +1,21 @@
 import uuid
-from collections.abc import Sequence
-from typing import Any
+from collections.abc import Callable, Sequence
+from typing import Any, TypeVar
 
 from fastapi import APIRouter, HTTPException
-from sqlmodel import col, select
+from sqlmodel import Session, col, select
 
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
-from app.cad_covers import validate_cover
+from app.feature_covers import (
+    apply_cover_changes,
+    drop_cad_covers,
+    ensure_link,
+    feature_detail,
+    feature_public,
+    features_public,
+    ordered_part_ids,
+)
 from app.models import (
     Feature,
     FeatureAsset,
@@ -23,6 +31,7 @@ from app.models import (
     FeatureNoteOrder,
     FeatureNotePublic,
     FeatureNoteUpdate,
+    FeaturePartLink,
     FeaturePartOrder,
     FeaturePublic,
     FeaturesPublic,
@@ -40,6 +49,36 @@ def get_feature_or_404(session: SessionDep, feature_id: uuid.UUID) -> Feature:
     if not feature:
         raise HTTPException(status_code=404, detail="Feature not found")
     return feature
+
+
+def lock_feature(session: SessionDep, feature_id: uuid.UUID) -> Feature:
+    """Serialize every change that a cover depends on: covers, links and attachments."""
+    feature = session.exec(
+        select(Feature).where(Feature.id == feature_id).with_for_update()
+    ).first()
+    if not feature:
+        raise HTTPException(status_code=404, detail="Feature not found")
+    return feature
+
+
+Response = TypeVar("Response")
+
+
+def commit_with(
+    session: SessionDep,
+    feature: Feature,
+    respond: Callable[[Session, Feature], Response],
+) -> Response:
+    """Build the answer before committing.
+
+    The answer reads the saved CAD captures, which may ask SharePoint. If that fails (an
+    expired Microsoft session) nothing is saved, so an error never hides a saved change.
+    """
+    session.flush()
+    session.refresh(feature)
+    answer = respond(session, feature)
+    session.commit()
+    return answer
 
 
 # ---------------------------------------------------------------------------
@@ -72,10 +111,7 @@ def read_features(
         skip=skip,
         limit=limit,
     )
-    return FeaturesPublic(
-        data=[FeaturePublic.model_validate(feature) for feature in features],
-        count=count,
-    )
+    return FeaturesPublic(data=features_public(session, features), count=count)
 
 
 # Antes de /{feature_id}, si no "filters" se leeria como un id.
@@ -95,7 +131,7 @@ def read_feature(
     Ficha completa de un feature: warnings, lessons learned y piezas ejemplo.
     """
     feature = get_feature_or_404(session, feature_id)
-    return FeatureDetail.model_validate(feature)
+    return feature_detail(session, feature)
 
 
 @router.post("/", response_model=FeaturePublic)
@@ -110,7 +146,7 @@ def create_feature(
     feature = crud.create_feature(
         session=session, feature_in=feature_in, owner_id=current_user.id
     )
-    return FeaturePublic.model_validate(feature)
+    return feature_public(session, feature)
 
 
 @router.put("/{feature_id}", response_model=FeaturePublic)
@@ -124,35 +160,22 @@ def update_feature(
     """
     Editar un feature. Cualquier usuario autenticado puede hacerlo: la base de
     conocimiento es colaborativa.
+
+    `part_covers` guarda las portadas cambiadas de algunas piezas junto con la
+    cabecera, en una sola transaccion: si una falla, no se guarda nada.
     """
-    feature = get_feature_or_404(session, feature_id)
+    # Locked like unlinking a piece or removing an attachment, so that a cover never
+    # lands on a removed link or keeps faces of a STEP that is no longer attached.
+    feature = lock_feature(session, feature_id)
     if feature_in.image_id and not session.get(StoredFile, feature_in.image_id):
         raise HTTPException(status_code=404, detail="File not found")
-    changes = feature_in.model_dump(exclude_unset=True)
-    if feature_in.cover_3d is not None:
-        image = (
-            session.get(StoredFile, feature_in.image_id)
-            if feature_in.image_id
-            else None
-        )
-        if not image or image.content_type not in {
-            "image/png",
-            "image/webp",
-            "image/jpeg",
-        }:
-            raise HTTPException(
-                422, "Guarda la imagen de portada junto con la selección 3D."
-            )
-        validate_cover(session, feature, feature_in.cover_3d)
-        changes["cover_3d"] = feature_in.cover_3d.model_dump(mode="json")
-    elif "image_id" in changes:
-        # An uploaded/pasted image replaces the CAD cover as one atomic header edit.
-        changes["cover_3d"] = None
-    feature.sqlmodel_update(changes)
+    if feature_in.part_covers:
+        apply_cover_changes(session, feature, feature_in.part_covers)
+    feature.sqlmodel_update(
+        feature_in.model_dump(exclude_unset=True, exclude={"part_covers"})
+    )
     session.add(feature)
-    session.commit()
-    session.refresh(feature)
-    return FeaturePublic.model_validate(feature)
+    return commit_with(session, feature, feature_public)
 
 
 @router.delete("/{feature_id}")
@@ -290,21 +313,6 @@ def delete_feature_note(
 # ---------------------------------------------------------------------------
 
 
-def ordered_part_ids(feature: Feature) -> list[str]:
-    parts = {part.id: part for part in feature.parts}
-    for asset in feature.assets:
-        if asset.part:
-            parts[asset.part.id] = asset.part
-    existing = {str(part_id) for part_id in parts}
-    order = [part_id for part_id in feature.part_order if part_id in existing]
-    order.extend(
-        str(part.id)
-        for part in sorted(parts.values(), key=lambda part: part.code)
-        if str(part.id) not in order
-    )
-    return order
-
-
 @router.put("/{feature_id}/parts/order", response_model=FeatureDetail)
 def reorder_feature_parts(
     session: SessionDep,
@@ -325,9 +333,7 @@ def reorder_feature_parts(
         )
     feature.part_order = order
     session.add(feature)
-    session.commit()
-    session.refresh(feature)
-    return FeatureDetail.model_validate(feature)
+    return commit_with(session, feature, feature_detail)
 
 
 @router.post("/{feature_id}/parts/{part_id}", response_model=FeatureDetail)
@@ -343,7 +349,7 @@ def link_feature_part(
     Adjuntar un fichero a una pieza ya la hace aparecer en la ficha; esto es
     para las piezas de las que todavia no hay nada subido.
     """
-    feature = get_feature_or_404(session, feature_id)
+    feature = lock_feature(session, feature_id)
     part = session.get(Part, part_id)
     if not part:
         raise HTTPException(status_code=404, detail="Part not found")
@@ -370,9 +376,8 @@ def link_feature_part(
             order.append(str(part_id))
         feature.part_order = order
         session.add(feature)
-        session.commit()
-        session.refresh(feature)
-    return FeatureDetail.model_validate(feature)
+        return commit_with(session, feature, feature_detail)
+    return feature_detail(session, feature)
 
 
 @router.delete("/{feature_id}/parts/{part_id}")
@@ -383,13 +388,11 @@ def unlink_feature_part(
     part_id: uuid.UUID,
 ) -> Message:
     """
-    Quitar la tarjeta y sus adjuntos de este feature. La pieza compartida y
-    los documentos originales se conservan.
+    Quitar la tarjeta, sus adjuntos y su portada de este feature. La pieza
+    compartida, los documentos originales y las portadas de las demas piezas se
+    conservan.
     """
-    session.exec(
-        select(Feature).where(Feature.id == feature_id).with_for_update()
-    ).first()
-    feature = get_feature_or_404(session, feature_id)
+    feature = lock_feature(session, feature_id)
     part = session.get(Part, part_id)
     if not part:
         raise HTTPException(status_code=404, detail="Part not found")
@@ -404,14 +407,11 @@ def unlink_feature_part(
         )
     ):
         session.delete(link)
-    if part in feature.parts:
-        feature.parts.remove(part)
-    removed = [asset for asset in feature.assets if asset.part_id == part_id]
-    if feature.cover_3d and any(
-        str(asset.id) == feature.cover_3d.get("asset_id") for asset in removed
-    ):
-        feature.cover_3d = None
-    for asset in removed:
+    # The link holds this piece's cover: deleting it removes only that one.
+    part_link = session.get(FeaturePartLink, (feature_id, part_id))
+    if part_link:
+        session.delete(part_link)
+    for asset in [asset for asset in feature.assets if asset.part_id == part_id]:
         session.delete(asset)
     feature.part_order = [item for item in feature.part_order if item != str(part_id)]
     session.add(feature)
@@ -436,7 +436,7 @@ def create_feature_asset(
     Adjuntar el fichero de una pieza. El fichero se sube antes por `/files/` y
     aqui se referencia con `file_id`.
     """
-    get_feature_or_404(session, feature_id)
+    lock_feature(session, feature_id)
     if asset_in.part_id and not session.get(Part, asset_in.part_id):
         raise HTTPException(status_code=404, detail="Part not found")
     if asset_in.file_id:
@@ -450,6 +450,26 @@ def create_feature_asset(
     return FeatureAssetPublic.model_validate(asset)
 
 
+def locked_asset(session: SessionDep, asset_id: uuid.UUID) -> FeatureAsset:
+    """The attachment, read again once its feature is locked.
+
+    A cover save holds the same lock: either it sees the attachment gone and refuses
+    the faces, or this change sees the saved cover and drops its faces.
+    """
+    asset = session.get(FeatureAsset, asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    lock_feature(session, asset.feature_id)
+    asset = session.exec(
+        select(FeatureAsset)
+        .where(FeatureAsset.id == asset_id)
+        .execution_options(populate_existing=True)
+    ).first()
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    return asset
+
+
 @router.put("/assets/{asset_id}", response_model=FeatureAssetPublic)
 def update_feature_asset(
     *,
@@ -461,9 +481,7 @@ def update_feature_asset(
     """
     Editar un fichero adjunto.
     """
-    asset = session.get(FeatureAsset, asset_id)
-    if not asset:
-        raise HTTPException(status_code=404, detail="Asset not found")
+    asset = locked_asset(session, asset_id)
     if asset_in.part_id and not session.get(Part, asset_in.part_id):
         raise HTTPException(status_code=404, detail="Part not found")
     changes = asset_in.model_dump(exclude_unset=True)
@@ -473,7 +491,15 @@ def update_feature_asset(
         if not document:
             raise HTTPException(status_code=404, detail="File not found")
         changes["name"] = document.filename
+    if any(
+        key in changes and changes[key] != getattr(asset, key)
+        for key in ("part_id", "file_id", "kind")
+    ):
+        # A cover selected on this STEP no longer matches what the attachment points at.
+        drop_cad_covers(session, [asset])
     asset.sqlmodel_update(changes)
+    if asset.part_id:
+        ensure_link(session, asset.feature_id, asset.part_id)
     session.add(asset)
     session.commit()
     session.refresh(asset)
@@ -486,10 +512,10 @@ def delete_feature_asset(
 ) -> Message:
     """
     Quitar un fichero adjunto del feature. El fichero subido no se borra.
+    Una portada hecha sobre ese STEP se queda como imagen, sin las caras.
     """
-    asset = session.get(FeatureAsset, asset_id)
-    if not asset:
-        raise HTTPException(status_code=404, detail="Asset not found")
+    asset = locked_asset(session, asset_id)
+    drop_cad_covers(session, [asset])
     session.delete(asset)
     session.commit()
     return Message(message="Asset deleted successfully")

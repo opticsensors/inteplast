@@ -1,6 +1,6 @@
 # Portadas por pieza: carrusel en la ficha y pila en el catálogo · plan
 
-**18 de noviembre de 2026 · Pendiente de ejecutar. Sin código todavía.**
+**18 de noviembre de 2026 · Cerrado con Eduard el 19/11/2026 · En ejecución desde el 19/11/2026.**
 
 > 🔴 **Orden decidido por Eduard (18/11/2026): este plan va PRIMERO.** El
 > [plan de carga del catálogo](plan-carga-catalogo-2026-11-18.md) (21 piezas y 8 features) se
@@ -36,8 +36,8 @@ mosaicos debajo de la portada escala a 20–30 piezas, y Eduard no quiere nada d
    - Teclado ← / → con el carrusel enfocado y deslizamiento con el dedo en el móvil.
    - **Pulsar la captura abre la modal** (`CoverDialog`) con el mismo carrusel: CAD interactivo
      con sus caras rojas si esa pieza tiene portada CAD; si no, la imagen. «Encuadrar» como hoy.
-   - **Pulsar `3 / 24` despliega la lista de piezas con buscador** para saltar a una. Es una
-     propuesta del asistente que Eduard ha visto en el prototipo sin objetarla. Se quita si él lo pide.
+   - **`3 / 24` es solo texto**, no se pulsa. La lista de piezas con buscador que proponía el
+     prototipo queda **descartada** (Eduard, 19/11/2026): solo flechas, teclado y deslizamiento.
 2. **Lista y cuadrícula: pila + número (T2).** La captura de la portada con dos capas detrás,
    que indican que hay más, y el número de piezas. Sin flechas ni navegación en la tarjeta: al
    pulsar se abre la ficha, y allí se navega.
@@ -48,6 +48,17 @@ mosaicos debajo de la portada escala a 20–30 piezas, y Eduard no quiere nada d
    las vinculadas**; «ya lo corregiremos más adelante si no nos gusta». Regla provisional: **la
    primera en el orden de piezas de la ficha** (`part_order` y luego el código, como
    `featureParts()`). Sin selector ni estrella por ahora.
+5. **Según el número de piezas (Eduard, 19/11/2026):**
+
+   | Piezas | Ficha | Lista y cuadrícula |
+   |---|---|---|
+   | **0** | Imagen del feature o icono, como hoy | Como hoy |
+   | **1** | Su captura con **solo el código** arriba a la izquierda. Sin flechas, sin `1 / 1`, sin teclado ni deslizamiento; en edición, sin `‹ 1 / 1 ›` | Su captura, **sin pila ni número** |
+   | **2 o más** | Carrusel completo | Pila con número |
+
+   En la lista sigue el resumen de debajo («1 pieza · 3212»), que ya existe y no es parte de la pila.
+6. **Resaltado:** en CAD, caras rojas sobre la pieza en gris, como hoy. Sobre las fotos la app no
+   dibuja marcas; una herramienta de círculo o elipse queda **descartada de momento**.
 
 ## Modelo de datos
 
@@ -104,8 +115,8 @@ La captura pasa a ser del **par feature–pieza**:
   - Se mantienen las pestañas Imagen y CAD, y el editor tiene la misma navegación `‹ 3 / 24 ›`.
   - «Aplicar» guarda un borrador por pieza y se puede pasar a la siguiente sin cerrar.
   - **Guardar** en la ficha persiste todos los borradores, igual que hoy imagen y selección.
-  - En la lista del número, las piezas sin captura propia llevan una marca discreta, sin texto
-    explicativo ([sin textos de ayuda](interfaz.md)).
+  - Sin lista de piezas (decisión 1) no hay marca de «sin captura propia»: se ve recorriendo el
+    carrusel.
 - **«Añadir pieza» con selección múltiple** en su desplegable con buscador. Comprobar si
   `Common/SearchSelect` lo admite; si no, añadir el modo múltiple sin cambiar los filtros del
   catálogo. Además, al crear la pieza desde su carpeta la app ya propone el feature.
@@ -116,10 +127,74 @@ La captura pasa a ser del **par feature–pieza**:
 Cada tanda se comprueba antes de pasar a la siguiente y se anota en
 [próximos pasos](proximos-pasos.md) al cerrarla.
 
+**Estado del 19/11/2026.** Eduard aprobó la tanda 5. La BD de trabajo está en
+`p27ea3fbd174` y la instalación local sirve el backend y el frontend reconstruidos.
+Antes de migrar se restauró la copia de `pg_dump` en un PostgreSQL temporal. La copia
+está en `C:/Users/eduard.almar/.codex/backups/inteplast/20261119-135348/app-before-part-covers.dump`.
+Tras la migración se verificaron los dos PNG y se compararon los identificadores de
+imagen y las selecciones CAD completas con la copia. Bolt Eye y Nervios conservan cada
+uno su portada en la pieza 3212. La API y la web responden en localhost.
+Eduard confirmó en la web que las dos fichas se ven correctamente. Con esa
+comprobación queda cerrada la tanda 5.
+
+**Correcciones tras la revisión (19/11/2026), aprobadas por Eduard:**
+
+1. Un único `PUT /features/{id}` guarda cabecera y portadas cambiadas en una transacción; se
+   retiran los endpoints por pieza (no se llegaron a desplegar).
+2. El borrador de una pieza se descarta cuando el servidor confirma su desvinculación; si falla,
+   se conserva. Si otro usuario la retiró, el guardado avisa del conflicto (409), no guarda nada
+   y el reintento guarda el resto.
+3. La vuelta atrás de la migración no resucita una selección 3D cuya portada se quitó o cuya
+   pieza se desvinculó.
+4. Una pieza sin captura muestra el icono, nunca la imagen propia del feature.
+5. La selección múltiple de «Añadir pieza» cuenta y envía todo lo marcado, aunque la búsqueda lo
+   oculte.
+6. Deslizar en la modal solo sobre imagen; sobre el 3D el gesto gira la pieza.
+7. La ficha recibe la captura automática de cada pieza también con portada propia.
+8. Un único orden, decidido por el servidor (natural: P2 antes que P10); el carrusel lo sigue.
+9. `cover_3d` suelto en `PUT /features/{id}` se rechaza con 422.
+
+**Segunda revisión (19/11/2026):**
+
+1. La respuesta de guardar, vincular y reordenar se prepara **antes** del `commit`: si la
+   consulta a SharePoint falla (sesión caducada), no se guarda nada.
+2. Guardar portadas, vincular, desvincular, quitar o cambiar un adjunto y borrar una pieza
+   toman el mismo bloqueo del feature: una portada nunca conserva caras de un STEP retirado.
+3. Antes de guardar, la ficha relee el feature. Si falta alguna pieza con borrador, avisa
+   nombrándola, descarta solo ese borrador y no guarda nada; un 409 anterior por otro motivo
+   ya no oculta el aviso.
+4. La vuelta atrás de la migración borra la selección 3D antigua siempre que no pueda volver
+   con la portada vigente de su pieza; una foto pegada después se conserva, sin caras.
+
+**Comprobaciones posteriores (19/11/2026)**
+
+- Añadir un adjunto toma el mismo bloqueo que desvincular su pieza. Si se desvincula al final,
+  se eliminan el vínculo y sus adjuntos. Si el adjunto se añade después, se crea de nuevo el
+  vínculo y se puede guardar una portada.
+- El borrador conserva el código que tenía la pieza al pulsar «Aplicar». Si otro usuario
+  la retira, el aviso puede identificarla aunque la ficha ya haya actualizado la lista.
+  Si se retira entre la lectura y el guardado, la ficha comprueba los vínculos al recibir
+  el 409 y basta un reintento para guardar los demás cambios.
+
+Desvincular quita la portada de esa pieza y **conserva el fichero subido**. La limpieza de
+imágenes sin referencias queda como tarea aparte, después de la tanda 5.
+
+Desviaciones del plan, decididas al implementar:
+
+- En la modal de consulta, el código y `n / N` van juntos arriba a la izquierda: arriba a la
+  derecha está **Encuadrar** del visor 3D.
+- Desvincular una pieza quita su portada (imagen incluida) con el vínculo y conserva el fichero
+  subido; antes se conservaba la imagen del feature. Borrar una pieza sí borra las imágenes
+  subidas solo para sus portadas.
+- Quitar el adjunto STEP de una portada deja la imagen y borra solo la selección de caras.
+- La edición no responde a ← / →: cambia de pieza con los botones `‹ ›` de su cabecera, para
+  no interferir con el visor 3D ni con la subida.
+- **Añadir pieza** múltiple: casillas en el mismo desplegable y botón «Añadir N piezas».
+
 | Tanda | Contenido |
 |---|---|
 | **1. Modelo y API** | Migración (vínculos que faltan, columnas nuevas, traslado de `cover_3d`), endpoint por pieza, `FeaturePublic`, desvincular y borrar pieza, cliente regenerado |
-| **2. Ficha** | Carrusel, modal con 3D por pieza, teclado, táctil, lista del número |
+| **2. Ficha** | Carrusel, modal con 3D por pieza, teclado, táctil, caso de una sola pieza |
 | **3. Catálogo** | Pila con número en lista y cuadrícula |
 | **4. Edición** | Editor por pieza en serie y «Añadir pieza» múltiple |
 | **5. Despliegue** | Copia de la BD de trabajo con `pg_dump` fuera de Git (como en A+B), migración, reconstrucción y comprobación en la web con la sesión de Microsoft |
@@ -133,18 +208,17 @@ Cada tanda se comprueba antes de pasar a la siguiente y se anota en
   - Desvincular una pieza no toca las capturas de las demás; borrar una pieza.
   - Portada y número de piezas de la tarjeta.
 - **Componentes** (`npm run test:components`):
-  - Carrusel: flechas, teclado, `n / N`, lista con buscador y flechas visibles en táctil.
+  - Carrusel: flechas, teclado, `n / N` y flechas visibles en táctil.
+  - Una sola pieza: código sin flechas ni `1 / 1`; sin pila en el catálogo.
   - Modal con 3D de la pieza visible y cancelación al cambiar de pieza.
   - Pila en lista y cuadrícula.
   - Edición en serie: conserva los borradores y Cancelar los descarta todos.
 - **Navegador:** escritorio y móvil, claro y oscuro, sin desplazamiento horizontal. Comprobar
   también en la ficha de pieza que no cambia su portada.
 
-## Preguntas para Eduard
+## Preguntas resueltas (Eduard, 19/11/2026)
 
-- **P1.** Las portadas que hoy son una imagen pegada, sin pieza: ¿se quedan como imagen del
-  feature (solo visible si no tiene piezas, propuesta por defecto) o se asignan a una pieza que
-  elija él?
-- **P2.** El resaltado: la app pinta hoy las caras en rojo sobre la pieza en gris. En el
-  prototipo, «R3 Foco» atenúa además el resto de la pieza. No se ha decidido; mientras tanto se
-  mantiene el de hoy.
+- **P1.** Las imágenes pegadas sin pieza se quedan como imagen del feature y solo se ven si no
+  tiene piezas. Aceptado que, en un feature con piezas, esa imagen deje de verse y salga la
+  captura automática del CAD.
+- **P2.** Resaltado como hoy (caras rojas sobre gris), sin atenuar el resto. Sin marcas sobre fotos.

@@ -1165,16 +1165,6 @@ export const FeatureDetailSchema = {
                 }
             ]
         },
-        cover_3d: {
-            anyOf: [
-                {
-                    '$ref': '#/components/schemas/FeatureCover3D'
-                },
-                {
-                    type: 'null'
-                }
-            ]
-        },
         part_order: {
             items: {
                 type: 'string',
@@ -1199,12 +1189,35 @@ export const FeatureDetailSchema = {
             title: 'Parts',
             default: []
         },
+        cover_image: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FilePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        part_count: {
+            type: 'integer',
+            title: 'Part Count',
+            default: 0
+        },
         notes: {
             items: {
                 '$ref': '#/components/schemas/FeatureNotePublic'
             },
             type: 'array',
             title: 'Notes',
+            default: []
+        },
+        part_covers: {
+            items: {
+                '$ref': '#/components/schemas/FeaturePartCoverPublic'
+            },
+            type: 'array',
+            title: 'Part Covers',
             default: []
         }
     },
@@ -1430,6 +1443,93 @@ export const FeatureNoteUpdateSchema = {
     title: 'FeatureNoteUpdate'
 } as const;
 
+export const FeaturePartCoverChangeSchema = {
+    properties: {
+        part_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Part Id'
+        },
+        image_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Image Id'
+        },
+        cover_3d: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FeatureCover3D'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    required: ['part_id'],
+    title: 'FeaturePartCoverChange',
+    description: `The new cover of the feature in one piece.
+
+An image, optionally made on the piece's CAD; no image removes the own cover and the
+piece shows its CAD capture again.`
+} as const;
+
+export const FeaturePartCoverPublicSchema = {
+    properties: {
+        part_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Part Id'
+        },
+        image: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FilePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        cover_3d: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FeatureCover3D'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        auto_image: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FilePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    type: 'object',
+    required: ['part_id'],
+    title: 'FeaturePartCoverPublic',
+    description: `What the cover shows for one piece of the feature.
+
+\`image\` and \`cover_3d\` are the capture made for this feature; \`auto_image\` is the
+saved catalogue capture of the piece's CAD, shown when there is no own capture.`
+} as const;
+
 export const FeaturePartOrderSchema = {
     properties: {
         part_ids: {
@@ -1505,16 +1605,6 @@ export const FeaturePublicSchema = {
                 }
             ]
         },
-        cover_3d: {
-            anyOf: [
-                {
-                    '$ref': '#/components/schemas/FeatureCover3D'
-                },
-                {
-                    type: 'null'
-                }
-            ]
-        },
         part_order: {
             items: {
                 type: 'string',
@@ -1538,6 +1628,21 @@ export const FeaturePublicSchema = {
             type: 'array',
             title: 'Parts',
             default: []
+        },
+        cover_image: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FilePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        part_count: {
+            type: 'integer',
+            title: 'Part Count',
+            default: 0
         }
     },
     type: 'object',
@@ -1594,15 +1699,20 @@ export const FeatureUpdateSchema = {
             ],
             title: 'Image Id'
         },
-        cover_3d: {
+        part_covers: {
             anyOf: [
                 {
-                    '$ref': '#/components/schemas/FeatureCover3D'
+                    items: {
+                        '$ref': '#/components/schemas/FeaturePartCoverChange'
+                    },
+                    type: 'array',
+                    maxItems: 500
                 },
                 {
                     type: 'null'
                 }
-            ]
+            ],
+            title: 'Part Covers'
         }
     },
     type: 'object',

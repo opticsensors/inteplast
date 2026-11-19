@@ -15,6 +15,7 @@ from app.api.routes.parts import get_part_or_404
 from app.cad_covers import validate_document
 from app.component_models import identity_expression, qualified
 from app.evidence import job_id
+from app.feature_covers import features_public, part_cad_cover
 from app.feature_links import feature_membership
 from app.file_sources import SourceError, document_cache_key
 from app.knowledge_models import (
@@ -96,26 +97,7 @@ def part_references(session: SessionDep, part_id: uuid.UUID) -> dict[str, Stored
 
 
 def part_card(session: SessionDep, part: Part, count: int) -> PartCardPublic:
-    cad = part_references(session, part.id).get("part")
-    cover = session.get(EvidenceJob, job_id("part-cover", part.id))
-    cad_key = None
-    if cad:
-        try:
-            cad_key = document_cache_key(cad)
-        except HTTPException as error:
-            # Keep the catalogue usable when a CAD is missing/changed/inaccessible, but do not
-            # present an old thumbnail as current. An expired login must still reach the browser.
-            if error.status_code not in {404, 409, 503}:
-                raise
-    image = None
-    if (
-        cad
-        and cover
-        and cad_key is not None
-        and cover.cache_key == cad_key
-        and cover.file_id == cad.id
-    ):
-        image = session.get(StoredFile, uuid.UUID(cover.payload["image_id"]))
+    cad, cad_key, image = part_cad_cover(session, part.id)
     characteristic_count = session.exec(
         select(func.count())
         .select_from(PartCharacteristic)
@@ -318,7 +300,7 @@ def search_catalog(
             ).all()
         ]
     return CatalogPublic(
-        features=[FeaturePublic.model_validate(f) for f in features],
+        features=features_public(session, features),
         parts=[part_card(session, p, counts.get(p.id, 0)) for p in parts],
         cotas=cotas,
         feature_count=feature_count,
@@ -338,7 +320,7 @@ def read_part_detail(
     return PartDetailPublic(
         part=part_card(session, part, count),
         files=read_files(session, part),
-        features=[FeaturePublic.model_validate(f) for f in features],
+        features=features_public(session, features),
         references=[
             PartReferencePublic(
                 kind=AssetKind(kind), file=FilePublic.model_validate(file)

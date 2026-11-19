@@ -54,6 +54,13 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
 - Nombre y descripción tienen etiquetas visibles. Los features ya no tienen categoría ni
   tags (17/11/2026). Cambiar imagen reutiliza el editor existente de portada, incluida la
   selección de superficies CAD.
+- **Portada por pieza (19/11/2026):** la cabecera muestra una captura por pieza en carrusel,
+  sin nada debajo. Con una pieza solo lleva su código; con varias, también `n / N` (texto, sin
+  lista) y flechas `size-8 rounded-md border bg-background/95 shadow-sm` que aparecen al pasar
+  el ratón o enfocar y siempre en táctil. En edición es el mismo carrusel con el lápiz, que
+  edita la pieza visible. Detalle en [portadas CAD](portadas-cad.md#una-portada-por-pieza-19112026).
+- **Añadir pieza** permite marcar varias piezas en su desplegable con buscador y añadirlas
+  juntas con «Añadir N piezas»; marcar no cierra el menú.
 - La ficha de feature muestra las piezas donde aparece y las cotas de cada una dentro
   de una misma subtarjeta con borde, tanto en consulta como en edición. «Ver pieza»
   abre su ficha, donde se consulta la documentación. No repetir documentos ni controles
@@ -110,7 +117,9 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
   Cuadrícula (`Catalog/CatalogView.tsx`), para Todo, Piezas y Features. La cuadrícula
   (`Catalog/CatalogTiles.tsx`) tiene una columna en móvil y más según el ancho; cada celda
   lleva la portada grande y debajo el código y el nombre, y en piezas la familia y el cliente;
-  en features, el nombre. El borde superior de color distingue el tipo. La vista elegida se
+  en features, el nombre. La portada de un feature es la de su primera pieza; con dos piezas
+  o más, en lista y cuadrícula, lleva dos capas detrás y el número de piezas (19/11/2026), sin
+  navegación: se navega en la ficha. El borde superior de color distingue el tipo. La vista elegida se
   guarda en este navegador (`inteplast.catalog-view`); si no se puede leer o guardar, se abre
   en Lista sin error. Las cotas encontradas siguen arriba en ambas vistas.
 - **Grafo (17–18/11/2026):** tercer botón de «Vista» (`Catalog/CatalogGraph.tsx`, cargado

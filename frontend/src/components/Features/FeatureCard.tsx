@@ -79,6 +79,51 @@ export function FeatureThumbnail({
   )
 }
 
+/**
+ * Cover of a catalogue card: the capture of the first piece. With two pieces or more,
+ * two layers behind it and the number of pieces; navigation is on the feature page
+ * (docs/plan-portadas-por-pieza-2026-11-18.md, decisions 2 and 5).
+ */
+export function FeatureCoverStack({
+  feature,
+  className,
+  flatClassName,
+}: {
+  feature: FeaturePublic
+  /** Size and placement, the same with or without layers. */
+  className?: string
+  /** Extra classes of the capture when it is shown alone. */
+  flatClassName?: string
+}) {
+  const cover = { image: feature.cover_image ?? null, name: feature.name }
+  const count = feature.part_count ?? 0
+  if (count < 2)
+    return (
+      <FeatureThumbnail
+        feature={cover}
+        className={cn(className, flatClassName)}
+      />
+    )
+  const layer = "absolute rounded-md border bg-muted"
+  return (
+    <div
+      data-slot="cover-stack"
+      className={cn("relative shrink-0 pr-2 pt-2", className)}
+    >
+      <div aria-hidden className={cn(layer, "bottom-2 left-2 right-0 top-0")} />
+      <div aria-hidden className={cn(layer, "inset-1")} />
+      <FeatureThumbnail feature={cover} className="relative size-full" />
+      <span
+        className="absolute right-4 top-4 rounded-full bg-foreground/85 px-2 py-0.5 text-[11px] font-medium tabular-nums text-background"
+        title={`${count} piezas`}
+      >
+        {count}
+        <span className="sr-only"> piezas</span>
+      </span>
+    </div>
+  )
+}
+
 interface FeatureCardProps {
   feature: FeaturePublic
   onSelect?: (feature: FeaturePublic) => void
@@ -113,7 +158,7 @@ export function FeatureCard({
           <span className="sr-only">Abrir {feature.name}</span>
         </button>
       )}
-      <FeatureThumbnail
+      <FeatureCoverStack
         feature={feature}
         className="size-24 self-center sm:size-36"
       />

@@ -337,6 +337,11 @@ def create_feature_asset(
     *, session: Session, asset_in: FeatureAssetCreate, feature_id: uuid.UUID
 ) -> FeatureAsset:
     db_asset = FeatureAsset.model_validate(asset_in, update={"feature_id": feature_id})
+    # An attachment of a piece makes it a piece of the feature: its cover lives on the link.
+    if db_asset.part_id and not session.get(
+        FeaturePartLink, (feature_id, db_asset.part_id)
+    ):
+        session.add(FeaturePartLink(feature_id=feature_id, part_id=db_asset.part_id))
     session.add(db_asset)
     session.commit()
     session.refresh(db_asset)

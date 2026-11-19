@@ -1,7 +1,7 @@
-import { Box, ImageIcon } from "lucide-react"
+import { Box, ChevronLeft, ChevronRight, ImageIcon } from "lucide-react"
 import { useEffect, useState } from "react"
 
-import type { FeatureCover3D, FeaturePublic, FilePublic } from "@/client"
+import type { FeatureCover3D, FeatureDetail, FilePublic } from "@/client"
 import { FileUpload } from "@/components/Common/FileUpload"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,17 +15,38 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CadCoverEditor } from "./CadCoverEditor"
 import { CoverButton } from "./CoverButton"
 import { COVER_EDITOR_ROWS, CoverDialog } from "./CoverDialog"
+import type { CoverDraft, CoverSlide } from "./coverSlides"
+import { CarouselFrame, COVER_SIZE, useCarousel } from "./FeatureCover"
 
 interface CoverEditorProps {
-  feature?: FeaturePublic
+  feature?: FeatureDetail
+  /** One per piece, with the unsaved drafts already applied. */
+  slides: CoverSlide[]
+  /** Image of the feature itself, only used while it has no pieces. */
   image: FilePublic | null
-  cover: FeatureCover3D | null
-  onChange: (image: FilePublic | null, cover: FeatureCover3D | null) => void
+  onImageChange: (image: FilePublic | null) => void
+  onPartChange: (partId: string, draft: CoverDraft) => void
 }
 
-export function FeatureCoverEditor(props: CoverEditorProps) {
+/**
+ * The cover in edit mode: the same carousel as the page, with the pencil. It edits
+ * the visible piece; «Aplicar» keeps a draft for it and the next piece can be edited
+ * without closing. «Guardar» on the page saves them all
+ * (docs/plan-portadas-por-pieza-2026-11-18.md, Interfaz).
+ */
+export function FeatureCoverEditor({
+  feature,
+  slides,
+  image,
+  onImageChange,
+  onPartChange,
+}: CoverEditorProps) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
+  const { current, many, go } = useCarousel(slides.length)
+  const slide = slides[current]
+  const name = feature?.name ?? "Portada del feature"
+
   return (
     <Dialog
       open={open}
@@ -33,14 +54,33 @@ export function FeatureCoverEditor(props: CoverEditorProps) {
         if (!busy) setOpen(next)
       }}
     >
-      <div className="flex w-32 shrink-0 flex-col gap-2 sm:w-48">
-        <DialogTrigger asChild>
-          <CoverButton
-            editable
-            image={props.image}
-            name={props.feature?.name ?? "Portada del feature"}
-          />
-        </DialogTrigger>
+      <div className="flex w-48 shrink-0 flex-col gap-2 sm:w-[300px]">
+        {slide ? (
+          <CarouselFrame
+            code={slide.part.code}
+            current={current}
+            count={slides.length}
+            onStep={go}
+          >
+            <DialogTrigger asChild>
+              <CoverButton
+                editable
+                image={slide.image}
+                name={`${name} · ${slide.part.code}`}
+                className="size-full sm:size-full"
+              />
+            </DialogTrigger>
+          </CarouselFrame>
+        ) : (
+          <DialogTrigger asChild>
+            <CoverButton
+              editable
+              image={image}
+              name={name}
+              className={COVER_SIZE}
+            />
+          </DialogTrigger>
+        )}
         <Button
           type="button"
           variant="outline"
@@ -61,17 +101,39 @@ export function FeatureCoverEditor(props: CoverEditorProps) {
             if (busy) event.preventDefault()
           }}
         >
-          <DialogHeader>
-            <DialogTitle>Editar portada</DialogTitle>
+          <DialogHeader className="flex-row items-center gap-2 pr-8">
+            <DialogTitle className="min-w-0 flex-1">Editar portada</DialogTitle>
+            {slide && (
+              <PieceStepper
+                code={slide.part.code}
+                position={
+                  many ? `${current + 1} / ${slides.length}` : undefined
+                }
+                disabled={busy}
+                onStep={many ? go : undefined}
+              />
+            )}
           </DialogHeader>
           <CoverEditorDraft
-            {...props}
+            // A new piece starts a new draft: what was not applied is dropped.
+            key={slide?.part.id ?? "feature"}
+            feature={feature}
+            partId={slide?.part.id}
+            image={slide ? (slide.own ? slide.image : null) : image}
+            cover={slide?.own ? slide.cover : null}
             setBusy={setBusy}
             close={() => setOpen(false)}
-            onChange={(image, cover) => {
-              props.onChange(image, cover)
+            onChange={(nextImage, cover) => {
+              if (slide)
+                onPartChange(slide.part.id, {
+                  partCode: slide.part.code,
+                  image: nextImage,
+                  cover,
+                })
+              else onImageChange(nextImage)
               setBusy(false)
-              setOpen(false)
+              // With more pieces the editor stays open to go on with the next one.
+              if (!many) setOpen(false)
             }}
           />
         </CoverDialog>
@@ -80,15 +142,79 @@ export function FeatureCoverEditor(props: CoverEditorProps) {
   )
 }
 
-/** Mount once per opening: cancelling never changes the form's cover draft. */
+/** `‹ 3212 3 / 24 ›`: the piece being edited and how to move to another. */
+function PieceStepper({
+  code,
+  position,
+  disabled,
+  onStep,
+}: {
+  code: string
+  position?: string
+  disabled: boolean
+  onStep?: (delta: number) => void
+}) {
+  return (
+    <div className="flex shrink-0 items-center gap-1 text-sm">
+      {onStep && (
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="size-8"
+          aria-label="Pieza anterior"
+          title="Pieza anterior"
+          disabled={disabled}
+          onClick={() => onStep(-1)}
+        >
+          <ChevronLeft className="size-4" />
+        </Button>
+      )}
+      <span className="px-1">
+        <span className="font-mono">{code}</span>
+        {position && (
+          <span className="ml-2 tabular-nums text-muted-foreground">
+            {position}
+          </span>
+        )}
+      </span>
+      {onStep && (
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="size-8"
+          aria-label="Pieza siguiente"
+          title="Pieza siguiente"
+          disabled={disabled}
+          onClick={() => onStep(1)}
+        >
+          <ChevronRight className="size-4" />
+        </Button>
+      )}
+    </div>
+  )
+}
+
+/** Mount once per piece and opening: cancelling never changes the form's drafts. */
 function CoverEditorDraft({
   feature,
+  partId,
   image: initialImage,
   cover,
   onChange,
   setBusy,
   close,
-}: CoverEditorProps & { setBusy: (busy: boolean) => void; close: () => void }) {
+}: {
+  feature?: FeatureDetail
+  /** The piece being edited; none while the feature has no pieces. */
+  partId?: string
+  image: FilePublic | null
+  cover: FeatureCover3D | null
+  onChange: (image: FilePublic | null, cover: FeatureCover3D | null) => void
+  setBusy: (busy: boolean) => void
+  close: () => void
+}) {
   const [tab, setTab] = useState(cover ? "cad" : "image")
   const [cadVisited, setCadVisited] = useState(Boolean(cover))
   const [image, setImage] = useState(initialImage)
@@ -143,7 +269,10 @@ function CoverEditorDraft({
           <Button
             type="button"
             disabled={busy || upload.error || !imageChanged}
-            onClick={() => onChange(image, null)}
+            onClick={() => {
+              onChange(image, null)
+              setImageChanged(false)
+            }}
           >
             {image ? "Aplicar" : "Quitar portada"}
           </Button>
@@ -153,6 +282,7 @@ function CoverEditorDraft({
         <TabsContent value="cad" forceMount hidden={tab !== "cad"}>
           <CadCoverEditor
             feature={feature}
+            partId={partId}
             initial={cover}
             image={initialImage}
             setBusy={setCadBusy}

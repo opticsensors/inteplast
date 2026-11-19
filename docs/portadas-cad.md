@@ -6,6 +6,49 @@ selección de caras y persistencia de portadas. Los visores de archivos se descr
 en [vistas 3D](vistas-3d.md). Las verificaciones fechadas al final son antecedentes;
 no se han repetido en esta revisión documental.
 
+## Una portada por pieza (19/11/2026)
+
+Desde la migración `p27ea3fbd174_feature_part_covers.py` la portada del feature es **una por
+pieza**: la captura y, si se hizo sobre el CAD, sus caras y su encuadre se guardan en
+`FeaturePartLink.image_id` y `FeaturePartLink.cover_3d`. Decisiones y alcance en el
+[plan de portadas por pieza](plan-portadas-por-pieza-2026-11-18.md).
+
+- **Qué se ve de cada pieza:** su captura propia; si no tiene, la captura automática de su CAD
+  (la del catálogo, sin rojo); si tampoco, el icono de imagen. Nunca se genera una captura nueva
+  al abrir la ficha.
+- **Ficha:** carrusel de 300 px (192 px en el móvil), sin nada debajo. Con una pieza, solo su
+  código arriba a la izquierda. Con varias, además `n / N` arriba a la derecha, flechas a los
+  lados (al pasar el ratón o enfocar; siempre en táctil), ← / → y deslizamiento con el dedo.
+  `n / N` es texto, no abre ninguna lista. La modal tiene el mismo carrusel; el código y la
+  posición van juntos arriba a la izquierda porque la derecha es de **Encuadrar**. Solo carga el
+  STEP de la pieza visible; cambiar de pieza termina su worker, como cerrar.
+- **Lista y cuadrícula:** la captura de la primera pieza de la ficha (`part_order` y luego el
+  código). Con dos piezas o más, dos capas detrás y el número de piezas; sin navegación.
+- **Imagen del feature sin pieza** (`Feature.image_id`): solo se muestra mientras el feature no
+  tiene piezas. La migración no la asigna a ninguna pieza.
+- **API:** `PUT /features/{id}` guarda la cabecera y las portadas cambiadas
+  (`part_covers`: pieza, `image_id` o nada para volver a la captura del CAD, y `cover_3d`
+  opcional) en **una sola transacción**: si una portada falla, no se guarda nada. La respuesta
+  se prepara antes del `commit`, así que un fallo de SharePoint tampoco deja nada a medias.
+  Al aplicar una portada, el borrador conserva el código de la pieza. Antes de guardar, la
+  ficha relee el feature. Si otro usuario ha retirado la pieza, el aviso muestra ese código
+  incluso si la lista de piezas ya se ha actualizado. Se descarta su borrador y el reintento
+  guarda el resto. Si la retirada coincide con el envío, el servidor responde **409** y
+  la ficha vuelve a comprobar qué piezas siguen vinculadas antes de mostrar el aviso.
+  Guardar portadas, vincular o desvincular piezas y añadir, quitar o cambiar adjuntos
+  comparten el bloqueo del feature. `cover_3d` suelto en el feature (pestaña de la versión anterior) se
+  rechaza con **422**. `FeaturePublic` añade `cover_image` y `part_count`; `FeatureDetail`,
+  `part_covers` (una por pieza, con su captura automática aunque haya portada propia).
+- **Orden:** lo decide el servidor (`part_order` y luego el código en orden natural: P2 antes
+  que P10). La tarjeta usa la primera y el carrusel sigue `part_covers`.
+- **Desvincular** quita la portada de esa pieza (su vínculo) y conserva el fichero subido. Al
+  volver a vincularla empieza sin portada propia. El borrador sin guardar de esa pieza se
+  descarta cuando el servidor confirma la desvinculación.
+- **Deslizar** cambia de pieza en la ficha y, sobre una imagen, en la modal; sobre el 3D el
+  gesto gira la pieza.
+- **`Feature.cover_3d`** ya no se lee ni se escribe. Se mantiene una tanda para que el
+  `downgrade` sepa en qué pieza estaba la portada.
+
 ## Piezas (22/09/2026)
 
 El catálogo y `/parts/{id}` comparten una captura PNG del STEP completo, sin selección
@@ -23,16 +66,20 @@ Pulsar la portada abre el 3D interactivo completo, con giro, zoom y encuadre.
 
 ## Uso
 
-En el feature, pulsar la portada en **Editar** (también si está vacía) abre **Editar portada**.
-La pestaña **Imagen** admite:
+En el feature, pulsar la portada en **Editar** (también si está vacía) abre **Editar portada**
+de **la pieza visible** en el carrusel. Con varias piezas, la cabecera de la modal lleva
+`‹ código n / N ›`: **Aplicar** guarda un borrador de esa pieza y deja la modal abierta para
+pasar a la siguiente. **Guardar** en la ficha envía todos los borradores; **Cancelar** en la
+ficha los descarta todos. La pestaña **Imagen** admite:
 
 - Clic para seleccionar una imagen del ordenador.
 - Arrastrar y soltar una imagen.
 - Pegar una imagen con **Ctrl+V**, fuera de los campos de texto.
-- **CAD**, en la misma ventana, permite usar el STEP de una de las piezas vinculadas al
-  feature ([origen del CAD](#origen-del-cad-de-la-portada)). No se abre otra modal encima.
+- **CAD**, en la misma ventana, usa el STEP de la pieza visible
+  ([origen del CAD](#origen-del-cad-de-la-portada)). No se abre otra modal encima. Ya no hay
+  selector de pieza; solo aparece un selector de archivo si esa pieza tiene varios STEP.
 
-El editor CAD permite elegir la pieza, marcar varias superficies con clics, quitar una marca
+El editor CAD permite marcar varias superficies con clics, quitar una marca
 con otro clic y limpiar la selección con el icono de borrador junto a **Encuadrar**.
 Arrastrar gira; la rueda amplía; el botón de encuadre
 recupera la vista inicial. **Aplicar** genera una imagen y la coloca en el borrador
@@ -74,17 +121,21 @@ cabecera. El pegado se limita a la modal y respeta los campos de texto.
 
 ## Persistencia y revisiones
 
-`Feature.cover_3d` es una anotación JSON nullable añadida por la migración
-`c84d70f6ab52_add_feature_cad_cover.py`. Las fichas existentes mantienen su imagen.
+La anotación (`cover_3d`, esquema `FeatureCover3D`) vive desde el 19/11/2026 en
+`FeaturePartLink.cover_3d`, junto a su imagen en `FeaturePartLink.image_id`
+([una portada por pieza](#una-portada-por-pieza-19112026)). Antes estaba en `Feature.cover_3d`
+(migración `c84d70f6ab52_add_feature_cad_cover.py`).
 
 Guarda el adjunto, la pieza, el documento y su versión, SHA-256 de los bytes del STEP, receta
-del importador, huella de la geometría, superficies seleccionadas y cámara. `Feature.image_id`
-sigue apuntando a una imagen para las miniaturas. El STEP original no se modifica.
+del importador, huella de la geometría, superficies seleccionadas y cámara. El STEP original
+no se modifica.
 
-`PUT /features/{id}` acepta `cover_3d` junto a `image_id`. Comprueba que el CAD pertenece al
-feature y a la pieza, que está disponible y que su versión y SHA-256 coinciden. Un cambio del
-original produce un error antes de guardar la cabecera. El esquema valida selección no vacía,
-sin duplicados y cámara finita y válida. Una edición de otros campos conserva la portada.
+`PUT /features/{id}` (con `part_covers`) comprueba que la pieza es del feature, que la
+selección es de esa pieza, que el CAD es un adjunto de esa pieza en ese feature, que está
+disponible y que su versión y SHA-256 coinciden. Si algo falla no guarda nada. El esquema valida
+selección no vacía, sin duplicados y cámara finita y válida. Editar otros campos del feature no
+toca las portadas. Quitar el adjunto STEP (o cambiar su pieza, archivo o tipo) borra la selección
+de caras de esa portada y conserva su imagen.
 
 El navegador verifica además la huella de la geometría antes de aplicar índices de caras.
 Los índices solo valen para esos bytes y esa receta: **no son identificadores estables entre
@@ -110,7 +161,13 @@ mantiene este contrato y lee los bytes de la ruta vinculada; sigue pendiente su 
 - `StepCoverCanvas.tsx`: caras de `occt-import-js`, selección por clic, cámara y captura PNG.
   Mantiene la teselación completa del STEP; no usa el GLB simplificado para identificar caras.
   Agrupa superficies consecutivas del mismo color para reducir las llamadas de dibujo.
-- `FeatureCover.tsx`: ampliación de imagen/3D; carga diferida del visor al abrir.
+- `FeatureCover.tsx`: carrusel por pieza (`CarouselFrame`, compartido con la edición) y
+  ampliación de imagen/3D; carga diferida del visor al abrir.
+- `coverSlides.ts`: qué muestra cada pieza y los borradores de edición sobre lo guardado.
+- `FeatureCard.tsx` (`FeatureCoverStack`): pila con número en lista y cuadrícula.
+- `feature_covers.py`: orden de las piezas, portada de cada pieza y de la tarjeta, guardado
+  de todas o ninguna (`apply_cover_changes`) y limpieza al quitar adjuntos.
+- `partUnlinked.ts`: aviso de desvinculación confirmada, para descartar el borrador.
 - `cadCover.ts`: elegibilidad, identidad del documento y versión de la receta.
 - `cad_covers.py`: validación del vínculo y de los bytes al guardar.
 
@@ -134,9 +191,10 @@ queda como tarea separada. Desvincular la pieza y volver a vincularla copia los 
 actuales, pero tiene dos efectos que no se recuperan al volver a vincular:
 
 - Se retiran las cotas de esa pieza asignadas al feature.
-- Si la portada 3D usa el CAD de esa pieza, se elimina su configuración (superficies
-  seleccionadas y cámara; `unlink_feature_part` en `api/routes/features.py`). La imagen
-  estática de la portada se conserva, pero la selección hay que rehacerla.
+- Se quita la portada del feature en esa pieza (imagen y selección), que vive en su vínculo
+  (`unlink_feature_part` en `api/routes/features.py`). El fichero subido se conserva y las
+  portadas de las demás piezas no cambian. Desde el 19/11/2026; antes se conservaba la imagen
+  y se perdía solo la selección.
 
 La portada de la pieza se selecciona a partir de su CAD principal actual. Su caché incluye
 también el origen activo y la versión del contenido, como se explica debajo.

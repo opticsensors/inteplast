@@ -210,9 +210,10 @@ docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bo
   ([README](prototypes/data-explorer/conocimiento/asistente/README.md)).
 - **Portadas CAD:** pulsar la cabecera abre la ampliación de imagen/3D; en edición abre una
   modal para pegar/arrastrar/elegir imágenes o crear una portada desde el STEP vinculado de
-  la pieza, con caras rojas y encuadre guardados. `Feature.cover_3d`
-  se liga a los bytes y la receta de importación; no reutilizar índices de caras entre
-  revisiones. Detalles en [docs/portadas-cad.md](docs/portadas-cad.md).
+  la pieza, con caras rojas y encuadre guardados. **Desde el 19/11/2026 hay una portada por
+  pieza** (`FeaturePartLink.image_id` / `cover_3d`): carrusel en la ficha, pila con número en
+  el catálogo. `cover_3d` se liga a los bytes y la receta de importación; no reutilizar índices
+  de caras entre revisiones. Detalles en [docs/portadas-cad.md](docs/portadas-cad.md).
 
 ---
 
