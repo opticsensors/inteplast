@@ -1198,6 +1198,18 @@ export const FeatureDetailSchema = {
                 }
             ]
         },
+        deferred_cover_part_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deferred Cover Part Id'
+        },
         part_count: {
             type: 'integer',
             title: 'Part Count',
@@ -1637,6 +1649,18 @@ export const FeaturePublicSchema = {
                     type: 'null'
                 }
             ]
+        },
+        deferred_cover_part_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deferred Cover Part Id'
         },
         part_count: {
             type: 'integer',
@@ -2799,6 +2823,37 @@ export const NoteKindSchema = {
 
 export const PartCardPublicSchema = {
     properties: {
+        cad: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FilePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        cad_cache_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cad Cache Key'
+        },
+        image: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FilePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         code: {
             type: 'string',
             maxLength: 64,
@@ -2912,36 +2967,17 @@ export const PartCardPublicSchema = {
             title: 'Characteristic Count',
             default: 0
         },
-        cad: {
+        deferred_cover_part_id: {
             anyOf: [
                 {
-                    '$ref': '#/components/schemas/FilePublic'
-                },
-                {
-                    type: 'null'
-                }
-            ]
-        },
-        cad_cache_key: {
-            anyOf: [
-                {
-                    type: 'string'
+                    type: 'string',
+                    format: 'uuid'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Cad Cache Key'
-        },
-        image: {
-            anyOf: [
-                {
-                    '$ref': '#/components/schemas/FilePublic'
-                },
-                {
-                    type: 'null'
-                }
-            ]
+            title: 'Deferred Cover Part Id'
         },
         measurement_status: {
             anyOf: [
@@ -3079,6 +3115,44 @@ export const PartCatalogPublicSchema = {
     type: 'object',
     required: ['code', 'id', 'feature_count'],
     title: 'PartCatalogPublic'
+} as const;
+
+export const PartCoverPublicSchema = {
+    properties: {
+        cad: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FilePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        cad_cache_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cad Cache Key'
+        },
+        image: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FilePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        }
+    },
+    type: 'object',
+    title: 'PartCoverPublic'
 } as const;
 
 export const PartCoverRequestSchema = {

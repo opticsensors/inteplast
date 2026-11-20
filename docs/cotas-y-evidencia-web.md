@@ -224,6 +224,13 @@ significado técnico:
 
 ## Indexación y revisiones
 
+Si el plano carece de `.icp` en su carpeta, en SharePoint se localizan las carpetas
+con proyectos dentro de la pieza. El servidor recuerda sus rutas y un cursor de cambios
+por usuario y carpeta. Al volver a abrir el índice, consulta ese cursor y rehace el
+inventario si hay cambios. Comprueba en las carpetas candidatas la versión de los
+proyectos y la identidad de las copias del PDF. Si la unidad no admite esta consulta
+incremental, se enumeran sus carpetas.
+
 La primera búsqueda se prepara desde el visor. El servidor ejecuta `app.ingestion.drawing.build_index`
 en un subproceso; OCR y extracción de números ocurren una vez por versión. Las propuestas
 no se dan por verificadas. La revisión humana guarda número y ubicación del candidato

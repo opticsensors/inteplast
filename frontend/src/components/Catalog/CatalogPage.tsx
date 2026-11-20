@@ -67,7 +67,12 @@ export function CatalogPage({ params }: { params: FeatureSearchParams }) {
     queryKey: ["features", "catalog", request],
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
-      CatalogService.searchCatalog({ ...request, skip: pageParam, limit: 40 }),
+      CatalogService.searchCatalog({
+        ...request,
+        skip: pageParam,
+        limit: 40,
+        deferCovers: true,
+      }),
     enabled: !drawings,
     getNextPageParam: (last, pages) =>
       pages.length * 40 <

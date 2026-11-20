@@ -15,7 +15,7 @@ from app import microsoft_auth, sharepoint
 from app.core.config import settings
 from app.core.db import engine
 from app.evidence import drawing_key, drawing_project_files, job_id
-from app.file_sources import reference_key
+from app.file_sources import reference_key, twin_projects
 from app.knowledge_models import EvidenceJob
 from app.measurement_models import MeasurementImport
 from app.models import Part, StoredFile
@@ -206,6 +206,65 @@ def test_sharepoint_walk_and_path_rules(graph: FakeGraph) -> None:
     assert anonymous.value.status_code == 401
 
 
+def test_remote_twins_reuse_only_an_unchanged_user_inventory(
+    graph: FakeGraph, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    drawing = f"{PIECE}/plan #1.pdf"
+    copy = f"{PIECE}/copies/another.pdf"
+    project = f"{PIECE}/copies/export.ICP"
+    original_request = sharepoint.request
+    scans: list[uuid.UUID | None] = []
+    delta = f"{sharepoint.item_url(PIECE)}/delta"
+
+    def request(url: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        if url == delta:
+            scans.append(sharepoint.acting_user.get())
+            paths = sorted(graph.files, reverse=True)
+            return {
+                "value": [entry(path) for path in paths],
+                "@odata.nextLink": delta + "?page=2",
+            }
+        if url == delta + "?page=2":
+            return {
+                "value": [entry(path) for path in graph.folders()],
+                "@odata.deltaLink": delta + f"?cursor={len(graph.files)}",
+            }
+        if url.startswith(delta + "?cursor="):
+            unchanged = url.endswith(f"={len(graph.files)}")
+            return {
+                "value": [] if unchanged else [{"id": "change"}],
+                "@odata.deltaLink": url,
+            }
+        return original_request(url, params)
+
+    def entry(path: str) -> dict[str, Any]:
+        node = graph.meta(path)
+        node["parentReference"]["id"] = "id-" + path.rpartition("/")[0]
+        return node
+
+    monkeypatch.setattr(sharepoint, "request", request)
+    first_user, other_user = uuid.uuid4(), uuid.uuid4()
+    with sharepoint.acting_as(first_user):
+        assert twin_projects(drawing, [PIECE]) == []
+        assert twin_projects(drawing, [PIECE]) == []
+        assert scans == [first_user]
+        graph.files.update({copy: graph.files[drawing], project: b"project"})
+        graph.versions.update({copy: 1, project: 1})
+        assert [p.path for p in twin_projects(drawing, [PIECE])] == [project]
+        assert scans == [first_user, first_user]
+        # Even with unchanged folder names, read the current candidate versions.
+        graph.files[copy] = b"x" * len(graph.files[drawing])
+        graph.versions[copy] += 1
+        assert twin_projects(drawing, [PIECE]) == []
+        assert len(scans) == 2
+    with sharepoint.acting_as(other_user):
+        assert twin_projects(drawing, [PIECE]) == []
+        assert scans[-1] == other_user
+        del graph.files[project]
+        assert twin_projects(drawing, [PIECE]) == []
+        assert len(scans) == 4
+
+
 def test_links_made_through_sharepoint_stay_readable_locally(
     client: TestClient,
     superuser_token_headers: dict[str, str],
@@ -387,6 +446,17 @@ def test_remote_cover_invalidates_without_downloading_the_cad(
         == body["image_id"]
     )
     downloads = graph.downloads
+    before = len(graph.requests)
+    deferred = client.get(
+        f"{API}/catalog",
+        headers=headers,
+        params={"part_id": remote_cover["part_id"], "defer_covers": True},
+    ).json()
+    assert len(graph.requests) == before
+    assert deferred["parts"][0]["deferred_cover_part_id"] == remote_cover["part_id"]
+    assert deferred["features"][0]["deferred_cover_part_id"] == remote_cover["part_id"]
+    assert deferred["parts"][0]["image"] is None
+    assert client.get(url, headers=headers).json()["image"]["id"] == body["image_id"]
     graph.files[remote_cover["path"]] = (
         b"ISO-10303-21; new remote CAD; END-ISO-10303-21;"
     )
@@ -396,6 +466,7 @@ def test_remote_cover_invalidates_without_downloading_the_cad(
     assert changed["cad"]["version"] == first["cad"]["version"]
     assert changed["cad_cache_key"] != first["cad_cache_key"]
     assert changed["image"] is None
+    assert client.get(url, headers=headers).json()["image"] is None
     card = client.get(
         f"{API}/catalog", headers=headers, params={"part_id": remote_cover["part_id"]}
     ).json()["parts"][0]

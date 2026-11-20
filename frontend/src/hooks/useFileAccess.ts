@@ -22,7 +22,7 @@ export function useDocumentStatus(file: FilePublic | null | undefined) {
     queryFn: () => FilesService.fileStatus({ fileId: file!.id }),
     enabled: file?.source === "local",
     retry: false,
-    refetchInterval: 30_000,
+    refetchOnWindowFocus: false,
   })
 }
 

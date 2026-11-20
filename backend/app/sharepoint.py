@@ -217,6 +217,98 @@ def walk(folder: str, *, too_wide: str, limit: int = 20000) -> list[SourceItem]:
     return files
 
 
+# Only folder names and a change cursor. Never cache a permission or a download URL.
+_icp_inventories: dict[tuple[uuid.UUID | None, str, str], tuple[str, list[str]]] = {}
+_icp_lock = threading.Lock()
+
+
+def icp_folders(folder: str) -> list[str] | None:
+    """Discover project folders, checking for changes on each subsequent lookup."""
+    root_id = item(folder, directory=True).remote["id"]
+    url = f"{item_url(folder)}/delta"
+    key = (acting_user.get(), url, root_id)
+    with _icp_lock:
+        cached = _icp_inventories.get(key)
+    if cached:
+        cursor, folders = cached
+        try:
+            page = request(cursor)
+        except SourceError as error:
+            if error.status_code not in {404, 503}:
+                raise
+            # Expired cursors and resets need a new full snapshot.
+        else:
+            if (
+                page.get("value") == []
+                and page.get("@odata.deltaLink")
+                and not page.get("@odata.nextLink")
+            ):
+                with _icp_lock:
+                    if _icp_inventories.get(key) is cached:
+                        _icp_inventories[key] = (page["@odata.deltaLink"], folders)
+                return folders
+    try:
+        result = _icp_inventory(url, folder, root_id)
+    except SourceError as error:
+        if error.status_code in {404, 503}:
+            return None  # Drives without folder delta can still list their children.
+        raise
+    if result is None:
+        return None
+    with _icp_lock:
+        if len(_icp_inventories) >= 256 and key not in _icp_inventories:
+            _icp_inventories.pop(next(iter(_icp_inventories)))
+        _icp_inventories[key] = result
+    return result[1]
+
+
+def _icp_inventory(url: str, folder: str, root_id: str) -> tuple[str, list[str]] | None:
+    """Delta supplies a hierarchy by ID. File versions still come from live listings."""
+    params: dict[str, Any] | None = {
+        "$select": "id,name,parentReference,folder,file,deleted",
+        "$top": 500,
+    }
+    nodes: dict[str, dict[str, Any]] = {}
+    while url:
+        page = request(url, params)
+        for node in page.get("value", []):
+            if "deleted" in node:
+                nodes.pop(node["id"], None)
+            else:
+                nodes[node["id"]] = node
+        if len(nodes) > 20001:  # same ceiling as walk(), plus the piece folder
+            raise SourceError(
+                "unavailable", "Selecciona la carpeta concreta de la pieza.", 422
+            )
+        url, params = page.get("@odata.nextLink", ""), None
+        if not url and not page.get("@odata.deltaLink"):
+            return None
+
+    parents = {
+        node.get("parentReference", {}).get("id")
+        for node in nodes.values()
+        if "file" in node
+        and PurePosixPath(node["name"]).suffix.lower() == ".icp"
+        and not node["name"].startswith(".")
+    }
+    folders = set()
+    for parent in parents:
+        names: list[str] = []
+        seen: set[str] = set()
+        while parent != root_id:
+            node = nodes.get(parent)
+            if not node or "folder" not in node or parent in seen:
+                return None
+            if node["name"].startswith("."):
+                break
+            seen.add(parent)
+            names.append(node["name"])
+            parent = node.get("parentReference", {}).get("id")
+        else:
+            folders.add("/".join([folder, *reversed(names)]))
+    return page["@odata.deltaLink"], sorted(folders)
+
+
 def cache_directory(data: dict[str, Any]) -> Path:
     parent = data.get("parentReference") or {}
     identity = f"{parent.get('driveId', '')}:{data.get('id', '')}"

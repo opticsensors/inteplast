@@ -23,9 +23,12 @@ before(async () => {
       {
         name: "isolated-api",
         setup(build) {
-          build.onResolve({ filter: /(?:^|\/)StepCoverCanvas$/ }, () => ({
-            path: path.join(__dirname, "fixtures/cad-canvas.jsx"),
-          }))
+          build.onResolve(
+            { filter: /(?:^|\/)(StepCoverCanvas|ModelViewer|WebModelViewer)$/ },
+            () => ({
+              path: path.join(__dirname, "fixtures/cad-canvas.jsx"),
+            }),
+          )
           build.onResolve({ filter: /^\.\/PdfViewer$/ }, () => ({
             path: path.join(__dirname, "fixtures/evidence-drawing.jsx"),
           }))
@@ -543,6 +546,76 @@ test("the initial catalogue mixes cards, filters by type, and cotas appear only 
       .inputValue(),
     "N170",
   )
+})
+
+test("catalogue cards are usable while they wait for their shared CAD cover", async (t) => {
+  const page = await mount(t)
+  await page.evaluate(() => {
+    const state = window.review
+    state.parts[0].deferred_cover_part_id =
+      state.feature.deferred_cover_part_id = "part-one"
+    state.pendingCover = new Promise((resolve) => {
+      state.deliverCover = () =>
+        resolve({
+          image: { id: "saved-cover", content_type: "image/png" },
+        })
+    })
+    return state.refreshCatalog()
+  })
+  await page.waitForFunction(() => window.review.coverRequests?.length)
+  await expect(
+    page.getByRole("button", { name: "Abrir 3212 Pump Housing" }),
+  ).toBeEnabled()
+  await expect(
+    page.getByRole("button", { name: "Abrir Bolt Eye" }),
+  ).toBeEnabled()
+  await page.evaluate(() => window.review.deliverCover())
+  await expect(page.locator("img[src*='saved-cover']")).toHaveCount(2)
+  assert.deepEqual(await page.evaluate(() => window.review.coverRequests), [
+    "part-one",
+  ])
+})
+
+test("a feature file checks availability on each opening and stays idle while reading", async (t) => {
+  const page = await mount(t)
+  await page.clock.install()
+  await page.evaluate(() => {
+    const state = window.review
+    state.feature.assets = [
+      {
+        id: "asset-one",
+        kind: "other",
+        part: state.parts[0],
+        name: "Informe",
+        file: {
+          id: "file-one",
+          filename: "informe.txt",
+          source: "local",
+          content_type: "text/plain",
+        },
+      },
+    ]
+  })
+  const open = () =>
+    page.evaluate(() =>
+      window.review.navigate({
+        to: "/features/$featureId/fichero/$assetId",
+        params: { featureId: "feature-one", assetId: "asset-one" },
+      }),
+    )
+  await open()
+  const download = page.getByRole("link", { name: "Descargar" })
+  await expect(download).toBeVisible()
+  await page.clock.fastForward(65_000)
+  assert.deepEqual(await page.evaluate(() => window.review.statusRequests), [
+    "file-one",
+  ])
+  await page.evaluate(() => window.review.navigate({ to: "/features" }))
+  await page.getByRole("button", { name: "Abrir Bolt Eye" }).waitFor()
+  await open()
+  await expect
+    .poll(() => page.evaluate(() => window.review.statusRequests))
+    .toEqual(["file-one", "file-one"])
 })
 
 test("piece editing saves and cancels header changes, and feature membership works in both directions", async (t) => {

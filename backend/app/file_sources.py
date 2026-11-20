@@ -325,7 +325,15 @@ def twin_projects(drawing: str, piece_folders: Sequence[str]) -> list[SourceItem
         return []
     # The most specific piece folder: a piece registered inside another one.
     piece = max(pieces, key=lambda folder: len(PurePosixPath(folder).parts))
-    files = walk_folder(piece)
+    project_folders = sharepoint.icp_folders(piece) if sharepoint.enabled() else None
+    if project_folders is None:
+        files = walk_folder(piece)
+    elif not project_folders:
+        return []
+    else:
+        files = [source_item(drawing)]
+        for folder in project_folders:
+            files.extend(folder_entries(folder))
     projects: dict[str, list[SourceItem]] = {}
     for item in files:
         if item.suffix == ".icp":

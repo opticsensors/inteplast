@@ -18,6 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { useCatalogCover } from "@/hooks/useCatalogCover"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
 
 const StepCoverCanvas = lazy(
@@ -69,7 +70,11 @@ function usePartImage(part: PartCardPublic) {
               image_id: uploaded.id,
             },
           })
-          void client.invalidateQueries({ queryKey: ["features", "catalog"] })
+          client.setQueryData(["features", "catalog", "cover", part.id], {
+            cad,
+            cad_cache_key: part.cad_cache_key,
+            image: saved,
+          })
           void client.invalidateQueries({
             queryKey: ["parts", "detail", part.id],
           })
@@ -95,9 +100,11 @@ export function PartThumbnail({
   className?: string
   wrapperClassName?: string
 }) {
-  const { image, loading, error } = usePartImage(part)
+  const { ref, cover } = useCatalogCover(part.deferred_cover_part_id)
+  const { image, loading, error } = usePartImage({ ...part, ...cover })
   return (
     <div
+      ref={ref}
       className={wrapperClassName}
       title={error ? fileErrorMessage(error) : undefined}
     >

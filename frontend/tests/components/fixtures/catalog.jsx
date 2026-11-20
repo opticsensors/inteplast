@@ -18,6 +18,7 @@ import {
 import { Route as Layout } from "../../../src/routes/_layout"
 import { Route as Catalog } from "../../../src/routes/_layout/features"
 import { Route as Detail } from "../../../src/routes/_layout/features_.$featureId"
+import { Route as FeatureFile } from "../../../src/routes/_layout/features_.$featureId_.fichero.$assetId"
 import { Route as NewFeature } from "../../../src/routes/_layout/features_.nuevo"
 import { Route as Home } from "../../../src/routes/_layout/index"
 import { Route as PartDetail } from "../../../src/routes/_layout/parts_.$partId"
@@ -136,6 +137,11 @@ const routes = [
   [Home, "/", "/"],
   [Catalog, "/features", "/features"],
   [Detail, "/features_/$featureId", "/features/$featureId"],
+  [
+    FeatureFile,
+    "/features_/$featureId_/fichero/$assetId",
+    "/features/$featureId/fichero/$assetId",
+  ],
   [NewFeature, "/features_/nuevo", "/features/nuevo"],
   [PartDetail, "/parts_/$partId", "/parts/$partId"],
   [NewPart, "/parts_/nueva", "/parts/nueva"],
@@ -155,6 +161,8 @@ const router = createRouter({
 window.review.location = () => router.state.location
 window.review.navigate = (options) => router.navigate(options)
 window.review.back = () => router.history.back()
+window.review.refreshCatalog = () =>
+  client.invalidateQueries({ queryKey: ["features", "catalog"] })
 window.review.refreshUser = () =>
   client.invalidateQueries({ queryKey: ["currentUser"] })
 

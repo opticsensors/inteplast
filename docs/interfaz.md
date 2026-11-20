@@ -104,6 +104,9 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
 
 - El menú **Catálogo** abre `/features`: tarjetas de piezas y features con la misma
   composición y tamaño de portada. Etiqueta y borde de color distinguen los tipos.
+- Las tarjetas de lista y cuadrícula se pueden abrir en cuanto llega el catálogo.
+  Al acercarse a la pantalla, cada portada CAD se comprueba por separado. Una pieza
+  y los features que usan su misma captura comparten la consulta.
 - **Medidas (18/11/2026):** tarjeta y celda de pieza llevan una etiqueta con lo que la app
   ha leído: «Medidas detectadas» (algún valor válido con cota y fuente, aunque la lectura
   siga en curso), «Informe pendiente de interpretar» (lectura terminada con un informe de

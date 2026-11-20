@@ -43,12 +43,16 @@ from app.part_files import PartFilePublic, primary_files, read_files
 router = APIRouter(tags=["catalog"])
 
 
-class PartCardPublic(PartPublic):
-    feature_count: int = 0
-    characteristic_count: int = 0
+class PartCoverPublic(BaseModel):
     cad: FilePublic | None = None
     cad_cache_key: str | None = None
     image: FilePublic | None = None
+
+
+class PartCardPublic(PartPublic, PartCoverPublic):
+    feature_count: int = 0
+    characteristic_count: int = 0
+    deferred_cover_part_id: uuid.UUID | None = None
     # Catalogue label: detected / pending / none; no label until the piece is read.
     measurement_status: MeasurementStatus | None = None
     # Catalogue label «Documentación de retoques»: correction documents were found.
@@ -96,8 +100,14 @@ def part_references(session: SessionDep, part_id: uuid.UUID) -> dict[str, Stored
     return primary_files(session, part_id)
 
 
-def part_card(session: SessionDep, part: Part, count: int) -> PartCardPublic:
-    cad, cad_key, image = part_cad_cover(session, part.id)
+def part_card(
+    session: SessionDep, part: Part, count: int, *, defer_covers: bool = False
+) -> PartCardPublic:
+    if defer_covers:
+        cad = part_references(session, part.id).get("part")
+        cad_key, image = None, None
+    else:
+        cad, cad_key, image = part_cad_cover(session, part.id)
     characteristic_count = session.exec(
         select(func.count())
         .select_from(PartCharacteristic)
@@ -110,6 +120,7 @@ def part_card(session: SessionDep, part: Part, count: int) -> PartCardPublic:
             "characteristic_count": characteristic_count,
             "cad": FilePublic.model_validate(cad) if cad else None,
             "cad_cache_key": cad_key,
+            "deferred_cover_part_id": part.id if cad and defer_covers else None,
             "image": FilePublic.model_validate(image) if image else None,
             "measurement_status": measurement_status(session, part),
             "corrections_documented": corrections_documented(session, part),
@@ -195,6 +206,7 @@ def search_catalog(
     customer_id: uuid.UUID | None = None,
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=40, ge=1, le=100),
+    defer_covers: bool = False,
 ) -> CatalogPublic:
     """Pieces, features and cotas that match the search and the filters.
 
@@ -300,8 +312,11 @@ def search_catalog(
             ).all()
         ]
     return CatalogPublic(
-        features=features_public(session, features),
-        parts=[part_card(session, p, counts.get(p.id, 0)) for p in parts],
+        features=features_public(session, features, defer_covers=defer_covers),
+        parts=[
+            part_card(session, p, counts.get(p.id, 0), defer_covers=defer_covers)
+            for p in parts
+        ],
         cotas=cotas,
         feature_count=feature_count,
         part_count=part_count,
@@ -327,6 +342,19 @@ def read_part_detail(
             )
             for kind, file in part_references(session, part.id).items()
         ],
+    )
+
+
+@router.get("/parts/{part_id}/cover", response_model=PartCoverPublic)
+def read_part_cover(
+    session: SessionDep, _current_user: CurrentUser, part_id: uuid.UUID
+) -> PartCoverPublic:
+    get_part_or_404(session, part_id)
+    cad, cad_key, image = part_cad_cover(session, part_id)
+    return PartCoverPublic(
+        cad=FilePublic.model_validate(cad) if cad else None,
+        cad_cache_key=cad_key,
+        image=FilePublic.model_validate(image) if image else None,
     )
 
 

@@ -664,6 +664,7 @@ class FeaturePublic(FeatureBase):
     # Card: the cover of the first piece (own capture, else the CAD one), or the
     # feature image when it has no pieces; and how many pieces it has.
     cover_image: FilePublic | None = None
+    deferred_cover_part_id: uuid.UUID | None = None
     part_count: int = 0
 
 

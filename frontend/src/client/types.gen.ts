@@ -252,6 +252,7 @@ export type FeatureDetail = {
     assets?: Array<FeatureAssetPublic>;
     parts?: Array<PartPublic>;
     cover_image?: (FilePublic | null);
+    deferred_cover_part_id?: (string | null);
     part_count?: number;
     notes?: Array<FeatureNotePublic>;
     part_covers?: Array<FeaturePartCoverPublic>;
@@ -343,6 +344,7 @@ export type FeaturePublic = {
     assets?: Array<FeatureAssetPublic>;
     parts?: Array<PartPublic>;
     cover_image?: (FilePublic | null);
+    deferred_cover_part_id?: (string | null);
     part_count?: number;
 };
 
@@ -610,6 +612,9 @@ export type NewPassword = {
 export type NoteKind = 'warning' | 'lesson';
 
 export type PartCardPublic = {
+    cad?: (FilePublic | null);
+    cad_cache_key?: (string | null);
+    image?: (FilePublic | null);
     code: string;
     name?: (string | null);
     description?: (string | null);
@@ -622,9 +627,7 @@ export type PartCardPublic = {
     customer?: (CatalogNamePublic | null);
     feature_count?: number;
     characteristic_count?: number;
-    cad?: (FilePublic | null);
-    cad_cache_key?: (string | null);
-    image?: (FilePublic | null);
+    deferred_cover_part_id?: (string | null);
     measurement_status?: ('detected' | 'pending' | 'none' | null);
     corrections_documented?: boolean;
 };
@@ -641,6 +644,12 @@ export type PartCatalogPublic = {
     family?: (CatalogNamePublic | null);
     customer?: (CatalogNamePublic | null);
     feature_count: number;
+};
+
+export type PartCoverPublic = {
+    cad?: (FilePublic | null);
+    cad_cache_key?: (string | null);
+    image?: (FilePublic | null);
 };
 
 export type PartCoverRequest = {
@@ -944,6 +953,7 @@ export type AssistantChatResponse = (string);
 
 export type CatalogSearchCatalogData = {
     customerId?: (string | null);
+    deferCovers?: boolean;
     familyId?: (string | null);
     featureId?: (string | null);
     kind?: 'all' | 'part' | 'feature';
@@ -960,6 +970,12 @@ export type CatalogReadPartDetailData = {
 };
 
 export type CatalogReadPartDetailResponse = (PartDetailPublic);
+
+export type CatalogReadPartCoverData = {
+    partId: string;
+};
+
+export type CatalogReadPartCoverResponse = (PartCoverPublic);
 
 export type CatalogSavePartCoverData = {
     partId: string;

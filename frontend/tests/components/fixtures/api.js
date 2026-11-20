@@ -381,14 +381,18 @@ export const FilesService = {
     state().documents[file.id] = file
     return clone(file)
   },
-  fileStatus: async () => ({
-    state: state().fileState ?? "available",
-    message:
-      state().fileState === "missing"
-        ? "Archivo no encontrado. Puedes volver a vincularlo."
-        : "Disponible",
-    path: "drawings/drawing.pdf",
-  }),
+  fileStatus: async ({ fileId }) => {
+    state().statusRequests ??= []
+    state().statusRequests.push(fileId)
+    return {
+      state: state().fileState ?? "available",
+      message:
+        state().fileState === "missing"
+          ? "Archivo no encontrado. Puedes volver a vincularlo."
+          : "Disponible",
+      path: "drawings/drawing.pdf",
+    }
+  },
   relinkFile: async ({ fileId, requestBody }) => {
     state().relinkRequests ??= []
     state().relinkRequests.push({ fileId, ...clone(requestBody) })
@@ -747,6 +751,11 @@ const withCatalogNames = (part) => ({
 })
 
 export const CatalogService = {
+  readPartCover: async ({ partId }) => {
+    state().coverRequests ??= []
+    state().coverRequests.push(partId)
+    return state().pendingCover ?? { image: null }
+  },
   readFamilies: async () => ({
     data: clone(catalogNames("families")).sort((a, b) =>
       a.name.localeCompare(b.name),

@@ -68,7 +68,9 @@ marcadas en rojo. El marcado se guarda en la aplicación y mantiene intacto el o
 
 La selección se implementa en [`viewers.ts`](../frontend/src/components/Features/viewers.ts)
 y en la ruta `/parts/{id}/fichero/{fileId}`. Se mantienen las rutas antiguas de adjuntos
-del feature para enlaces guardados.
+del feature para enlaces guardados. Al entrar en el visor de un adjunto externo se
+comprueba su disponibilidad. Durante la lectura se renueva el enlace temporal cada
+cinco minutos. La comprobación de estado se repite al volver a abrir el adjunto.
 
 | Archivo | Comportamiento implementado |
 |---|---|

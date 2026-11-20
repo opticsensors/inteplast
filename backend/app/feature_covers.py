@@ -154,6 +154,7 @@ def _card(
     order: list[str],
     links: dict[uuid.UUID, FeaturePartLink],
     cache: AutoCovers,
+    defer_covers: bool = False,
 ) -> dict[str, object]:
     if not order:
         image = FilePublic.model_validate(feature.image) if feature.image else None
@@ -161,6 +162,8 @@ def _card(
     first = uuid.UUID(order[0])
     link = links.get(first)
     own = _file(session, link.image_id) if link else None
+    if own is None and defer_covers:
+        return {"deferred_cover_part_id": first, "part_count": len(order)}
     if own is None:
         auto = _auto_cover(session, first, cache)
         own = FilePublic.model_validate(auto) if auto else None
@@ -168,21 +171,28 @@ def _card(
 
 
 def feature_public(
-    session: Session, feature: Feature, cache: AutoCovers | None = None
+    session: Session,
+    feature: Feature,
+    cache: AutoCovers | None = None,
+    *,
+    defer_covers: bool = False,
 ) -> FeaturePublic:
     cache = {} if cache is None else cache
     order = ordered_part_ids(feature)
     links = _links(session, feature.id)
     return FeaturePublic.model_validate(
-        feature, update=_card(session, feature, order, links, cache)
+        feature, update=_card(session, feature, order, links, cache, defer_covers)
     )
 
 
 def features_public(
-    session: Session, features: Iterable[Feature]
+    session: Session, features: Iterable[Feature], *, defer_covers: bool = False
 ) -> list[FeaturePublic]:
     cache: AutoCovers = {}
-    return [feature_public(session, feature, cache) for feature in features]
+    return [
+        feature_public(session, feature, cache, defer_covers=defer_covers)
+        for feature in features
+    ]
 
 
 def feature_detail(session: Session, feature: Feature) -> FeatureDetail:

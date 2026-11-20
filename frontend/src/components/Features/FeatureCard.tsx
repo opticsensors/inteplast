@@ -1,8 +1,9 @@
 import { ImageIcon, Package2 } from "lucide-react"
-import type { CSSProperties, ReactNode } from "react"
+import type { CSSProperties, ReactNode, Ref } from "react"
 
 import type { FeaturePublic } from "@/client"
 import { Badge } from "@/components/ui/badge"
+import { useCatalogCover } from "@/hooks/useCatalogCover"
 import { useFileAccess } from "@/hooks/useFileAccess"
 import { cn } from "@/lib/utils"
 import { featureParts, partLabel } from "./parts"
@@ -44,10 +45,12 @@ export function FeatureThumbnail({
   className,
   style,
   fit = "cover",
+  elementRef,
 }: {
   feature: Pick<FeaturePublic, "image" | "name">
   className?: string
   style?: CSSProperties
+  elementRef?: Ref<HTMLDivElement>
   /** En la tarjeta se recorta para que cuadre; en la ficha, no: la geometria
    *  es lo que se va a mirar y cortarla por los bordes seria absurdo. */
   fit?: "cover" | "contain"
@@ -55,6 +58,7 @@ export function FeatureThumbnail({
   const { url } = useFileAccess(feature.image?.id)
   return (
     <div
+      ref={elementRef}
       className={cn(
         "flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted",
         className,
@@ -95,11 +99,18 @@ export function FeatureCoverStack({
   /** Extra classes of the capture when it is shown alone. */
   flatClassName?: string
 }) {
-  const cover = { image: feature.cover_image ?? null, name: feature.name }
+  const { ref, cover: fallback } = useCatalogCover(
+    feature.deferred_cover_part_id,
+  )
+  const cover = {
+    image: feature.cover_image ?? fallback?.image,
+    name: feature.name,
+  }
   const count = feature.part_count ?? 0
   if (count < 2)
     return (
       <FeatureThumbnail
+        elementRef={ref}
         feature={cover}
         className={cn(className, flatClassName)}
       />
@@ -108,6 +119,7 @@ export function FeatureCoverStack({
   const layer = cn("absolute rounded-md border", surface)
   return (
     <div
+      ref={ref}
       data-slot="cover-stack"
       className={cn("relative shrink-0 pr-2 pt-2", className)}
     >
