@@ -81,13 +81,16 @@ Cliente final: **Robert Bosch** (división BueP). Informes en formato **PPAP / Q
 
 ## Foco actual
 
-🔴 **Próxima sesión (Eduard, 18/11/2026): primero el
-[plan de portadas por pieza](docs/plan-portadas-por-pieza-2026-11-18.md) y después el
-[plan de carga del catálogo](docs/plan-carga-catalogo-2026-11-18.md).** Orden en
+🗓️ **Reunión con INTEPLAST el 20/11/2026:** puntos a comentar (carpetas como la del 3212,
+moldes, planos, componentes y trazabilidad) en [docs/reunion-inteplast-2026-11-20.md](docs/reunion-inteplast-2026-11-20.md).
+
+**El catálogo local contiene las 21 piezas y los 8 features de Exemples (19/11/2026).**
+Se verificaron las fichas y se documentaron las seis cotas de referencia que quedaron
+sin vincular. [Registro de la carga](docs/carga-catalogo-2026-11-19.md) y
 [próximos pasos](docs/proximos-pasos.md).
 
-**La app sigue con el piloto `3212 Pump Housing`** (Bolt Eye): adaptador de correcciones,
-previsiones y casos revisados solo para él. El cierre y la posible existencia de retoques
+**El piloto de correcciones sigue limitado al `3212 Pump Housing`** (Bolt Eye), con adaptador
+de correcciones, previsiones y casos revisados para esa pieza. El cierre y la posible existencia de retoques
 posteriores siguen pendientes de confirmar.
 
 **Los datos de los 8 features de Exemples ya están leídos** (2026-10-21) y documentados en

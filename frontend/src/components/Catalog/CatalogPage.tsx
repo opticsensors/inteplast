@@ -38,9 +38,14 @@ export function CatalogPage({ params }: { params: FeatureSearchParams }) {
   const changeView = (next: CatalogView) => {
     setView(next)
     saveCatalogView(next)
+    if (next === "graph" && params.kind && params.kind !== "all")
+      change({ ...params, kind: "all" })
   }
   const q = useDebounce(search.q)
-  const kind = params.kind ?? "all"
+  const kind =
+    view === "graph" && params.kind !== "drawing"
+      ? "all"
+      : (params.kind ?? "all")
   // «Planos» has its own list and is always a grid.
   const drawings = kind === "drawing"
   const change = (values: FeatureSearchParams) =>
@@ -135,7 +140,14 @@ export function CatalogPage({ params }: { params: FeatureSearchParams }) {
               variant="ghost"
               className="-mb-px h-11 rounded-none border-b-2 border-transparent px-0 text-muted-foreground hover:bg-transparent hover:text-foreground aria-pressed:border-primary aria-pressed:text-primary"
               aria-pressed={kind === value}
-              onClick={() => change({ ...params, kind: value })}
+              onClick={() => {
+                if (
+                  view === "graph" &&
+                  (value === "part" || value === "feature")
+                )
+                  changeView("list")
+                change({ ...params, kind: value })
+              }}
             >
               {label}
             </Button>

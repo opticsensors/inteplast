@@ -129,19 +129,20 @@ export function PartCover({ part }: { part: PartCardPublic }) {
       className="size-full"
     />
   )
-  if (!cad && !image)
-    return (
-      <FeatureThumbnail
-        feature={{ name, image }}
-        className="size-32 sm:size-48"
-      />
-    )
   return (
     <Dialog open={expanded} onOpenChange={setExpanded}>
-      <div className="relative shrink-0">
-        <DialogTrigger asChild>
-          <CoverButton image={image} name={name} />
-        </DialogTrigger>
+      <div className="relative size-32 shrink-0 sm:size-48">
+        {cad || image ? (
+          <DialogTrigger asChild>
+            <CoverButton
+              image={image}
+              name={name}
+              className="size-full sm:size-full"
+            />
+          </DialogTrigger>
+        ) : (
+          fallback
+        )}
         {loading && (
           <Loader2
             aria-label="Preparando portada"

@@ -104,7 +104,8 @@ export function FeatureCoverStack({
         className={cn(className, flatClassName)}
       />
     )
-  const layer = "absolute rounded-md border bg-muted"
+  const surface = "border-neutral-600 bg-white"
+  const layer = cn("absolute rounded-md border", surface)
   return (
     <div
       data-slot="cover-stack"
@@ -112,9 +113,12 @@ export function FeatureCoverStack({
     >
       <div aria-hidden className={cn(layer, "bottom-2 left-2 right-0 top-0")} />
       <div aria-hidden className={cn(layer, "inset-1")} />
-      <FeatureThumbnail feature={cover} className="relative size-full" />
+      <FeatureThumbnail
+        feature={cover}
+        className={cn("relative size-full [&>svg]:text-neutral-600", surface)}
+      />
       <span
-        className="absolute right-4 top-4 rounded-full bg-foreground/85 px-2 py-0.5 text-[11px] font-medium tabular-nums text-background"
+        className="absolute right-4 top-4 rounded-full bg-neutral-900/90 px-2 py-0.5 text-[11px] font-medium tabular-nums text-white"
         title={`${count} piezas`}
       >
         {count}

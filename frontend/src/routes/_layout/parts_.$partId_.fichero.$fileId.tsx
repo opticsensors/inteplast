@@ -35,12 +35,13 @@ function PartFile() {
     queryFn: () => CatalogService.readPartDetail({ partId }),
   })
   const result = useQuery({
-    queryKey: ["part-evidence", partId, search.revision, search.snapshot],
+    queryKey: ["part-evidence", partId, search.revision, search.snapshot, ""],
     queryFn: () =>
       EvidenceService.readPartEvidence({
         partId,
         revision: search.revision,
         snapshotId: search.snapshot,
+        cota: "",
       }),
   })
   const file = result.data?.documents.find((f) => f.id === fileId)

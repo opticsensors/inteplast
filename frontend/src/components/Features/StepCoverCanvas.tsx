@@ -13,10 +13,10 @@ import {
   MAX_COVER_STEP_SIZE,
   sha256,
 } from "./cadCover"
+import { coverFaceRanges } from "./coverFaceRanges"
 import { loadCoverGeometry } from "./coverGeometry"
 import { createModelControls } from "./modelControls"
 
-type Face = { first: number; last: number }
 type Surface = {
   meshIndex: number
   faceIndex: number
@@ -34,6 +34,7 @@ export default function StepCoverCanvas({
   onResetSelection,
   disabled = false,
   wholePart = false,
+  allowWholeComponent = false,
 }: {
   file: FilePublic
   initial?: FeatureCover3D | null
@@ -45,6 +46,7 @@ export default function StepCoverCanvas({
   onResetSelection?: () => void
   disabled?: boolean
   wholePart?: boolean
+  allowWholeComponent?: boolean
 }) {
   const host = useRef<HTMLDivElement>(null)
   const callbacks = useRef({ onReady, onSelectionChange })
@@ -141,7 +143,6 @@ export default function StepCoverCanvas({
           )
         else geometry.computeVertexNormals()
         const rendered = new THREE.Mesh(geometry, materials)
-        rendered.userData.cadFaces = mesh.faces
         meshes.push(rendered)
         object.add(rendered)
         // Allow closing between meshes, including during renderer preparation.
@@ -152,44 +153,26 @@ export default function StepCoverCanvas({
         }
       }
       const surfaces = new Map<string, Surface>()
-      const ranges: Face[][] = []
-      meshes.forEach((mesh, meshIndex) => {
-        const faces = mesh.userData.cadFaces as Face[]
-        ranges.push(faces)
+      const ranges = meshes.map((mesh, meshIndex) => {
         mesh.userData.meshIndex = meshIndex
-        mesh.geometry.clearGroups()
-        let next = 0
-        faces.forEach((face, faceIndex) => {
-          if (
-            face.first < next ||
-            face.last < face.first ||
-            (face.last + 1) * 3 > (mesh.geometry.index?.count ?? 0)
-          )
-            throw new Error(
-              "El STEP no conserva superficies seleccionables válidas.",
-            )
-          if (face.first > next)
-            mesh.geometry.addGroup(next * 3, (face.first - next) * 3, 0)
-          mesh.geometry.addGroup(
-            face.first * 3,
-            (face.last - face.first + 1) * 3,
-            0,
-          )
+        if (wholePart) return []
+        const faces = coverFaceRanges(
+          prepared[meshIndex].faces,
+          (mesh.geometry.index?.count ?? 0) / 3,
+        )
+        for (const { faceIndex } of faces) {
           surfaces.set(`${meshIndex}:${faceIndex}`, {
             meshIndex,
             faceIndex,
           })
-          next = face.last + 1
-        })
-        const triangles = (mesh.geometry.index?.count ?? 0) / 3
-        if (next < triangles)
-          mesh.geometry.addGroup(next * 3, (triangles - next) * 3, 0)
+        }
+        return faces
       })
       if (stopped) {
         release()
         return
       }
-      if (!surfaces.size)
+      if (!wholePart && !surfaces.size)
         throw new Error(
           "Este STEP no contiene superficies que se puedan seleccionar.",
         )
@@ -229,9 +212,9 @@ export default function StepCoverCanvas({
             else geometry.addGroup(first, count, color)
           }
           let next = 0
-          ranges[meshIndex].forEach((face, faceIndex) => {
+          ranges[meshIndex].forEach((face) => {
             append(next * 3, (face.first - next) * 3, 0)
-            const key = `${meshIndex}:${faceIndex}`
+            const key = `${meshIndex}:${face.faceIndex}`
             append(
               face.first * 3,
               (face.last - face.first + 1) * 3,
@@ -329,10 +312,10 @@ export default function StepCoverCanvas({
         const hit = ray.intersectObjects(meshes, false)[0]
         if (!hit || hit.faceIndex == null) return null
         const meshIndex = hit.object.userData.meshIndex as number
-        const faceIndex = ranges[meshIndex].findIndex(
+        const range = ranges[meshIndex].find(
           (face) => hit.faceIndex! >= face.first && hit.faceIndex! <= face.last,
         )
-        return faceIndex < 0 ? null : `${meshIndex}:${faceIndex}`
+        return range ? `${meshIndex}:${range.faceIndex}` : null
       }
       let down: { id: number; x: number; y: number; moved: boolean } | null =
         null
@@ -407,7 +390,7 @@ export default function StepCoverCanvas({
       callbacks.current.onReady?.({
         clear: clearSelection.current,
         capture: async () => {
-          if (!selected.size)
+          if (!selected.size && !allowWholeComponent)
             throw new Error(
               "Selecciona al menos una superficie para la portada.",
             )
@@ -460,7 +443,15 @@ export default function StepCoverCanvas({
       callbacks.current.onReady?.(null)
       release()
     }
-  }, [file.id, file.version, file.size, initial, editable, wholePart])
+  }, [
+    file.id,
+    file.version,
+    file.size,
+    initial,
+    editable,
+    wholePart,
+    allowWholeComponent,
+  ])
 
   return (
     <div

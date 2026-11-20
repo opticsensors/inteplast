@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import HTTPException
+from sqlalchemy import text
+from sqlalchemy.orm import defer
 from sqlmodel import Session, col, select
 
 from app import sharepoint
@@ -61,14 +63,17 @@ def context_key(part: Part) -> str:
     )
 
 
-def imported(session: Session, part_id: uuid.UUID) -> list[MeasurementImport]:
-    return list(
-        session.exec(
-            select(MeasurementImport)
-            .where(MeasurementImport.part_id == part_id)
-            .order_by(col(MeasurementImport.imported_at), col(MeasurementImport.id))
-        ).all()
+def imported(
+    session: Session, part_id: uuid.UUID, *, include_rows: bool = True
+) -> list[MeasurementImport]:
+    query = (
+        select(MeasurementImport)
+        .where(MeasurementImport.part_id == part_id)
+        .order_by(col(MeasurementImport.imported_at), col(MeasurementImport.id))
     )
+    if not include_rows:
+        query = query.options(defer(MeasurementImport.rows))  # type: ignore[arg-type]
+    return list(session.exec(query).all())
 
 
 def natural(value: str) -> list[Any]:
@@ -500,8 +505,9 @@ def study(
     part: Part,
     revision: str | None,
     snapshot_id: uuid.UUID | None = None,
+    cota: str | None = None,
 ) -> tuple[JobPublic, list[str]]:
-    batches = imported(session, part.id)
+    batches = imported(session, part.id, include_rows=cota is None)
     legacy = legacy_study(session, part.id)
     revisions = {b.revision for b in batches}
     if legacy.get("measurement_revision"):
@@ -522,10 +528,26 @@ def study(
             None,
         )
         legacy = baseline or {}
-    selected = revision or (all_revisions[-1] if all_revisions else None)
-    base = (
-        copy.deepcopy(legacy) if selected == legacy.get("measurement_revision") else {}
+    selected = revision or next(
+        (rev for rev in reversed(all_revisions) if rev != "sin-revision"),
+        all_revisions[-1] if all_revisions else None,
     )
+    base = legacy if selected == legacy.get("measurement_revision") else {}
+    if base and cota is not None:
+        # Keep the pilot's searchable catalog, but only load the requested series.
+        base = {
+            **base,
+            "catalog": {
+                **base["catalog"],
+                "entries": [
+                    entry
+                    if cota and (cota == entry["id"] or cota in entry["numbers"])
+                    else {**entry, "series": []}
+                    for entry in base["catalog"]["entries"]
+                ],
+            },
+        }
+    base = copy.deepcopy(base)
     active = {
         (b.sample, b.cavity): b
         for b in batches
@@ -550,13 +572,36 @@ def study(
         "catalog": {"entries": []},
     }
     entries = {e["id"]: e for e in base["catalog"]["entries"]}
+    selected_rows: dict[uuid.UUID, list[dict[str, Any]]] = {}
+    if cota:
+        # Expand only in-force imports in Postgres. Never send the other cotas
+        # across the database connection. Preserve source order within a batch.
+        match = (
+            "(r.item->'numbers')::jsonb = cast(:numbers as jsonb)"
+            if "/" in cota
+            else "(r.item->'numbers')::jsonb ? :cota"
+        )
+        query = text(
+            "select m.id, r.item from measurementimport m "
+            "cross join lateral json_array_elements(m.rows) with ordinality r(item, n) "
+            f"where m.id = any(:ids) and {match} order by m.id, r.n"
+        )
+        for batch_id, row in session.execute(
+            query,
+            {
+                "ids": [b.id for b in active.values()],
+                "cota": cota,
+                "numbers": json.dumps(cota.split("/")),
+            },
+        ):
+            selected_rows.setdefault(batch_id, []).append(row)
     for (sample, cavity), batch in active.items():
         for entry in entries.values():
             if entry.get("kind") == "diagnostic":
                 continue
             for series in entry["series"]:
                 series["records"].get(cavity, {}).pop(sample, None)
-        for row in batch.rows:
+        for row in batch.rows if cota is None else selected_rows.get(batch.id, []):
             code = "/".join(row["numbers"])
             entry = entries.setdefault(
                 code,

@@ -1020,6 +1020,7 @@ export type EvidenceReadMetrologyData = {
 export type EvidenceReadMetrologyResponse = (MetrologyCatalog);
 
 export type EvidenceReadPartEvidenceData = {
+    cota?: (string | null);
     partId: string;
     revision?: (string | null);
     snapshotId?: (string | null);

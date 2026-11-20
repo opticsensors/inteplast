@@ -463,7 +463,7 @@ class FeatureCover3D(BaseModel):
     source_sha256: Sha256
     geometry_key: Sha256
     recipe: Literal["occt-import-js@0.0.23/cover-v1"]
-    faces: list[CadFaceSelection] = Field(min_length=1, max_length=5000)
+    faces: list[CadFaceSelection] = Field(max_length=5000)
     camera: CadCamera
 
     @model_validator(mode="after")

@@ -24,7 +24,7 @@ import { CoverButton } from "./CoverButton"
 import { CoverDialog } from "./CoverDialog"
 import { CoverLoading } from "./CoverLoading"
 import { coverAsset } from "./cadCover"
-import { coverSlides, step } from "./coverSlides"
+import { coverPieceLabel, coverSlides, step } from "./coverSlides"
 import { FeatureThumbnail } from "./FeatureCard"
 
 const StepCoverCanvas = lazy(() => import("./StepCoverCanvas"))
@@ -127,7 +127,14 @@ export function CarouselFrame({
       {...swipe}
     >
       {children}
-      {code && <span className={cn(chip, "left-2 font-mono")}>{code}</span>}
+      {code && (
+        <span
+          title={code}
+          className={cn(chip, "left-2 max-w-[70%] truncate font-mono")}
+        >
+          {code}
+        </span>
+      )}
       {many && (
         <>
           <span className={cn(chip, "right-2 tabular-nums")}>
@@ -155,7 +162,11 @@ export function FeatureCover({ feature }: { feature: FeatureDetail }) {
   const { current, many, go } = useCarousel(slides.length)
   const slide = slides[current]
   const view: CoverView = slide
-    ? { image: slide.image, cover: slide.cover, code: slide.part.code }
+    ? {
+        image: slide.image,
+        cover: slide.cover,
+        code: coverPieceLabel(feature, slide),
+      }
     : { image: feature.image ?? null, cover: null }
 
   if (!slide && !feature.image)
@@ -289,9 +300,7 @@ function CoverViewer({
       <DialogHeader>
         <DialogTitle className="pr-6">{feature.name}</DialogTitle>
         <DialogDescription className="sr-only">
-          {cover
-            ? "Portada 3D de la pieza con las superficies marcadas."
-            : "Imagen de portada ampliada."}
+          {cover ? "Portada 3D de la pieza." : "Imagen de portada ampliada."}
         </DialogDescription>
       </DialogHeader>
       <div
@@ -304,10 +313,12 @@ function CoverViewer({
         </div>
         {/* Top right belongs to the 3D tools: code and position go together on the left. */}
         {view.code && (
-          <span className={cn(chip, "left-2")}>
-            <span className="font-mono">{view.code}</span>
+          <span className={cn(chip, "left-2 flex max-w-[72%] items-center")}>
+            <span className="truncate font-mono" title={view.code}>
+              {view.code}
+            </span>
             {position && (
-              <span className="ml-2 tabular-nums text-muted-foreground">
+              <span className="ml-2 shrink-0 tabular-nums text-muted-foreground">
                 {position}
               </span>
             )}

@@ -17,6 +17,7 @@ import { formatFileSize, handleError } from "@/utils"
 
 interface FileUploadProps {
   value: FilePublic | null
+  previewFallback?: FilePublic | null
   onChange: (file: FilePublic | null) => void
   /** "image" pinta el cuadro con vista previa; "file" una fila con el nombre. */
   variant?: "image" | "file"
@@ -37,6 +38,7 @@ interface FileUploadProps {
  */
 export function FileUpload({
   value,
+  previewFallback,
   onChange,
   variant = "file",
   accept,
@@ -50,7 +52,8 @@ export function FileUpload({
   const inputRef = useRef<HTMLInputElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const { showErrorToast } = useCustomToast()
-  const { url } = useFileAccess(value?.id)
+  const preview = value ?? previewFallback
+  const { url } = useFileAccess(preview?.id)
 
   const mutation = useMutation({
     mutationFn: (file: File) => FilesService.uploadFile({ formData: { file } }),
@@ -149,10 +152,10 @@ export function FileUpload({
         >
           {mutation.isPending ? (
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
-          ) : value && url && isPreviewableImage(value.content_type) ? (
+          ) : preview && url && isPreviewableImage(preview.content_type) ? (
             <img
               src={url}
-              alt={value.filename}
+              alt={preview.filename}
               className="size-full object-contain"
             />
           ) : (

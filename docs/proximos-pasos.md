@@ -1,5 +1,8 @@
 # Próximos pasos
 
+> 🗓️ **20/11/2026: reunión con INTEPLAST.** Puntos a comentar en
+> [reunion-inteplast-2026-11-20.md](reunion-inteplast-2026-11-20.md).
+
 La implementación de protecciones y criterios de aceptación para todas las piezas se sigue en
 [Plan de ingesta del 02/11/2026](plan-ingesta-2026-11-02.md), con verificaciones y contratos técnicos cerrados para las 21 piezas.
 
@@ -9,18 +12,20 @@ La implementación de protecciones y criterios de aceptación para todas las pie
 > pendientes; el contrato y las limitaciones de cada tema viven en el documento enlazado.
 > Las pruebas de una fecha anterior no se presentan como validaciones de esta revisión.
 
-## 🔴 Orden para la próxima sesión (decidido por Eduard el 18/11/2026)
+## Portadas y carga del catálogo (19/11/2026)
 
 1. **Primero:** [portadas por pieza](plan-portadas-por-pieza-2026-11-18.md). Carrusel en la ficha
    del feature, pila con número en lista y cuadrícula, y una captura por pieza.
    **Desplegado en la instalación local el 19/11/2026.** Copia restaurada en una BD temporal,
-   migración aplicada y aplicación reconstruida. Bolt Eye y Nervios conservan su imagen y su
+   migración aplicada y aplicación reconstruida. Bolt Eye y Nervios conservaron su imagen y su
    selección CAD en la pieza 3212. **Tanda 5 cerrada.** Eduard confirmó en la web que
    las dos fichas se ven correctamente. La ubicación de la copia consta en el plan.
    **Después de la tanda 5:** limpieza de imágenes subidas que ya no usa nadie (por ejemplo, la
    portada de una pieza desvinculada, cuyo fichero se conserva). Decisión de Eduard, 19/11/2026.
-2. **Después:** [carga de las 21 piezas y los 8 features](plan-carga-catalogo-2026-11-18.md).
-   La carga es el siguiente trabajo previsto.
+2. **Carga completada.** Las 21 piezas y los 8 features ya están en la BD local. La 3197 pasó de
+   125 a 139 cotas conservando su historial. Se retiró «Nervios» y se cargó «Nervios de Soldadura»
+   con las piezas 3205, 3206 y 3214. Se verificaron las 19 altas contra la selección de archivos del formulario.
+   [Registro de ejecución](carga-catalogo-2026-11-19.md).
 
 ## Pendiente ahora (18/11/2026)
 
@@ -30,6 +35,8 @@ todo ya en `main` (`7b471c0`). El detalle de cada tanda está en
 
 | Pendiente | Qué falta | Dónde empezar |
 |---|---|---|
+| **Cotas pendientes tras la carga del 19/11** | Revisar N21 de 3205, N203 de 3206, N4010 de 3238 y N80 de 3288, que la lectura no registró. En la 3288, los nominales de N30 y N43 corresponden a otras medidas. El informe de la 3226 sigue pendiente de interpretación | [Cotas pendientes y ejemplos de lectura](carga-catalogo-2026-11-19.md#cotas-de-referencia-pendientes) |
+| **Distinguir el CAD de producto del utillaje** | En la 3202 el descubrimiento encontró un CAD en la carpeta de diseño y otros seis archivos en las carpetas de útiles del método de medición. Quedó sin principal y, por tanto, sin captura. Contrastar la regla general con la 3288, que sí tiene dos CAD de producto (base y tapa) | [Criterios para los archivos principales](plan-principales-y-tablas-2026-11-18.md) |
 | **Filtro del catálogo por medidas** | Aplazado por acuerdo con el revisor: filtrar por «Medidas detectadas», «Informe pendiente de interpretar» y «Sin medidas detectadas». Debe calcularse en el servidor con el mismo criterio que la etiqueta, para lista, cuadrícula y grafo | `backend/app/measurement_status.py` (hoy por tarjeta) y `crud.part_conditions` |
 | **Validar en la web con sesión de Microsoft** | Nada de lo anterior se ha comprobado con la sesión real: borrado de pieza, familias y clientes, cuadrícula, grafo, Planos y etiquetas. Solo hay pruebas aisladas y capturas del banco | Instalación local, `http://localhost:5173` |
 | **Primer administrador corporativo** | Sin él, nadie con sesión de Microsoft ve «⋯ → Eliminar» en la ficha de pieza | [Próxima sesión](#próxima-sesión-de-la-app-final-usuarios-y-prueba-real-de-archivos) |

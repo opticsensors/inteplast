@@ -376,6 +376,36 @@ def test_cover_requires_valid_selection_and_camera(
     assert result.status_code == 422
 
 
+def test_whole_component_cover_reopens_on_the_chosen_step(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    headers = superuser_token_headers
+    feature_id, part_id, body = cover_example(client, headers, db)
+    second = upload(client, headers, "lid.stp", b"second STEP", "model/step")
+    asset = client.post(
+        f"{API}/features/{feature_id}/assets",
+        headers=headers,
+        json={
+            "part_id": part_id,
+            "kind": "part",
+            "file_id": second["id"],
+            "name": "Lid",
+        },
+    )
+    assert asset.status_code == 200
+    body["cover_3d"].update(
+        asset_id=asset.json()["id"],
+        file_id=second["id"],
+        file_version=second["version"],
+        source_sha256=hashlib.sha256(b"second STEP").hexdigest(),
+        faces=[],
+    )
+    result = save(client, headers, feature_id, [{"part_id": part_id, **body}])
+    assert result.status_code == 200, result.text
+    saved = cover_of(detail(client, headers, feature_id), part_id)["cover_3d"]
+    assert saved["asset_id"] == asset.json()["id"] and saved["faces"] == []
+
+
 def test_a_page_from_before_covers_per_piece_is_rejected(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:

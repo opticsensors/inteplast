@@ -23,6 +23,15 @@ def validate_cover(session: Session, feature: Feature, cover: FeatureCover3D) ->
         raise HTTPException(409, "Vincula primero el STEP como CAD de este feature.")
     document = session.get(StoredFile, cover.file_id)
     validate_document(document, cover.file_version, cover.source_sha256)
+    if not cover.faces and not any(
+        other.part_id == cover.part_id
+        and other.kind == AssetKind.part
+        and other.file_id != cover.file_id
+        and other.file
+        and Path(other.file.filename).suffix.lower() in {".step", ".stp"}
+        for other in feature.assets
+    ):
+        raise HTTPException(422, "Selecciona al menos una superficie para la portada.")
 
 
 def validate_document(

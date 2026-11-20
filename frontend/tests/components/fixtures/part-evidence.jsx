@@ -486,9 +486,14 @@ EvidenceService.readFeatureEvidence = async ({ featureId, partId }) => ({
   pending: [],
   cases: [],
 })
-EvidenceService.readPartEvidence = async ({ partId, revision, snapshotId }) => {
+EvidenceService.readPartEvidence = async ({
+  partId,
+  revision,
+  snapshotId,
+  cota,
+}) => {
   window.review.evidenceRequests ??= []
-  window.review.evidenceRequests.push({ partId, revision, snapshotId })
+  window.review.evidenceRequests.push({ partId, revision, snapshotId, cota })
   return {
     part: catalog.find((item) => item.part.id === partId).part,
     features: catalog.find((item) => item.part.id === partId).features,
@@ -500,6 +505,16 @@ EvidenceService.readPartEvidence = async ({ partId, revision, snapshotId }) => {
       state: "ready",
       payload: {
         ...study,
+        catalog: {
+          ...study.catalog,
+          entries: study.catalog.entries.map((entry) =>
+            cota === undefined ||
+            cota === entry.id ||
+            entry.numbers.includes(cota)
+              ? entry
+              : { ...entry, series: [] },
+          ),
+        },
         measurement_revision: window.review.measurementRevisions?.includes(
           revision,
         )

@@ -65,14 +65,14 @@ def read_metrology(
     return catalog(session, q, feature_id, skip, limit)
 
 
-def public_job(job: EvidenceJob | None) -> JobPublic:
+def public_job(job: EvidenceJob | None, *, include_payload: bool = True) -> JobPublic:
     if not job:
         return JobPublic(state="empty")
     return JobPublic(
         state=job.state,
         message=job.message,
         updated_at=job.updated_at,
-        payload=job.payload if job.state == "ready" else {},
+        payload=job.payload if include_payload and job.state == "ready" else {},
     )
 
 
@@ -91,12 +91,15 @@ def read_part_evidence(
     part_id: uuid.UUID,
     revision: str | None = None,
     snapshot_id: uuid.UUID | None = None,
+    cota: str | None = None,
 ) -> Any:
     part = get_part_or_404(session, part_id)
     from app.part_setup import reference_choices, references
 
     drawing = references(session, part_id).get("drawing")
-    study, revisions = measurement_imports.study(session, part, revision, snapshot_id)
+    study, revisions = measurement_imports.study(
+        session, part, revision, snapshot_id, cota
+    )
     ids = (
         select(FeatureAsset.file_id)
         .where(FeatureAsset.part_id == part_id)
@@ -131,7 +134,10 @@ def read_part_evidence(
         measurement_revisions=revisions,
         drawing_file_id=drawing.id if drawing else None,
         drawing_reference_set="drawing" in reference_choices(session, part_id),
-        refresh_job=public_job(session.get(EvidenceJob, job_id("study", part_id))),
+        refresh_job=public_job(
+            session.get(EvidenceJob, job_id("study", part_id)),
+            include_payload=cota is None,
+        ),
         import_available=is_pilot(part),
     )
 

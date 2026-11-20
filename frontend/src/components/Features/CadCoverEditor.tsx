@@ -1,7 +1,9 @@
+import { useQuery } from "@tanstack/react-query"
 import { Loader2 } from "lucide-react"
 import { lazy, Suspense, useRef, useState } from "react"
 
 import {
+  CatalogService,
   type FeatureCover3D,
   type FeaturePublic,
   type FilePublic,
@@ -22,6 +24,7 @@ export function CadCoverEditor({
   partId,
   initial,
   image,
+  autoImage,
   setBusy,
   onSaved,
   close,
@@ -30,6 +33,7 @@ export function CadCoverEditor({
   /** The piece is chosen by the carousel: only its STEP files are offered. */
   partId?: string
   image: FilePublic | null
+  autoImage?: FilePublic | null
   initial: FeatureCover3D | null
   setBusy: (busy: boolean) => void
   onSaved: (image: FilePublic, cover: FeatureCover3D) => void
@@ -77,16 +81,28 @@ export function CadCoverEditor({
     }
   })
 
-  const preview =
-    image && initial?.asset_id === asset?.id ? (
-      <FeatureThumbnail
-        feature={{ image, name: feature?.name ?? "Portada" }}
-        fit="contain"
-        className="size-full"
-      />
-    ) : (
-      <div className="size-full rounded-lg border bg-muted" />
-    )
+  const ownPreview = asset && initial?.asset_id === asset.id ? image : null
+  const detail = useQuery({
+    queryKey: ["parts", "detail", partId],
+    queryFn: () => CatalogService.readPartDetail({ partId: partId! }),
+    enabled: Boolean(partId && asset?.file && autoImage && !ownPreview),
+  })
+  const piece = detail.data?.part
+  const previewImage =
+    ownPreview ??
+    (piece?.cad && piece.cad.id === asset?.file?.id ? piece.image : null)
+  const preview = previewImage ? (
+    <FeatureThumbnail
+      feature={{
+        image: previewImage,
+        name: feature?.name ?? "Portada de la pieza",
+      }}
+      fit="contain"
+      className="size-full"
+    />
+  ) : (
+    <div className="size-full rounded-lg border bg-muted" />
+  )
 
   return (
     <div className={COVER_EDITOR_ROWS}>
@@ -141,10 +157,9 @@ export function CadCoverEditor({
               file={asset.file}
               initial={saved}
               editable
+              allowWholeComponent={assets.length > 1}
               disabled={save.pending}
-              fallback={
-                image && initial?.asset_id === asset.id ? preview : undefined
-              }
+              fallback={previewImage ? preview : undefined}
               className="size-full"
               onReady={(api) => {
                 controls.current = api
@@ -190,7 +205,7 @@ export function CadCoverEditor({
         </Button>
         <Button
           type="button"
-          disabled={!ready || !count || save.pending}
+          disabled={!ready || (!count && assets.length < 2) || save.pending}
           onClick={() => void save.run(undefined)}
         >
           {save.pending && <Loader2 className="size-4 animate-spin" />}Aplicar

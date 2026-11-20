@@ -22,8 +22,10 @@ pieza**: la captura y, si se hizo sobre el CAD, sus caras y su encuadre se guard
   `n / N` es texto, no abre ninguna lista. La modal tiene el mismo carrusel; el código y la
   posición van juntos arriba a la izquierda porque la derecha es de **Encuadrar**. Solo carga el
   STEP de la pieza visible; cambiar de pieza termina su worker, como cerrar.
-- **Lista y cuadrícula:** la captura de la primera pieza de la ficha (`part_order` y luego el
-  código). Con dos piezas o más, dos capas detrás y el número de piezas; sin navegación.
+- **Lista y cuadrícula:** la captura corresponde a la primera pieza de la ficha (`part_order`
+  y luego el código). Si le falta imagen, la tarjeta muestra el icono aunque otras piezas tengan
+  captura. Con dos piezas o más, la portada y las dos capas de detrás son cuadradas, con fondo
+  blanco y borde gris oscuro en ambos temas. El contador indica cuántas piezas hay.
 - **Imagen del feature sin pieza** (`Feature.image_id`): solo se muestra mientras el feature no
   tiene piezas. La migración no la asigna a ninguna pieza.
 - **API:** `PUT /features/{id}` guarda la cabecera y las portadas cambiadas
@@ -55,6 +57,14 @@ El catálogo y `/parts/{id}` comparten una captura PNG del STEP completo, sin se
 de superficies. Se reutilizan el lector STEP en worker, los controles, `FeatureThumbnail`,
 `CoverButton`, `CoverDialog` y `StepCoverCanvas`. Las capturas nuevas se calculan una a una
 y se guardan para que volver al catálogo no vuelva a cargar todos los STEP.
+El indicador de preparación incluye el tiempo de espera en la cola. Una pieza sin CAD
+principal queda con el icono de imagen y no entra en la cola.
+
+El editor muestra la captura automática de la pieza en la pestaña Imagen cuando falta una
+portada propia. Si la pieza tiene varios STEP vinculados al feature, el selector de CAD permite
+aplicar un componente entero o marcar sus caras. La elección guardada pertenece a ese feature.
+La comprobación de las caras vacías en los STEP de 3056, 3167 y 3288 se recoge en el
+[informe del catálogo](comprobacion-step-catalogo-2026-11-19.md).
 La generación se realiza en el navegador y admite STEP/STP de hasta **50 MiB**; puede
 cargar el motor 3D al entrar en el catálogo si faltan capturas. No hay editor manual de
 imagen ni selección de caras para la pieza: su portada abre la consulta 3D incluso al editar.

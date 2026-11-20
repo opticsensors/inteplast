@@ -24,7 +24,28 @@ new Function("module", "exports", "require", result.outputFiles[0].text)(
 )
 const { MeasurementPlot } = compiled.exports
 
-test("excluded values remain visible as evidence but are never plotted as measurements", () => {
+test("dense histories thin axis labels while keeping every point accessible", () => {
+  const labels = Array.from(
+    { length: 92 },
+    (_, i) => `intern.${i + 1}.muestra5`,
+  )
+  const html = renderToStaticMarkup(
+    React.createElement(MeasurementPlot, {
+      labels,
+      visible: ["c1"],
+      lines: [{ name: "c1", points: labels.map((_, i) => ({ value: i })) }],
+    }),
+  )
+  const ticks = html.match(/<text[^>]* y="263"[^>]*>[\s\S]*?<\/text>/g)
+  assert.ok(ticks.length > 1 && ticks.length < labels.length)
+  assert.match(ticks[0], />1\.muestra5</)
+  assert.match(ticks.at(-1), />92\.muestra5</)
+  assert.equal((html.match(/<circle /g) ?? []).length, labels.length)
+  for (const label of labels)
+    assert.ok(html.includes(`Consultar C1 · ${label}`))
+})
+
+test("the chart shows only usable measurements and leaves import diagnostics out of the view", () => {
   const html = renderToStaticMarkup(
     React.createElement(MeasurementPlot, {
       labels: ["01", "02", "03"],
@@ -33,7 +54,11 @@ test("excluded values remain visible as evidence but are never plotted as measur
         {
           name: "c1",
           points: [
-            { value: 2, provenance_state: "medicion" },
+            {
+              value: 2,
+              provenance_state: "medicion",
+              warnings: ["Revisar cabecera."],
+            },
             { value: 777, provenance_state: "generado", flags: ["aleatoria"] },
             { value: 999, provenance_state: "sin_confirmar" },
           ],
@@ -41,16 +66,12 @@ test("excluded values remain visible as evidence but are never plotted as measur
       ],
     }),
   )
-  assert.match(html, /2 valores excluidos/)
-  assert.match(html, /777/)
-  assert.match(html, /999/)
-  assert.match(html, /fórmula aleatoria/)
-  assert.match(html, /Procedencia sin confirmar/)
+  assert.doesNotMatch(html, /valores excluidos|>777<|>999<|Revisar cabecera/)
   const svg = html.match(/<svg[\s\S]*?<\/svg>/)[0]
   assert.equal((svg.match(/<circle /g) || []).length, 1)
 })
 
-test("copied measurements expose their origin without plotting twice", () => {
+test("copied measurements are never plotted twice", () => {
   const html = renderToStaticMarkup(
     React.createElement(MeasurementPlot, {
       labels: ["01", "02"],
@@ -71,7 +92,6 @@ test("copied measurements expose their origin without plotting twice", () => {
       ],
     }),
   )
-  assert.match(html, /1 valores excluidos/)
-  assert.match(html, /Copia de DR!I15/)
+  assert.doesNotMatch(html, /valores excluidos|DR!I15/)
   assert.equal((html.match(/<circle /g) || []).length, 1)
 })

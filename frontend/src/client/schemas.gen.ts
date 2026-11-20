@@ -1054,7 +1054,6 @@ export const FeatureCover3DSchema = {
             },
             type: 'array',
             maxItems: 5000,
-            minItems: 1,
             title: 'Faces'
         },
         camera: {

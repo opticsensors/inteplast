@@ -4,7 +4,7 @@ import type {
   FilePublic,
   PartPublic,
 } from "@/client"
-
+import { coverAssets } from "./cadCover"
 import { featureParts } from "./parts"
 
 /** What the cover shows for one piece of the feature. */
@@ -16,6 +16,19 @@ export interface CoverSlide {
   cover: FeatureCover3D | null
   /** True when the image is the feature's own capture on this piece. */
   own: boolean
+}
+
+export function coverPieceLabel(
+  feature: FeatureDetail | undefined,
+  slide: CoverSlide,
+) {
+  const files = coverAssets(feature).filter(
+    (asset) => asset.part?.id === slide.part.id,
+  )
+  const selected = files.find((asset) => asset.id === slide.cover?.asset_id)
+  return files.length > 1 && selected
+    ? `${slide.part.code} · ${selected.name}`
+    : slide.part.code
 }
 
 /**

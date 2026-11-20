@@ -309,6 +309,7 @@ export class EvidenceService {
      * @param data.partId
      * @param data.revision
      * @param data.snapshotId
+     * @param data.cota
      * @returns PartEvidencePublic Successful Response
      * @throws ApiError
      */
@@ -321,7 +322,8 @@ export class EvidenceService {
             },
             query: {
                 revision: data.revision,
-                snapshot_id: data.snapshotId
+                snapshot_id: data.snapshotId,
+                cota: data.cota
             },
             errors: {
                 422: 'Validation Error'

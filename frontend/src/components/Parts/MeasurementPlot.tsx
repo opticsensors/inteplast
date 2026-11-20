@@ -1,5 +1,5 @@
 import { X } from "lucide-react"
-import { useEffect, useId, useRef, useState } from "react"
+import { useEffect, useId, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { fmt } from "./EvidenceElements"
@@ -28,21 +28,42 @@ type Hit = {
   color: string
 }
 const colors = ["#2563eb", "#8b5cf6", "#d97706", "#0891b2"]
-const provenanceLabels: Record<string, string> = {
-  aleatoria: "fórmula aleatoria",
-  copia: "copia de otra hoja del mismo libro",
-  posible_copia_de_generador: "posible copia de un generador",
-  difiere_de_hoja_origen: "difiere de la hoja de origen",
-  resultado_vacio: "resultado guardado vacío",
-  valor_impuesto: "valor impuesto en el informe",
-  formula_sin_valor: "fórmula sin valor guardado",
-  formula_error: "error de fórmula",
-  dependencia_aleatoria_no_resuelta: "posible cálculo dependiente de RAND",
-  importacion_sin_auditoria:
-    "importación anterior a la comprobación de fórmulas",
-}
 const finite = (value: number | null | undefined): value is number =>
   value != null && Number.isFinite(value)
+
+function sampleTicks(labels: string[], width: number) {
+  const last = labels.length - 1
+  if (last < 0) return []
+  const step = (width - 128) / Math.max(1, last)
+  const ctx =
+    typeof document === "undefined"
+      ? null
+      : document.createElement("canvas").getContext("2d")
+  if (ctx) ctx.font = `12px ${getComputedStyle(document.body).fontFamily}`
+  const measure = (s: string) => ctx?.measureText(s).width ?? 7 * s.length
+  const ticks = labels.map((label, index) => {
+    const parts = (
+      step < 64 ? label.replace(/^(intern\.)(.+)$/, "$1 · $2") : label
+    )
+      .split(" · ")
+      .map((part) => {
+        if (measure(part) <= 116) return part
+        let end = part.length - 1
+        while (end && measure(`${part.slice(0, end)}…`) > 116) end--
+        return `${part.slice(0, end)}…`
+      })
+    return { index, parts, half: Math.max(...parts.map(measure)) / 2 }
+  })
+  let right = -Infinity
+  const lastLeft = last * step - ticks[last].half
+  return ticks.filter(({ index, half }) => {
+    const center = index * step
+    if (center - half < right + 8) return false
+    if (index > 0 && index < last && center + half + 8 > lastLeft) return false
+    right = center + half
+    return true
+  })
+}
 
 /** Hit-test the visible points, never the empty area of a sample column. */
 export function MeasurementPlot({
@@ -68,24 +89,6 @@ export function MeasurementPlot({
   empty?: boolean
   onSource?: (point: PlotPoint, cavity: string) => void
 }) {
-  const excluded = sourceLines.flatMap((line) =>
-    visible.includes(line.name)
-      ? line.points.flatMap((point, index) =>
-          point && !point.connectorOnly && !usableMeasurement(point)
-            ? [{ point, cavity: line.name, sample: labels[index] }]
-            : [],
-        )
-      : [],
-  )
-  const warnings = [
-    ...new Set(
-      sourceLines.flatMap((line) =>
-        visible.includes(line.name)
-          ? line.points.flatMap((point) => point?.warnings ?? [])
-          : [],
-      ),
-    ),
-  ]
   const lines = sourceLines.map((line) => ({
     ...line,
     points: line.points.map((point) =>
@@ -156,8 +159,10 @@ export function MeasurementPlot({
     labels.length === 1
       ? plotWidth / 2
       : 64 + (index * (plotWidth - 128)) / (labels.length - 1)
-  const compactLabels =
-    labels.length > 1 && (plotWidth - 128) / (labels.length - 1) < 64
+  const ticks = useMemo(
+    () => sampleTicks(labels, plotWidth),
+    [labels, plotWidth],
+  )
   const y = (value: number) => 235 - ((value - min) / (max - min)) * 190
   const hits: Hit[] = lines.flatMap((line) =>
     visible.includes(line.name)
@@ -240,49 +245,6 @@ export function MeasurementPlot({
   }
   return (
     <div className="min-w-0 space-y-3">
-      {warnings.map((warning) => (
-        <p key={warning} className="text-sm text-muted-foreground">
-          {warning}
-        </p>
-      ))}
-      {excluded.length > 0 && (
-        <details className="rounded-md border p-3 text-sm">
-          <summary>
-            {excluded.length} valores excluidos de la gráfica y los cálculos por
-            su procedencia
-          </summary>
-          <ul className="mt-2 max-h-60 space-y-2 overflow-auto">
-            {excluded.map(({ point, cavity, sample }, index) => (
-              <li key={`${cavity}-${sample}-${index}`}>
-                {cavity} · {sample}:{" "}
-                {point.value == null
-                  ? (point.original_error ?? "sin valor guardado")
-                  : fmt(point.value)}{" "}
-                ·{" "}
-                {point.flags?.includes("copia")
-                  ? "Copia"
-                  : point.provenance_state === "generado"
-                    ? "Generado"
-                    : "Procedencia sin confirmar"}
-                {point.duplicate_of &&
-                  ` de ${point.duplicate_of.sheet}!${point.duplicate_of.cell}`}
-                {point.flags?.length
-                  ? ` (${point.flags.map((flag) => provenanceLabels[flag] ?? flag.replace(/_/g, " ")).join(", ")})`
-                  : ""}
-                {onSource && point.source && (
-                  <Button
-                    variant="link"
-                    size="sm"
-                    onClick={() => onSource(point, cavity)}
-                  >
-                    Ver informe
-                  </Button>
-                )}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
       <div
         ref={plot}
         className="relative"
@@ -440,9 +402,9 @@ export function MeasurementPlot({
                   </g>
                 ),
             )}
-            {labels.map((label, index) => (
+            {ticks.map(({ index, parts }) => (
               <text
-                key={`${label}-${index}`}
+                key={index}
                 x={x(index)}
                 y="263"
                 textAnchor="middle"
@@ -450,16 +412,11 @@ export function MeasurementPlot({
                 fill="currentColor"
                 opacity=".65"
               >
-                {(compactLabels
-                  ? label.replace(/^(intern\.)(.+)$/, "$1 · $2")
-                  : label
-                )
-                  .split(" · ")
-                  .map((text, line) => (
-                    <tspan key={text} x={x(index)} dy={line ? 15 : 0}>
-                      {text}
-                    </tspan>
-                  ))}
+                {parts.map((text, line) => (
+                  <tspan key={line} x={x(index)} dy={line ? 15 : 0}>
+                    {text}
+                  </tspan>
+                ))}
               </text>
             ))}
           </svg>

@@ -124,6 +124,7 @@ test("revision and historical import survive revision changes and browser naviga
       partId: "part-one",
       revision: "06",
       snapshotId: "older-import",
+      cota: "",
     },
   )
   assert.equal((await state(page)).snapshot, "older-import")
@@ -735,9 +736,7 @@ test("mobile layout and touch values remain within the viewport", async (t) => {
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   )
-  await page
-    .getByRole("heading", { name: "Evolución de mediciones", exact: true })
-    .tap()
+  await page.getByRole("heading", { name: "Cotas", exact: false }).first().tap()
   await expect(
     page.getByRole("dialog", { name: "Valores de intern.03" }),
   ).toHaveCount(0)

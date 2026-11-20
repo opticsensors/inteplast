@@ -122,9 +122,10 @@ Desde el 02/11/2026, `measurement_tables.py` lee cachés con auditoría BIFF8/OO
 reconoce firmas incompatibles y usa Calamine como alternativa a xlrd. Incluye hojas
 DR(100%) y CAV_n con cabeceras reconocidas, conservando muestra y unidad explícita.
 `MeasurementImport.rows` guarda procedencia, flags, fórmula cuando está disponible,
-valor original y fuente. Solo `medicion` sin marca `copia` entra en estadísticas y gráficas. Los valores
-`generado`/`sin_confirmar` se muestran en un listado con el motivo de exclusión y acceso
-al informe. El asistente comunica los excluidos sin usarlos para calcular.
+valor original y fuente. Solo `medicion` sin marca `copia` entra en estadísticas y gráficas.
+La ficha consulta el índice de cotas al abrirse y pide las series de la cota elegida
+para su revisión o importación histórica. Los motivos de exclusión y las discrepancias
+de cabecera se conservan con la importación. El asistente comunica los excluidos sin usarlos para calcular.
 Los snapshots Excel anteriores a esta auditoría se muestran sin confirmar hasta un
 refresco explícito; no se reescriben. Las fórmulas potencialmente dependientes de RAND
 llevan aviso. Se siguen referencias estáticas; nombres, referencias dinámicas o externas no resueltas siguen sin confirmar. La detección de constantes copiadas exige la estructura del generador, intervalo y redondeo; no es una detección general. Las copias de hojas se conservan con coordenada de origen y las diferencias aparte; ninguna cuenta dos veces. Los futuros SPC #P# deberán respetar los tres estados.

@@ -152,7 +152,6 @@ export function Measurements({
           className="space-y-3 rounded-lg border p-4 sm:p-5"
           aria-label="Evolución de mediciones"
         >
-          <h3 className="text-sm font-medium">Evolución de mediciones</h3>
           <MeasurementPlot empty labels={labels} lines={[]} visible={[]} />
         </section>
       ) : !entry || !selected ? (
@@ -251,10 +250,6 @@ export function Measurements({
                 : "Evolución de mediciones"
             }
           >
-            <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-              <h3 className="font-medium">Evolución de mediciones</h3>
-              <span className="text-muted-foreground">{selected.label}</span>
-            </div>
             <MeasurementPlot
               key={`${code}-${selected.series.id}`}
               labels={labels}

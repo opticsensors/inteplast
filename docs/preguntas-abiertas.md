@@ -11,6 +11,9 @@
 > el paquete de aclaraciones para la extracción sin IA que sigue a continuación.
 > El **16/11/2026** se añaden [A28: informe del 3226 sin numeración](#a28-3226-sin-numeracion)
 > y la incongruencia I-209 (3197), que no se pregunta por separado: va con A14/A24.
+> El **19/11/2026**, tras la carga del catálogo, se añade [A29: qué archivo representa la pieza,
+> el molde y el escaneo](#a29-archivo-principal), se amplían [A15](#a15-versiones-cad-gui) y
+> [A19](#a19-planos) con casos concretos y se propone una convención de carpetas.
 
 <a id="extraccion-sin-ia"></a>
 ## Para validar la extracción sin IA · 13/11/2026
@@ -65,6 +68,12 @@ sus plantillas o un índice sencillo, sin exigir rehacer los documentos antiguos
 - **Ejecución:** separar propuesto, aprobado y ejecutado; vincular la versión
   ejecutada y su fecha a los informes antes/después. Un OK sin significado
   acordado queda como texto, no como confirmación automática.
+- **Carpetas de pieza (19/11/2026):** en `1- 2D y 3D pieza`, un STEP y un PDF vigentes
+  de esa pieza, o uno por componente con el componente en el nombre; en `3- Molde`, un
+  STEP de conjunto reconocible por el nombre (como `RP-3083_Mold_Rev0` del 3205), con
+  electrodos y semimoldes en subcarpetas; en `7- Pieza real STL`, un escaneo con el
+  código de la pieza en el nombre; borradores y versiones anteriores, fuera de la
+  carpeta 1 o marcados. Casos que lo motivan en [A29](#a29-archivo-principal).
 - **Validación:** elegir un responsable y un ejemplo de cada formato para
   contrastar el resultado de la app. Las lagunas quedan visibles; no se rellenan
   por analogía con otras piezas.
@@ -436,6 +445,17 @@ y el CAD del molde, además del histórico de mediciones y retoques.
 inicial, una versión intermedia o la versión final tras los retoques. Tampoco está decidido
 qué versiones deben poder consultarse desde la GUI.
 
+Casos concretos (añadidos el 19/11/2026):
+
+- **3237:** en `1- 2D y 3D pieza` está `20231004_3130589019.007-EL_SIDE_MASK_S4_corrected.stp`;
+  en `5- Retoques molde/4rd Modification of the towers/` hay dos STEP con índice **009**
+  (`…3130589019.009-…_modified_V03-MODIFICADA.step` y `…3130589019_009-…_.step`).
+- **3238:** en `1- 2D y 3D pieza` está `…313058901F.007-…_modified_V03.stp`; en
+  `5- Retoques molde/20260323_4rd Modification of the towers/` hay la misma pieza con el
+  sufijo `-GPF`.
+
+¿El CAD vigente de la pieza es el de `1- 2D y 3D pieza` o el de la modificación?
+
 **Preguntas:**
 
 1. **¿Qué revisión representan los CAD de pieza y molde que nos habéis pasado: son los
@@ -537,6 +557,10 @@ ya excluye esos valores sin necesidad de respuesta.
   cota. Tenemos el plano del conjunto en nivel 1 y en nivel 2, con el globo 80
   (`6- Método de medición/balloned/REV.01` y `REV.02`), pero no cómo se corresponde con los planos
   de base y tapa.
+- *(19/11/2026)* Los planos de `1- 2D y 3D pieza` del **3167** y del **3168** son borradores:
+  `20260727_0130S00338_DRAFT_V07.pdf` y `20260727_0130S00337_DRAFT_V02.pdf`.
+- *(19/11/2026)* En el **3309**, el STEP de la pieza es `…77217-12300___TG_g_SUPPORT_FUEL_TANK_FILLER_PIPE_NO2.stp`
+  y el plano, `dwg_ab_77217-02200-000A_2864368.pdf`: los números no coinciden.
 
 **Preguntas:**
 
@@ -544,6 +568,8 @@ ya excluye esos valores sin necesidad de respuesta.
 2. **¿El plano del 3051 es el vigente o hay una versión aceptada posterior?**
 3. **En el 3288, ¿cómo se corresponden las cotas del plano del conjunto BSG-296-00 (la DIM. 80)
    con las de los planos de base y tapa y con los informes?**
+4. **3167 y 3168: ¿los planos `DRAFT` son los vigentes o hay una versión publicada?**
+5. **3309: ¿qué son `77217-12300` y `77217-02200-000A`, y el plano corresponde al STEP de la pieza?**
 
 <details><summary>Contexto interno (no enviar)</summary>
 
@@ -811,6 +837,55 @@ Comprobado el 16/11/2026 con el lector de la app (`measurement_tables.workbook`)
 `DW-UMED-18` y el que tenemos es `DW-UMED-2-2`: no se ha comprobado si son el mismo. No se
 inventan identificadores por la posición de la fila: una fila insertada los cambiaría todos.
 La app deja la hoja como pendiente con ese motivo. Decidir si se envía corresponde a Eduard.
+</details>
+
+<a id="a29-archivo-principal"></a>
+### A29 · Qué archivo representa la pieza, el molde y el escaneo
+
+*Añadida el 19/11/2026, después de cargar las 21 piezas con «Usar carpeta de la pieza».*
+
+**Recordatorio.** Al dar de alta una pieza, la aplicación toma de su carpeta el CAD de la
+pieza (`1- 2D y 3D pieza`), el molde (`3- Molde`) y el escaneo (`7- Pieza real STL`). Cuando
+hay un solo archivo de cada tipo, lo elige sin ayuda. Así ocurre, por ejemplo, en el molde
+del 3174, 3186, 3214 o 3218.
+
+**Qué no nos cuadra.**
+
+| Pieza | Situación |
+|---|---|
+| 3056, 3167, 3202 | `3- Molde/Tool` trae lado de inyección, lado de expulsión, puente y pieza (6, 4 y 5 STEP), y `3- Molde/Electrode`, 121, 58 y 34 electrodos. No hay un STEP del molde completo |
+| 3233 | `3- Molde` trae 17 STEP: los electrodos `E01`–`E11`, el puente y la pieza con agujeros, sin conjunto |
+| 3195 | `P3195_ES`, `P3195_IS`, `P3195_part with shrinkage` y `P3195_transport bar` |
+| 3206 | Solo los dos lados: `3206 GPF EXP.step` y `3206 GPF INJ.step` |
+| 3168 | Dos STEP, `5506170ECO11A0-10.stp` y `5506170ESY11A0-10.stp`, sin indicar qué es cada uno |
+| 3288 | Molde: solo `000591368_00-B_Aufbau_Top.stp`. Escaneo: `3288-00_Base.stl` y `3288-00 Nou.stl` |
+| 3309 | El único escaneo se llama `3218-00 316919 C1.stl`, con el código del 3218 |
+| 3226 | No hay carpeta de molde ni de método de medición |
+
+El 3205 sí trae un conjunto reconocible, `RP-3083_Mold_Rev0.stp`, junto a electrodos y lados.
+
+**Preguntas:**
+
+1. **¿Existe un STEP del molde completo de cada pieza? Si no, ¿cuál de los archivos de
+   `3- Molde` queréis ver como molde de la pieza?**
+2. **3168: ¿qué son `ECO` y `ESY`?**
+3. **3288: ¿el molde `Aufbau_Top` es el completo o una mitad? ¿Qué es el escaneo `Nou` y
+   cuál queréis ver de la pieza?**
+4. **3309: ¿el escaneo `3218-00 316919 C1.stl` es del 3309 con otro nombre?**
+5. **3226: ¿hay CAD del molde y método de medición?**
+6. **Para entregas futuras, ¿os va bien la convención de carpetas propuesta arriba?**
+
+<details><summary>Contexto interno (no enviar)</summary>
+
+Inventario de la biblioteca (`documento`, rutas de `3- Molde` sin retoques) y [registro de
+la carga](carga-catalogo-2026-11-19.md). Según el [plan de archivos
+principales](plan-principales-y-tablas-2026-11-18.md), el orden alfabético llegó a proponer un
+electrodo como molde en 3056, 3167 y 3202. La app debe dejar el principal vacío cuando haya
+duda. La respuesta sirve para la regla general, no para elegir a mano en cada ficha. Del
+3309, el STL no es el del 3218 (`3218-00 316945 C1.stl`, otro tamaño); ver
+[3309](../conocimiento/1-clips/3309.md). La 3288 base/tapa se trata como componentes
+([A22](#a22-3288), [A25](#a25-3288-tapa)). Los CAD de pieza con versiones en retoques van en
+[A15](#a15-versiones-cad-gui) y los planos en [A19](#a19-planos).
 </details>
 
 ### Correspondencia con las incongruencias abiertas

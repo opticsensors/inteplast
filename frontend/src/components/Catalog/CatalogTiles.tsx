@@ -69,8 +69,8 @@ export function PartTile({
       cover={
         <PartThumbnail
           part={part}
-          className="size-full border-0 bg-transparent"
-          wrapperClassName="relative size-full"
+          className="size-full"
+          wrapperClassName="relative mx-auto aspect-square h-full max-w-full"
         />
       }
     >
@@ -120,8 +120,8 @@ export function FeatureTile({
       cover={
         <FeatureCoverStack
           feature={feature}
-          className="size-full"
-          flatClassName="border-0 bg-transparent"
+          className="mx-auto aspect-square h-full max-w-full"
+          flatClassName="w-full border-0 bg-transparent"
         />
       }
     >

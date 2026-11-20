@@ -267,6 +267,7 @@ export default function CatalogGraph({
         setSettled(latest.current.data)
       })
     instance.d3Force("charge")?.strength(-160)
+    instance.d3Force("link")?.distance(55).strength(0.55)
     graph.current = instance
     // Tests reach the real node positions through the element; there is no other API.
     Object.defineProperty(element, "catalogGraph", {

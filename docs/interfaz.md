@@ -123,7 +123,9 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
   guarda en este navegador (`inteplast.catalog-view`); si no se puede leer o guardar, se abre
   en Lista sin error. Las cotas encontradas siguen arriba en ambas vistas.
 - **Grafo (17–18/11/2026):** tercer botón de «Vista» (`Catalog/CatalogGraph.tsx`, cargado
-  solo al abrirlo). Muestra lo mismo que la lista con la búsqueda y los filtros activos
+  solo al abrirlo). Al entrar desde Piezas o Features, abre «Todo» y muestra los dos tipos
+  con sus conexiones. Conserva la búsqueda y los filtros de pieza, feature, familia y cliente.
+  Las pestañas Piezas y Features permiten volver a su lista. Consulta el catálogo
   (`GET /catalog/graph`), todo de una vez, hasta 500 nodos; si hay más dice «Mostrando N de
   M: filtra para ver el resto». Librería `force-graph@1.43.5`, la del visor, fijada en
   `package.json`. Piezas: círculo con la captura CAD guardada o, sin ella, con el código
@@ -299,6 +301,9 @@ ni ocultarla por no aparecer en el índice nuevo.
 
 ## Gráficas y detalle
 
+- La gráfica de cotas ajusta las etiquetas del eje X al ancho disponible. Conserva
+  los puntos y el identificador completo de cada muestreo al consultarlo. Los avisos
+  técnicos de la importación se conservan fuera de la gráfica.
 - Mostrar información solo sobre un punto, al pasar el cursor, tocarlo o enfocarlo con
   el teclado. Las zonas vacías y los segmentos de línea no activan información.
 - Colocar el recuadro junto al punto y ajustarlo a los bordes. En la evolución contiene

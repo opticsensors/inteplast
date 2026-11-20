@@ -154,6 +154,21 @@ def test_import_shared_piece_with_review_history_and_revisions(
     assert a["study"]["payload"]["samples"] == ["01", "03"]
     assert b["study"]["payload"]["samples"] == ["01"]
     assert len(a["characteristics"]) == 2
+
+    def scoped(cota, **params):
+        response = client.get(
+            f"{API}/{part.id}", headers=headers, params={"cota": cota, **params}
+        )
+        assert response.status_code == 200, response.text
+        return response.json()
+
+    overview = scoped("", revision="A")
+    assert overview["study"]["payload"]["catalog"]["entries"] == []
+    assert overview["characteristics"] == a["characteristics"]
+    assert overview["study"]["payload"]["samples"] == ["01", "03"]
+    assert scoped("N170", revision="A")["study"] == a["study"]
+    assert scoped("N170", snapshot_id=old_id)["study"] == historical["study"]
+    assert scoped("N999", revision="A")["study"]["payload"]["catalog"]["entries"] == []
     # The same registered piece can be linked to a second feature, without an import.
     second = create_random_feature(db)
     db.add(FeaturePartLink(feature_id=second.id, part_id=part.id))
@@ -163,6 +178,42 @@ def test_import_shared_piece_with_review_history_and_revisions(
         not f["characteristics"]
         for f in client.get(f"{API}/{part.id}", headers=headers).json()["features"]
     )
+
+
+def test_default_revision_prefers_identified_measurements(
+    client: TestClient, normal_user_token_headers, piece
+):
+    part, _, folder = piece
+    url = f"{API}/{part.id}"
+    headers = normal_user_token_headers
+    for sample, revision, expected in [
+        ("01", "sin-revision", "sin-revision"),
+        ("02", "004", "004"),
+        ("03", "002", "004"),
+    ]:
+        path = f"intern.{sample}/c1/export.csv"
+        write(folder, path)
+        file = {"path": path, "revision": revision, "sample": sample, "cavity": "c1"}
+        preview = client.post(
+            f"{url}/measurements/preview", headers=headers, json={"files": [file]}
+        ).json()
+        response = client.post(
+            f"{url}/measurements/import",
+            headers=headers,
+            json={
+                "context_key": preview["context_key"],
+                "files": [request_file(preview["files"][0])],
+            },
+        )
+        assert response.status_code == 200, response.text
+        overview = client.get(url, headers=headers, params={"cota": ""}).json()
+        assert overview["study"]["payload"]["measurement_revision"] == expected
+
+    explicit = client.get(
+        url, headers=headers, params={"revision": "sin-revision"}
+    ).json()
+    assert explicit["measurement_revisions"] == ["002", "004", "sin-revision"]
+    assert explicit["study"]["payload"]["samples"] == ["01"]
 
 
 def test_import_validates_sources_and_is_atomic(
@@ -332,6 +383,7 @@ def test_existing_pilot_is_preserved_before_first_csv_replacement(
         ]["records"]["c1"]["01"]["value"]
 
     assert value({"snapshot_id": baseline["id"]}) == 3.8
+    assert value({"snapshot_id": baseline["id"], "cota": "N170"}) == 3.8
     assert value({}) == 3.95
     other = create_random_part(db)
     assert (

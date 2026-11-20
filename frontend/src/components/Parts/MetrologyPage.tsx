@@ -37,12 +37,19 @@ export function MetrologyPage({
     enabled: !embedded,
   })
   const result = useQuery({
-    queryKey: ["part-evidence", partId, search.revision, search.snapshot],
+    queryKey: [
+      "part-evidence",
+      partId,
+      search.revision,
+      search.snapshot,
+      search.cota ?? "",
+    ],
     queryFn: () =>
       EvidenceService.readPartEvidence({
         partId: partId!,
         revision: search.revision,
         snapshotId: search.snapshot,
+        cota: search.cota ?? "",
       }),
     enabled: Boolean(partId),
     refetchInterval: (q) =>

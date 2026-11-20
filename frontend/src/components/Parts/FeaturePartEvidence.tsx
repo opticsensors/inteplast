@@ -54,8 +54,8 @@ export function FeaturePartEvidence({
       EvidenceService.readFeatureEvidence({ featureId: feature.id, partId }),
   })
   const partEvidence = useQuery({
-    queryKey: ["part-evidence", partId],
-    queryFn: () => EvidenceService.readPartEvidence({ partId }),
+    queryKey: ["part-evidence", partId, undefined, undefined, ""],
+    queryFn: () => EvidenceService.readPartEvidence({ partId, cota: "" }),
     enabled: Boolean(
       editable || result.data?.characteristics.some((c) => c.component),
     ),
@@ -81,8 +81,8 @@ export function FeaturePartEvidence({
     )
     if (!characteristic) {
       const evidence = await client.fetchQuery({
-        queryKey: ["part-evidence", partId],
-        queryFn: () => EvidenceService.readPartEvidence({ partId }),
+        queryKey: ["part-evidence", partId, undefined, undefined, ""],
+        queryFn: () => EvidenceService.readPartEvidence({ partId, cota: "" }),
         staleTime: 0,
       })
       const studyRevision = evidence.study.payload?.measurement_revision

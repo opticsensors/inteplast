@@ -83,6 +83,19 @@ que no cambian cuando cambia el plano y hojas que ya usan las cotas de una revis
 ¹ Número, componente, revisión y fecha del último cambio distintos. Es un recuento informativo: qué debe contar la columna «Planos» del visor está sin decidir.
 <!-- planos-resumen:fin -->
 
+**Cotas numeradas en el Excel y no en el plano (comprobado el 20/11/2026).**
+- **Piezas afectadas:** 3051, 3056, 3168, 3197, 3233 y 3309. Ningún PDF de plano de la entrega lleva globos ni numeración ([tabla de marcas](planos-globos.md)).
+- **Cotas con número en los informes, según la biblioteca:**
+  - 3051: 202 en `medida_dr`.
+  - 3056: 483 en `medida_dr`.
+  - 3168: 150 en `medida_dr`.
+  - 3197: 163 en `medida_dr` y 53 en `medida_cmm`.
+  - 3233: 278 en `medida_dr`.
+  - 3309: 25 en `medida_dr`.
+- **3186 y 3218:** solo tienen numerado el plano `6494730` de la 3174 (I-301).
+- **3226:** no tiene número de cota ni en el plano ni en el Excel (A28).
+- **Hipótesis sin confirmar:** INTEPLAST numera sobre un plano con globos que no está en la entrega. Se pregunta en la [reunión del 20/11](../docs/reunion-inteplast-2026-11-20.md).
+
 ## Inventario de los PDF
 
 Ordenado por pieza y fecha del cambio. «Id» es `documento.id` de la biblioteca; `= N`, copia idéntica de N.

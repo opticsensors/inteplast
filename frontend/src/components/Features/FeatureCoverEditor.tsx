@@ -15,7 +15,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CadCoverEditor } from "./CadCoverEditor"
 import { CoverButton } from "./CoverButton"
 import { COVER_EDITOR_ROWS, CoverDialog } from "./CoverDialog"
-import type { CoverDraft, CoverSlide } from "./coverSlides"
+import {
+  type CoverDraft,
+  type CoverSlide,
+  coverPieceLabel,
+} from "./coverSlides"
 import { CarouselFrame, COVER_SIZE, useCarousel } from "./FeatureCover"
 
 interface CoverEditorProps {
@@ -57,7 +61,7 @@ export function FeatureCoverEditor({
       <div className="flex w-48 shrink-0 flex-col gap-2 sm:w-[300px]">
         {slide ? (
           <CarouselFrame
-            code={slide.part.code}
+            code={coverPieceLabel(feature, slide)}
             current={current}
             count={slides.length}
             onStep={go}
@@ -105,7 +109,7 @@ export function FeatureCoverEditor({
             <DialogTitle className="min-w-0 flex-1">Editar portada</DialogTitle>
             {slide && (
               <PieceStepper
-                code={slide.part.code}
+                code={coverPieceLabel(feature, slide)}
                 position={
                   many ? `${current + 1} / ${slides.length}` : undefined
                 }
@@ -120,6 +124,11 @@ export function FeatureCoverEditor({
             feature={feature}
             partId={slide?.part.id}
             image={slide ? (slide.own ? slide.image : null) : image}
+            autoImage={
+              feature?.part_covers?.find(
+                (item) => item.part_id === slide?.part.id,
+              )?.auto_image
+            }
             cover={slide?.own ? slide.cover : null}
             setBusy={setBusy}
             close={() => setOpen(false)}
@@ -155,7 +164,7 @@ function PieceStepper({
   onStep?: (delta: number) => void
 }) {
   return (
-    <div className="flex shrink-0 items-center gap-1 text-sm">
+    <div className="flex min-w-0 max-w-[72%] items-center gap-1 text-sm">
       {onStep && (
         <Button
           type="button"
@@ -170,10 +179,12 @@ function PieceStepper({
           <ChevronLeft className="size-4" />
         </Button>
       )}
-      <span className="px-1">
-        <span className="font-mono">{code}</span>
+      <span className="flex min-w-0 items-center px-1">
+        <span className="truncate font-mono" title={code}>
+          {code}
+        </span>
         {position && (
-          <span className="ml-2 tabular-nums text-muted-foreground">
+          <span className="ml-2 shrink-0 tabular-nums text-muted-foreground">
             {position}
           </span>
         )}
@@ -201,6 +212,7 @@ function CoverEditorDraft({
   feature,
   partId,
   image: initialImage,
+  autoImage,
   cover,
   onChange,
   setBusy,
@@ -210,6 +222,7 @@ function CoverEditorDraft({
   /** The piece being edited; none while the feature has no pieces. */
   partId?: string
   image: FilePublic | null
+  autoImage?: FilePublic | null
   cover: FeatureCover3D | null
   onChange: (image: FilePublic | null, cover: FeatureCover3D | null) => void
   setBusy: (busy: boolean) => void
@@ -247,6 +260,7 @@ function CoverEditorDraft({
       <TabsContent value="image" className={COVER_EDITOR_ROWS}>
         <FileUpload
           value={image}
+          previewFallback={autoImage}
           variant="image"
           pasteInDialog
           coverLayout
@@ -285,6 +299,7 @@ function CoverEditorDraft({
             partId={partId}
             initial={cover}
             image={initialImage}
+            autoImage={autoImage}
             setBusy={setCadBusy}
             onSaved={onChange}
             close={close}

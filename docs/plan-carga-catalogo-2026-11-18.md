@@ -1,13 +1,10 @@
 # Cargar las 21 piezas y los 8 features en la base de datos · plan
 
-**18 de noviembre de 2026 · Siguiente paso inmediato. Pendiente de ejecutar.**
-Eduard lo ha detenido hasta corregir un fallo que detectó el mismo día. Antes de empezar,
-revisar ese cambio (`git log`) y comprobar que este plan sigue siendo válido.
-**Hasta entonces no se ha tocado la base de datos.**
-
-> 🔴 **Se ejecuta DESPUÉS del [plan de portadas por pieza](plan-portadas-por-pieza-2026-11-18.md)**
-> (orden decidido por Eduard el 18/11/2026). No empezar esta carga hasta que aquel esté cerrado
-> y comprobado, porque cambia el modelo de portadas de los features que se van a cargar.
+**Plan del 18 de noviembre de 2026. Carga completada el 19/11/2026.** Eduard la autorizó tras
+comprobar las [portadas por pieza](plan-portadas-por-pieza-2026-11-18.md) en la instalación
+local (commit `cd4ca0f`). La BD contiene las 21 piezas y los 8 features. Se vincularon 92 de
+las 98 cotas de referencia. El detalle por pieza y revisión, los seis pendientes y la copia
+previa constan en el [registro de ejecución](carga-catalogo-2026-11-19.md).
 
 ## Qué se quiere conseguir
 
@@ -196,10 +193,8 @@ ejecutara.
    - Guardar el resultado de cada pieza: archivos elegidos, avisos y cotas leídas.
 6. **Piezas existentes.**
    - **3212:** solo los campos manuales y el cambio de rol de N288.
-   - **3197:** tiene cotas leídas, pero `files_managed = false`. El editor no vuelve a proponer
-     ficheros si se elige la misma carpeta. **Pregunta pendiente para Eduard:** dejarla así y lanzar
-     «Actualizar datos», o borrarla (superusuario, alcance de `GET /parts/{id}/deletion`) y crearla
-     con el botón como las demás.
+   - **3197:** Eduard eligió el 19/11/2026 conservar la ficha y sus 125 cotas de partida,
+     mantener su configuración de archivos (`files_managed = false`) y ejecutar «Actualizar datos».
    - Vínculos extra feature ↔ pieza con `POST /features/{id}/parts/{part_id}`: 3167 → Tetones;
      3214 → Tetones; 3205 y 3206 → Planitudes.
 7. **Nombres y cotas.**

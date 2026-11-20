@@ -81,7 +81,13 @@ export function consultationEntries(
     ...entry,
     revision: study?.measurement_revision,
   }))
-  for (const cota of characteristics) {
+  // A code can be registered in several revisions. Prefer the revision on screen.
+  const currentRevision = study?.measurement_revision
+  const ordered = [
+    ...characteristics.filter((cota) => cota.revision === currentRevision),
+    ...characteristics.filter((cota) => cota.revision !== currentRevision),
+  ]
+  for (const cota of ordered) {
     if (
       !entries.some(
         (entry) => entry.id === cota.code || entry.numbers.includes(cota.code),

@@ -1004,13 +1004,25 @@ async function clickNode(page, id) {
 
 test("the graph shows the list's results and clicking a real node opens its page", async (t) => {
   const page = await mount(t)
+  await page.getByRole("button", { name: "Piezas", exact: true }).click()
+  await expect(
+    page.getByRole("button", { name: "Abrir Bolt Eye" }),
+  ).toHaveCount(0)
   await page
     .getByRole("group", { name: "Vista" })
     .getByRole("button", { name: "Grafo" })
     .click()
   const graph = page.getByTestId("catalog-graph")
+  await expect(
+    page.getByRole("button", { name: "Todo", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true")
   // Pieces and features; families and customers are switched off at first.
   await expect(graph).toHaveAttribute("data-nodes", "2")
+  await expect
+    .poll(() =>
+      graph.evaluate((el) => el.catalogGraph?.graphData().links.length),
+    )
+    .toBe(1)
   await clickNode(page, "part:part-one")
   await readHeading(page, "3212 Pump Housing")
   await page.evaluate(() => window.review.back())
