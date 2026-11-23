@@ -1,4 +1,4 @@
-"""First-page thumbnails of drawings, cached by the version of the original.
+"""Upright drawing thumbnails, cached per page and version of the original.
 
 The PNG lives in the derived store next to the 3D previews. It is generated the first
 time it is asked for, a few at a time: past that the caller gets "busy" and asks again,
@@ -23,20 +23,21 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from fastapi import HTTPException
+from PIL import Image
 
 from app.core.config import settings
 from app.file_sources import document_path, document_version
 from app.models import StoredFile
 
-RECIPE = "pdf-first-page-png-v1/480"
+RECIPE = "pdf-upright-page-v2/480"
 WIDTH = 480
 TIMEOUT_SECONDS = 60
 # A couple of child processes at once per API worker.
 SLOTS = threading.BoundedSemaphore(2)
 
 
-def thumbnail_key(document: StoredFile) -> str:
-    return hashlib.sha256(
+def thumbnail_key(document: StoredFile, page: int = 1) -> str:
+    version = hashlib.sha256(
         json.dumps(
             [
                 str(document.id),
@@ -49,6 +50,7 @@ def thumbnail_key(document: StoredFile) -> str:
             ]
         ).encode()
     ).hexdigest()
+    return f"{version}-{page}"
 
 
 def thumbnail_directory(file_id: uuid.UUID) -> Path:
@@ -59,7 +61,12 @@ def thumbnail_path(file_id: uuid.UUID, key: str) -> Path:
     return thumbnail_directory(file_id) / f"{key}.png"
 
 
-def convert(source: Path, partial: Path) -> None:
+def thumbnail_rotation(path: Path) -> int:
+    with Image.open(path) as image:
+        return int(image.info["display_rotation"])
+
+
+def convert(source: Path, partial: Path, page: int) -> None:
     """Run the converter; any failure or timeout becomes a clear HTTP error."""
     try:
         result = subprocess.run(
@@ -70,11 +77,12 @@ def convert(source: Path, partial: Path) -> None:
                 str(source),
                 str(partial),
                 str(WIDTH),
+                str(page),
             ],
             capture_output=True,
             text=True,
             timeout=TIMEOUT_SECONDS,
-            env={**os.environ, "OMP_NUM_THREADS": "1"},
+            env={**os.environ, "OMP_NUM_THREADS": "1", "OMP_THREAD_LIMIT": "1"},
         )
     except subprocess.TimeoutExpired as error:
         raise HTTPException(
@@ -102,11 +110,11 @@ def document_lock(file_id: uuid.UUID) -> Iterator[bool]:
             fcntl.flock(handle, fcntl.LOCK_UN)
 
 
-def prepare(document: StoredFile) -> tuple[str, str]:
+def prepare(document: StoredFile, page: int = 1) -> tuple[str, str]:
     """("ready", key) once the PNG exists for this version, or ("busy", key)."""
     if Path(document.filename).suffix.lower() != ".pdf":
         raise HTTPException(415, "Solo los planos PDF tienen miniatura.")
-    key = thumbnail_key(document)
+    key = thumbnail_key(document, page)
     target = thumbnail_path(document.id, key)
     if target.is_file():
         return "ready", key
@@ -122,13 +130,13 @@ def prepare(document: StoredFile) -> tuple[str, str]:
             # Not "*.png": the cleanup below never touches a drawing in progress.
             partial = target.with_name(f"{key}.{os.getpid()}.part")
             try:
-                convert(source, partial)
+                convert(source, partial, page)
                 os.replace(partial, target)
             finally:
                 partial.unlink(missing_ok=True)
             # Older versions of this document are no longer served.
             for old in thumbnail_directory(document.id).glob("*.png"):
-                if old != target:
+                if old.stem.partition("-")[0] != key.partition("-")[0]:
                     old.unlink(missing_ok=True)
         return "ready", key
     finally:

@@ -45,7 +45,12 @@ from app.models import (
 )
 from app.previews import delete_preview, preview_key, preview_path, request_preview
 from app.source_tables import SourceTable, read_table
-from app.thumbnails import delete_thumbnails, thumbnail_key, thumbnail_path
+from app.thumbnails import (
+    delete_thumbnails,
+    thumbnail_key,
+    thumbnail_path,
+    thumbnail_rotation,
+)
 from app.thumbnails import prepare as prepare_thumbnail_file
 
 router = APIRouter(prefix="/files", tags=["files"])
@@ -455,6 +460,7 @@ def read_preview(
 class ThumbnailPublic(BaseModel):
     state: Literal["ready", "busy"]
     url: str | None = None
+    rotation: int = 0
 
 
 class IcpCheckPublic(BaseModel):
@@ -482,17 +488,25 @@ def check_drawing_icp(
 
 @router.post("/{file_id}/thumbnail", response_model=ThumbnailPublic)
 def prepare_thumbnail(
-    session: SessionDep, current_user: CurrentUser, file_id: uuid.UUID
+    session: SessionDep,
+    current_user: CurrentUser,
+    file_id: uuid.UUID,
+    page: int = Query(1, ge=1, le=2147483647),
 ) -> ThumbnailPublic:
-    """First page of a PDF as a small PNG, made once per version of the original.
+    """Upright PDF page and its clockwise display correction, cached per version.
 
     "busy" means that other thumbnails are being drawn: show a placeholder and ask again.
     """
     document = session.get(StoredFile, file_id)
     if document is None:
         raise HTTPException(status_code=404, detail="File not found")
-    state, key = prepare_thumbnail_file(document)
+    state, key = prepare_thumbnail_file(document, page)
     if state == "busy":
+        return ThumbnailPublic(state="busy")
+    try:
+        rotation = thumbnail_rotation(thumbnail_path(file_id, key))
+    except FileNotFoundError:
+        # A newer version was generated between prepare and opening the PNG.
         return ThumbnailPublic(state="busy")
     expires_at = datetime.now(timezone.utc) + timedelta(
         minutes=settings.FILE_ACCESS_TOKEN_EXPIRE_MINUTES
@@ -511,7 +525,8 @@ def prepare_thumbnail(
     )
     return ThumbnailPublic(
         state="ready",
-        url=f"{settings.API_V1_STR}/files/{file_id}/thumbnail?token={token}",
+        url=f"{settings.API_V1_STR}/files/{file_id}/thumbnail?token={token}&page={page}",
+        rotation=rotation,
     )
 
 
@@ -523,6 +538,7 @@ def read_thumbnail(
         HTTPAuthorizationCredentials | None, Depends(optional_bearer)
     ],
     token: str | None = None,
+    page: int = Query(1, ge=1, le=2147483647),
 ) -> FileResponse:
     if credentials:
         user_id = get_current_user(session, credentials.credentials).id
@@ -536,7 +552,7 @@ def read_thumbnail(
     if document is None:
         raise HTTPException(status_code=404, detail="File not found")
     with sharepoint.acting_as(user_id):
-        key = thumbnail_key(document)
+        key = thumbnail_key(document, page)
     if token and not credentials:
         authorize_file_token(
             session, file_id, token, purpose="file-thumbnail", cache_key=key

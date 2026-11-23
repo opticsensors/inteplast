@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, Link } from "@tanstack/react-router"
 import { Download, ExternalLink, FileQuestion } from "lucide-react"
 import { lazy, Suspense } from "react"
 
@@ -182,10 +182,14 @@ function AssetDetail() {
 
       {!file ? (
         <EmptyState title="Sin archivo vinculado">
-          <p>
-            El adjunto está declarado en la ficha. Puedes vincular un archivo
-            existente desde <em>Editar</em>, en la ficha del feature.
-          </p>
+          <p>Los archivos se gestionan en la ficha de la pieza.</p>
+          {asset.part && (
+            <Button variant="link" asChild>
+              <Link to="/parts/$partId" params={{ partId: asset.part.id }}>
+                Abrir pieza {asset.part.code}
+              </Link>
+            </Button>
+          )}
         </EmptyState>
       ) : unavailable ? (
         <EmptyState

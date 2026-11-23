@@ -158,6 +158,9 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
   cualquier índice pendiente. Mientras tanto aparece «Leyendo plano…». Si falla la lectura,
   aparece «Lectura no disponible». Al pulsar se abre el plano en su pieza
   (`/parts/{id}/fichero/{fileId}`, el visor de planos actual).
+  La miniatura y el visor muestran cada hoja en la orientación de lectura detectada.
+  Las hojas diseñadas en vertical pueden seguir en vertical. Al buscar una cota, la marca
+  gira con la hoja.
 - Cabecera en tres filas: título y acciones; Todo/Piezas/Features con subrayado activo;
   buscador y Filtros. Nuevo feature usa borde y precede a Nueva pieza, en verde sólido.
   Los controles principales tienen 44 px de altura y reutilizan el estilo de Features.

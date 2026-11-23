@@ -8,14 +8,14 @@ const { chromium } = require("playwright")
 const frontend = path.resolve(__dirname, "../..")
 let browser, bundle, worker
 // Two vector sheets with different colors. No customer files or external requests.
-function syntheticPdf() {
+function syntheticPdf(rotateSecond = false) {
   const stream = (color) => `${color} rg 80 80 180 180 re f`
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>",
     "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 600 400] /Resources << >> /Contents 4 0 R >>",
     `<< /Length ${stream("1 0 0").length} >>\nstream\n${stream("1 0 0")}\nendstream`,
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 600 400] /Resources << >> /Contents 6 0 R >>",
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 600 400] /Rotate ${rotateSecond ? 90 : 0} /Resources << >> /Contents 6 0 R >>`,
     `<< /Length ${stream("0 0 1").length} >>\nstream\n${stream("0 0 1")}\nendstream`,
   ]
   let pdf = "%PDF-1.7\n"
@@ -94,7 +94,7 @@ async function mount(t, mode = "pdf") {
     if (url.pathname === "/original.pdf")
       return route.fulfill({
         contentType: "application/pdf",
-        body: syntheticPdf(),
+        body: syntheticPdf(mode === "rotated"),
       })
     if (url.pathname === "/")
       return route.fulfill({
@@ -187,6 +187,43 @@ test("PDF pages render independently and reopening releases the previous rendere
   await page.evaluate(() => window.viewer.mount())
   await page.getByText("1 / 2", { exact: true }).waitFor()
   assert.deepEqual(await pixel(), [255, 0, 0, 255])
+})
+
+test("the correction rotates the sheet and its dimension marker together on each page", async (t) => {
+  const page = await mount(t, "rotated")
+  for (const [number, box, color] of [
+    [1, [80 / 600, 140 / 400, 260 / 600, 320 / 400], [255, 0, 0]],
+    // This sheet already has /Rotate 90 in the original PDF.
+    [2, [80 / 400, 80 / 600, 260 / 400, 260 / 600], [0, 0, 255]],
+  ]) {
+    await page.evaluate(
+      ({ number, box }) =>
+        window.viewer.mount({
+          id: "dimension",
+          page: number,
+          box,
+        }),
+      { number, box },
+    )
+    await page.getByText(`${number} / 2`, { exact: true }).waitFor()
+    const result = await page.locator("canvas").evaluate((canvas) => {
+      const marker = canvas.nextElementSibling.firstElementChild.style
+      const centerX = parseFloat(marker.left) + parseFloat(marker.width) / 2
+      const centerY = parseFloat(marker.top) + parseFloat(marker.height) / 2
+      const rect = canvas.getBoundingClientRect()
+      const x = Math.round(((centerX - rect.left) / rect.width) * canvas.width)
+      const y = Math.round(((centerY - rect.top) / rect.height) * canvas.height)
+      const rgb = Array.from(
+        canvas.getContext("2d").getImageData(x, y, 1, 1).data,
+      ).slice(0, 3)
+      return { rgb, centerX, centerY, portrait: rect.height > rect.width }
+    })
+    assert.deepEqual(result.rgb, color)
+    assert.equal(result.portrait, number === 1)
+    assert.ok(
+      Math.abs(result.centerX - 400) < 1 && Math.abs(result.centerY - 300) < 1,
+    )
+  }
 })
 
 test("3D follows screen-space drag, crosses the poles, and stops when released", async (t) => {

@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { createRoot } from "react-dom/client"
 import { PerspectiveCamera, Vector3 } from "three"
 import { createModelControls } from "../../../src/components/Features/modelControls"
@@ -28,10 +29,17 @@ if (location.hash === "#model") {
   }
 } else {
   const root = createRoot(document.getElementById("root"))
+  const client = new QueryClient()
   window.viewer = {
-    mount: () =>
+    mount: (focus) =>
       root.render(
-        <PdfViewer file={{ id: "synthetic-pdf" }} title="Plano de prueba" />,
+        <QueryClientProvider client={client}>
+          <PdfViewer
+            file={{ id: "synthetic-pdf" }}
+            title="Plano de prueba"
+            focus={focus}
+          />
+        </QueryClientProvider>,
       ),
     unmount: () => root.render(null),
   }

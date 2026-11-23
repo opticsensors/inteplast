@@ -12,6 +12,7 @@ import { partLabel } from "@/components/Features/parts"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useDrawingThumbnail } from "@/hooks/useDrawingThumbnail"
 import { absoluteFileUrl, fileErrorMessage } from "@/hooks/useFileAccess"
 
 export type CatalogDrawingsRequest = {
@@ -32,19 +33,7 @@ const BUSY_RETRY_MS = 3000
 function DrawingThumbnail({ card }: { card: DrawingCard }) {
   // An expired or unreachable image shows the drawing icon, never a broken image.
   const [broken, setBroken] = useState(false)
-  const thumbnail = useQuery({
-    queryKey: ["drawing-thumbnail", card.file.id, card.file.version],
-    queryFn: async () => {
-      const result = await FilesService.prepareThumbnail({
-        fileId: card.file.id,
-      })
-      if (result.state === "busy") throw new Error("busy")
-      return result
-    },
-    retry: (count, error) => error.message === "busy" && count < 20,
-    retryDelay: 1500,
-    staleTime: 10 * 60_000,
-  })
+  const thumbnail = useDrawingThumbnail(card.file)
   if (thumbnail.data?.url && !broken)
     return (
       <img
@@ -59,7 +48,7 @@ function DrawingThumbnail({ card }: { card: DrawingCard }) {
       className="flex size-full items-center justify-center text-muted-foreground"
       title={thumbnail.error ? fileErrorMessage(thumbnail.error) : undefined}
     >
-      {broken || (thumbnail.isError && thumbnail.error.message !== "busy") ? (
+      {broken || thumbnail.isError ? (
         <FileText className="size-10" aria-label="Sin miniatura" />
       ) : (
         <Loader2

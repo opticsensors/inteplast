@@ -1227,11 +1227,12 @@ export class FilesService {
     
     /**
      * Prepare Thumbnail
-     * First page of a PDF as a small PNG, made once per version of the original.
+     * Upright PDF page and its clockwise display correction, cached per version.
      *
      * "busy" means that other thumbnails are being drawn: show a placeholder and ask again.
      * @param data The data for the request.
      * @param data.fileId
+     * @param data.page
      * @returns ThumbnailPublic Successful Response
      * @throws ApiError
      */
@@ -1241,6 +1242,9 @@ export class FilesService {
             url: '/api/v1/files/{file_id}/thumbnail',
             path: {
                 file_id: data.fileId
+            },
+            query: {
+                page: data.page
             },
             errors: {
                 422: 'Validation Error'
@@ -1253,6 +1257,7 @@ export class FilesService {
      * @param data The data for the request.
      * @param data.fileId
      * @param data.token
+     * @param data.page
      * @returns unknown Successful Response
      * @throws ApiError
      */
@@ -1264,7 +1269,8 @@ export class FilesService {
                 file_id: data.fileId
             },
             query: {
-                token: data.token
+                token: data.token,
+                page: data.page
             },
             errors: {
                 422: 'Validation Error'

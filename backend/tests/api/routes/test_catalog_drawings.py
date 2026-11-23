@@ -3,17 +3,20 @@
 import os
 import threading
 import uuid
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
 import fitz
 import pytest
 from fastapi.testclient import TestClient
+from PIL import Image
 from sqlmodel import Session
 
 from app import thumbnails
 from app.core.config import settings
 from app.file_sources import stamp
+from app.ingestion.drawing_orientation import display_rotation
 from app.knowledge_models import PartFile
 from app.models import StoredFile
 from tests.utils.feature import create_random_part
@@ -154,9 +157,9 @@ def test_thumbnail_is_made_once_per_version_and_again_when_the_file_changes(
     calls: list[Path] = []
     original = thumbnails.convert
 
-    def counted(source: Path, partial: Path) -> None:
+    def counted(source: Path, partial: Path, page: int) -> None:
         calls.append(partial)
-        original(source, partial)
+        original(source, partial, page)
 
     monkeypatch.setattr(thumbnails, "convert", counted)
     folder = thumbnails.thumbnail_directory(document.id)
@@ -192,6 +195,58 @@ def test_thumbnail_is_made_once_per_version_and_again_when_the_file_changes(
     assert client.get(changed.json()["url"]).status_code == 200
 
 
+def test_rotation_is_per_sheet_and_preserves_portrait_drawings(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    pieces: Any,
+    db: Session,
+) -> None:
+    document = pieces["files"]["base/plan_base.pdf"]
+    source = pieces["root"] / document.source_path
+    with fitz.open() as pdf:
+        for native_rotation in (0, 90, 180, 270):
+            sheet = pdf.new_page(width=300, height=500)
+            sheet.insert_text((20, 40), "General drawing notes and specifications")
+            sheet.set_rotation(native_rotation)
+        pdf.save(source)
+    original_bytes = source.read_bytes()
+    document.source_version = stamp(source)
+    db.add(document)
+    db.commit()
+    url = f"{API}/files/{document.id}/thumbnail"
+    urls = []
+    for page, expected in enumerate((0, 270, 180, 90), start=1):
+        response = client.post(
+            url, headers=superuser_token_headers, params={"page": page}
+        )
+        assert response.status_code == 200, response.text
+        item = response.json()
+        assert item["state"] == "ready" and item["rotation"] == expected
+        urls.append(item["url"])
+    for signed_url in urls:
+        response = client.get(signed_url)
+        assert response.status_code == 200
+        with Image.open(BytesIO(response.content)) as image:
+            assert image.size == (480, 800)
+    assert client.get(urls[1].replace("page=2", "page=1")).status_code == 401
+    assert source.read_bytes() == original_bytes
+
+
+def test_scanned_title_block_and_sheet_without_readable_text() -> None:
+    with fitz.open() as pdf:
+        vector = pdf.new_page(width=600, height=400)
+        vector.insert_text((380, 340), "Drawing specifications")
+        vector.insert_text((380, 360), "General assembly notes")
+        image = vector.get_pixmap(matrix=fitz.Matrix(2, 2)).tobytes("png")
+        scan = pdf.new_page(width=600, height=400)
+        scan.insert_image(scan.rect, stream=image)
+        scan.set_rotation(270)
+        assert display_rotation(scan) == 90
+        assert scan.rotation == 270
+        blank = pdf.new_page(width=300, height=500)
+        assert display_rotation(blank) == 0
+
+
 def test_thumbnails_are_drawn_a_few_at_a_time_and_only_for_pdfs(
     client: TestClient, superuser_token_headers: dict[str, str], pieces: Any
 ) -> None:
@@ -206,6 +261,7 @@ def test_thumbnails_are_drawn_a_few_at_a_time_and_only_for_pdfs(
         assert busy.status_code == 200 and busy.json() == {
             "state": "busy",
             "url": None,
+            "rotation": 0,
         }
     finally:
         for _ in range(taken):
@@ -227,10 +283,10 @@ def test_a_second_request_waits_while_the_same_drawing_is_being_drawn(
     started, release = threading.Event(), threading.Event()
     original = thumbnails.convert
 
-    def slow(source: Path, partial: Path) -> None:
+    def slow(source: Path, partial: Path, page: int) -> None:
         started.set()
         assert release.wait(10)
-        original(source, partial)
+        original(source, partial, page)
 
     monkeypatch.setattr(thumbnails, "convert", slow)
     results: list[Any] = []

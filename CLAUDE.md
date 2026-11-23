@@ -81,6 +81,10 @@ Cliente final: **Robert Bosch** (división BueP). Informes en formato **PPAP / Q
 
 ## Foco actual
 
+**Cambios del 23/11/2026.** La página antigua del adjunto sin archivo ya remite a la pieza
+en local. El alta por correo con Microsoft ya funciona en el servidor de Eurecat.
+[Cambios rápidos](docs/proximos-pasos.md#-prioridad-urgente-cambios-rápidos-23112026) · [Casos de trabajo](docs/proximos-pasos.md#casos-de-trabajo-del-23-de-noviembre).
+
 🗓️ **Reunión con INTEPLAST el 20/11/2026:** puntos a comentar (carpetas como la del 3212,
 moldes, planos, componentes y trazabilidad) en [docs/reunion-inteplast-2026-11-20.md](docs/reunion-inteplast-2026-11-20.md).
 
@@ -196,8 +200,8 @@ docker compose exec backend python -m app.seed_features   # carga de ejemplo: Bo
   junto con `SHAREPOINT_ROOT_PATH`.
   **Fases (Eduard, 09/11/2026):** 1) pruebas con cuentas de Eurecat; 2) servidor de Eurecat + cuentas de Eurecat +
   SharePoint de Eurecat; 3) traslado a los servidores de INTEPLAST ([despliegue](docs/despliegue-servidor.md)).
-  Su cuenta sigue siendo usuario normal; configurar el primer administrador corporativo está pendiente:
-  [próxima sesión](docs/proximos-pasos.md#próxima-sesión-de-la-app-final-usuarios-y-prueba-real-de-archivos). Detalle y
+  Eduard administra el piloto de Eurecat. INTEPLAST debe designar a su responsable para la entrega
+  ([primer administrador](docs/despliegue-servidor.md#primer-administrador-de-inteplast)). Detalle y
   activación en [docs/ficheros-externos.md](docs/ficheros-externos.md#sharepoint-microsoft-graph).
 - **Asistente — decisión de Eduard (17/11/2026): Ollama descartado; Copilot de empresa es la solución final.**
   Antes de llevar la app al servidor, hacer una **prueba de concepto local en este PC con Codex

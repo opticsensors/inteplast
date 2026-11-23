@@ -56,7 +56,7 @@ archivos de la pieza ([limitación](portadas-cad.md#origen-del-cad-de-la-portada
 
 La página antigua `/features/{id}/fichero/{assetId}` sigue respondiendo para enlaces
 guardados, con **Volver a vincular** para originales locales, pero la interfaz ya no enlaza a
-ella. Su texto para un adjunto sin archivo aún remite a la edición del feature. La
+ella. Si el adjunto carece de archivo, remite a la ficha de pieza y la enlaza cuando se conoce. La
 actualización explícita de un documento compartido sigue disponible en
 `PUT /files/{id}/reference` para integraciones; se rechaza si el documento ya es evidencia
 de una pieza.
@@ -290,12 +290,10 @@ cambia de comportamiento.
   con el mismo correo (`preferred_username`), y de la organización configurada
   (`MICROSOFT_TENANT_ID`). La cuenta queda ligada por su `oid`. En este modo el login con
   contraseña está desactivado; cerrar sesión borra también los tokens de Microsoft.
-- **Administradores**: también entran con Microsoft; el acceso a Admin depende del rol
-  `is_superuser` de la app. Hay que configurar una vez al primer administrador corporativo;
-  después puede dar de alta a otros desde la interfaz. El alta no concede permisos en
-  SharePoint. Pendiente adaptar el formulario, que todavía exige una contraseña aunque no
-  se utiliza en modo Microsoft. Vincular el modo de archivos al método de login es una
-  decisión actual de esta app, no un requisito de SharePoint.
+- **Administradores.** También entran con Microsoft. El rol `is_superuser` da acceso a
+  **Admin → Add User**, donde basta el correo corporativo para crear un usuario normal y
+  activo. SharePoint aplica sus propios permisos al abrir los originales.
+  [Designación del primer administrador y traspaso al cliente](despliegue-servidor.md#primer-administrador-de-inteplast).
 - **Lectura** (`app/sharepoint.py`): direcciones por ruta desde `SHAREPOINT_ROOT_PATH`, con cada
   segmento codificado según las [reglas de Graph](https://learn.microsoft.com/en-us/graph/onedrive-addressing-driveitems).
   Los errores 429 y 500/502/503/504 se reintentan respetando `Retry-After`

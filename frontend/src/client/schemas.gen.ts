@@ -4367,6 +4367,11 @@ export const ThumbnailPublicSchema = {
                 }
             ],
             title: 'Url'
+        },
+        rotation: {
+            type: 'integer',
+            title: 'Rotation',
+            default: 0
         }
     },
     type: 'object',

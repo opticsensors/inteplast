@@ -12,6 +12,34 @@ La implementación de protecciones y criterios de aceptación para todas las pie
 > pendientes; el contrato y las limitaciones de cada tema viven en el documento enlazado.
 > Las pruebas de una fecha anterior no se presentan como validaciones de esta revisión.
 
+## 🔴 Prioridad urgente: cambios rápidos (23/11/2026)
+
+1. **Corregido y probado en local.** Un enlace guardado a un adjunto sin archivo indica que los archivos se gestionan en la ficha de la pieza. Si el adjunto tiene pieza, «Abrir pieza» lleva a su ficha. La prueba de navegador cubre ambos casos.
+2. **Completado en Eurecat.** Con Microsoft activo, **Admin → Add User** solo pide el correo corporativo. El alta crea un usuario normal activo.
+
+## Siguientes pasos acordados para Planos y Cotas (23/11/2026)
+
+1. **Mostrar el plano vigente en la ficha y en Planos.** Tomar el PDF definitivo de la carpeta de la pieza `1- 2D y 3D pieza` y usar su `.icp` cuando esté disponible. El PDF se puede abrir también sin `.icp`. Mostrar una tarjeta por pieza o por componente cuando tengan planos propios, conservando todas las hojas del PDF. Excluir del catálogo las copias antiguas de método de medición, retoques y `OLD`. Si la carpeta carece de un candidato inequívoco, permitir que el usuario elija en la ficha. En los adjuntos, mostrar el plano, el CAD y el molde vigentes con un icono de carpeta sin texto visible, accesible por teclado y con nombre accesible. El icono abre la carpeta correspondiente en otra pestaña de SharePoint con los permisos del usuario.
+2. **Conservar las revisiones de las mediciones en Cotas.** Mantener el selector «Revisión de mediciones» cuando haya varias. Cada muestreo conserva el informe de origen, la revisión declarada y sus nominales y tolerancias. Cambiar la revisión consultada cambia la gráfica y mantiene el plano vigente en el visor. Si ese plano aún carece de mediciones, las anteriores siguen disponibles con su revisión. Mantener separadas las series cuya equivalencia no esté acreditada y señalar una cota histórica en el plano vigente solo si se ha comprobado la correspondencia.
+
+**Caso para validar ambos cambios.** En la 3237, Planos debe abrir el PDF 05 de `2D y 3D pieza`. El 03 con globos de `Método de medición/OLD` seguirá consultable desde la carpeta. Cotas debe conservar las mediciones que citan el 04. [Casos de revisiones de plano e informes](preguntas-abiertas.md#a26-revisiones-plano).
+
+**Rendimiento pendiente.** Priorizar las miniaturas visibles, aprovechar la imagen guardada mientras conserve su vigencia y el usuario tenga acceso, y aplazar las comprobaciones de globos hasta mostrar la imagen. Medir de nuevo el tiempo hasta la primera miniatura con las 40 tarjetas actuales. En dos reaperturas locales, con las 40 imágenes ya generadas, la primera se sirvió a los 13 s y la última a los 17 s.
+
+## Casos de trabajo del 23 de noviembre
+
+Acuerdos de la reunión del viernes 20 recogidos para el lunes 23. El piloto sigue utilizando la carpeta `Exemples` del OneDrive de Eduard.
+
+| Caso | Qué falta hacer o decidir |
+|---|---|
+| Pieza sin feature | Probar un borde ámbar y el aviso «Sin feature asociado» en la tarjeta del catálogo. La pieza se debe poder guardar así. Comprobar que el aviso desaparece al vincular el primer feature. |
+| Carpeta del molde | Confirmar la carpeta de destino de una pieza y hacer que el elemento **Molde** de su ficha la abra directamente. Probar con una cuenta que tenga acceso. Así se pueden consultar todos los archivos del molde sin cargar el 3D. |
+| Carpeta de fotos | Acordar dónde se guardan las fotos y cómo se identifica la carpeta de cada pieza. Añadir un adjunto de tipo carpeta y comprobar que permite abrir todas sus fotos. |
+| Material y cavidades | Pedir a INTEPLAST la plantilla Excel de datos de pieza y un ejemplo rellenado. Identificar los campos, leer automáticamente el material y el número de cavidades y mostrarlos junto a Cliente y Familia. Acordar si interesan otros campos. |
+| Varios features sobre un CAD | Mostrar juntas las caras ya marcadas por el usuario sobre el CAD de la pieza, con un color por feature y una leyenda con los nombres. Probar con dos features y decidir cómo representar una cara compartida. |
+| Piloto en el servidor de Eurecat | Web, API, HTTPS y entrada de Eduard con Microsoft operativos. Fijar la primera prueba desde otro equipo de la red o VPN. Abrir un PDF y un CAD reales desde la ficha y comprobar también el acceso de un segundo usuario. Para que ambos consulten los mismos originales, habrá que compartir la carpeta con ese usuario y configurar la unidad común. El traslado a INTEPLAST queda para la fase siguiente. |
+| Excel de cotas y plano correspondiente | Pedir a INTEPLAST un informe rellenado y el plano numerado de la misma revisión, con el CSV de máquina cuando exista. Acordar cómo identificar pieza, componente, plano, revisión y muestreo. Contrastar el mismo número de cota en Excel y plano, con nominal, tolerancias, unidad, cavidad y valor medido. Pedir que se distingan las mediciones nuevas de las copiadas. |
+
 ## Portadas y carga del catálogo (19/11/2026)
 
 1. **Primero:** [portadas por pieza](plan-portadas-por-pieza-2026-11-18.md). Carrusel en la ficha
@@ -39,7 +67,7 @@ todo ya en `main` (`7b471c0`). El detalle de cada tanda está en
 | **Distinguir el CAD de producto del utillaje** | En la 3202 el descubrimiento encontró un CAD en la carpeta de diseño y otros seis archivos en las carpetas de útiles del método de medición. Quedó sin principal y, por tanto, sin captura. Contrastar la regla general con la 3288, que sí tiene dos CAD de producto (base y tapa) | [Criterios para los archivos principales](plan-principales-y-tablas-2026-11-18.md) |
 | **Filtro del catálogo por medidas** | Aplazado por acuerdo con el revisor: filtrar por «Medidas detectadas», «Informe pendiente de interpretar» y «Sin medidas detectadas». Debe calcularse en el servidor con el mismo criterio que la etiqueta, para lista, cuadrícula y grafo | `backend/app/measurement_status.py` (hoy por tarjeta) y `crud.part_conditions` |
 | **Validar en la web con sesión de Microsoft** | Nada de lo anterior se ha comprobado con la sesión real: borrado de pieza, familias y clientes, cuadrícula, grafo, Planos y etiquetas. Solo hay pruebas aisladas y capturas del banco | Instalación local, `http://localhost:5173` |
-| **Primer administrador corporativo** | Sin él, nadie con sesión de Microsoft ve «⋯ → Eliminar» en la ficha de pieza | [Próxima sesión](#próxima-sesión-de-la-app-final-usuarios-y-prueba-real-de-archivos) |
+| **Primer administrador de INTEPLAST** | Eduard administra el piloto de Eurecat. Queda pendiente que INTEPLAST designe a su responsable y que esa persona compruebe su acceso a Admin | [Procedimiento de entrega](despliegue-servidor.md#primer-administrador-de-inteplast) |
 | **Secretos de la instalación** | La instalación local usa los valores de ejemplo `changethis` (`SECRET_KEY`, contraseñas). Cambiarlos antes de llevarla al servidor | `.env`, [despliegue](despliegue-servidor.md) |
 | **Etiquetas no incorporadas** | «Propuesta de retoque detectada»: solo cuando se pueda mostrar la frase original (3 de 20 piezas en el ensayo). «Cotas con datos»: en espera, porque los originales no acreditan el enlace plano–revisión–medida (caso 3288: plano REV.02, informes de revisión 1) | Ensayo del revisor, `C:/Users/eduard.almar/.codex/workspaces/inteplast-ensayo-etiquetas-20261118/resultado.json` |
 
@@ -624,23 +652,17 @@ misma estructura bajo la raíz nueva.
 
 ## Próxima sesión de la app final: usuarios y prueba real de archivos
 
-**Despliegue futuro acordado el 05/11/2026:** Linux con Docker y HTTPS interno, accesible
-por red corporativa o VPN. La petición a IT, configuración y comprobaciones pendientes
-están en [Despliegue en servidor interno](despliegue-servidor.md). El servidor aún no está validado.
+El servidor de Eurecat ya sirve la web por HTTPS interno. Eduard ha comprobado el inicio
+de sesión con Microsoft. Queda probar los originales con los usuarios del piloto.
+[Despliegue en servidor interno](despliegue-servidor.md).
 
 **Fases fijadas por Eduard el 09/11/2026:** 1) pruebas con cuentas de Eurecat; 2) servidor de
 Eurecat, cuentas de Eurecat y SharePoint de Eurecat; 3) traslado a los servidores de INTEPLAST.
 Las fases 1 y 2 no dependen de A10; la 3 sí.
 
-- Definir con Eduard quién será el primer administrador corporativo y asignarle ese rol
-  una vez. Su cuenta actual sigue siendo normal; **no se le han concedido permisos de
-  administrador**. El administrador también entrará con Microsoft y gestionará las altas
-  desde «Admin», sin tener que crear cada usuario manualmente en la BD.
-- Adaptar el formulario de alta: todavía exige contraseña aunque en modo Microsoft no se
-  utiliza. Actualmente el switch de SharePoint también desactiva el login con contraseña;
-  es una decisión de la app, no una obligación de SharePoint. La propuesta es usar Microsoft
-  para usuarios y administradores, con los roles gestionados por la app. Dar de alta un
-  usuario en ella no le concede acceso a archivos en Microsoft.
+- En Eurecat, Eduard entra con Microsoft y administra las altas por correo desde **Admin**.
+  Para la fase 3, pedir el correo de la persona designada por INTEPLAST y verificar con ella
+  el [traspaso de administración](despliegue-servidor.md#primer-administrador-de-inteplast).
 - Probar listado y apertura de un PDF/STEP real, y después visores, alta y actualización.
   El éxito del login no sustituye estas comprobaciones. La biblioteca compartida y los
   permisos de INTEPLAST siguen pendientes de concretar.
@@ -725,7 +747,6 @@ Los acuerdos de IT constan en el [acta del 24/09](acta-reunion-2026-09-24.md).
 | Adjuntos del feature que no siguen a la pieza | Definir cómo actualizar el vínculo sin perder cotas ni configuración de portada | [Origen del CAD](portadas-cad.md#origen-del-cad-de-la-portada) |
 | Captura de pieza tras cambios en Graph | **Corregida el 30/10:** la versión del origen invalida la captura en backend y navegador; probada con Graph simulado. Pendiente comprobar la conexión real | [Cambios remotos y miniatura](portadas-cad.md#cambios-remotos-y-miniatura-de-pieza) |
 | ~~Lector de comparativas CSV del backend (`measurement_tables.csv_rows`)~~ | **Corregido el 16/11/2026** ([tanda 1](#resultados-de-la-tanda-1-16112026)). Encontrado el 09/11 al cargar el 3197 en la biblioteca: asignaba los POINT de las comparativas del 3212 a N178 (título en la misma línea que el primer valor), dejaba sin tolerancias la comparativa del 3197 `.03` y no reconocía `3197_totes_nozzle 55/65.csv` | [3197](../conocimiento/0-bolt-eye/3197.md#csv-de-la-cmm-en-la-biblioteca-09112026) |
-| Página antigua `/features/{id}/fichero/{assetId}` | Actualizar el mensaje del adjunto sin archivo o redirigir a la pieza; ya no recibe enlaces de la UI | [Aplicación](app-web.md) |
 | Política de finales de línea | Propuesta LF y procedimiento escritos el 04/11; los aplica Eduard con la copia limpia | [Desarrollo](../development.md#finales-de-línea-propuesta-del-04112026-sin-aplicar) |
 | Volcado OAuth en el historial de Git | Retirado de `TODO.md` el 04/11 (el código era de un solo uso y ya caducado). Sigue en el historial desde `a6f3b44`; reescribirlo o no lo decide Eduard | — |
 

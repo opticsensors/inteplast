@@ -879,6 +879,7 @@ export type SourceTable = {
 export type ThumbnailPublic = {
     state: 'ready' | 'busy';
     url?: (string | null);
+    rotation?: number;
 };
 
 export type Token = {
@@ -1302,12 +1303,14 @@ export type FilesCheckDrawingIcpResponse = (IcpCheckPublic);
 
 export type FilesPrepareThumbnailData = {
     fileId: string;
+    page?: number;
 };
 
 export type FilesPrepareThumbnailResponse = (ThumbnailPublic);
 
 export type FilesReadThumbnailData = {
     fileId: string;
+    page?: number;
     token?: (string | null);
 };
 

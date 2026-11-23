@@ -576,6 +576,48 @@ test("catalogue cards are usable while they wait for their shared CAD cover", as
   ])
 })
 
+test("a saved feature attachment URL with no file points to its own piece when available", async (t) => {
+  const page = await mount(t)
+  await page.evaluate(() => {
+    const { feature, parts } = window.review
+    feature.assets = [
+      {
+        id: "linked",
+        kind: "drawing",
+        name: "Plano",
+        file: null,
+        part: parts[0],
+      },
+      {
+        id: "orphan",
+        kind: "drawing",
+        name: "Otro plano",
+        file: null,
+        part: null,
+      },
+    ]
+  })
+  const open = (assetId) =>
+    page.evaluate(
+      (id) =>
+        window.review.navigate({
+          to: "/features/$featureId/fichero/$assetId",
+          params: { featureId: "feature-one", assetId: id },
+        }),
+      assetId,
+    )
+  await open("linked")
+  const link = page.getByRole("link", { name: "Abrir pieza 3212" })
+  await expect(link).toHaveAttribute("href", "/parts/part-one")
+  await link.click()
+  await readHeading(page, "3212 Pump Housing")
+  await open("orphan")
+  await expect(
+    page.getByText("Los archivos se gestionan en la ficha de la pieza."),
+  ).toBeVisible()
+  await expect(page.getByRole("link", { name: /Abrir pieza/ })).toHaveCount(0)
+})
+
 test("a feature file checks availability on each opening and stays idle while reading", async (t) => {
   const page = await mount(t)
   await page.clock.install()

@@ -9,6 +9,7 @@ import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url"
 import { useEffect, useRef, useState } from "react"
 
 import { type FilePublic, FilesService } from "@/client"
+import { useDrawingThumbnail } from "@/hooks/useDrawingThumbnail"
 import { absoluteFileUrl, fileErrorMessage } from "@/hooks/useFileAccess"
 
 GlobalWorkerOptions.workerSrc = workerUrl
@@ -16,6 +17,21 @@ GlobalWorkerOptions.workerSrc = workerUrl
 type View = { x: number; y: number; scale: number }
 const toolbarButton =
   "flex size-8 items-center justify-center rounded-md hover:bg-accent disabled:opacity-40"
+
+// Search boxes are normalized in the original displayed PDF coordinates.
+function displayedBox(box: number[], correction: number) {
+  const [left, top, right, bottom] = box
+  switch (correction) {
+    case 90:
+      return [1 - bottom, left, 1 - top, right]
+    case 180:
+      return [1 - right, 1 - bottom, 1 - left, 1 - top]
+    case 270:
+      return [top, 1 - right, bottom, 1 - left]
+    default:
+      return box
+  }
+}
 
 /** Render the PDF locally, then handle the sheet like an image on a desk. */
 export default function PdfViewer({
@@ -39,6 +55,11 @@ export default function PdfViewer({
   })
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null)
   const [pageNumber, setPageNumber] = useState(1)
+  const thumbnail = useDrawingThumbnail(file, pageNumber)
+  const correction = thumbnail.data?.rotation ?? 0
+  const waitingForRotation =
+    thumbnail.isPending ||
+    (!thumbnail.isError && thumbnail.data?.state === "busy")
   const [ready, setReady] = useState(false)
   const [error, setError] = useState("")
 
@@ -82,19 +103,20 @@ export default function PdfViewer({
   useEffect(() => {
     const surface = surfaceRef.current
     const canvas = sheetRef.current
-    if (!pdf || !surface || !canvas) return
+    setReady(false)
+    if (!pdf || !surface || !canvas || waitingForRotation) return
     let active = true
     let cleanup = () => {}
     let rendering: RenderTask | undefined
     let timer: ReturnType<typeof setTimeout> | undefined
-    setReady(false)
     setError("")
 
     const openPage = async () => {
       try {
         const page = await pdf.getPage(pageNumber)
         if (!active) return
-        const base = page.getViewport({ scale: 1 })
+        const rotation = (page.rotate + correction) % 360
+        const base = page.getViewport({ scale: 1, rotation })
         let view: View = { x: 0, y: 0, scale: 1 }
         let viewportWidth = surface.clientWidth
         let viewportHeight = surface.clientHeight
@@ -118,7 +140,7 @@ export default function PdfViewer({
             Math.sqrt(16_000_000 / (base.width * base.height)),
             8192 / Math.max(base.width, base.height),
           )
-          const viewport = page.getViewport({ scale })
+          const viewport = page.getViewport({ scale, rotation })
           const buffer = document.createElement("canvas")
           buffer.width = Math.ceil(viewport.width)
           buffer.height = Math.ceil(viewport.height)
@@ -148,8 +170,8 @@ export default function PdfViewer({
           canvas.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`
           const marker = overlayRef.current
             ?.firstElementChild as HTMLElement | null
-          const box = focusRef.current?.box
-          if (marker && box) {
+          if (marker && focusRef.current?.page === pageNumber) {
+            const box = displayedBox(focusRef.current.box, correction)
             // Position in screen pixels so zoom never thickens the outline.
             marker.style.left = `${view.x + box[0] * base.width * view.scale}px`
             marker.style.top = `${view.y + box[1] * base.height * view.scale}px`
@@ -292,7 +314,8 @@ export default function PdfViewer({
         surface.addEventListener("pointercancel", up)
         surface.addEventListener("lostpointercapture", up)
         surface.addEventListener("keydown", key)
-        const focusBox = (box: number[]) => {
+        const focusBox = (original: number[]) => {
+          const box = displayedBox(original, correction)
           fitted = false
           const width = Math.max(
             (box[2] - box[0]) * base.width * 9,
@@ -354,7 +377,7 @@ export default function PdfViewer({
       cleanup()
       actions.current = { fit: () => {}, zoom: () => {}, focus: () => {} }
     }
-  }, [pdf, pageNumber])
+  }, [pdf, pageNumber, correction, waitingForRotation])
 
   return (
     <div className="relative h-[75vh] w-full overflow-hidden rounded-lg border bg-muted/30">

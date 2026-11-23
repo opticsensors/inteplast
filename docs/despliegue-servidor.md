@@ -7,8 +7,8 @@ y actualizar el servidor.
 
 **Fases fijadas por Eduard el 09/11/2026:**
 
-1. Pruebas con cuentas de Eurecat (en curso: login automático confirmado en local).
-2. Servidor de Eurecat, con cuentas de Eurecat y SharePoint de Eurecat.
+1. Pruebas locales con cuentas de Eurecat. Login automático y lectura del OneDrive de Eduard comprobados.
+2. Piloto actual en el servidor de Eurecat, con cuentas de Eurecat y el OneDrive de Eduard.
 3. Traslado a los servidores de INTEPLAST. Esta fase depende de [A10](preguntas-abiertas.md#a10-acceso-originales).
 
 **Asistente — decisión de Eduard (17/11/2026): Ollama descartado.** Antes del traslado,
@@ -19,10 +19,38 @@ local y provisional; no se traslada como solución de producción. Prueba integr
 18/11/2026 con puente de Windows y búsqueda por palabras sin Ollama; detalle en
 [asistente](asistente.md#prueba-local-integrada-18112026).
 
-Esta guía recoge la opción elegida, la petición a IT y el trabajo pendiente. **No implica
-que el servidor esté provisionado ni que se haya desplegado o validado la aplicación allí.**
-Los comandos generales están en [deployment.md](../deployment.md); la integración de
-archivos, en [SharePoint y originales externos](ficheros-externos.md#sharepoint-microsoft-graph).
+## Estado del servidor de Eurecat y punto de reanudación (23/11/2026)
+
+**Despliegue completado el 23/11/2026.** La web y la API responden por HTTPS. Eduard ha
+entrado con Microsoft como administrador y se han trasladado las 21 piezas, los 8 features
+y los archivos subidos. El piloto usa su carpeta `Exemples` de OneDrive. Queda programar
+la prueba con usuarios y originales desde la web. [Casos de trabajo](proximos-pasos.md#casos-de-trabajo-del-23-de-noviembre).
+
+Las comprobaciones siguientes corresponden a la preparación previa a la instalación.
+
+| Comprobación | Resultado del 23/11 |
+|---|---|
+| Acceso desde el PC de Eduard | El DNS resolvió a `172.20.48.115` y Eduard entró con su cuenta corporativa desde PowerShell mediante `ssh -l "$env:USERNAME" euredinteplast.local.eurecat.org`. SSH guardó la clave del servidor en `known_hosts` al aceptarla en la primera conexión. Su huella ED25519 quedó pendiente de contraste por otro canal. |
+| Máquina | Ubuntu 24.04.5 LTS, 2 CPU disponibles, 15 GiB de RAM y 4 GiB de swap. En `/`, 33 GiB libres de 43 GiB. Git 2.43.0. |
+| Docker | Docker 29.10.0 y Compose v5.8.0. La cuenta de Eduard accede al motor con `sudo docker ps`, que devolvió una tabla vacía. Sin `sudo`, el socket `root:docker` denegó el acceso. |
+| HTTPS | La conexión al 443 desde el PC falló. En el servidor, `ss -ltn 'sport = :443'` confirmó que ningún servicio escuchaba en ese puerto. |
+
+**Plan utilizado para la primera instalación**
+
+1. Abrir Docker Desktop y ejecutar `docker ps` en PowerShell. La última vez, WSL falló al crear la máquina virtual de Docker con `CreateVm/HCS/0x80070569`. Si se repite tras reiniciar, pasar el error a IT para que revise el derecho «Iniciar sesión como servicio» de las máquinas virtuales en ese PC.
+2. Con el motor disponible, medir los datos locales desde la raíz del repo. Si los contenedores existentes están parados, arrancarlos con `docker compose start db backend`. Anotar las dos cifras y comprobar que en el servidor cabe la restauración con margen para imágenes, copias y caché de CAD.
+
+   ```powershell
+   docker compose exec -T db sh -c 'du -sh $PGDATA'
+   docker compose exec -T backend du -sh /app/uploads
+   ```
+
+3. Preparar el certificado y la configuración privada del [despliegue desde PowerShell](#desplegar-desde-el-pc), registrar el retorno HTTPS en Entra y validar el acceso al origen elegido.
+4. Hacer la primera copia, [restaurar los datos en Eurecat](#rutas-traslado-de-datos-y-persistencia) y [probar el acceso con usuarios](#estado-y-comprobaciones-antes-de-abrir-el-acceso-al-equipo).
+
+**Actualizaciones posteriores.** Desarrollar y probar los cambios en el PC, subir la versión
+validada a GitHub y desplegar esa versión por SSH con Compose. Aplicar las migraciones sobre
+la base de datos del servidor y conservar sus volúmenes para mantener las fichas que edite el equipo.
 
 ## Desplegar desde el PC
 
@@ -72,7 +100,7 @@ navegador del usuario, por lo que la API puede seguir siendo interna.
 
 ## Nombre propuesto por IT de Eurecat (17/11/2026)
 
-IT ofrece **un solo nombre DNS** para la fase 2, con la API en el mismo dominio:
+IT y Eduard acordaron **un solo nombre DNS** para la fase 2, con la API en el mismo dominio:
 
 - Web: `https://euredinteplast.local.eurecat.org`
 - API: el mismo nombre, bajo `/api`. **En minúsculas**: IT lo escribió `/API`, pero las rutas
@@ -90,12 +118,6 @@ Configuración de la instalación interna con `compose.server.yml`:
 | `FRONTEND_HOST`, `BACKEND_CORS_ORIGINS` | `https://euredinteplast.local.eurecat.org` |
 | `MICROSOFT_REDIRECT_URI` y Entra | `https://euredinteplast.local.eurecat.org/api/v1/login/microsoft/callback`, registrado como Web |
 | Certificado | Traefik carga la cadena y clave privadas aportadas por la instalación. Falta acordar su entrega y renovación en Eurecat. |
-
-Respuesta propuesta a IT (no enviada):
-
-> Perfecte, amb un sol nom n'hi ha prou: la web a `https://euredinteplast.local.eurecat.org` i
-> l'API a `/api` del mateix domini (en minúscules). Em podeu passar el certificat HTTPS per a
-> aquest nom i dir-me qui se n'encarrega de renovar-lo? Gràcies!
 
 ## Por qué HTTPS y qué alternativas existen
 
@@ -117,7 +139,7 @@ registrada. Se prefieren nombres internos para facilitar el acceso y la gestión
 
 ## Petición a IT
 
-Texto base para solicitar la infraestructura; sustituir los nombres cuando IT los confirme:
+Petición inicial, anterior al acuerdo de usar un solo nombre para web y API:
 
 > Queremos desplegar INTEPLAST en un servidor interno, accesible desde la red corporativa
 > o VPN, con inicio de sesión mediante Microsoft y lectura de documentos de SharePoint.
@@ -160,10 +182,26 @@ de ejemplo. Las credenciales se entregarán por el canal privado acordado con IT
 | `ASSETS_SOURCE_ID`, `ASSETS_SOURCE_NAME` | Mantener el identificador del conjunto actual al migrar su BD y sus documentos; el nombre es la etiqueta visible. |
 | `ASSISTANT_ENABLED` | Mantener `false` en el servidor hasta disponer de la integración con Copilot. Ollama está descartado y el proveedor Codex incorporado el 18/11 es solo para la prueba local; no trasladar la sesión ni el token del puente del PC al servidor. |
 
-El usuario necesita tanto un alta activa en INTEPLAST como permisos en Microsoft para
-los originales. Hay que designar al primer administrador corporativo de la app; el rol de
-administrador de INTEPLAST no concede acceso a SharePoint. Si se cambia de Eurecat al entorno
-de INTEPLAST, su IT debe preparar o autorizar el registro y los accesos correspondientes.
+El usuario necesita tanto un alta activa en la app como permisos en Microsoft para los
+originales. Al pasar al entorno de INTEPLAST, su IT debe preparar o autorizar el registro
+de Microsoft y los accesos a SharePoint.
+
+### Primer administrador de INTEPLAST
+
+Eduard administra el piloto de Eurecat. Para la entrega, INTEPLAST debe designar a la persona
+responsable y comunicar su correo corporativo. Antes del primer arranque, quien despliegue
+la web pondrá ese correo en `FIRST_SUPERUSER` del `.env.production` del cliente.
+
+- **Base nueva.** `prestart` crea la cuenta configurada como administradora activa. La persona
+  entra con Microsoft. `FIRST_SUPERUSER_PASSWORD` se configura con un secreto aleatorio de la
+  instalación. La contraseña corporativa solo se introduce ante Microsoft.
+- **Copia de la base de Eurecat.** La restauración conserva los usuarios y sus roles. Si el
+  correo designado ya existe, `prestart` conserva su estado y sus permisos. Si falta, lo
+  crea como administrador en el siguiente arranque. Quien haga el traspaso comprobará en la
+  base de destino que la cuenta esté activa y tenga el rol de administrador.
+- **Comprobación de entrega.** La persona designada inicia sesión con su propia cuenta y abre
+  **Admin → Add User**. Después de verificarlo, revisar con INTEPLAST si Eduard debe conservar
+  acceso y ajustar su rol en la instalación del cliente según lo acordado.
 
 <a id="ajustes-pendientes-en-los-archivos-de-despliegue"></a>
 
@@ -206,12 +244,10 @@ de migraciones y volúmenes está en [deployment.md](../deployment.md#persistenc
 
 ## Estado y comprobaciones antes de abrir el acceso al equipo
 
-Al recoger esta decisión, la configuración local tiene SharePoint activado y el identificador
-de unidad vacío. Está documentado el login real correcto del 30/10/2026, usando el retorno
-manual de Postman, y desde el **09/11/2026** el retorno automático a `localhost`, confirmado por
-Eduard con su cuenta de Eurecat. En el servidor habrá que registrar su URL HTTPS.
-**La lectura de archivos reales por Graph sigue pendiente de validar.**
-El seguimiento está en [próximos pasos](proximos-pasos.md#próxima-sesión-de-la-app-final-usuarios-y-prueba-real-de-archivos).
+En local, Eduard comprobó el retorno automático de Microsoft el 09/11 y la lectura de
+archivos reales de su OneDrive por Graph el 12/11. La prueba con la biblioteca compartida
+y las cuentas del equipo corresponde al despliegue en Eurecat.
+[Pruebas locales de SharePoint](ficheros-externos.md#sharepoint-microsoft-graph).
 
 Comprobar en el servidor de destino:
 
