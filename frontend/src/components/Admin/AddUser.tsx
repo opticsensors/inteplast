@@ -38,7 +38,13 @@ const formSchema = (microsoft: boolean) =>
       email: z
         .string()
         .trim()
-        .pipe(z.email({ message: "Introduce un correo válido" })),
+        .pipe(
+          z.email({
+            message: microsoft
+              ? "Introduce un correo válido"
+              : "Invalid email address",
+          }),
+        ),
       full_name: z.string().optional(),
       password: microsoft
         ? z.string()
@@ -138,7 +144,7 @@ const AddUser = () => {
                         required
                       />
                     </FormControl>
-                    <FormMessage />
+                    <FormMessage className="sr-only" />
                   </FormItem>
                 )}
               />
