@@ -1,6 +1,10 @@
 # Despliegue de INTEPLAST
 
-El despliegue utiliza `compose.yml` y el proxy HTTPS de `compose.traefik.yml`.
+Para instalar o actualizar **el servidor interno de Eurecat**, ejecutar `.\scripts\deploy.ps1`
+desde el PC. La [guía de primera instalación](docs/despliegue-servidor.md#desplegar-desde-el-pc)
+explica cómo proporcionar la configuración privada y los certificados.
+
+La receta general de subdominios que sigue utiliza `compose.yml` y el proxy HTTPS de `compose.traefik.yml`.
 Este repositorio **no incluye workflows de GitHub Actions ni entornos de CI/CD configurados**.
 Los pasos siguientes se ejecutan en el servidor preparado por el responsable del despliegue.
 

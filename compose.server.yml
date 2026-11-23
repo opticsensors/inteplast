@@ -1,0 +1,95 @@
+# Production overlay for the internal, single-host deployment.
+x-server-environment: &server-environment
+  ENVIRONMENT: production
+  FRONTEND_HOST: https://${DOMAIN:?Set DOMAIN}
+  BACKEND_CORS_ORIGINS: https://${DOMAIN:?Set DOMAIN}
+  ENABLE_TEST_ROUTES: "false"
+  ALLOW_PUBLIC_SIGNUP: "false"
+
+services:
+  adminer:
+    profiles: [maintenance]
+    labels:
+      traefik.enable: "false"
+
+  prestart:
+    environment: *server-environment
+
+  backend:
+    environment:
+      <<: *server-environment
+      ASSISTANT_ENABLED: "false"
+      ASSISTANT_CODEX_BRIDGE_TOKEN: ""
+      SHAREPOINT_ENABLED: "true"
+      SHAREPOINT_ROOT_PATH: ${SHAREPOINT_ROOT_PATH:?Set the folder in the Microsoft drive}
+      MICROSOFT_TENANT_ID: ${MICROSOFT_TENANT_ID:?Set the Microsoft tenant}
+      MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:?Set the Microsoft client ID}
+      MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:?Set the Microsoft client secret}
+      MICROSOFT_REDIRECT_URI: https://${DOMAIN}/api/v1/login/microsoft/callback
+      ASSETS_SOURCE_ID: ${ASSETS_SOURCE_ID:?Keep the source ID of the existing dataset}
+      ASSETS_SOURCE_NAME: ${ASSETS_SOURCE_NAME:-Archivos de referencia}
+    labels:
+      traefik.enable: "false"
+
+  frontend:
+    build:
+      args:
+        VITE_API_URL: https://${DOMAIN}
+    labels:
+      traefik.enable: "false"
+
+  proxy:
+    image: traefik:3.6
+    restart: always
+    ports:
+      - "443:443"
+    command:
+      - --entrypoints.https.address=:443
+      - --providers.file.filename=/routes.yml
+      - --ping=true
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    configs:
+      - source: routes
+        target: /routes.yml
+    secrets: [fullchain, privkey]
+
+configs:
+  routes:
+    content: |
+      http:
+        routers:
+          api:
+            rule: Host(`${DOMAIN}`) && PathPrefix(`/api/`)
+            entryPoints: [https]
+            service: api
+            tls: {}
+          web:
+            rule: Host(`${DOMAIN}`)
+            entryPoints: [https]
+            service: web
+            tls: {}
+        services:
+          api:
+            loadBalancer:
+              servers: [{url: "http://backend:8000"}]
+          web:
+            loadBalancer:
+              servers: [{url: "http://frontend:80"}]
+      tls:
+        certificates:
+          - certFile: /run/secrets/fullchain
+            keyFile: /run/secrets/privkey
+
+secrets:
+  fullchain:
+    file: ../.config/inteplast/fullchain.pem
+  privkey:
+    file: ../.config/inteplast/privkey.pem
+
+networks:
+  traefik-public:
+    external: false
