@@ -13,7 +13,9 @@ COPY ./frontend /app/frontend
 WORKDIR /app/frontend
 ARG VITE_API_URL
 
-RUN npm run build
+# Vite preserves permissions on copied public assets. Nginx workers must
+# be able to serve them even when the deploy checkout uses a private umask.
+RUN npm run build && chmod -R u=rwX,go=rX dist
 
 
 # Stage 1, based on Nginx, to have only the compiled app, ready for production with Nginx

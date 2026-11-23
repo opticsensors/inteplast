@@ -14,7 +14,8 @@ export function AuthLayout({ children, contentClassName }: AuthLayoutProps) {
         <Logo variant="full" className="h-16" asLink={false} />
       </div>
       <div className="flex flex-col gap-4 p-6 md:p-10">
-        <div className="flex justify-end">
+        <div className="flex items-center justify-between lg:justify-end">
+          <Logo variant="icon" className="size-8 lg:hidden" asLink={false} />
           <Appearance />
         </div>
         <div className="flex flex-1 items-center justify-center">
