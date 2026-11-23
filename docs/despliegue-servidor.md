@@ -24,6 +24,33 @@ que el servidor esté provisionado ni que se haya desplegado o validado la aplic
 Los comandos generales están en [deployment.md](../deployment.md); la integración de
 archivos, en [SharePoint y originales externos](ficheros-externos.md#sharepoint-microsoft-graph).
 
+## Desplegar desde el PC
+
+Desde la raíz del repo en PowerShell, el mismo comando instala o actualiza el software publicado en la rama `main` de GitHub. Por defecto conecta a `euredinteplast.local.eurecat.org` con el nombre de usuario de Windows y usa `~/inteplast` en el servidor. Para otra instalación, `-Server` debe coincidir con el `DOMAIN` del certificado y `-User` permite elegir la cuenta SSH. SSH y, si hace falta, `sudo docker` piden la contraseña en la terminal.
+
+```powershell
+.\scripts\deploy.ps1
+```
+
+**Primera instalación**
+
+1. Publicar en `main` la versión que se quiere desplegar, incluido `compose.server.yml`. Para preparar únicamente la copia de Git mientras llega el certificado, ejecutar `.\scripts\deploy.ps1 -PrepareOnly`.
+2. Preparar una carpeta privada fuera del repo en el PC, por ejemplo `$env:USERPROFILE\inteplast-produccion`. Copiar allí [la plantilla](../.env.production.example) como `.env.production`, completar las credenciales de PostgreSQL y Microsoft, el correo del primer administrador y el origen. Al trasladar el catálogo, conservar su `ASSETS_SOURCE_ID`. Planificar la rotación de `SECRET_KEY` y el nuevo inicio de sesión si la instalación anterior tenía una clave de ejemplo. Para el piloto con el OneDrive de Eduard, dejar vacío `SHAREPOINT_DRIVE_ID`. Para una biblioteca compartida, indicar su identificador y raíz autorizados.
+3. Añadir a esa carpeta `fullchain.pem` (certificado del nombre HTTPS y certificados intermedios) y `privkey.pem` (clave PEM correspondiente, utilizable por el proxy sin contraseña). El PC debe confiar en la autoridad emisora. El registro **Web** de Entra debe admitir `https://euredinteplast.local.eurecat.org/api/v1/login/microsoft/callback`.
+4. Lanzar la instalación desde el PC. Los tres ficheros viajan por SSH y se guardan en `~/.config/inteplast/` con acceso privado.
+
+```powershell
+.\scripts\deploy.ps1 -ConfigDirectory "$env:USERPROFILE\inteplast-produccion"
+```
+
+En las siguientes ejecuciones se reutiliza la configuración instalada. Para cambiarla, el administrador actualiza esos ficheros en el servidor por su canal de administración. El lanzador conserva una configuración existente incluso si se repite el comando inicial. Al renovar el certificado, recrear el proxy desde `~/inteplast` con `sudo docker compose -p inteplast --env-file ~/.config/inteplast/.env.production -f compose.yml -f compose.server.yml up -d --no-deps --force-recreate proxy` para que cargue el nuevo par.
+
+**Actualizaciones.** El lanzador comprueba origen, rama y cambios locales, avanza únicamente por *fast-forward* y serializa los despliegues. Compose construye las imágenes antes de sustituir servicios. Si PostgreSQL ya tiene una revisión de Alembic y cambia la revisión objetivo, guarda un `pg_dump -Fc` en `~/.local/share/inteplast/backups/` antes de migrar. El proyecto Compose se llama `inteplast` para conservar los volúmenes entre versiones. El comando termina comprobando la web y la respuesta de salud de la API por HTTPS desde el PC.
+
+Si una ejecución falla, corregir la causa que indica la terminal y repetir el comando. Para diagnosticar una migración o un servicio, desde `~/inteplast` se pueden consultar los registros con `sudo docker compose -p inteplast --env-file ~/.config/inteplast/.env.production -f compose.yml -f compose.server.yml logs --tail=80 prestart backend proxy`. Un fallo después de migrar puede requerir restaurar una copia compatible. La copia inicial de los datos del PC, la restauración, el respaldo de `app-uploads` y la conservación de copias fuera del servidor se gestionan con el [procedimiento de traslado](#rutas-traslado-de-datos-y-persistencia).
+
+Se usa el [patrón de producción de Docker Compose](https://docs.docker.com/compose/how-tos/production/) y la espera de servicios de [`docker compose up --wait`](https://docs.docker.com/reference/cli/docker/compose/up/).
+
 ## Plataforma y acceso elegidos
 
 - **Linux con Docker Engine y Docker Compose.** Los contenedores actuales ya son Linux.
@@ -54,15 +81,15 @@ IT ofrece **un solo nombre DNS** para la fase 2, con la API en el mismo dominio:
   del 16/11/2026).
 
 Un solo nombre sirve y simplifica: web y API comparten origen, sin CORS entre dominios.
-Cambios necesarios, **sin hacer todavía**:
+Configuración de la instalación interna con `compose.server.yml`:
 
 | Qué | Cambio |
 |---|---|
-| Reglas de Traefik (`compose.yml`) | Backend: `Host(nombre) && PathPrefix(/api)`. Frontend: `Host(nombre)` con menor prioridad. Sustituyen a `api.${DOMAIN}` y `dashboard.${DOMAIN}`. Adminer y el panel de Traefik no se publican |
+| Reglas de Traefik | El proxy sirve la API bajo `/api/` y la web bajo `/` en el mismo nombre. Solo publica el puerto 443. |
 | `VITE_API_URL` | `https://euredinteplast.local.eurecat.org`, sin `/api`: el cliente ya añade `/api/v1`. Se fija al construir el frontend |
 | `FRONTEND_HOST`, `BACKEND_CORS_ORIGINS` | `https://euredinteplast.local.eurecat.org` |
 | `MICROSOFT_REDIRECT_URI` y Entra | `https://euredinteplast.local.eurecat.org/api/v1/login/microsoft/callback`, registrado como Web |
-| Certificado | Let's Encrypt no sirve para un nombre interno `.local`: pedir a IT el certificado de ese nombre (y quién lo renueva) y cargarlo en Traefik en lugar del resolver `le` |
+| Certificado | Traefik carga la cadena y clave privadas aportadas por la instalación. Falta acordar su entrega y renovación en Eurecat. |
 
 Respuesta propuesta a IT (no enviada):
 
@@ -122,9 +149,9 @@ de ejemplo. Las credenciales se entregarán por el canal privado acordado con IT
 | Variable o elemento | Ajuste necesario |
 |---|---|
 | `ENVIRONMENT` | `production`. |
-| `DOMAIN` y reglas del proxy | Los nombres acordados con IT. El Compose actual utiliza `dashboard.<dominio>` y `api.<dominio>`; si se eligen otros, adaptar las reglas. |
+| `DOMAIN` y reglas del proxy | El nombre interno acordado con IT. El lanzador configura las rutas del proxy a partir de ese nombre. |
 | `FRONTEND_HOST`, `BACKEND_CORS_ORIGINS` | La dirección HTTPS de la web accesible desde los equipos de los usuarios. |
-| `VITE_API_URL` | La dirección HTTPS de la API; se incorpora al construir el frontend. En el Compose actual se calcula como `https://api.${DOMAIN}`: cambiar solo una variable del entorno del contenedor ya construido no actualiza la web. |
+| `VITE_API_URL` | El overlay incorpora `https://${DOMAIN}` al construir el frontend. |
 | `MICROSOFT_REDIRECT_URI` | `https://<nombre-interno-api>/api/v1/login/microsoft/callback`, exactamente igual que la URI registrada en Entra como Web. |
 | `MICROSOFT_TENANT_ID`, `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_SCOPES` | Los del registro autorizado para la organización y la biblioteca de destino; comprobar vigencia del secret y permisos concedidos. |
 | `SHAREPOINT_ENABLED` | `true` para leer por Graph; en la implementación actual también activa el login Microsoft y desactiva el login por contraseña. |
@@ -138,31 +165,15 @@ los originales. Hay que designar al primer administrador corporativo de la app; 
 administrador de INTEPLAST no concede acceso a SharePoint. Si se cambia de Eurecat al entorno
 de INTEPLAST, su IT debe preparar o autorizar el registro y los accesos correspondientes.
 
-## Ajustes pendientes en los archivos de despliegue
+<a id="ajustes-pendientes-en-los-archivos-de-despliegue"></a>
 
-El despliegue elegido necesita concretar estos ajustes; **no están implementados por el
-hecho de documentarlos**:
+## Servicios del servidor
 
-1. **Certificados y proxy interno.** `compose.traefik.yml` usa Let's Encrypt con el reto
-   TLS-ALPN-01, que requiere que la autoridad pueda alcanzar el servicio por el puerto 443.
-   Esa receta no funciona sin cambios en un servidor accesible solo por red privada.
-   Configurar los certificados de IT en el proxy, o integrar su proxy corporativo, adaptando
-   también las reglas y el resolver `le` de `compose.yml`. IT puede valorar DNS-01 para un
-   dominio que controle si prefiere esa alternativa; no requiere publicar la web.
-   [Tipos de validación de Let's Encrypt](https://letsencrypt.org/docs/challenge-types/).
-2. **Identificador del origen sin montaje local.** Actualmente `ASSETS_SOURCE_ID` y
-   `ASSETS_SOURCE_NAME` llegan al backend mediante `compose.assets.yml`, que además exige
-   `ASSETS_HOST_PATH` y monta una carpeta. Para usar solo SharePoint, pasarlos al backend
-   mediante la configuración de producción sin exigir ese montaje. Ponerlos únicamente
-   en `.env.production` no basta si Compose no los transmite al servicio.
-3. **Servicios de producción.** Usar el frontend compilado y el backend de producción.
-   Excluir `compose.override.yml`, destinado al desarrollo, y definir los servicios y
-   puertos que utilizará el proxy elegido. No es necesario publicar PostgreSQL a los usuarios.
-4. **Asistente.** No instalar Ollama en el servidor. La prueba local con Codex está integrada
-   desde el 18/11; después se integrará Copilot como solución final. El proveedor local usa
-   el puente del PC y búsqueda por palabras, por lo que el módulo debe permanecer desactivado
-   en el servidor hasta integrar Copilot. Esa integración requiere concretar autenticación,
-   permisos, conexión a la API y pruebas de concurrencia; la prueba local no la valida.
+El lanzador combina `compose.yml` y `compose.server.yml`. Arranca PostgreSQL,
+las migraciones de `prestart`, el backend, el frontend compilado y Traefik con certificado
+interno. El backend recibe el identificador del origen para leer por Graph. El asistente
+permanece desactivado hasta integrar Copilot. El acceso a los documentos del equipo
+requiere validar la biblioteca compartida con sus usuarios.
 
 La integración Graph y el retorno automático ya existen: estos puntos son principalmente
 configuración de despliegue. Si se decide usar carpetas locales del servidor en lugar de
