@@ -1,7 +1,9 @@
+import secrets
 import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select
 
 from app import crud
@@ -15,6 +17,7 @@ from app.core.security import get_password_hash, verify_password
 from app.models import (
     Item,
     Message,
+    MicrosoftUserCreate,
     UpdatePassword,
     User,
     UserCreate,
@@ -53,19 +56,44 @@ def read_users(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
 @router.post(
     "/", dependencies=[Depends(get_current_active_superuser)], response_model=UserPublic
 )
-def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
+def create_user(
+    *, session: SessionDep, user_in: UserCreate | MicrosoftUserCreate
+) -> Any:
     """
     Create new user.
     """
-    user = crud.get_user_by_email(session=session, email=user_in.email)
-    if user:
+    if settings.SHAREPOINT_ENABLED:
+        if not isinstance(user_in, MicrosoftUserCreate):
+            raise HTTPException(
+                422, "Para el acceso con Microsoft, indica solo el correo."
+            )
+        email = user_in.email.lower()
+        # Local sign-in is disabled. The database still requires a password hash.
+        account = UserCreate(email=email, password=secrets.token_urlsafe(48))
+        existing = session.exec(
+            select(User.id).where(func.lower(User.email) == email)
+        ).first()
+    else:
+        if not isinstance(user_in, UserCreate):
+            raise HTTPException(422, "Password is required for local sign-in.")
+        account = user_in
+        existing = crud.get_user_by_email(session=session, email=account.email)
+    if existing:
         raise HTTPException(
             status_code=400,
             detail="The user with this email already exists in the system.",
         )
 
-    user = crud.create_user(session=session, user_create=user_in)
-    if settings.emails_enabled and user_in.email:
+    try:
+        user = crud.create_user(session=session, user_create=account)
+    except IntegrityError:
+        session.rollback()
+        if crud.get_user_by_email(session=session, email=account.email):
+            raise HTTPException(
+                409, "The user with this email already exists in the system."
+            ) from None
+        raise
+    if isinstance(user_in, UserCreate) and settings.emails_enabled:
         email_data = generate_new_account_email(
             email_to=user_in.email, username=user_in.email, password=user_in.password
         )

@@ -5,7 +5,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { type UserCreate, UsersService } from "@/client"
+import { UsersService } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -29,36 +29,45 @@ import {
 import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
+import { useLoginMethods } from "@/hooks/useLoginMethods"
 import { handleError } from "@/utils"
 
-const formSchema = z
-  .object({
-    email: z.email({ message: "Invalid email address" }),
-    full_name: z.string().optional(),
-    password: z
-      .string()
-      .min(1, { message: "Password is required" })
-      .min(8, { message: "Password must be at least 8 characters" }),
-    confirm_password: z
-      .string()
-      .min(1, { message: "Please confirm your password" }),
-    is_superuser: z.boolean(),
-    is_active: z.boolean(),
-  })
-  .refine((data) => data.password === data.confirm_password, {
-    message: "The passwords don't match",
-    path: ["confirm_password"],
-  })
+const formSchema = (microsoft: boolean) =>
+  z
+    .object({
+      email: z
+        .string()
+        .trim()
+        .pipe(z.email({ message: "Introduce un correo válido" })),
+      full_name: z.string().optional(),
+      password: microsoft
+        ? z.string()
+        : z
+            .string()
+            .min(1, { message: "Password is required" })
+            .min(8, { message: "Password must be at least 8 characters" }),
+      confirm_password: microsoft
+        ? z.string()
+        : z.string().min(1, { message: "Please confirm your password" }),
+      is_superuser: z.boolean(),
+      is_active: z.boolean(),
+    })
+    .refine((data) => data.password === data.confirm_password, {
+      message: "The passwords don't match",
+      path: ["confirm_password"],
+    })
 
-type FormData = z.infer<typeof formSchema>
+type FormData = z.infer<ReturnType<typeof formSchema>>
 
 const AddUser = () => {
+  const { data: methods } = useLoginMethods()
+  const microsoft = methods?.microsoft === true
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema(microsoft)),
     mode: "onSubmit",
     reValidateMode: "onSubmit",
     criteriaMode: "all",
@@ -73,8 +82,10 @@ const AddUser = () => {
   })
 
   const mutation = useMutation({
-    mutationFn: (data: UserCreate) =>
-      UsersService.createUser({ requestBody: data }),
+    mutationFn: ({ confirm_password: _confirmation, ...data }: FormData) =>
+      UsersService.createUser({
+        requestBody: microsoft ? { email: data.email } : data,
+      }),
     onSuccess: () => {
       showSuccessToast("User created successfully")
       form.reset()
@@ -93,7 +104,7 @@ const AddUser = () => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="my-4">
+        <Button className="my-4" disabled={!methods}>
           <Plus className="mr-2" />
           Add User
         </Button>
@@ -102,7 +113,9 @@ const AddUser = () => {
         <DialogHeader>
           <DialogTitle>Add User</DialogTitle>
           <DialogDescription>
-            Fill in the form below to add a new user to the system.
+            {microsoft
+              ? "La persona entrará con su cuenta de Microsoft."
+              : "Fill in the form below to add a new user to the system."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -114,7 +127,8 @@ const AddUser = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Email <span className="text-destructive">*</span>
+                      {microsoft ? "Correo corporativo" : "Email"}{" "}
+                      <span className="text-destructive">*</span>
                     </FormLabel>
                     <FormControl>
                       <Input
@@ -124,99 +138,112 @@ const AddUser = () => {
                         required
                       />
                     </FormControl>
-                    <FormMessage className="sr-only" />
+                    <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="full_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Full Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Full name" type="text" {...field} />
-                    </FormControl>
-                    <FormMessage className="sr-only" />
-                  </FormItem>
-                )}
-              />
+              {!microsoft && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="full_name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Full name"
+                            type="text"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage className="sr-only" />
+                      </FormItem>
+                    )}
+                  />
 
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Set Password <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Password"
-                        type="password"
-                        {...field}
-                        required
-                      />
-                    </FormControl>
-                    <FormMessage className="sr-only" />
-                  </FormItem>
-                )}
-              />
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Set Password{" "}
+                          <span className="text-destructive">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Password"
+                            type="password"
+                            {...field}
+                            required
+                          />
+                        </FormControl>
+                        <FormMessage className="sr-only" />
+                      </FormItem>
+                    )}
+                  />
 
-              <FormField
-                control={form.control}
-                name="confirm_password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      Confirm Password{" "}
-                      <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Password"
-                        type="password"
-                        {...field}
-                        required
-                      />
-                    </FormControl>
-                    <FormMessage className="sr-only" />
-                  </FormItem>
-                )}
-              />
+                  <FormField
+                    control={form.control}
+                    name="confirm_password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Confirm Password{" "}
+                          <span className="text-destructive">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Password"
+                            type="password"
+                            {...field}
+                            required
+                          />
+                        </FormControl>
+                        <FormMessage className="sr-only" />
+                      </FormItem>
+                    )}
+                  />
 
-              <FormField
-                control={form.control}
-                name="is_superuser"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal">Is superuser?</FormLabel>
-                  </FormItem>
-                )}
-              />
+                  <FormField
+                    control={form.control}
+                    name="is_superuser"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal">
+                          Is superuser?
+                        </FormLabel>
+                      </FormItem>
+                    )}
+                  />
 
-              <FormField
-                control={form.control}
-                name="is_active"
-                render={({ field }) => (
-                  <FormItem className="flex items-center gap-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal">Is active?</FormLabel>
-                  </FormItem>
-                )}
-              />
+                  <FormField
+                    control={form.control}
+                    name="is_active"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal">
+                          Is active?
+                        </FormLabel>
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
             </div>
 
             <DialogFooter>

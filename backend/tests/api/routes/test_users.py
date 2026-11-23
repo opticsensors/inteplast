@@ -58,6 +58,52 @@ def test_create_user_new_email(
         assert user.email == created_user["email"]
 
 
+def test_add_microsoft_user_by_email(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    url = f"{settings.API_V1_STR}/users/"
+    email = random_email().lower()
+    with (
+        patch.object(settings, "SHAREPOINT_ENABLED", True),
+        patch("app.api.routes.users.send_email") as send,
+    ):
+        response = client.post(
+            url, headers=superuser_token_headers, json={"email": email.upper()}
+        )
+        assert response.status_code == 200
+        assert response.json()["is_active"] and not response.json()["is_superuser"]
+        assert crud.get_user_by_email(session=db, email=email) is not None
+        assert (
+            client.post(
+                url, headers=superuser_token_headers, json={"email": email}
+            ).status_code
+            == 400
+        )
+        assert (
+            client.post(
+                url,
+                headers=superuser_token_headers,
+                json={"email": random_email(), "is_superuser": True},
+            ).status_code
+            == 422
+        )
+        assert (
+            client.post(
+                url,
+                headers=superuser_token_headers,
+                json={"email": random_email(), "password": random_lower_string()},
+            ).status_code
+            == 422
+        )
+        send.assert_not_called()
+    assert (
+        client.post(
+            url, headers=superuser_token_headers, json={"email": random_email()}
+        ).status_code
+        == 422
+    )
+
+
 def test_get_existing_user_as_superuser(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:

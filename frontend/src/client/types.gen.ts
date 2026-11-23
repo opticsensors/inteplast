@@ -604,6 +604,10 @@ export type MicrosoftTicket = {
     ticket: string;
 };
 
+export type MicrosoftUserCreate = {
+    email: string;
+};
+
 export type NewPassword = {
     token: string;
     new_password: string;
@@ -1501,7 +1505,7 @@ export type UsersReadUsersData = {
 export type UsersReadUsersResponse = (UsersPublic);
 
 export type UsersCreateUserData = {
-    requestBody: UserCreate;
+    requestBody: (UserCreate | MicrosoftUserCreate);
 };
 
 export type UsersCreateUserResponse = (UserPublic);

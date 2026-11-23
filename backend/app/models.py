@@ -32,6 +32,11 @@ class UserCreate(UserBase):
     password: str = Field(min_length=8, max_length=128)
 
 
+class MicrosoftUserCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    email: EmailStr = Field(max_length=255)
+
+
 class UserRegister(SQLModel):
     email: EmailStr = Field(max_length=255)
     password: str = Field(min_length=8, max_length=128)

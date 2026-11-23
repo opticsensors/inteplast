@@ -24,6 +24,30 @@ test("Add User button is visible", async ({ page }) => {
 })
 
 test.describe("Admin user management", () => {
+  test("Add a Microsoft user with just their email", async ({ page }) => {
+    await page.route("**/api/v1/login/methods", (route) =>
+      route.fulfill({
+        json: { microsoft: true, password: false, sharepoint: true },
+      }),
+    )
+    const email = randomEmail()
+    await page.route("**/api/v1/users/", async (route) => {
+      if (route.request().method() !== "POST") return route.continue()
+      expect(route.request().postDataJSON()).toEqual({ email })
+      await route.fulfill({
+        json: { email, is_active: true, is_superuser: false },
+      })
+    })
+    await page.goto("/admin")
+    await page.getByRole("button", { name: "Add User" }).click()
+    const dialog = page.getByRole("dialog")
+    await expect(dialog.locator("input")).toHaveCount(1)
+    await expect(dialog.getByRole("checkbox")).toHaveCount(0)
+    await dialog.getByLabel("Correo corporativo").fill(email)
+    await dialog.getByRole("button", { name: "Save" }).click()
+    await expect(page.getByText("User created successfully")).toBeVisible()
+  })
+
   test("Create a new user successfully", async ({ page }) => {
     await page.goto("/admin")
 

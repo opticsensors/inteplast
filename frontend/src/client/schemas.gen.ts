@@ -2797,6 +2797,21 @@ export const MicrosoftTicketSchema = {
     title: 'MicrosoftTicket'
 } as const;
 
+export const MicrosoftUserCreateSchema = {
+    properties: {
+        email: {
+            type: 'string',
+            maxLength: 255,
+            format: 'email',
+            title: 'Email'
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    required: ['email'],
+    title: 'MicrosoftUserCreate'
+} as const;
+
 export const NewPasswordSchema = {
     properties: {
         token: {
