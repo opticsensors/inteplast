@@ -81,8 +81,8 @@ Cliente final: **Robert Bosch** (división BueP). Informes en formato **PPAP / Q
 
 ## Foco actual
 
-**Cambios del 23/11/2026.** La página antigua del adjunto sin archivo ya remite a la pieza
-en local. El alta por correo con Microsoft ya funciona en el servidor de Eurecat.
+**Cambios del 23/11/2026.** En el servidor de Eurecat, la miniatura y el visor comparten el giro de
+cada hoja. Los enlaces antiguos a adjuntos sin archivo remiten a la pieza. El alta con Microsoft se hace por correo.
 [Cambios rápidos](docs/proximos-pasos.md#-prioridad-urgente-cambios-rápidos-23112026) · [Casos de trabajo](docs/proximos-pasos.md#casos-de-trabajo-del-23-de-noviembre).
 
 🗓️ **Reunión con INTEPLAST el 20/11/2026:** puntos a comentar (carpetas como la del 3212,

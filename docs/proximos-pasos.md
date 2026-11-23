@@ -14,7 +14,7 @@ La implementación de protecciones y criterios de aceptación para todas las pie
 
 ## 🔴 Prioridad urgente: cambios rápidos (23/11/2026)
 
-1. **Corregido y probado en local.** Un enlace guardado a un adjunto sin archivo indica que los archivos se gestionan en la ficha de la pieza. Si el adjunto tiene pieza, «Abrir pieza» lleva a su ficha. La prueba de navegador cubre ambos casos.
+1. **Desplegado en Eurecat.** Un enlace guardado a un adjunto sin archivo indica que los archivos se gestionan en la ficha de la pieza. Si el adjunto tiene pieza, «Abrir pieza» lleva a su ficha. La prueba local de navegador cubre ambos casos.
 2. **Completado en Eurecat.** Con Microsoft activo, **Admin → Add User** solo pide el correo corporativo. El alta crea un usuario normal activo.
 
 ## Siguientes pasos acordados para Planos y Cotas (23/11/2026)
@@ -22,7 +22,7 @@ La implementación de protecciones y criterios de aceptación para todas las pie
 1. **Mostrar el plano vigente en la ficha y en Planos.** Tomar el PDF definitivo de la carpeta de la pieza `1- 2D y 3D pieza` y usar su `.icp` cuando esté disponible. El PDF se puede abrir también sin `.icp`. Mostrar una tarjeta por pieza o por componente cuando tengan planos propios, conservando todas las hojas del PDF. Excluir del catálogo las copias antiguas de método de medición, retoques y `OLD`. Si la carpeta carece de un candidato inequívoco, permitir que el usuario elija en la ficha. En los adjuntos, mostrar el plano, el CAD y el molde vigentes con un icono de carpeta sin texto visible, accesible por teclado y con nombre accesible. El icono abre la carpeta correspondiente en otra pestaña de SharePoint con los permisos del usuario.
 2. **Conservar las revisiones de las mediciones en Cotas.** Mantener el selector «Revisión de mediciones» cuando haya varias. Cada muestreo conserva el informe de origen, la revisión declarada y sus nominales y tolerancias. Cambiar la revisión consultada cambia la gráfica y mantiene el plano vigente en el visor. Si ese plano aún carece de mediciones, las anteriores siguen disponibles con su revisión. Mantener separadas las series cuya equivalencia no esté acreditada y señalar una cota histórica en el plano vigente solo si se ha comprobado la correspondencia.
 
-**Caso para validar ambos cambios.** En la 3237, Planos debe abrir el PDF 05 de `2D y 3D pieza`. El 03 con globos de `Método de medición/OLD` seguirá consultable desde la carpeta. Cotas debe conservar las mediciones que citan el 04. [Casos de revisiones de plano e informes](preguntas-abiertas.md#a26-revisiones-plano).
+**Caso para validar ambos cambios.** En la 3237, Planos debe abrir el PDF 05 de `2D y 3D pieza`. Cuando las versiones estén repartidas en varias carpetas, el icono debe abrir su carpeta común de la pieza para que se pueda llegar también al 03 con globos de `Método de medición/OLD`. Cotas debe conservar las mediciones que citan el 04. [Casos de revisiones de plano e informes](preguntas-abiertas.md#a26-revisiones-plano).
 
 **Rendimiento pendiente.** Priorizar las miniaturas visibles, aprovechar la imagen guardada mientras conserve su vigencia y el usuario tenga acceso, y aplazar las comprobaciones de globos hasta mostrar la imagen. Medir de nuevo el tiempo hasta la primera miniatura con las 40 tarjetas actuales. En dos reaperturas locales, con las 40 imágenes ya generadas, la primera se sirvió a los 13 s y la última a los 17 s.
 
@@ -37,7 +37,7 @@ Acuerdos de la reunión del viernes 20 recogidos para el lunes 23. El piloto sig
 | Carpeta de fotos | Acordar dónde se guardan las fotos y cómo se identifica la carpeta de cada pieza. Añadir un adjunto de tipo carpeta y comprobar que permite abrir todas sus fotos. |
 | Material y cavidades | Pedir a INTEPLAST la plantilla Excel de datos de pieza y un ejemplo rellenado. Identificar los campos, leer automáticamente el material y el número de cavidades y mostrarlos junto a Cliente y Familia. Acordar si interesan otros campos. |
 | Varios features sobre un CAD | Mostrar juntas las caras ya marcadas por el usuario sobre el CAD de la pieza, con un color por feature y una leyenda con los nombres. Probar con dos features y decidir cómo representar una cara compartida. |
-| Piloto en el servidor de Eurecat | Web, API, HTTPS y entrada de Eduard con Microsoft operativos. Fijar la primera prueba desde otro equipo de la red o VPN. Abrir un PDF y un CAD reales desde la ficha y comprobar también el acceso de un segundo usuario. Para que ambos consulten los mismos originales, habrá que compartir la carpeta con ese usuario y configurar la unidad común. El traslado a INTEPLAST queda para la fase siguiente. |
+| Piloto en el servidor de Eurecat | Eduard ha comprobado el acceso con Microsoft y la lectura de los originales. Probar ahora el mismo PDF y CAD con un segundo usuario desde otro equipo de la red o VPN. Para que ambos consulten los mismos originales, habrá que compartir la carpeta con ese usuario y configurar la unidad común. |
 | Excel de cotas y plano correspondiente | Pedir a INTEPLAST un informe rellenado y el plano numerado de la misma revisión, con el CSV de máquina cuando exista. Acordar cómo identificar pieza, componente, plano, revisión y muestreo. Contrastar el mismo número de cota en Excel y plano, con nominal, tolerancias, unidad, cavidad y valor medido. Pedir que se distingan las mediciones nuevas de las copiadas. |
 
 ## Portadas y carga del catálogo (19/11/2026)
@@ -653,7 +653,7 @@ misma estructura bajo la raíz nueva.
 ## Próxima sesión de la app final: usuarios y prueba real de archivos
 
 El servidor de Eurecat ya sirve la web por HTTPS interno. Eduard ha comprobado el inicio
-de sesión con Microsoft. Queda probar los originales con los usuarios del piloto.
+de sesión con Microsoft y la lectura de PDF y CAD. Queda repetir la prueba con un segundo usuario.
 [Despliegue en servidor interno](despliegue-servidor.md).
 
 **Fases fijadas por Eduard el 09/11/2026:** 1) pruebas con cuentas de Eurecat; 2) servidor de
@@ -663,9 +663,8 @@ Las fases 1 y 2 no dependen de A10; la 3 sí.
 - En Eurecat, Eduard entra con Microsoft y administra las altas por correo desde **Admin**.
   Para la fase 3, pedir el correo de la persona designada por INTEPLAST y verificar con ella
   el [traspaso de administración](despliegue-servidor.md#primer-administrador-de-inteplast).
-- Probar listado y apertura de un PDF/STEP real, y después visores, alta y actualización.
-  El éxito del login no sustituye estas comprobaciones. La biblioteca compartida y los
-  permisos de INTEPLAST siguen pendientes de concretar.
+- Probar el listado y la apertura de los originales con el segundo usuario. La biblioteca
+  compartida y los permisos de INTEPLAST siguen pendientes de concretar para la fase 3.
 
 Detalle técnico: [SharePoint](ficheros-externos.md#sharepoint-microsoft-graph).
 

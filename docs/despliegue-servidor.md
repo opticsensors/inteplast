@@ -23,8 +23,13 @@ local y provisional; no se traslada como solución de producción. Prueba integr
 
 **Despliegue completado el 23/11/2026.** La web y la API responden por HTTPS. Eduard ha
 entrado con Microsoft como administrador y se han trasladado las 21 piezas, los 8 features
-y los archivos subidos. El piloto usa su carpeta `Exemples` de OneDrive. Queda programar
-la prueba con usuarios y originales desde la web. [Casos de trabajo](proximos-pasos.md#casos-de-trabajo-del-23-de-noviembre).
+y los archivos subidos. Eduard ha confirmado la lectura de PDF y CAD desde su carpeta
+`Exemples` de OneDrive. Queda probar con un segundo usuario desde otro equipo.
+[Casos de trabajo](proximos-pasos.md#casos-de-trabajo-del-23-de-noviembre).
+
+**Actualización de Planos del 23/11.** Se desplegó el código `8dbadfb`. Desde el PC se verificaron
+por HTTPS la salud de la API, el parámetro de página y el campo de giro de las miniaturas,
+el módulo del visor que aplica ese giro y el enlace a la pieza en la página antigua del adjunto.
 
 Las comprobaciones siguientes corresponden a la preparación previa a la instalación.
 
