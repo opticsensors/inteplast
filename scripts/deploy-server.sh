@@ -53,7 +53,11 @@ for file in .env.production fullchain.pem privkey.pem; do
 done
 openssl verify -partial_chain -CAfile "$candidate/fullchain.pem" -verify_hostname "$domain" "$candidate/fullchain.pem"
 cert_pub=$(openssl x509 -in "$candidate/fullchain.pem" -noout -pubkey)
-key_pub=$(openssl pkey -in "$candidate/privkey.pem" -passin pass: -pubout)
+# A key provisioned by IT can be root-owned. Keep its permissions and
+# compare only the public part, without copying the key to the deploy user.
+read_key=(openssl pkey)
+if [[ ! -r "$candidate/privkey.pem" ]]; then read_key=(sudo openssl pkey); fi
+key_pub=$("${read_key[@]}" -in "$candidate/privkey.pem" -passin pass: -pubout)
 [[ $cert_pub == "$key_pub" ]] || fail 'El certificado y la clave TLS no corresponden.'
 
 docker=(docker)
