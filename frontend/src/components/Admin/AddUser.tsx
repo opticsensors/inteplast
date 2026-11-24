@@ -30,7 +30,7 @@ import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useLoginMethods } from "@/hooks/useLoginMethods"
-import { handleError } from "@/utils"
+import { userError } from "./userError"
 
 const formSchema = (microsoft: boolean) =>
   z
@@ -40,26 +40,23 @@ const formSchema = (microsoft: boolean) =>
         .trim()
         .pipe(
           z.email({
-            message: microsoft
-              ? "Introduce un correo válido"
-              : "Invalid email address",
+            message: "Introduce un correo válido",
           }),
         ),
       full_name: z.string().optional(),
       password: microsoft
         ? z.string()
-        : z
-            .string()
-            .min(1, { message: "Password is required" })
-            .min(8, { message: "Password must be at least 8 characters" }),
+        : z.string().min(1, { message: "Introduce una contraseña" }).min(8, {
+            message: "La contraseña debe tener al menos 8 caracteres",
+          }),
       confirm_password: microsoft
         ? z.string()
-        : z.string().min(1, { message: "Please confirm your password" }),
+        : z.string().min(1, { message: "Confirma la contraseña" }),
       is_superuser: z.boolean(),
       is_active: z.boolean(),
     })
     .refine((data) => data.password === data.confirm_password, {
-      message: "The passwords don't match",
+      message: "Las contraseñas no coinciden",
       path: ["confirm_password"],
     })
 
@@ -93,11 +90,11 @@ const AddUser = () => {
         requestBody: microsoft ? { email: data.email } : data,
       }),
     onSuccess: () => {
-      showSuccessToast("User created successfully")
+      showSuccessToast("Usuario creado")
       form.reset()
       setIsOpen(false)
     },
-    onError: handleError.bind(showErrorToast),
+    onError: (error) => showErrorToast(userError(error)),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] })
     },
@@ -110,18 +107,18 @@ const AddUser = () => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="my-4" disabled={!methods}>
+        <Button disabled={!methods}>
           <Plus className="mr-2" />
-          Add User
+          Añadir usuario
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" closeLabel="Cerrar">
         <DialogHeader>
-          <DialogTitle>Add User</DialogTitle>
+          <DialogTitle>Añadir usuario</DialogTitle>
           <DialogDescription>
             {microsoft
               ? "La persona entrará con su cuenta de Microsoft."
-              : "Fill in the form below to add a new user to the system."}
+              : "Introduce los datos de la nueva cuenta."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -133,12 +130,11 @@ const AddUser = () => {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {microsoft ? "Correo corporativo" : "Email"}{" "}
-                      <span className="text-destructive">*</span>
+                      Correo <span className="text-destructive">*</span>
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Email"
+                        placeholder="Correo"
                         type="email"
                         {...field}
                         required
@@ -156,13 +152,9 @@ const AddUser = () => {
                     name="full_name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Full Name</FormLabel>
+                        <FormLabel>Nombre</FormLabel>
                         <FormControl>
-                          <Input
-                            placeholder="Full name"
-                            type="text"
-                            {...field}
-                          />
+                          <Input placeholder="Nombre" type="text" {...field} />
                         </FormControl>
                         <FormMessage className="sr-only" />
                       </FormItem>
@@ -175,12 +167,11 @@ const AddUser = () => {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          Set Password{" "}
-                          <span className="text-destructive">*</span>
+                          Contraseña <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Password"
+                            placeholder="Contraseña"
                             type="password"
                             {...field}
                             required
@@ -197,12 +188,12 @@ const AddUser = () => {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          Confirm Password{" "}
+                          Confirmar contraseña{" "}
                           <span className="text-destructive">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="Password"
+                            placeholder="Contraseña"
                             type="password"
                             {...field}
                             required
@@ -224,9 +215,7 @@ const AddUser = () => {
                             onCheckedChange={field.onChange}
                           />
                         </FormControl>
-                        <FormLabel className="font-normal">
-                          Is superuser?
-                        </FormLabel>
+                        <FormLabel className="font-normal">Admin</FormLabel>
                       </FormItem>
                     )}
                   />
@@ -243,7 +232,7 @@ const AddUser = () => {
                           />
                         </FormControl>
                         <FormLabel className="font-normal">
-                          Is active?
+                          Cuenta activa
                         </FormLabel>
                       </FormItem>
                     )}
@@ -259,11 +248,11 @@ const AddUser = () => {
                   variant="outline"
                   disabled={mutation.isPending}
                 >
-                  Cancel
+                  Cancelar
                 </Button>
               </DialogClose>
               <LoadingButton type="submit" loading={mutation.isPending}>
-                Save
+                Guardar
               </LoadingButton>
             </DialogFooter>
           </form>

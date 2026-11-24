@@ -332,7 +332,7 @@ En `.env` (plantilla en `.env.example`; Compose las pasa al backend):
 |---|---|
 | `SHAREPOINT_ENABLED` | `false` (local) / `true` (SharePoint) |
 | `SHAREPOINT_ROOT_PATH` | `Escritorio/proyectos/11. inteplast/Exemples`, dentro de la unidad |
-| `SHAREPOINT_DRIVE_ID` | vacío = OneDrive del usuario conectado. Para otros usuarios haría falta el ID de la unidad y la carpeta compartida con ellos: sin comprobar |
+| `SHAREPOINT_DRIVE_ID` | Unidad inicial. Vacío usa el OneDrive del usuario conectado. La carpeta guardada desde Admin tiene prioridad. |
 | `MICROSOFT_TENANT_ID`, `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | App registrada por informática de Eurecat (25/09/2026). La nota inicial indicaba unos 60 días de vigencia del secret; verificar su caducidad efectiva en el registro antes de activar |
 | `MICROSOFT_REDIRECT_URI` | `http://localhost:8000/api/v1/login/microsoft/callback`, plataforma Web, retorno automático (09/11/2026). Antes, `https://oauth.pstmn.io/v1/browser-callback` (Postman, copiar y pegar) |
 | `MICROSOFT_SCOPES` | `https://graph.microsoft.com/.default`: los permisos ya concedidos a la app |
@@ -385,8 +385,25 @@ dentro de la web).
   aunque un usuario no tenga acceso al original en SharePoint. Lo mismo ocurre con las
   miniaturas PNG guardadas como imágenes. En cambio, las vistas GLB y el índice del plano
   vuelven a comprobar el acceso y la versión del original mediante Graph antes de servirse.
-- Si `SHAREPOINT_DRIVE_ID` está vacío, cada usuario lee su propio OneDrive: solo sirve para
-  el propietario de `Exemples`.
+- Sin una carpeta seleccionada en Admin ni un `SHAREPOINT_DRIVE_ID` fijo, cada usuario
+  busca los originales en su propio OneDrive.
+
+### Cambiar la carpeta desde Admin
+
+En **Admin**, el botón **SharePoint** aparece a la izquierda de **Añadir usuario**.
+El diálogo muestra la carpeta actual y permite pegar otro enlace de OneDrive de empresa
+o SharePoint de la organización autorizada. **Comprobar** verifica el acceso a la
+carpeta elegida y busca hasta tres carpetas de pieza por su ruta registrada, dando
+preferencia a features distintos. La comprobación termina en la carpeta de cada pieza,
+por lo que reorganizar su contenido conserva el resultado. Si alguna carpeta de la
+muestra falta o requiere permiso, el diálogo muestra su ruta.
+**Guardar** activa la carpeta para todo el catálogo. Cada usuario sigue leyendo los
+originales con sus propios permisos.
+
+La selección se guarda en PostgreSQL por conjunto de datos, con los identificadores
+de unidad y carpeta devueltos por Microsoft. Se aplica a las siguientes consultas y a
+los trabajos de preparación. Hasta la primera selección se usa la configuración del
+servidor. Si se cambia la estructura interna, hay que revisar los vínculos afectados.
 
 ## Integración con INTEPLAST
 

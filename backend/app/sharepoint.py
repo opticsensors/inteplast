@@ -18,13 +18,16 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from pathlib import Path, PurePosixPath
-from typing import Any, Literal
+from typing import Any, Literal, NamedTuple
 from urllib.parse import quote
 
 import httpx
+from sqlmodel import Session
 
 from app.core.config import settings
+from app.core.db import engine
 from app.microsoft_auth import access_token, forget
+from app.microsoft_models import SharePointFolder
 from app.source_types import SourceError, SourceItem
 
 logger = logging.getLogger(__name__)
@@ -34,6 +37,16 @@ PATH_SAFE = "!$&'()*+,;=:@"
 ATTEMPTS = 4
 PAGE_SIZE = 200
 acting_user: ContextVar[uuid.UUID | None] = ContextVar("sharepoint_user", default=None)
+
+
+class FolderRoot(NamedTuple):
+    drive_id: str
+    item_id: str
+
+
+active_folder: ContextVar[FolderRoot | None] = ContextVar(
+    "sharepoint_folder", default=None
+)
 _local = threading.local()
 
 
@@ -41,13 +54,28 @@ def enabled() -> bool:
     return settings.SHAREPOINT_ENABLED
 
 
+def configured_folder(session: Session) -> SharePointFolder | None:
+    return (
+        session.get(SharePointFolder, settings.ASSETS_SOURCE_ID) if enabled() else None
+    )
+
+
+def catalog_root(session: Session) -> FolderRoot | None:
+    """Keep a request or background operation on one root, even across commits."""
+    row = configured_folder(session)
+    return FolderRoot(row.drive_id, row.item_id) if row else None
+
+
 @contextmanager
 def acting_as(user_id: uuid.UUID | None) -> Iterator[None]:
     """Read SharePoint as this user, e.g. inside a background job they requested."""
+    with Session(engine) as session:
+        origin = active_folder.set(catalog_root(session))
     token = acting_user.set(user_id)
     try:
         yield
     finally:
+        active_folder.reset(origin)
         acting_user.reset(token)
 
 
@@ -111,6 +139,10 @@ def request(url: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         raise SourceError(
             "missing", "Archivo o carpeta no encontrado en SharePoint.", 404
         )
+    if response.status_code == 400 and url.startswith(f"{GRAPH}/shares/"):
+        raise SourceError(
+            "unavailable", "Microsoft no reconoce el enlace de carpeta.", 422
+        )
     if response.status_code == 403:
         # Not 403 for the browser: that status ends the application session.
         raise SourceError(
@@ -147,6 +179,9 @@ def drive_url() -> str:
 
 def item_url(relative: str) -> str:
     """Path-based addressing from the drive root, each segment percent-encoded."""
+    folder = active_folder.get()
+    if folder is not None:
+        return folder_item_url(folder.drive_id, folder.item_id, relative)
     parts = [p for p in settings.SHAREPOINT_ROOT_PATH.split("/") if p]
     parts += validate(relative)
     if not parts:
@@ -154,9 +189,17 @@ def item_url(relative: str) -> str:
     return f"{drive_url()}/root:/{'/'.join(quote(p, safe=PATH_SAFE) for p in parts)}:"
 
 
+def folder_item_url(drive_id: str, item_id: str, relative: str = "") -> str:
+    base = f"{GRAPH}/drives/{quote(drive_id, safe='')}/items/{quote(item_id, safe='')}"
+    path = "/".join(quote(p, safe=PATH_SAFE) for p in validate(relative))
+    return f"{base}:/{path}:" if path else base
+
+
 def version(data: dict[str, Any]) -> str:
     # cTag changes with the content only; "sp:" tells it apart from a local stamp.
     tag = data.get("cTag") or data.get("eTag") or data.get("lastModifiedDateTime")
+    if active_folder.get() is not None:
+        tag = (data.get("parentReference", {}).get("driveId"), data.get("id"), tag)
     digest = hashlib.sha256(str(tag).encode()).hexdigest()[:24]
     return f"sp:{digest}:{int(data.get('size') or 0)}"
 

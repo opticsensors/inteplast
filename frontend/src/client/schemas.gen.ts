@@ -1906,6 +1906,54 @@ export const FileStatusSchema = {
     title: 'FileStatus'
 } as const;
 
+export const FolderCheckSchema = {
+    properties: {
+        folder: {
+            '$ref': '#/components/schemas/FolderInfo'
+        },
+        total: {
+            type: 'integer',
+            title: 'Total'
+        },
+        checked: {
+            type: 'integer',
+            title: 'Checked'
+        },
+        found: {
+            type: 'integer',
+            title: 'Found'
+        },
+        unavailable: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Unavailable'
+        },
+        ticket: {
+            type: 'string',
+            title: 'Ticket'
+        }
+    },
+    type: 'object',
+    required: ['folder', 'total', 'checked', 'found', 'unavailable', 'ticket'],
+    title: 'FolderCheck'
+} as const;
+
+export const FolderChoiceSchema = {
+    properties: {
+        ticket: {
+            type: 'string',
+            maxLength: 8192,
+            minLength: 1,
+            title: 'Ticket'
+        }
+    },
+    type: 'object',
+    required: ['ticket'],
+    title: 'FolderChoice'
+} as const;
+
 export const FolderDiscoverySchema = {
     properties: {
         folder_path: {
@@ -1958,6 +2006,48 @@ export const FolderDiscoverySchema = {
     type: 'object',
     required: ['folder_path', 'name', 'references'],
     title: 'FolderDiscovery'
+} as const;
+
+export const FolderInfoSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        web_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Web Url'
+        },
+        per_user: {
+            type: 'boolean',
+            title: 'Per User',
+            default: false
+        }
+    },
+    type: 'object',
+    required: ['name', 'web_url'],
+    title: 'FolderInfo'
+} as const;
+
+export const FolderLinkSchema = {
+    properties: {
+        url: {
+            type: 'string',
+            maxLength: 8192,
+            minLength: 1,
+            title: 'Url'
+        }
+    },
+    type: 'object',
+    required: ['url'],
+    title: 'FolderLink'
 } as const;
 
 export const GraphLinkSchema = {

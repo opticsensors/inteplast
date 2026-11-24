@@ -62,12 +62,18 @@ def get_current_user(session: SessionDep, token: TokenDep) -> User:
     return user
 
 
+def request_folder(session: SessionDep) -> sharepoint.FolderRoot | None:
+    return sharepoint.catalog_root(session)
+
+
 async def bind_source_user(
     user: Annotated[User, Depends(get_current_user)],
+    folder: Annotated[sharepoint.FolderRoot | None, Depends(request_folder)],
 ) -> User:
     # Async on purpose: the context variable is set in the request task, so the
     # endpoint (run later in the threadpool) reads SharePoint as this user.
     sharepoint.acting_user.set(user.id)
+    sharepoint.active_folder.set(folder)
     return user
 
 

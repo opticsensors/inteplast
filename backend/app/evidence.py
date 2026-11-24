@@ -358,6 +358,7 @@ def process_next(stop: threading.Event) -> bool:
         job.state, job.message = "processing", None
         session.add(job)
         session.commit()
+        origin = sharepoint.active_folder.set(sharepoint.catalog_root(session))
         token = sharepoint.acting_user.set(
             uuid.UUID(source_user) if source_user else None
         )
@@ -467,6 +468,7 @@ def process_next(stop: threading.Event) -> bool:
                 session.add(active)
                 session.commit()
         finally:
+            sharepoint.active_folder.reset(origin)
             sharepoint.acting_user.reset(token)
             if staging is not None:
                 shutil.rmtree(staging, ignore_errors=True)

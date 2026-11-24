@@ -11,6 +11,7 @@ from app.api.routes import (
     login,
     measurement_imports,
     microsoft,
+    originals,
     part_setup,
     parts,
     private,
@@ -23,6 +24,7 @@ from app.core.config import settings
 api_router = APIRouter()
 api_router.include_router(login.router)
 api_router.include_router(microsoft.router)
+api_router.include_router(originals.router)
 api_router.include_router(users.router)
 api_router.include_router(utils.router)
 api_router.include_router(items.router)

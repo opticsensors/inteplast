@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { AssistantStatusResponse, AssistantChatData, AssistantChatResponse, CatalogSearchCatalogData, CatalogSearchCatalogResponse, CatalogReadPartDetailData, CatalogReadPartDetailResponse, CatalogReadPartCoverData, CatalogReadPartCoverResponse, CatalogSavePartCoverData, CatalogSavePartCoverResponse, CatalogReadCatalogGraphData, CatalogReadCatalogGraphResponse, CatalogReadCatalogDrawingsData, CatalogReadCatalogDrawingsResponse, CatalogReadFamiliesResponse, CatalogCreateFamilyData, CatalogCreateFamilyResponse, CatalogReadCustomersResponse, CatalogCreateCustomerData, CatalogCreateCustomerResponse, EvidenceReadMetrologyFiltersResponse, EvidenceReadMetrologyData, EvidenceReadMetrologyResponse, EvidenceReadPartEvidenceData, EvidenceReadPartEvidenceResponse, EvidenceImportPartEvidenceData, EvidenceImportPartEvidenceResponse, EvidenceReadFeatureEvidenceData, EvidenceReadFeatureEvidenceResponse, EvidenceAssignCharacteristicData, EvidenceAssignCharacteristicResponse, EvidenceUnassignCharacteristicData, EvidenceUnassignCharacteristicResponse, EvidenceReadDrawingIndexData, EvidenceReadDrawingIndexResponse, EvidenceIndexDrawingData, EvidenceIndexDrawingResponse, EvidencePrepareDrawingMarksData, EvidencePrepareDrawingMarksResponse, EvidenceReviewDrawingLocationData, EvidenceReviewDrawingLocationResponse, EvidencePreviewMeasurementsData, EvidencePreviewMeasurementsResponse, EvidenceImportMeasurementsData, EvidenceImportMeasurementsResponse, EvidenceMeasurementHistoryData, EvidenceMeasurementHistoryResponse, FeaturesReadFeaturesData, FeaturesReadFeaturesResponse, FeaturesCreateFeatureData, FeaturesCreateFeatureResponse, FeaturesReadFeatureFiltersResponse, FeaturesReadFeatureData, FeaturesReadFeatureResponse, FeaturesUpdateFeatureData, FeaturesUpdateFeatureResponse, FeaturesDeleteFeatureData, FeaturesDeleteFeatureResponse, FeaturesReorderFeatureNotesData, FeaturesReorderFeatureNotesResponse, FeaturesReorderFeatureAssetsData, FeaturesReorderFeatureAssetsResponse, FeaturesCreateFeatureNoteData, FeaturesCreateFeatureNoteResponse, FeaturesUpdateFeatureNoteData, FeaturesUpdateFeatureNoteResponse, FeaturesDeleteFeatureNoteData, FeaturesDeleteFeatureNoteResponse, FeaturesReorderFeaturePartsData, FeaturesReorderFeaturePartsResponse, FeaturesLinkFeaturePartData, FeaturesLinkFeaturePartResponse, FeaturesUnlinkFeaturePartData, FeaturesUnlinkFeaturePartResponse, FeaturesCreateFeatureAssetData, FeaturesCreateFeatureAssetResponse, FeaturesUpdateFeatureAssetData, FeaturesUpdateFeatureAssetResponse, FeaturesDeleteFeatureAssetData, FeaturesDeleteFeatureAssetResponse, FilesReadAttachmentFolderData, FilesReadAttachmentFolderResponse, FilesReadAttachmentScreenshotData, FilesReadAttachmentScreenshotResponse, FilesUpdateAttachmentScreenshotData, FilesUpdateAttachmentScreenshotResponse, FilesListSourceData, FilesListSourceResponse, FilesReferenceFileData, FilesReferenceFileResponse, FilesRelinkFileData, FilesRelinkFileResponse, FilesReadSourceTableData, FilesReadSourceTableResponse, FilesFileStatusData, FilesFileStatusResponse, FilesUploadFileData, FilesUploadFileResponse, FilesCreateFileAccessUrlData, FilesCreateFileAccessUrlResponse, FilesPreparePreviewData, FilesPreparePreviewResponse, FilesReadPreviewData, FilesReadPreviewResponse, FilesCheckDrawingIcpData, FilesCheckDrawingIcpResponse, FilesPrepareThumbnailData, FilesPrepareThumbnailResponse, FilesReadThumbnailData, FilesReadThumbnailResponse, FilesReadFileData, FilesReadFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, LoginLoginMethodsResponse, LoginStartMicrosoftLoginResponse, LoginCompleteMicrosoftLoginData, LoginCompleteMicrosoftLoginResponse, LoginRedeemMicrosoftTicketData, LoginRedeemMicrosoftTicketResponse, LoginMicrosoftLogoutResponse, PartsReadPartDataReportData, PartsReadPartDataReportResponse, PartsReadPartDataData, PartsReadPartDataResponse, PartsRegisterPartData, PartsRegisterPartResponse, PartsDiscoverPartFolderData, PartsDiscoverPartFolderResponse, PartsSetupPartData, PartsSetupPartResponse, PartsRefreshPartDataData, PartsRefreshPartDataResponse, PartsReadPartsData, PartsReadPartsResponse, PartsCreatePartData, PartsCreatePartResponse, PartsCreatePartFromFolderData, PartsCreatePartFromFolderResponse, PartsUpdatePartData, PartsUpdatePartResponse, PartsDeletePartData, PartsDeletePartResponse, PartsReadPartDeletionData, PartsReadPartDeletionResponse, PartsReadComponentOptionsData, PartsReadComponentOptionsResponse, PartsSaveComponentOrganizationData, PartsSaveComponentOrganizationResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { AssistantStatusResponse, AssistantChatData, AssistantChatResponse, CatalogSearchCatalogData, CatalogSearchCatalogResponse, CatalogReadPartDetailData, CatalogReadPartDetailResponse, CatalogReadPartCoverData, CatalogReadPartCoverResponse, CatalogSavePartCoverData, CatalogSavePartCoverResponse, CatalogReadCatalogGraphData, CatalogReadCatalogGraphResponse, CatalogReadCatalogDrawingsData, CatalogReadCatalogDrawingsResponse, CatalogReadFamiliesResponse, CatalogCreateFamilyData, CatalogCreateFamilyResponse, CatalogReadCustomersResponse, CatalogCreateCustomerData, CatalogCreateCustomerResponse, EvidenceReadMetrologyFiltersResponse, EvidenceReadMetrologyData, EvidenceReadMetrologyResponse, EvidenceReadPartEvidenceData, EvidenceReadPartEvidenceResponse, EvidenceImportPartEvidenceData, EvidenceImportPartEvidenceResponse, EvidenceReadFeatureEvidenceData, EvidenceReadFeatureEvidenceResponse, EvidenceAssignCharacteristicData, EvidenceAssignCharacteristicResponse, EvidenceUnassignCharacteristicData, EvidenceUnassignCharacteristicResponse, EvidenceReadDrawingIndexData, EvidenceReadDrawingIndexResponse, EvidenceIndexDrawingData, EvidenceIndexDrawingResponse, EvidencePrepareDrawingMarksData, EvidencePrepareDrawingMarksResponse, EvidenceReviewDrawingLocationData, EvidenceReviewDrawingLocationResponse, EvidencePreviewMeasurementsData, EvidencePreviewMeasurementsResponse, EvidenceImportMeasurementsData, EvidenceImportMeasurementsResponse, EvidenceMeasurementHistoryData, EvidenceMeasurementHistoryResponse, FeaturesReadFeaturesData, FeaturesReadFeaturesResponse, FeaturesCreateFeatureData, FeaturesCreateFeatureResponse, FeaturesReadFeatureFiltersResponse, FeaturesReadFeatureData, FeaturesReadFeatureResponse, FeaturesUpdateFeatureData, FeaturesUpdateFeatureResponse, FeaturesDeleteFeatureData, FeaturesDeleteFeatureResponse, FeaturesReorderFeatureNotesData, FeaturesReorderFeatureNotesResponse, FeaturesReorderFeatureAssetsData, FeaturesReorderFeatureAssetsResponse, FeaturesCreateFeatureNoteData, FeaturesCreateFeatureNoteResponse, FeaturesUpdateFeatureNoteData, FeaturesUpdateFeatureNoteResponse, FeaturesDeleteFeatureNoteData, FeaturesDeleteFeatureNoteResponse, FeaturesReorderFeaturePartsData, FeaturesReorderFeaturePartsResponse, FeaturesLinkFeaturePartData, FeaturesLinkFeaturePartResponse, FeaturesUnlinkFeaturePartData, FeaturesUnlinkFeaturePartResponse, FeaturesCreateFeatureAssetData, FeaturesCreateFeatureAssetResponse, FeaturesUpdateFeatureAssetData, FeaturesUpdateFeatureAssetResponse, FeaturesDeleteFeatureAssetData, FeaturesDeleteFeatureAssetResponse, FilesReadAttachmentFolderData, FilesReadAttachmentFolderResponse, FilesReadAttachmentScreenshotData, FilesReadAttachmentScreenshotResponse, FilesUpdateAttachmentScreenshotData, FilesUpdateAttachmentScreenshotResponse, FilesListSourceData, FilesListSourceResponse, FilesReferenceFileData, FilesReferenceFileResponse, FilesRelinkFileData, FilesRelinkFileResponse, FilesReadSourceTableData, FilesReadSourceTableResponse, FilesFileStatusData, FilesFileStatusResponse, FilesUploadFileData, FilesUploadFileResponse, FilesCreateFileAccessUrlData, FilesCreateFileAccessUrlResponse, FilesPreparePreviewData, FilesPreparePreviewResponse, FilesReadPreviewData, FilesReadPreviewResponse, FilesCheckDrawingIcpData, FilesCheckDrawingIcpResponse, FilesPrepareThumbnailData, FilesPrepareThumbnailResponse, FilesReadThumbnailData, FilesReadThumbnailResponse, FilesReadFileData, FilesReadFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, LoginLoginMethodsResponse, LoginStartMicrosoftLoginResponse, LoginCompleteMicrosoftLoginData, LoginCompleteMicrosoftLoginResponse, LoginRedeemMicrosoftTicketData, LoginRedeemMicrosoftTicketResponse, LoginMicrosoftLogoutResponse, OriginalsReadOriginalsResponse, OriginalsSaveOriginalsData, OriginalsSaveOriginalsResponse, OriginalsCheckOriginalsData, OriginalsCheckOriginalsResponse, PartsReadPartDataReportData, PartsReadPartDataReportResponse, PartsReadPartDataData, PartsReadPartDataResponse, PartsRegisterPartData, PartsRegisterPartResponse, PartsDiscoverPartFolderData, PartsDiscoverPartFolderResponse, PartsSetupPartData, PartsSetupPartResponse, PartsRefreshPartDataData, PartsRefreshPartDataResponse, PartsReadPartsData, PartsReadPartsResponse, PartsCreatePartData, PartsCreatePartResponse, PartsCreatePartFromFolderData, PartsCreatePartFromFolderResponse, PartsUpdatePartData, PartsUpdatePartResponse, PartsDeletePartData, PartsDeletePartResponse, PartsReadPartDeletionData, PartsReadPartDeletionResponse, PartsReadComponentOptionsData, PartsReadComponentOptionsResponse, PartsSaveComponentOrganizationData, PartsSaveComponentOrganizationResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class AssistantService {
     /**
@@ -1678,6 +1678,58 @@ export class LoginService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/login/microsoft/logout'
+        });
+    }
+}
+
+export class OriginalsService {
+    /**
+     * Read Originals
+     * @returns FolderInfo Successful Response
+     * @throws ApiError
+     */
+    public static readOriginals(): CancelablePromise<OriginalsReadOriginalsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/admin/originals'
+        });
+    }
+
+    /**
+     * Save Originals
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns FolderInfo Successful Response
+     * @throws ApiError
+     */
+    public static saveOriginals(data: OriginalsSaveOriginalsData): CancelablePromise<OriginalsSaveOriginalsResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/admin/originals',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+
+    /**
+     * Check Originals
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns FolderCheck Successful Response
+     * @throws ApiError
+     */
+    public static checkOriginals(data: OriginalsCheckOriginalsData): CancelablePromise<OriginalsCheckOriginalsResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin/originals/check',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
         });
     }
 }

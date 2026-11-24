@@ -54,6 +54,17 @@ class LoginMethods(SQLModel):
     source_name: str
 
 
+class SharePointFolder(SQLModel, table=True):
+    """Administrator-selected originals folder for this logical dataset."""
+
+    source_id: str = Field(primary_key=True, max_length=100)
+    drive_id: str
+    item_id: str
+    name: str
+    web_url: str
+    revision: uuid.UUID = Field(default_factory=uuid.uuid4)
+
+
 class MicrosoftLoginStart(SQLModel):
     auth_uri: str
 

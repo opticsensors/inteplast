@@ -397,6 +397,19 @@ export type FileStatus = {
 
 export type state2 = 'available' | 'missing' | 'changed' | 'unavailable';
 
+export type FolderCheck = {
+    folder: FolderInfo;
+    total: number;
+    checked: number;
+    found: number;
+    unavailable: Array<(string)>;
+    ticket: string;
+};
+
+export type FolderChoice = {
+    ticket: string;
+};
+
 export type FolderDiscovery = {
     folder_path: string;
     name: string;
@@ -405,6 +418,16 @@ export type FolderDiscovery = {
     code?: string;
     existing_part?: (PartPublic | null);
     suggested_features?: Array<FeatureSuggestion>;
+};
+
+export type FolderInfo = {
+    name: string;
+    web_url: (string | null);
+    per_user?: boolean;
+};
+
+export type FolderLink = {
+    url: string;
 };
 
 export type GraphLink = {
@@ -1433,6 +1456,20 @@ export type LoginRedeemMicrosoftTicketData = {
 export type LoginRedeemMicrosoftTicketResponse = (Token);
 
 export type LoginMicrosoftLogoutResponse = (Message);
+
+export type OriginalsReadOriginalsResponse = (FolderInfo);
+
+export type OriginalsSaveOriginalsData = {
+    requestBody: FolderChoice;
+};
+
+export type OriginalsSaveOriginalsResponse = (FolderInfo);
+
+export type OriginalsCheckOriginalsData = {
+    requestBody: FolderLink;
+};
+
+export type OriginalsCheckOriginalsResponse = (FolderCheck);
 
 export type PartsReadPartDataReportData = {
     partId: string;

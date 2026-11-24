@@ -17,6 +17,30 @@ La implementación de protecciones y criterios de aceptación para todas las pie
 1. **Desplegado en Eurecat.** Un enlace guardado a un adjunto sin archivo indica que los archivos se gestionan en la ficha de la pieza. Si el adjunto tiene pieza, «Abrir pieza» lleva a su ficha. La prueba local de navegador cubre ambos casos.
 2. **Completado en Eurecat.** Con Microsoft activo, **Admin → Add User** solo pide el correo corporativo. El alta crea un usuario normal activo.
 
+## 🔴 Reorganizar Metrología de las 21 piezas (prueba de concepto, 24/11/2026)
+
+**Decisión de Eduard: es un cambio importante y se hará en breve.** La reorganización la hacemos nosotros, no INTEPLAST. Se aplica en una copia de `Exemples` a las 21 piezas, para ver cómo quedaría y cómo de bien funciona la app. Después se enseña el resultado a INTEPLAST. La app es la misma; deben mejorar sus resultados. El código del backend queda así como versión definitiva, preparada para la estructura que habrá de verdad.
+
+**Regla:** en `4- Metrologia/Interns/`, solo informes de muestreo, un Excel por muestreo. Si existen, los CSV de máquina pueden ir junto al Excel de su muestreo, pero solo sirven de comprobación. Todo lo demás va en cualquier otra carpeta: copias de cliente, Cpk, comparativas, MSA, volcados y PPAP. Detalle en [Método 3](estructura-de-carpetas-por-pieza.md#método-3-organizar-la-metrología-solo-con-excel).
+
+1. **Relación de operaciones por pieza**, de ruta actual a destino:
+   - informes de la raíz (3051, 3197, 3212) y de `Version 00/Interns` (3174) a `Interns/`;
+   - comparativas fuera de `Interns/`;
+   - copias dudosas, en su sitio;
+   - CSV de máquina junto al Excel de su muestreo.
+2. **Aplicarla en la copia de trabajo,** sin tocar los originales.
+3. **Cambiar el backend:**
+   - leer medidas solo de `Interns/`;
+   - leer la variante (`-00`, `-10`, `-20`) y separar sus historiales;
+   - avisar de los Excel sin muestreo reconocible y de los muestreos con varios Excel;
+   - usar el CSV solo para comprobar (decisión 3): las medidas salen siempre del Excel; si el CSV da otro valor para la misma cota, muestreo y cavidad, la app avisa sin cambiar nada. Antes, contar en 3167, 3197, 3212 y 3233 cuántas cotas del Excel se identifican en el CSV ([límite](estructura-de-carpetas-por-pieza.md#método-3-organizar-la-metrología-solo-con-excel)).
+4. **Recargar las 21 piezas y comparar con la carga actual:** muestreos, series duplicadas, avisos y gráficas.
+5. **Enseñarlo a INTEPLAST con las preguntas abiertas:**
+   - qué significan las variantes;
+   - qué copia vale en los 13 muestreos repetidos dentro de `Interns/`;
+   - qué son `3206-00_intern.121` y `.122`;
+   - si adoptan la estructura para los informes nuevos.
+
 ## Siguientes pasos acordados para Planos y Cotas (23/11/2026)
 
 1. **Mostrar solo el plano vigente en la ficha y en Planos.** Tomar el PDF definitivo de `1- 2D y 3D pieza`. Usar su `.icp` únicamente si corresponde a ese plano y está en esa misma carpeta. Si falta, mostrar el PDF solo. Excluir los PDF y `.icp` de método de medición, retoques y `OLD` de la selección del vigente. Mostrar una tarjeta por pieza o por componente con plano propio y conservar todas las hojas del PDF. Si hay varios candidatos indistinguibles, dejar la elección al usuario. Aplicar también el criterio de vigencia al CAD de pieza y al molde en sus carpetas correspondientes.

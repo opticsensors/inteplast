@@ -351,7 +351,7 @@ varias, y consultar una versión anterior desde el historial de importaciones de
 | `/parts/nueva` | `routes/_layout/parts_.nueva.tsx` | Alta de pieza desde su carpeta, con la misma composición que la ficha |
 | `/parts/{id}/fichero/{fileId}` | `routes/_layout/parts_.$partId_.fichero.$fileId.tsx` | 🔑 **La página de un archivo de la pieza**: visor PDF con buscador de cotas, tabla CSV/XLS/XLSX, imagen o 3D; si no hay visor, descarga del original |
 | `/features/nuevo` | `routes/_layout/features_.nuevo.tsx` | **Alta completa** con todas las secciones desde el principio. Añadir contenido crea el feature automáticamente; Guardar termina en su ficha de consulta |
-| `/admin` | `routes/_layout/admin.tsx` | Usuarios y permisos; punto de alta de cuentas con el registro público cerrado |
+| `/admin` | `routes/_layout/admin.tsx` | Usuarios, permisos y selección de la [carpeta de originales](ficheros-externos.md#cambiar-la-carpeta-desde-admin) de SharePoint |
 
 Componentes en `components/Features/`:
 
