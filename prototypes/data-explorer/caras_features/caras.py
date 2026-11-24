@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import struct
 from dataclasses import dataclass, field
+from itertools import product
 from pathlib import Path
 
 import numpy as np
@@ -263,9 +264,10 @@ def render(
     return img
 
 
-def ids_visibles(m: Modelo, cam: dict, size: int = 160) -> np.ndarray:
-    """Mapa de píxeles -> índice global de cara (+1; 0 = fondo)."""
+def _visor_ids(m: Modelo, size: int):
+    """Colores enteros por cara, sin mezclar identificadores en los bordes."""
     p = pv.Plotter(off_screen=True, window_size=(size, size), lighting=None)
+    p.render_window.SetMultiSamples(0)
     p.background_color = (0, 0, 0)
     for mi in range(len(m.positions)):
         ids = np.zeros(len(m.triangles[mi]), np.int64)
@@ -276,10 +278,24 @@ def ids_visibles(m: Modelo, cam: dict, size: int = 160) -> np.ndarray:
         poly = _poly(m, mi)
         poly.cell_data["rgb"] = rgb
         p.add_mesh(poly, scalars="rgb", rgb=True, lighting=False)
+    return p
+
+
+def _mapa_ids(p, m, cam):
     _poner_camara(p, cam, m)
-    img = p.screenshot(return_img=True).astype(np.int64)
-    p.close()
-    return (img[..., 0] << 16) | (img[..., 1] << 8) | img[..., 2]
+    p.render()
+    rgb = p.screenshot(return_img=True).astype(np.int32)
+    return (rgb[..., 0] << 16) | (rgb[..., 1] << 8) | rgb[..., 2]
+
+
+def ids_visibles(m: Modelo, cam: dict, size: int = 160) -> np.ndarray:
+    """Índice de cara por píxel (+1; 0 = fondo)."""
+    p = _visor_ids(m, size)
+    try:
+        p.show(auto_close=False, interactive=False)
+        return _mapa_ids(p, m, cam)
+    finally:
+        p.close()
 
 
 def _direcciones(n: int = 48) -> np.ndarray:
@@ -314,17 +330,47 @@ def encuadre(
     target = (lo + hi) / 2
     extent = max(np.linalg.norm(hi - lo), 0.7 * m.diagonal / zoom)
     dist = extent * 0.5 / np.tan(np.radians(22.5)) * 1.15
-    best = None
-    for d in _direcciones() if dirs is None else dirs:
-        # Preferir vistas algo elevadas e isométricas, como la inicial de la app.
-        cam = {"position": list(target + d * dist), "target": list(target), "up": _up(d)}
-        ids = ids_visibles(m, cam)
-        vis = np.isin(ids, selg)
-        n_faces = len(np.intersect1d(np.unique(ids[vis]), selg))
-        score = n_faces / len(selg) + 0.5 * vis.mean() ** 0.5 + 0.05 * d[2] - 0.05 * abs(abs(d[0]) - abs(d[1]))
-        if best is None or score > best[0]:
-            best = (score, cam, n_faces / len(selg))
-    return best[1], best[2]
+    direcciones = _direcciones() if dirs is None else dirs
+    p = _visor_ids(m, 192)
+    # Evitar que un primer plano coloque la cámara dentro o pegada al sólido.
+    limites = np.concatenate(m.positions)
+    caja = np.array(list(product(*zip(limites.min(0), limites.max(0))))) - m.centro
+
+    def buscar(objetivo, distancia):
+        best = None
+        for d in direcciones:
+            frontal = ((caja - objetivo) @ d).max() + 0.12 * m.diagonal
+            cam = {"position": list(objetivo + d * max(distancia, frontal)), "target": list(objetivo), "up": _up(d)}
+            ids = _mapa_ids(p, m, cam)
+            vis = np.isin(ids, selg)
+            fraccion = len(np.unique(ids[vis])) / len(selg)
+            area = vis.mean()
+            score = fraccion + 3 * np.sqrt(area) + 0.025 * d[2]
+            if best is None or score > best[0]:
+                best = (score, cam, fraccion, area)
+        return best
+
+    try:
+        p.show(auto_close=False, interactive=False)
+        best = buscar(target, dist)
+        if best[3] < 0.0015:
+            # Un pin puede estar técnicamente visible y ocupar un solo píxel.
+            # Probar el grupo más denso y un segundo grupo separado, sin cambiar las caras.
+            radio = 0.12 * m.diagonal
+            densidad = [np.count_nonzero(np.linalg.norm(pts - pt, axis=1) <= radio) for pt in pts]
+            disponibles = np.ones(len(pts), dtype=bool)
+            for _ in range(2):
+                if not disponibles.any():
+                    break
+                centro = pts[np.argmax(np.where(disponibles, densidad, -1))]
+                cerca = np.linalg.norm(pts - centro, axis=1) <= radio
+                detalle = buscar(pts[cerca].mean(0), min(dist, 0.32 * m.diagonal))
+                if detalle[3] > best[3] * 2 and detalle[2] > 0:
+                    best = detalle
+                disponibles &= ~cerca
+        return best[1], best[2]
+    finally:
+        p.close()
 
 
 def guardar_png(img: np.ndarray, path: str | Path) -> None:

@@ -6,8 +6,8 @@ preparar el paso siguiente (una pieza con todos sus features en colores y leyend
 
 > 🔴 **Son propuestas del LLM sin validar.** No acreditan una selección automática fiable ni
 > sustituyen la decisión de Eduard o de INTEPLAST (regla del 16/11/2026, [AGENTS.md](../../../AGENTS.md)).
-> Si una portada está mal, se corrige la **regla** en `reglas.py` y se vuelve a generar; no se
-> retocan caras a mano en la app para disimularlo.
+> El agente corrige las reglas en `reglas.py`. Eduard revisa las propuestas desde Features
+> y puede editar las caras y el encuadre de cada portada.
 
 ## Qué hay
 
@@ -47,13 +47,30 @@ apoya la regla en una cota concreta, no un acierto medido.
 | Planitudes | 3168 | Cara plana mayor y coplanarias | baja |
 | Paredes muy delgadas | 3233, 3237, 3238 | Caras planas enfrentadas a 0,40 ± 0,01 con solape | media |
 | Tetones | 3214 | Cuatro pines Ø1,14 (cota 6) y sus tapas | alta |
-| Tetones | 3167 | Pines Ø2: la cota 500 dice Ø1,4 y no hay cilindros de ese diámetro | baja |
+| Tetones | 3167 | Seis pines con salida, de Ø1,4 ±0,05 en los flancos, con las caras contiguas de cada pin. Cota 500 y corrección 1.3, diapositiva 3 | media |
 
 **Sin propuesta:** 3309 (clips en diagonal, ninguna regla los aísla), 3214 en Nervios (el nervio
 central no tiene el perfil a 60°), Pockets 3056 y 3167 (la regla de espesor 0,85 / 0,8 encuentra
 paredes ocultas dentro de la pieza; la captura no enseña ningún pocket, falta una regla del hueco)
 y 3202 (sin CAD). **No tocados:** 3212 Bolt Eye y 3288 Tetones,
 portadas de Eduard.
+
+### Carga para revisión de Eduard en local
+
+El 24/11/2026 se guardaron 18 portadas editables en Features mediante la API local, con
+sesión de Microsoft. Antes de la carga se contrastaron los 16 CAD vinculados con los GLB.
+Las selecciones de Eduard en 3212 y 3288 se conservaron. Para revisar una propuesta, abrir
+el feature en **Editar → Cambiar imagen → CAD**. **Aplicar** deja la modificación en el
+borrador de esa pieza y **Guardar** la conserva en la ficha.
+
+En el 3167 la regla revisada identifica seis grupos separados de 22 caras en el GLB. Lee los
+arcos en ambos extremos de cada flanco para admitir la salida del pin. La regla de tapas
+de los pines rectos sigue las aristas del extremo y descarta superficies coaxiales alejadas.
+La comparación con el plano sigue pendiente de validación por Eduard.
+
+Cuando Eduard confirme la revisión, la referencia para el traslado al servidor será la
+portada guardada en cada vínculo local, con su PNG, sus caras, cámara y revisión de CAD.
+El traslado de esas ediciones es independiente del despliegue de código.
 
 ## Límites
 
@@ -62,5 +79,5 @@ portadas de Eduard.
 - La captura PNG la dibuja PyVista, no el navegador. El tono y el grosor de las aristas son
   parecidos a los de la app, no idénticos. Al ampliar, la app dibuja el 3D con sus propias
   caras y cámara.
-- El encuadre busca la dirección que enseña más caras marcadas y su área. Con caras repartidas
-  por toda la pieza enseña la pieza entera.
+- El encuadre compara la cantidad de caras visibles y su área en pantalla. Si la zona marcada
+  ocupa muy pocos píxeles, prueba una vista de detalle con la cámara fuera de la pieza.

@@ -15,7 +15,6 @@ sin regla fiable no lleva propuesta: se anota en `SIN_PROPUESTA`.
 
 from __future__ import annotations
 
-import glob
 import json
 import sys
 from pathlib import Path
@@ -110,8 +109,9 @@ PROPUESTAS = {
         "Caras enfrentadas a 0,40 (148 espesor 0,4 ±0,05, sección D–D)."),
     ("Tetones", "3214"): (lambda m: reglas.pines(m, 0.57, 0.01), "alta",
         "Cuatro pines Ø1,14 (cota 6, corrección 1.1 «increase in Ø0,03 the pins»)."),
-    ("Tetones", "3167"): (lambda m: reglas.pines(m, 1.0, 0.01, area_min=5), "baja",
-        "Pines Ø2 de la cara superior. La cota 500 dice Ø1,4 «Gauss pin»: no hay cilindros Ø1,4."),
+    ("Tetones", "3167"): (lambda m: reglas.pines_con_desmoldeo(m, 0.7, 0.025), "media",
+        "Cota 500: seis pines Ø1,4 ±0,05. Se admiten los flancos con salida y sus caras contiguas; "
+        "la corrección 1.3 muestra tres nervios por pin."),
 }
 
 SIN_PROPUESTA = {
@@ -150,9 +150,15 @@ def main(glb_dir: str, out_dir: str) -> None:
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     resultado, por_pieza = [], {}
+    def modelo(pieza):
+        archivos = list((Path(glb_dir) / CAD[pieza]).glob("*.glb"))
+        if len(archivos) != 1:
+            raise ValueError(f"{pieza}: se esperaba un único GLB para el CAD, hay {len(archivos)}")
+        return caras.leer_glb(archivos[0])
+
     for (feature, pieza), (regla, conf, porque) in PROPUESTAS.items():
         fid = CAD[pieza]
-        m = caras.leer_glb(glob.glob(f"{glb_dir}/{fid}/*.glb")[0])
+        m = modelo(pieza)
         sel = sorted({c.key for c in regla(m)})
         if not sel:
             print(f"{feature} {pieza}: la regla no encuentra caras")
@@ -176,7 +182,7 @@ def main(glb_dir: str, out_dir: str) -> None:
     for pieza, feats in por_pieza.items():
         if len(feats) < 2:
             continue
-        m = caras.leer_glb(glob.glob(f"{glb_dir}/{CAD[pieza]}/*.glb")[0])
+        m = modelo(pieza)
         col, todas = {}, []
         for i, (_, sel) in enumerate(feats):
             for k in sel:
@@ -187,7 +193,7 @@ def main(glb_dir: str, out_dir: str) -> None:
         img = _leyenda(img, [(f, COLORES[i % len(COLORES)]) for i, (f, _) in enumerate(feats)])
         caras.guardar_png(img, out / f"pieza_{pieza}.png")
     (out / "propuestas.json").write_text(json.dumps({
-        "fecha": "2026-11-24", "autor": "Claude (LLM), sin validar",
+        "fecha": "2026-11-24", "autor": "Prototipo de reglas geométricas, pendiente de revisión de Eduard",
         "propuestas": resultado,
         "sin_propuesta": [{"feature": f, "pieza": p, "motivo": t} for (f, p), t in SIN_PROPUESTA.items()],
     }, ensure_ascii=False, indent=1), encoding="utf-8")

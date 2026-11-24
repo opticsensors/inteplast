@@ -37,19 +37,103 @@ def agujeros(m: Modelo, radio: float, tol: float = 0.03, excluir_centro: float =
     return out
 
 
-def tapas(m: Modelo, cil: list[Cara]) -> list[Cara]:
-    """Caras planas que cierran un pin: normal según el eje y dentro del radio."""
-    out = []
-    planos = [c for c in m.caras if c.tipo == "plano"]
-    for p in cil:
-        for c in planos:
-            if abs(abs(c.normal @ p.eje) - 1) > 0.01:
+def _continuacion(m, semilla, origen, eje, radio, zmin, zmax):
+    """Sigue aristas compartidas dentro del volumen del pin, incluidas sus tapas."""
+    por_arista = {}
+    centro = origen + eje * ((zmin + zmax) / 2)
+    alcance = np.hypot(radio, (zmax - zmin) / 2)
+    for c in m.caras:
+        if c.key != semilla.key:
+            if c.mesh != semilla.mesh or np.linalg.norm(c.centro - centro) > alcance:
                 continue
-            rel = c.centro - p.eje_punto
-            rel -= (rel @ p.eje) * p.eje
-            if np.linalg.norm(rel) < 0.3 * p.radio and c.area < np.pi * p.radio**2 * 1.2:
-                out.append(c)
-    return out
+            w = _verts(m, c) - origen
+            z = w @ eje
+            if z.min() < zmin or z.max() > zmax:
+                continue
+            if np.linalg.norm(w - np.outer(z, eje), axis=1).max() > radio:
+                continue
+        # Los dos lados de la costura OCCT pueden usar índices de vértice distintos.
+        tri = m.triangles[c.mesh][c.first : c.last + 1]
+        edges = np.sort(np.vstack([tri[:, [0, 1]], tri[:, [1, 2]], tri[:, [2, 0]]]), axis=1)
+        edges, counts = np.unique(edges, axis=0, return_counts=True)
+        for a, b in np.round(m.positions[c.mesh][edges[counts == 1]], 5):
+            edge = tuple(sorted((tuple(a), tuple(b))))
+            por_arista.setdefault(edge, set()).add(c.key)
+    vecinos = {}
+    for keys in por_arista.values():
+        for k in keys:
+            vecinos.setdefault(k, set()).update(keys)
+    vistas, pendientes = {semilla.key}, [semilla.key]
+    while pendientes:
+        nuevas = vecinos.get(pendientes.pop(), set()) - vistas
+        vistas.update(nuevas)
+        pendientes.extend(nuevas)
+    return [m.cara(*k) for k in sorted(vistas)]
+
+
+def tapas(m: Modelo, cil: list[Cara]) -> list[Cara]:
+    """Solo superficies unidas al extremo del pin, incluso si hay un chaflán."""
+    out = {}
+    for p in cil:
+        z = (_verts(m, p) - p.eje_punto) @ p.eje
+        for borde, signo in [(z.min(), -1), (z.max(), 1)]:
+            extremo = p.eje_punto + borde * p.eje
+            caras = _continuacion(m, p, extremo, signo * p.eje, p.radio + 0.02, -0.01, 0.75 * p.radio)
+            for c in caras:
+                if c.tipo == "plano" and c.normal @ (signo * p.eje) > 0.99:
+                    out[c.key] = c
+    return list(out.values())
+
+
+def _arco(xy):
+    if len(xy) < 5:
+        return None
+    media = xy.mean(0)
+    puntos = xy - media
+    ajuste = np.c_[2 * puntos, np.ones(len(xy))]
+    x, y, _ = np.linalg.lstsq(ajuste, (puntos * puntos).sum(1), rcond=None)[0]
+    centro = media + [x, y]
+    delta = xy - centro
+    radios = np.linalg.norm(delta, axis=1)
+    angulos = np.sort(np.arctan2(delta[:, 1], delta[:, 0]))
+    if np.ptp(radios) > 0.003 or np.diff(np.r_[angulos, angulos[0] + 2 * np.pi]).max() > 1.6 * np.pi:
+        return None
+    return centro, radios.mean()
+
+
+def pines_con_desmoldeo(m: Modelo, radio: float, tol: float) -> list[Cara]:
+    """Pin con salida sobre la cara principal y diámetro en tolerancia en ambos extremos."""
+    eje = max((c for c in m.caras if c.tipo == "plano"), key=lambda c: c.area).normal
+    u = np.cross(eje, [1, 0, 0] if abs(eje[0]) < 0.9 else [0, 1, 0])
+    u /= np.linalg.norm(u)
+    v = np.cross(eje, u)
+    seleccion = {}
+    for c in m.caras:
+        if c.tipo == "plano" or c.key in seleccion:
+            continue
+        w = _verts(m, c)
+        z = w @ eje
+        if np.ptp(z) < radio:
+            continue
+        xy = np.c_[w @ u, w @ v]
+        if np.ptp(xy, axis=0).max() > 2 * (radio + tol):
+            continue
+        a = _arco(xy[z <= z.min() + 0.001])
+        b = _arco(xy[z >= z.max() - 0.001])
+        if a is None or b is None or max(abs(a[1] - radio), abs(b[1] - radio)) > tol:
+            continue
+        if np.linalg.norm(a[0] - b[0]) > 0.01:
+            continue
+        centro = (a[0] + b[0]) / 2
+        origen = centro[0] * u + centro[1] * v
+        tri = m.positions[c.mesh][m.triangles[c.mesh][c.first : c.last + 1]]
+        normales = np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0])
+        rel = tri.mean(1) - origen
+        if (normales * (rel - np.outer(rel @ eje, eje))).sum() <= 0:
+            continue  # Orificio, con las normales hacia el eje.
+        caras = _continuacion(m, c, origen, eje, 1.25 * radio, z.min() - radio, z.max() + radio)
+        seleccion.update((cara.key, cara) for cara in caras)
+    return list(seleccion.values())
 
 
 def pines(m: Modelo, radio: float, tol: float = 0.03, area_min: float = 0.0) -> list[Cara]:
