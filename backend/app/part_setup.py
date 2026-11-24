@@ -597,6 +597,8 @@ def save_references(
 
 
 def refresh(session: Session, part: Part, user_id: uuid.UUID) -> PartRefreshResult:
+    from app.previews import queue_part_previews
+
     paths = folder_files(part.folder_path or "")
     used_files: dict[str, str] = {}
     added, skipped = automatic_measurements.refresh(
@@ -652,6 +654,7 @@ def refresh(session: Session, part: Part, user_id: uuid.UUID) -> PartRefreshResu
         )
     if not correction_files:
         notices.append("No se han encontrado documentos de correcciones.")
+    queue_part_previews(session, part, user_id)
     return PartRefreshResult(
         imported=added,
         skipped=skipped,

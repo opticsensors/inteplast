@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog"
 import { useCatalogCover } from "@/hooks/useCatalogCover"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
+import { usePrepareCover } from "@/hooks/usePrepareCover"
 
 // Catalogue thumbnails share one worker/WebGL slot, even when several cards mount together.
 let queue: Promise<unknown> = Promise.resolve()
@@ -134,6 +135,7 @@ export function PartCover({ part }: { part: PartCardPublic }) {
   const cad =
     part.cad && /\.(step|stp)$/i.test(part.cad.filename) ? part.cad : undefined
   const name = partLabel(part)
+  usePrepareCover(cad, part.cad_cache_key)
   const fallback = (
     <FeatureThumbnail
       feature={{ name, image }}

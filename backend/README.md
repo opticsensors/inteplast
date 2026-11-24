@@ -21,6 +21,14 @@ workspace en `.venv`. Desde `backend/`, activar `../.venv/bin/activate` (Bash) o
 arrancado, aplicar las migraciones y crear el administrador siguiendo la receta de
 [development.md](../development.md); el proceso local no ejecuta el `prestart` de Docker.
 
+Para preparar las portadas 3D con el backend de Python fuera de Docker, usa Node 22 y
+ejecuta lo siguiente desde la raíz después de `npm ci`. Repite el comando si cambia el
+conversor de portadas. La imagen Docker ya incluye este paso.
+
+```sh
+npx --no-install esbuild backend/scripts/cover-glb.mjs --bundle --platform=node --format=cjs --external:occt-import-js --outfile=node_modules/.cache/inteplast-cad/cover.cjs
+```
+
 ## Pruebas
 
 Desde la raíz:

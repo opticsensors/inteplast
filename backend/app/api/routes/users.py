@@ -70,15 +70,13 @@ def create_user(
         email = user_in.email.lower()
         # Local sign-in is disabled. The database still requires a password hash.
         account = UserCreate(email=email, password=secrets.token_urlsafe(48))
-        existing = session.exec(
-            select(User.id).where(func.lower(User.email) == email)
-        ).first()
+        email_match = func.lower(User.email) == email
     else:
         if not isinstance(user_in, UserCreate):
             raise HTTPException(422, "Password is required for local sign-in.")
         account = user_in
-        existing = crud.get_user_by_email(session=session, email=account.email)
-    if existing:
+        email_match = col(User.email) == account.email
+    if session.exec(select(User.id).where(email_match)).first() is not None:
         raise HTTPException(
             status_code=400,
             detail="The user with this email already exists in the system.",

@@ -44,7 +44,7 @@ from app.models import (
     StoredFile,
     User,
 )
-from app.previews import delete_preview, preview_key, preview_path, request_preview
+from app.previews import delete_preview, preview_key, preview_path, queue_preview
 from app.source_tables import SourceTable, read_table
 from app.thumbnails import (
     delete_thumbnails,
@@ -294,6 +294,10 @@ def relink_file(
     document.sqlmodel_update(reference_metadata(body))
     document.screenshot_id = None
     session.add(document)
+    if any(asset.kind == "part" for asset in assets):
+        from app.previews import queue_product_step
+
+        queue_product_step(session, document.id, _current_user.id)
     for asset in assets:
         asset.name = document.filename
         session.add(asset)
@@ -467,7 +471,9 @@ def prepare_preview(
     ).first()
     if document is None:
         raise HTTPException(status_code=404, detail="File not found")
-    preview = request_preview(session, document, retry, current_user.id)
+    preview = queue_preview(session, document, retry, current_user.id)
+    session.commit()
+    session.refresh(preview)
     result = FilePreviewPublic(state=preview.state, message=preview.message)
     if preview.state == "ready":
         expires_at = datetime.now(timezone.utc) + timedelta(

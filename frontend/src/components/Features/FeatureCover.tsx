@@ -18,6 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { usePrepareCover } from "@/hooks/usePrepareCover"
 import { cn } from "@/lib/utils"
 import { CoverButton } from "./CoverButton"
 import { CoverDialog } from "./CoverDialog"
@@ -166,6 +167,10 @@ export function FeatureCover({ feature }: { feature: FeatureDetail }) {
         code: coverPieceLabel(feature, slide),
       }
     : { image: feature.image ?? null, cover: null }
+  usePrepareCover(
+    view.cover ? coverAsset(feature, view.cover)?.file : null,
+    view.cover?.source_sha256,
+  )
 
   if (!slide && !feature.image)
     return <FeatureThumbnail feature={feature} className={COVER_SIZE} />

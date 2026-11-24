@@ -316,6 +316,63 @@ test("real STEP worker preserves existing cover-v1 surfaces and modal fits its s
   await expect(surface(page).locator("canvas")).toHaveCount(0)
 })
 
+test("a server GLB restores the saved STEP faces without importing the original", async (t) => {
+  const dir = path.join(
+    os.homedir(),
+    ".codex",
+    "scratch",
+    "inteplast-cover-tests",
+    String(process.pid),
+    "glb",
+  )
+  fs.mkdirSync(dir, { recursive: true })
+  const script = path.join(dir, "cover.cjs")
+  const glb = path.join(dir, "cube.glb")
+  require("esbuild").buildSync({
+    entryPoints: [path.resolve(frontend, "../backend/scripts/cover-glb.mjs")],
+    outfile: script,
+    bundle: true,
+    platform: "node",
+    format: "cjs",
+    external: ["occt-import-js"],
+  })
+  require("node:child_process").execFileSync(
+    process.execPath,
+    [
+      script,
+      path.join(occtRoot, "test/testfiles/simple-basic-cube/cube.stp"),
+      glb,
+    ],
+    { env: { ...process.env, NODE_PATH: path.dirname(occtRoot) } },
+  )
+  const page = await mount(t)
+  let originals = 0
+  await page.route("**/files/part-step?*", (route) => {
+    originals++
+    return route.abort()
+  })
+  await page.route("**/cube.glb", (route) =>
+    route.fulfill({ path: glb, contentType: "model/gltf-binary" }),
+  )
+  await page.evaluate(async () => {
+    const { FilesService } = await import("/tests/components/fixtures/api.js")
+    FilesService.preparePreview = async () => ({
+      state: "ready",
+      url: "/cube.glb",
+    })
+    await window.review.navigate("/cover")
+  })
+  await page.getByRole("button", { name: "Ampliar portada" }).click()
+  await ready(page)
+  assert.equal(await page.evaluate(() => window.workerStats.started), 0)
+  assert.equal(originals, 0)
+  await page.keyboard.press("Escape")
+  await page.route("**/cube.glb", (route) => route.fulfill({ status: 403 }))
+  await page.getByRole("button", { name: "Ampliar portada" }).click()
+  await expect(page.getByRole("alert")).toContainText("CAD no está disponible")
+  await expect(surface(page).locator("canvas")).toHaveCount(0)
+})
+
 test("a thumbnail and viewer can share STEP preparation and cancel independently", async (t) => {
   const page = await mount(t)
   const result = await page.evaluate(async (data) => {

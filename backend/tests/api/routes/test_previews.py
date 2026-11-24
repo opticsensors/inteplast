@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 import trimesh
 from fastapi.testclient import TestClient
-from sqlalchemy import text
+from sqlalchemy import delete, text
 from sqlmodel import Session
 
 from app import previews
@@ -18,8 +18,110 @@ from app.core.config import settings
 from app.core.db import engine
 from app.models import FilePreview, StoredFile
 from app.preview_converter import convert, sha256
+from app.source_types import SourceItem
 
 BASE = f"{settings.API_V1_STR}/files"
+
+
+@pytest.fixture(scope="module", autouse=True)
+def isolate_preview_queue(db: Session) -> None:
+    # Other API tests now enqueue product CAD on registration. These worker tests
+    # exercise the first pending job in the isolated test database.
+    db.execute(delete(FilePreview))
+    db.commit()
+
+
+def test_registered_step_prepares_selectable_glb(
+    client: TestClient,
+    db: Session,
+    superuser_token_headers: dict[str, str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from OCP.BRepPrimAPI import BRepPrimAPI_MakeBox
+    from OCP.STEPControl import STEPControl_AsIs, STEPControl_Writer
+
+    monkeypatch.setattr(settings, "ASSETS_ROOT", str(tmp_path))
+    folder = tmp_path / "box"
+    folder.mkdir()
+    source = folder / "box.stp"
+    writer = STEPControl_Writer()
+    writer.Transfer(BRepPrimAPI_MakeBox(2, 3, 4).Shape(), STEPControl_AsIs)
+    writer.Write(str(source))
+    part = client.post(
+        f"{settings.API_V1_STR}/parts/register",
+        headers=superuser_token_headers,
+        json={
+            "code": "prepared-box",
+            "folder_path": "box",
+            "files": [
+                {"kind": "part", "name": "CAD", "path": "box/box.stp", "primary": True}
+            ],
+        },
+    )
+    assert part.status_code == 200, part.text
+    detail = client.get(
+        f"{settings.API_V1_STR}/parts/{part.json()['id']}/detail",
+        headers=superuser_token_headers,
+    ).json()
+    file_id = detail["part"]["cad"]["id"]
+    job = db.get(FilePreview, uuid.UUID(file_id))
+    assert job and job.state == "queued"
+    assert previews.process_next(threading.Event())
+    ready = client.post(
+        f"{BASE}/{file_id}/preview", headers=superuser_token_headers
+    ).json()
+    assert ready["state"] == "ready", ready
+    binary = client.get(ready["url"]).content
+    length = struct.unpack_from("<I", binary, 12)[0]
+    model = json.loads(binary[20 : 20 + length])
+    assert model["extras"]["sourceHash"] == sha256(source)
+    assert len(model["extras"]["geometryKey"]) == 64
+    (mesh,) = model["meshes"]
+    assert len(mesh["extras"]["faces"]) == 6
+    assert [primitive["mode"] for primitive in mesh["primitives"]] == [4, 1]
+    assert client.get(f"{BASE}/{file_id}/preview").status_code == 401
+
+    # SharePoint identifies the same bytes by a different version. Keep checking
+    # current access and content while reusing the already prepared geometry.
+    monkeypatch.setattr(previews.sharepoint, "enabled", lambda: True)
+    monkeypatch.setattr(
+        previews.sharepoint,
+        "item",
+        lambda path: SourceItem(
+            path, directory=False, size=source.stat().st_size, version=sha256(source)
+        ),
+    )
+    monkeypatch.setattr(previews.sharepoint, "download", lambda _item: source)
+    endpoint = f"{BASE}/{file_id}/preview"
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            previews,
+            "run_converter",
+            lambda *_: pytest.fail("Repeated STEP conversion"),
+        )
+        assert client.get(ready["url"]).status_code == 401
+        assert (
+            client.post(endpoint, headers=superuser_token_headers).json()["state"]
+            == "queued"
+        )
+        assert previews.process_next(threading.Event())
+        updated = client.post(endpoint, headers=superuser_token_headers).json()
+        assert updated["state"] == "ready"
+        assert client.get(updated["url"]).content == binary
+
+    # A different STEP must invoke the converter even at the same path and size.
+    data = source.read_bytes()
+    assert b"\n" in data
+    source.write_bytes(data.replace(b"\n", b" ", 1))
+    assert (
+        client.post(endpoint, headers=superuser_token_headers).json()["state"]
+        == "queued"
+    )
+    assert previews.process_next(threading.Event())
+    changed = client.post(endpoint, headers=superuser_token_headers).json()
+    assert changed["state"] == "ready"
+    assert client.get(changed["url"]).content != binary
 
 
 def test_step_reduction_preserves_a_closed_surface(

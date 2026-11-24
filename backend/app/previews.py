@@ -26,15 +26,28 @@ from sqlmodel import Session, col, select
 from app import sharepoint
 from app.core.config import settings
 from app.core.db import engine
-from app.file_sources import document_path, document_version
-from app.models import FilePreview, StoredFile
-from app.preview_converter import EXTENSIONS, MAX_INPUT_BYTES, preview_recipe
+from app.file_sources import document_cache_key, document_path, document_version
+from app.models import FilePreview, Part, StoredFile
+from app.preview_converter import (
+    COVER_RECIPE,
+    EXTENSIONS,
+    MAX_INPUT_BYTES,
+    cover_command,
+    preview_recipe,
+    sha256,
+)
 
 logger = logging.getLogger(__name__)
 WORKER_LOCK = 3212091501
 
 
 def preview_key(document: StoredFile) -> str:
+    recipe = preview_recipe(Path(document.filename).suffix.lower(), document.size)
+    if recipe == COVER_RECIPE:
+        # Use the same verified source identity as the catalogue PNG.
+        return hashlib.sha256(
+            f"{recipe}:{document_cache_key(document)}".encode()
+        ).hexdigest()
     return hashlib.sha256(
         json.dumps(
             [
@@ -44,7 +57,7 @@ def preview_key(document: StoredFile) -> str:
                 document.source_key,
                 document.source_path,
                 document_version(document),
-                preview_recipe(Path(document.filename).suffix.lower()),
+                recipe,
             ]
         ).encode()
     ).hexdigest()
@@ -58,7 +71,7 @@ def preview_path(preview: FilePreview) -> Path:
     return preview_directory(preview.file_id) / f"{preview.cache_key}.glb"
 
 
-def request_preview(
+def queue_preview(
     session: Session,
     document: StoredFile,
     retry: bool,
@@ -90,28 +103,62 @@ def request_preview(
     if preview.state == "queued" and requested_by is not None:
         preview.requested_by = requested_by
     session.add(preview)
-    session.commit()
-    session.refresh(preview)
     return preview
+
+
+def queue_product_step(
+    session: Session, file_id: uuid.UUID, user_id: uuid.UUID
+) -> None:
+    document = session.exec(
+        select(StoredFile).where(StoredFile.id == file_id).with_for_update()
+    ).first()
+    if document and Path(document.filename).suffix.lower() in {".stp", ".step"}:
+        try:
+            queue_preview(session, document, retry=True, requested_by=user_id)
+        except HTTPException as exc:
+            logger.info("Preview deferred for %s: %s", file_id, exc.detail)
+
+
+def queue_part_previews(session: Session, part: Part, user_id: uuid.UUID) -> None:
+    """Schedule linked product components in the caller's transaction."""
+    from app.part_files import read_files
+
+    for file_id in sorted(
+        {item.file.id for item in read_files(session, part) if item.kind == "part"}
+    ):
+        queue_product_step(session, file_id, user_id)
 
 
 def run_converter(
     source: Path, extension: str, output: Path, stop: threading.Event
 ) -> dict[str, Any]:
-    environment = {**os.environ, "OPENBLAS_NUM_THREADS": "1", "OMP_NUM_THREADS": "1"}
+    environment = {
+        **os.environ,
+        "OPENBLAS_NUM_THREADS": "1",
+        "OMP_NUM_THREADS": "1",
+        "INTEPLAST_PREVIEW_PARENT_PID": str(os.getpid()),
+    }
+    command = [
+        sys.executable,
+        "-m",
+        "app.preview_converter",
+        str(source),
+        extension,
+        str(output),
+        str(settings.PREVIEW_MEMORY_MB),
+    ]
+    if (
+        os.name == "nt"
+        and preview_recipe(extension, source.stat().st_size) == COVER_RECIPE
+    ):
+        # Windows cannot replace a process. Supervise Node directly so cancellation
+        # and timeouts still terminate the process doing the conversion.
+        command = cover_command(source, output)
     # Native libraries can crash or hang: keep them outside the API process.
     with (
         tempfile.TemporaryFile(dir=output.parent) as errors,
         subprocess.Popen(
-            [
-                sys.executable,
-                "-m",
-                "app.preview_converter",
-                str(source),
-                extension,
-                str(output),
-                str(settings.PREVIEW_MEMORY_MB),
-            ],
+            command,
             env=environment,
             stdout=subprocess.DEVNULL,
             stderr=errors,
@@ -139,6 +186,36 @@ def run_converter(
     return metadata
 
 
+def prepare_geometry(
+    document: StoredFile, temporary: Path, stop: threading.Event
+) -> dict[str, Any]:
+    source = document_path(document)
+    extension = Path(document.filename).suffix.lower()
+    recipe = preview_recipe(extension, source.stat().st_size)
+    if recipe == COVER_RECIPE:
+        # A relink or a switch to SharePoint can change the version identifier
+        # without changing the STEP. Reuse only a published view of the same bytes.
+        for manifest in temporary.parent.glob("*.json"):
+            if len(manifest.stem) != 64:
+                continue
+            binary = manifest.with_suffix(".glb")
+            try:
+                saved = json.loads(manifest.read_bytes())
+                if (
+                    saved.get("recipe") == recipe
+                    and binary.stat().st_size == saved["size"]
+                    and sha256(source) == saved["source_sha256"]
+                ):
+                    shutil.copyfile(binary, temporary)
+                    return dict(saved)
+            except (OSError, ValueError, KeyError, TypeError, AttributeError):
+                # A missing or incomplete cache can always be rebuilt from the CAD.
+                continue
+    metadata = run_converter(source, extension, temporary, stop)
+    metadata["recipe"] = recipe
+    return metadata
+
+
 def process_next(stop: threading.Event) -> bool:
     """Called only while holding the advisory lock (or explicitly in tests)."""
     with Session(engine) as session:
@@ -163,12 +240,8 @@ def process_next(stop: threading.Event) -> bool:
                 if preview_key(document) != key:
                     raise ValueError("Source version no longer matches job")
                 output.parent.mkdir(parents=True, exist_ok=True)
-                metadata = run_converter(
-                    document_path(document),
-                    Path(document.filename).suffix.lower(),
-                    temporary,
-                    stop,
-                )
+                metadata = prepare_geometry(document, temporary, stop)
+                temporary.with_suffix(".json").write_text(json.dumps(metadata))
                 # Re-read under the same document row lock used by relink/request.
                 session.expire_all()
                 current = session.exec(

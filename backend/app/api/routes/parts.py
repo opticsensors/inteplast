@@ -239,6 +239,10 @@ def update_part(
             changes["name"] = name
     part.sqlmodel_update(changes)
     session.add(part)
+    if part_in.files is not None or part_in.references is not None:
+        from app.previews import queue_part_previews
+
+        queue_part_previews(session, part, _current_user.id)
     commit_part(session)
     session.refresh(part)
     return PartPublic.model_validate(part)

@@ -1,8 +1,9 @@
-# Vistas ligeras del escaneo y del molde
+# Vistas ligeras del CAD de producto, del escaneo y del molde
 
-Implementado el **2026-09-15**. Los STL y STEP/STP de más de 50 MiB se abren mediante
-un GLB generado automáticamente en el servidor. El visor y sus controles son los mismos
-que los del CAD de la pieza. **Descargar** sigue entregando el original íntegro.
+El servidor genera un GLB para el visor de STL y de STEP/STP de más de 50 MiB.
+Las portadas 3D de piezas y features con STEP/STP de hasta 50 MiB también usan un GLB
+preparado, que conserva las aristas y la numeración de caras del editor.
+**Descargar** sigue entregando el original íntegro.
 Por petición del usuario se elimina el pie informativo permanente «Vista simplificada…».
 El aviso específico de **Vista parcial** sigue apareciendo cuando faltan superficies.
 
@@ -36,7 +37,11 @@ la aplicación lo vuelve a generar; al eliminar el documento se elimina su cach�
 
 - STL: `trimesh` y `fast-simplification`, objetivo de **300.000 triángulos** y máximo
   aceptado de **330.000**.
-- STEP/STP: OpenCascade 7.9 mediante `cadquery-ocp`, importando todas las raíces y aplicando las
+- STEP/STP de hasta 50 MiB: la cola usa la misma versión de OpenCascade en WASM y la misma
+  preparación de mallas que el editor de portadas. Cada malla GLB incluye sus superficies,
+  sus aristas y los rangos de caras del STEP original. La selección y el encuadre de cada
+  feature se aplican al abrirlo. El límite de salida es de 25 MiB.
+- STEP/STP de mayor tamaño: OpenCascade 7.9 mediante `cadquery-ocp`, importando todas las raíces y aplicando las
   transformaciones de cada cara. Teselación con desviación absoluta de **0,1 mm** y ángulo
   **0,35 rad**; simplificación posterior con objetivo de **500.000 triángulos**. Se admiten
   hasta **1.000.000** si el reductor necesita conservar más geometría, manteniendo el límite
@@ -104,6 +109,10 @@ Los errores no se reintentan en bucle: el usuario dispone de **Reintentar** y de
 | `PREVIEW_WORKER_ENABLED` | `true`; `false` en el stack aislado de pruebas |
 | `PREVIEW_TIMEOUT_SECONDS` | `900` (15 minutos) |
 | `PREVIEW_MEMORY_MB` | `8192` (memoria virtual, Linux) |
+
+La precarga de una portada 3D usa `previews.preview_key(document)` con el mismo origen
+que utilizará la ficha. La clave de la miniatura PNG incluye además su estilo y pertenece
+a la tabla de portadas.
 
 El caché se identifica por UUID/versión del documento, origen, versión actual de sus bytes
 y receta. Para archivos locales, esa versión procede de tamaño/fecha; para SharePoint,

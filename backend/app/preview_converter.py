@@ -6,19 +6,47 @@ coordinates are retained (STEP imported in mm; STL has no declared unit).
 
 import hashlib
 import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 RECIPE = "glb-v8-occt7.9-weld-300k-stl-1m-step-limit"
 STEP_RECIPE = "glb-v9-step-face-boundaries"
+COVER_RECIPE = "glb-cover-v1-occt-js-0.0.23"
+COVER_BUNDLE = Path("/opt/inteplast-cad/cover.cjs")
+if not COVER_BUNDLE.is_file():
+    # Direct Python development uses the JS dependencies of the local checkout.
+    COVER_BUNDLE = Path(__file__).resolve().parents[2] / (
+        "node_modules/.cache/inteplast-cad/cover.cjs"
+    )
+MAX_COVER_BYTES = 50 * 1024 * 1024
 MAX_INPUT_BYTES = 512 * 1024 * 1024
 MAX_OUTPUT_BYTES = 25 * 1024 * 1024
 EXTENSIONS = {".stl", ".step", ".stp"}
 
 
-def preview_recipe(extension: str) -> str:
+def preview_recipe(extension: str, size: int | None = None) -> str:
+    if (
+        extension in {".step", ".stp"}
+        and size is not None
+        and size <= MAX_COVER_BYTES
+        and COVER_BUNDLE.is_file()
+    ):
+        return COVER_RECIPE
     return RECIPE if extension == ".stl" else STEP_RECIPE
+
+
+def cover_command(source: Path, output: Path) -> list[str]:
+    return [
+        "node",
+        "--disable-wasm-trap-handler",
+        "--max-old-space-size=2048",
+        str(COVER_BUNDLE),
+        str(source),
+        str(output),
+    ]
 
 
 def sha256(path: Path) -> str:
@@ -302,17 +330,24 @@ def main() -> None:
     source, extension, output, memory_mb = sys.argv[1:]
     if sys.platform == "linux":
         import ctypes
-        import os
         import resource
         import signal
 
         # Also stop a native job if its API worker is killed without cleanup.
         ctypes.CDLL(None).prctl(1, signal.SIGKILL)
-        if os.getppid() == 1:
+        parent = os.environ.get("INTEPLAST_PREVIEW_PARENT_PID")
+        if parent is not None and os.getppid() != int(parent):
             raise InterruptedError("Parent worker exited")
 
         limit = int(memory_mb) * 1024 * 1024
         resource.setrlimit(resource.RLIMIT_AS, (limit, limit))
+    if preview_recipe(extension, Path(source).stat().st_size) == COVER_RECIPE:
+        command = cover_command(Path(source), Path(output))
+        if os.name == "nt":
+            subprocess.run(command, check=True)
+            return
+        # Keep the worker timeout, memory limit and parent-death signal on Linux.
+        os.execvp(command[0], command)
     metadata = convert(Path(source), extension, Path(output))
     Path(output).with_suffix(".json").write_text(json.dumps(metadata), encoding="utf-8")
 

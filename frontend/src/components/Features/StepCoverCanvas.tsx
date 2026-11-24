@@ -2,21 +2,20 @@ import { Eraser, RotateCcw } from "lucide-react"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import * as THREE from "three"
 
-import { type FeatureCover3D, type FilePublic, FilesService } from "@/client"
+import type { FeatureCover3D, FilePublic } from "@/client"
 import { Button } from "@/components/ui/button"
-import { absoluteFileUrl, fileErrorMessage } from "@/hooks/useFileAccess"
+import { fileErrorMessage } from "@/hooks/useFileAccess"
 import { cn } from "@/lib/utils"
 import { CoverLoading } from "./CoverLoading"
 import {
   COVER_RECIPE,
   type CoverControls,
   MAX_COVER_STEP_SIZE,
-  sha256,
 } from "./cadCover"
 import { addCadEdges } from "./cadEdges"
 import { coverFaceRanges } from "./coverFaceRanges"
-import { loadCoverGeometry } from "./coverGeometry"
 import { createModelControls } from "./modelControls"
+import { readCoverGeometry } from "./preparedCover"
 
 type Surface = {
   meshIndex: number
@@ -79,38 +78,27 @@ export default function StepCoverCanvas({
         throw new Error(
           "La selección de superficies admite STEP de hasta 50 MB. Vincula una exportación de la pieza más pequeña.",
         )
-      const access = await FilesService.createFileAccessUrl({ fileId: file.id })
-      if (stopped) return
-      const response = await fetch(absoluteFileUrl(access.url), {
-        signal: abort.signal,
-      })
-      if (!response.ok)
-        throw new Error(
-          "El CAD no está disponible. Revisa su vínculo en Piezas ejemplo.",
-        )
-      const buffer = await response.arrayBuffer()
-      if (stopped) return
-      const sourceHash = await sha256(buffer)
-      if (stopped) return
-      if (
-        initial &&
-        (initial.recipe !== COVER_RECIPE ||
-          initial.source_sha256 !== sourceHash ||
-          initial.file_id !== file.id ||
-          (initial.file_version ?? null) !== (file.version ?? null))
-      ) {
-        setRestartable(true)
-        throw new Error(
-          "El CAD ha cambiado. Limpia la selección para trabajar con esta revisión.",
-        )
+      const checkSource = (sourceHash: string) => {
+        if (
+          initial &&
+          (initial.recipe !== COVER_RECIPE ||
+            initial.source_sha256 !== sourceHash ||
+            initial.file_id !== file.id ||
+            (initial.file_version ?? null) !== (file.version ?? null))
+        ) {
+          setRestartable(true)
+          throw new Error(
+            "El CAD ha cambiado. Limpia la selección para trabajar con esta revisión.",
+          )
+        }
       }
-      setStatus("Preparando superficies…")
-      const { meshes: prepared, geometryKey } = await loadCoverGeometry(
-        buffer,
+      const {
+        meshes: prepared,
+        geometryKey,
         sourceHash,
-        abort.signal,
-      )
+      } = await readCoverGeometry(file.id, abort.signal, checkSource)
       if (stopped) return
+      setStatus("Preparando superficies…")
       const object = new THREE.Group()
       const meshes: THREE.Mesh[] = []
       const materials = [

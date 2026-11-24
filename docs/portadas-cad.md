@@ -20,8 +20,9 @@ pieza**: la captura y, si se hizo sobre el CAD, sus caras y su encuadre se guard
   código arriba a la izquierda. Con varias, además `n / N` arriba a la derecha, flechas a los
   lados (al pasar el ratón o enfocar; siempre en táctil), ← / → y deslizamiento con el dedo.
   `n / N` es texto, no abre ninguna lista. La modal tiene el mismo carrusel; el código y la
-  posición van juntos arriba a la izquierda porque la derecha es de **Encuadrar**. Solo carga el
-  STEP de la pieza visible; cambiar de pieza termina su worker, como cerrar.
+  posición van juntos arriba a la izquierda porque la derecha es de **Encuadrar**. La modal
+  carga la geometría de la pieza visible. Cambiar de pieza o cerrar cancela esa carga en el
+  navegador. Si el servidor ya estaba preparando la vista, termina el trabajo para la próxima visita.
 - **Lista y cuadrícula:** la captura corresponde a la primera pieza de la ficha (`part_order`
   y luego el código). Si le falta imagen, la tarjeta muestra el icono aunque otras piezas tengan
   captura. Con dos piezas o más, la portada y las dos capas de detrás son cuadradas, con fondo
@@ -54,7 +55,7 @@ pieza**: la captura y, si se hizo sobre el CAD, sus caras y su encuadre se guard
 ## Piezas (22/09/2026)
 
 El catálogo y `/parts/{id}` comparten una captura PNG del STEP completo, sin selección
-de superficies. Se reutilizan el lector STEP en worker, los controles, `FeatureThumbnail`,
+de superficies. Se reutilizan la geometría preparada, los controles, `FeatureThumbnail`,
 `CoverButton`, `CoverDialog` y `StepCoverCanvas`. Las capturas nuevas se calculan una a una
 y se guardan para que volver al catálogo no vuelva a cargar todos los STEP.
 El indicador de preparación incluye el tiempo de espera en la cola. Una pieza sin CAD
@@ -65,8 +66,8 @@ portada propia. Si la pieza tiene varios STEP vinculados al feature, el selector
 aplicar un componente entero o marcar sus caras. La elección guardada pertenece a ese feature.
 La comprobación de las caras vacías en los STEP de 3056, 3167 y 3288 se recoge en el
 [informe del catálogo](comprobacion-step-catalogo-2026-11-19.md).
-La generación se realiza en el navegador y admite STEP/STP de hasta **50 MiB**; puede
-cargar el motor 3D al entrar en el catálogo si faltan capturas. No hay editor manual de
+El navegador genera el PNG a partir de la geometría y admite portadas de STEP/STP de hasta
+**50 MiB**. Puede cargar el motor 3D al entrar en el catálogo si faltan capturas. No hay editor manual de
 imagen ni selección de caras para la pieza: su portada abre la consulta 3D incluso al editar.
 
 `PUT /parts/{id}/cover` comprueba el CAD actual, su versión y SHA-256. La imagen derivada
@@ -113,13 +114,20 @@ selector imagen/3D. Solo hay una X de cierre arriba, además de Esc. La captura 
 mientras carga el CAD o si falla. Durante la carga aparece «Cargando modelo CAD…» con un
 indicador animado pequeño, sin recuadro, en la parte inferior de la imagen.
 Al apuntar a la portada CAD o enfocarla con el teclado, la ficha adelanta la carga del
-código del visor. Al abrirla, el visor pide acceso al STEP y comprueba los bytes recibidos.
-La primera conversión calcula la geometría y las aristas en un worker. La pestaña conserva
-en memoria hasta cuatro modelos recientes con un presupuesto aproximado de 64 MiB. La
-portada automática, el visor y el editor reutilizan esa geometría cuando coincide el SHA-256.
-Cada vista aplica sus propias caras y cámara. Recargar la página libera la geometría y
-conserva el PNG guardado en el servidor. Cerrar el visor cancela su descarga y termina la
-conversión en curso si nadie más la está usando.
+código del visor. Al vincular un STEP de producto, el servidor prepara en segundo plano
+un GLB con las aristas y los rangos de triángulos de cada cara. Las fichas antiguas
+solicitan la preparación al entrar en la ficha. La cola, la validación de la versión y
+el enlace de acceso son los de las [vistas 3D](vistas-3d.md).
+
+La portada automática, la consulta y el editor comparten la geometría preparada.
+La selección de cada feature sigue en su vínculo con la pieza. El visor comprueba
+el archivo, su versión, el SHA-256 del STEP y la huella de la geometría antes de aplicar
+las caras y la cámara guardadas. El GLB se reutiliza al recargar y entre usuarios con acceso.
+Si SharePoint o una revinculación cambia el identificador de versión, el servidor comprueba
+el SHA-256 del STEP autorizado. Cuando coinciden el contenido y la receta del conversor,
+reutiliza el GLB guardado. Un cambio en los bytes del CAD genera una vista nueva.
+Si falla la conversión, sigue disponible el lector STEP en el navegador para los archivos
+admitidos por la portada.
 Una ficha sin portada no abre una ampliación vacía.
 
 Todas las modales de portada ajustan su ancho al cuadrado, con 16 px de margen interior.
@@ -172,10 +180,12 @@ mantiene este contrato y lee los bytes de la ruta vinculada; sigue pendiente su 
 - `CadCoverEditor.tsx`: selección del CAD y captura dentro de esa modal.
 - `CoverButton.tsx`: miniatura clicable compartida por consulta y edición.
 - `CoverDialog.tsx`: ancho ajustado al cuadrado y filas de tamaño común a ambos editores.
-- `cover.worker.ts` / `coverGeometry.ts`: conversión STEP y huella compatibles con cover-v1,
-  transferencia de arrays y cancelación al cerrar.
+- `prepareCoverGeometry.ts` prepara las mismas mallas y la misma huella en el conversor
+  del servidor (`cover-glb.mjs`) y en el lector STEP del navegador (`cover.worker.ts`).
+- `preparedCover.ts` lee los triángulos, las aristas y los rangos de caras del GLB.
+  También resuelve la lectura del STEP si falla la preparación.
 - `StepCoverCanvas.tsx`: caras de `occt-import-js`, selección por clic, cámara y captura PNG.
-  Mantiene la teselación completa del STEP; no usa el GLB simplificado para identificar caras.
+  Mantiene la teselación completa del STEP y comprueba las caras antes de aplicar la selección.
   Agrupa superficies consecutivas del mismo color para reducir las llamadas de dibujo.
 - `FeatureCover.tsx`: carrusel por pieza (`CarouselFrame`, compartido con la edición) y
   ampliación de imagen/3D; carga diferida del visor al abrir.

@@ -1,3 +1,14 @@
+FROM node:22-bookworm-slim AS cover-converter
+WORKDIR /build
+COPY package.json package-lock.json ./
+COPY frontend/package.json frontend/
+RUN npm ci --ignore-scripts --no-audit --no-fund
+COPY frontend/src/components/Features/cadCover.ts frontend/src/components/Features/coverFaceRanges.ts frontend/src/components/Features/prepareCoverGeometry.ts frontend/src/components/Features/
+COPY backend/scripts/cover-glb.mjs backend/scripts/
+RUN ./node_modules/.bin/esbuild backend/scripts/cover-glb.mjs --bundle --platform=node --format=cjs --external:occt-import-js --outfile=/opt/inteplast-cad/cover.cjs \
+    && mkdir -p /opt/inteplast-cad/node_modules/occt-import-js \
+    && cp -r node_modules/occt-import-js/dist node_modules/occt-import-js/package.json /opt/inteplast-cad/node_modules/occt-import-js/
+
 FROM python:3.10
 
 ENV PYTHONUNBUFFERED=1
@@ -46,5 +57,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --package app
 
 WORKDIR /app/backend/
+
+COPY --from=cover-converter /usr/local/bin/node /usr/local/bin/node
+COPY --from=cover-converter /opt/inteplast-cad /opt/inteplast-cad
 
 CMD ["fastapi", "run", "--workers", "4", "app/main.py"]

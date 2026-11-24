@@ -444,6 +444,10 @@ def create_feature_asset(
         if not document:
             raise HTTPException(status_code=404, detail="File not found")
         asset_in.name = document.filename
+    if asset_in.kind == "part" and asset_in.file_id:
+        from app.previews import queue_product_step
+
+        queue_product_step(session, asset_in.file_id, _current_user.id)
     asset = crud.create_feature_asset(
         session=session, asset_in=asset_in, feature_id=feature_id
     )
@@ -498,6 +502,14 @@ def update_feature_asset(
         # A cover selected on this STEP no longer matches what the attachment points at.
         drop_cad_covers(session, [asset])
     asset.sqlmodel_update(changes)
+    if (
+        asset.kind == "part"
+        and asset.file_id
+        and ("kind" in changes or "file_id" in changes)
+    ):
+        from app.previews import queue_product_step
+
+        queue_product_step(session, asset.file_id, _current_user.id)
     if asset.part_id:
         ensure_link(session, asset.feature_id, asset.part_id)
     session.add(asset)

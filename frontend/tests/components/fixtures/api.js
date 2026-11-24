@@ -298,6 +298,7 @@ export const FeaturesService = {
 }
 
 export const FilesService = {
+  preparePreview: async () => ({ state: "error" }),
   readAttachmentFolder: async ({ kind }) =>
     state().attachmentFolders?.[kind] ?? null,
   readAttachmentScreenshot: async ({ fileId }) => {

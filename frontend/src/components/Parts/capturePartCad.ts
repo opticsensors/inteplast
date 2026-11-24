@@ -1,21 +1,15 @@
 import * as THREE from "three"
-import { type FilePublic, FilesService } from "@/client"
-import { MAX_COVER_STEP_SIZE, sha256 } from "@/components/Features/cadCover"
+import type { FilePublic } from "@/client"
+import { MAX_COVER_STEP_SIZE } from "@/components/Features/cadCover"
 import { addCadEdges } from "@/components/Features/cadEdges"
-import { loadCoverGeometry } from "@/components/Features/coverGeometry"
 import { createModelControls } from "@/components/Features/modelControls"
-import { absoluteFileUrl } from "@/hooks/useFileAccess"
+import { readCoverGeometry } from "@/components/Features/preparedCover"
 
 /** Reuse the STEP worker and the feature camera; render the complete, unmarked part. */
 export async function capturePartCad(file: FilePublic, signal: AbortSignal) {
   if (file.size > MAX_COVER_STEP_SIZE)
     throw new Error("El STEP supera los 50 MB.")
-  const access = await FilesService.createFileAccessUrl({ fileId: file.id })
-  const response = await fetch(absoluteFileUrl(access.url), { signal })
-  if (!response.ok) throw new Error("El CAD no está disponible.")
-  const bytes = await response.arrayBuffer()
-  const sourceHash = await sha256(bytes)
-  const { meshes } = await loadCoverGeometry(bytes, sourceHash, signal)
+  const { meshes, sourceHash } = await readCoverGeometry(file.id, signal)
   signal.throwIfAborted()
   const object = new THREE.Group()
   const material = new THREE.MeshPhongMaterial({

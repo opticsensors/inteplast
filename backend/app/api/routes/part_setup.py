@@ -25,6 +25,7 @@ from app.part_setup import (
     PartSetupRequest,
     PartSetupResult,
 )
+from app.previews import queue_part_previews
 
 router = APIRouter(prefix="/parts", tags=["parts"])
 
@@ -118,6 +119,7 @@ def register_part(
                         name=file.filename,
                     )
                 )
+        queue_part_previews(session, part, _current_user.id)
         commit_part(session)
         session.refresh(part)
         return PartPublic.model_validate(part)
@@ -159,6 +161,7 @@ def setup_part(
         if not part.name:
             raise HTTPException(422, "Escribe el nombre de la pieza.")
         session.add(part)
+        queue_part_previews(session, part, current_user.id)
         session.commit()
         session.refresh(part)
         return PartSetupResult(part=PartPublic.model_validate(part))
@@ -173,8 +176,10 @@ def refresh_part_data(
     part_id: uuid.UUID,
 ) -> PartRefreshResult:
     try:
-        return part_setup.refresh(
+        result = part_setup.refresh(
             session, get_part_or_404(session, part_id), current_user.id
         )
+        session.commit()
+        return result
     except SourceError as error:
         raise HTTPException(error.status_code, error.message)
