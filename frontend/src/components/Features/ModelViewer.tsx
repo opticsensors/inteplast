@@ -4,6 +4,8 @@ import type * as THREE_NS from "three"
 
 import { type FilePublic, FilesService } from "@/client"
 import { absoluteFileUrl } from "@/hooks/useFileAccess"
+import { addCadEdges, cadLineColor, offsetCadSurface } from "./cadEdges"
+import { cadBoundaryIndices } from "./coverFaceRanges"
 import { createModelControls } from "./modelControls"
 
 type Three = typeof THREE_NS
@@ -139,9 +141,11 @@ export async function loadBrep(
 export default function ModelViewer({
   file,
   previewUrl,
+  showCadEdges = false,
 }: {
   file: FilePublic
   previewUrl?: string
+  showCadEdges?: boolean
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const resetRef = useRef<() => void>(() => undefined)
@@ -184,6 +188,36 @@ export default function ModelViewer({
           ? await loadBrep(three, extension, buffer)
           : await loadMesh(three, extension, buffer)
         if (disposed) return
+        if (showCadEdges) {
+          const surfaces: THREE_NS.Mesh[] = []
+          let hasStepLines = false
+          object.traverse((child) => {
+            if (child instanceof three.Mesh) surfaces.push(child)
+            if (previewUrl && child instanceof three.LineSegments) {
+              hasStepLines = true
+              child.material.color.setHex(cadLineColor)
+              child.material.depthWrite = false
+              child.material.toneMapped = false
+              child.renderOrder = 1
+            }
+          })
+          for (const surface of surfaces) {
+            if (hasStepLines) offsetCadSurface(surface)
+            else
+              addCadEdges(
+                surface,
+                cadBoundaryIndices(
+                  surface.geometry.index?.array,
+                  surface.geometry.getAttribute("position").count,
+                  surface.userData.cadFaces ?? [],
+                ),
+              )
+          }
+        } else if (previewUrl) {
+          object.traverse((child) => {
+            if (child instanceof three.LineSegments) child.visible = false
+          })
+        }
         if (
           previewUrl &&
           ["step", "stp"].includes(extensionOf(file.filename))
@@ -289,7 +323,7 @@ export default function ModelViewer({
       abort.abort()
       dispose()
     }
-  }, [file.id, file.filename, previewUrl])
+  }, [file.id, file.filename, previewUrl, showCadEdges])
 
   return (
     <div className="relative h-[70vh] w-full overflow-hidden rounded-lg border bg-muted/30">

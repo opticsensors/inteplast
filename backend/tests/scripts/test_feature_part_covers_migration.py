@@ -10,13 +10,26 @@ from alembic.config import Config
 from sqlmodel import Session
 
 from app.core.db import engine
-from app.models import Feature, FeatureAsset, Part, StoredFile
+from app.models import Feature, FeatureAsset, Part
 
 PREVIOUS = "o16d92fa1c07"
 
 
 def columns(table: str) -> set[str]:
     return {column["name"] for column in sa.inspect(engine).get_columns(table)}
+
+
+def insert_image(connection: sa.Connection, filename: str) -> uuid.UUID:
+    # Build the fixture using the columns present in both historical schemas.
+    image_id = uuid.uuid4()
+    connection.execute(
+        sa.text(
+            "INSERT INTO storedfile (id, filename, content_type, size, source)"
+            " VALUES (:id, :name, 'image/png', 0, 'upload')"
+        ),
+        {"id": image_id, "name": filename},
+    )
+    return image_id
 
 
 def test_cad_cover_moves_to_its_piece_and_comes_back(db: Session) -> None:
@@ -29,21 +42,15 @@ def test_cad_cover_moves_to_its_piece_and_comes_back(db: Session) -> None:
     try:
         assert "image_id" not in columns("featurepartlink")
         with Session(engine) as session:
-            cad_image = StoredFile(
-                filename=f"cad-{token}.png", content_type="image/png"
-            )
-            pasted = StoredFile(
-                filename=f"pasted-{token}.png", content_type="image/png"
-            )
+            cad_image = insert_image(session.connection(), f"cad-{token}.png")
+            pasted = insert_image(session.connection(), f"pasted-{token}.png")
             linked = Part(code=f"L{token}")
             attached = Part(code=f"A{token}")
-            session.add_all([cad_image, pasted, linked, attached])
+            session.add_all([linked, attached])
             session.flush()
             cover = {"asset_id": str(uuid.uuid4()), "part_id": str(linked.id)}
-            with_cad = Feature(
-                name=f"CAD {token}", image_id=cad_image.id, cover_3d=cover
-            )
-            with_image = Feature(name=f"Image {token}", image_id=pasted.id)
+            with_cad = Feature(name=f"CAD {token}", image_id=cad_image, cover_3d=cover)
+            with_image = Feature(name=f"Image {token}", image_id=pasted)
             session.add_all([with_cad, with_image])
             session.flush()
             # The second piece belongs to the CAD feature only through an attachment.
@@ -54,8 +61,8 @@ def test_cad_cover_moves_to_its_piece_and_comes_back(db: Session) -> None:
             )
             session.commit()
             ids = {
-                "cad_image": cad_image.id,
-                "pasted": pasted.id,
+                "cad_image": cad_image,
+                "pasted": pasted,
                 "linked": linked.id,
                 "attached": attached.id,
                 "with_cad": with_cad.id,
@@ -147,12 +154,12 @@ def test_downgrade_does_not_bring_back_a_removed_cad_cover(
     command.downgrade(config, PREVIOUS)
     try:
         with Session(engine) as session:
-            image = StoredFile(filename=f"cad-{token}.png", content_type="image/png")
+            image_id = insert_image(session.connection(), f"cad-{token}.png")
             part = Part(code=f"L{token}")
-            session.add_all([image, part])
+            session.add(part)
             session.flush()
             cover = {"asset_id": str(uuid.uuid4()), "part_id": str(part.id)}
-            feature = Feature(name=f"CAD {token}", image_id=image.id, cover_3d=cover)
+            feature = Feature(name=f"CAD {token}", image_id=image_id, cover_3d=cover)
             session.add(feature)
             session.commit()
             feature_id, part_id = feature.id, part.id
@@ -179,14 +186,7 @@ def test_downgrade_does_not_bring_back_a_removed_cad_cover(
             )
             if change == "new photo":
                 # The feature is left without pieces and gets an image of its own.
-                photo_id = uuid.uuid4()
-                connection.execute(
-                    sa.text(
-                        "INSERT INTO storedfile (id, filename, content_type, size, source)"
-                        " VALUES (:id, :name, 'image/png', 0, 'upload')"
-                    ),
-                    {"id": photo_id, "name": f"photo-{token}.png"},
-                )
+                photo_id = insert_image(connection, f"photo-{token}.png")
                 connection.execute(
                     sa.text("UPDATE feature SET image_id = :photo WHERE id = :id"),
                     {"photo": photo_id, "id": feature_id},

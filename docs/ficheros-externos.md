@@ -22,7 +22,7 @@ Desde el 22/09/2026 los archivos pertenecen a la **pieza** y se gestionan en su 
    carpeta se proponen CAD, escaneo, molde y plano por ruta, extensión y nombre, sin leer su
    contenido. En una pieza nueva se proponen también título y código; en una existente se
    conservan los que ya tiene.
-2. En **Archivos**, cada fila tiene su tipo (desplegable), un nombre visible editable, una
+2. Al editar **Archivos**, cada fila tiene su tipo (desplegable), un nombre editable, una
    estrella para elegir el principal cuando hay varios del mismo tipo, el botón de carpeta
    para elegir otro archivo y la papelera para quitarlo de la lista. **Añadir fichero**
    incorpora más archivos, y CAD, Escaneo, Molde y Plano 2D aparecen aunque estén vacíos.
@@ -35,8 +35,8 @@ Desde el 22/09/2026 los archivos pertenecen a la **pieza** y se gestionan en su 
    features de una pieza existente sí se guardan al modificarlos. Si cambió la carpeta,
    la interfaz inicia una lectura después de guardar. **Crear pieza** registra primero
    la ficha y después solicita esa lectura: un fallo de importación conserva la pieza creada.
-4. En consulta, el nombre de cada archivo abre su página (`/parts/{id}/fichero/{fileId}`) y
-   el botón de la fila descarga el original.
+4. En consulta, el tipo de adjunto abre su página (`/parts/{id}/fichero/{fileId}`), donde
+   aparece el nombre del fichero. El icono de descarga de la fila permite bajar el original.
 
 La página del archivo elige el [visor compatible](#visores-de-archivos) o propone descargar
 el original. La descarga nunca se sustituye por el GLB derivado.
@@ -74,13 +74,14 @@ cinco minutos. La comprobación de estado se repite al volver a abrir el adjunto
 
 | Archivo | Comportamiento implementado |
 |---|---|
-| PDF (`application/pdf`) | `DrawingSearch` y `PdfViewer`: buscador de cotas y canvas PDF.js. **Abrir en pestaña** abre el original; la descarga está en la fila Archivos de la pieza |
+| PDF (`application/pdf`) | `DrawingSearch` y `PdfViewer` ofrecen el buscador de cotas y el visor PDF.js. En los planos hay dos iconos de SharePoint pendientes de conectar, uno para la carpeta del plano y otro para el histórico. El original se descarga desde la fila de la pieza |
 | CSV, XLS, XLSX | `SourceTableViewer`: celdas en solo lectura, búsqueda y localizador de origen. Las fórmulas muestran su resultado guardado si existe; no se recalculan ni se ejecutan macros |
 | Imágenes JPEG, PNG, GIF, WebP, AVIF y BMP | Imagen en la página; SVG se descarga |
 | STL, GLB/GLTF, OBJ, PLY | `ModelViewer` con three.js; carga directa hasta 50 MiB |
 | STEP/STP, IGES/IGS, BREP | `ModelViewer` con `occt-import-js`/OpenCascade WASM; teselación en el navegador hasta 50 MiB |
 | STL y STEP/STP de más de 50 MiB | `WebModelViewer` solicita un [GLB al servidor](vistas-3d.md); máximo de entrada 512 MiB |
-| Otros formatos 3D grandes o sin lector (Moldflow, SolidWorks, CATIA, DWG/DXF…) | **Descargar original** para abrirlo en su aplicación |
+| CAD de molde y Moldflow | La ficha abre la carpeta devuelta por Graph con los permisos del usuario. Junto al botón de carpeta está la descarga del original vinculado. El lápiz edita una captura opcional y la consulta muestra la imagen guardada. El CAD de molde prescinde del visor 3D. |
+| Otros formatos 3D grandes o sin lector (SolidWorks, CATIA, DWG/DXF…) | **Descargar original** para abrirlo en su aplicación |
 
 Los controles 3D usan `TrackballControls`: arrastre izquierdo para girar sin bloqueo en
 los polos, rueda para zoom, derecho/central para desplazar y **Encuadrar** para restablecer

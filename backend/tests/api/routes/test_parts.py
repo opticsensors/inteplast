@@ -462,6 +462,49 @@ def test_deletion_keeps_an_image_shown_in_a_feature_note(
     assert stored.read_bytes() == b"image bytes"
 
 
+@pytest.mark.parametrize("shared", [True, False])
+def test_deletion_of_attachment_keeps_only_shared_screenshots(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+    shared: bool,
+) -> None:
+    from app.knowledge_models import PartFile
+
+    part = create_random_part(db)
+    image = StoredFile(filename="capture.png", content_type="image/png")
+    db.add(image)
+    db.flush()
+    original = StoredFile(filename="molde.step", screenshot_id=image.id)
+    db.add(original)
+    db.flush()
+    db.add(PartFile(part_id=part.id, file_id=original.id, kind="mold", name="Molde"))
+    if shared:
+        other = create_random_part(db)
+        second = StoredFile(filename="ensayo.mfr", screenshot_id=image.id)
+        db.add(second)
+        db.flush()
+        db.add(
+            PartFile(
+                part_id=other.id, file_id=second.id, kind="moldflow", name="Moldflow"
+            )
+        )
+    db.commit()
+    original_id, image_id = original.id, image.id
+    url = f"{settings.API_V1_STR}/parts/{part.id}"
+    scope = client.get(f"{url}/deletion", headers=superuser_token_headers).json()
+    assert scope["files_removed"] == (1 if shared else 2)
+    result = client.delete(
+        url, headers=superuser_token_headers, params={"confirm": scope["key"]}
+    )
+    assert result.status_code == 200, result.text
+    db.expire_all()
+    assert db.get(StoredFile, original_id) is None
+    assert (db.get(StoredFile, image_id) is not None) == shared
+    if shared:
+        assert second.screenshot_id == image_id
+
+
 @pytest.mark.parametrize("change", ["location", "characteristic", "measurement"])
 def test_deletion_key_changes_when_a_deleted_row_is_edited(
     client: TestClient,

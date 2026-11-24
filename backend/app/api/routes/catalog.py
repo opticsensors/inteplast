@@ -15,7 +15,7 @@ from app.api.routes.parts import get_part_or_404
 from app.cad_covers import validate_document
 from app.component_models import identity_expression, qualified
 from app.evidence import job_id
-from app.feature_covers import features_public, part_cad_cover
+from app.feature_covers import features_public, part_cad_cover, part_cover_key
 from app.feature_links import feature_membership
 from app.file_sources import SourceError, document_cache_key
 from app.knowledge_models import (
@@ -47,6 +47,7 @@ class PartCoverPublic(BaseModel):
     cad: FilePublic | None = None
     cad_cache_key: str | None = None
     image: FilePublic | None = None
+    cover_needs_refresh: bool = False
 
 
 class PartCardPublic(PartPublic, PartCoverPublic):
@@ -105,9 +106,9 @@ def part_card(
 ) -> PartCardPublic:
     if defer_covers:
         cad = part_references(session, part.id).get("part")
-        cad_key, image = None, None
+        cad_key, image, refresh = None, None, False
     else:
-        cad, cad_key, image = part_cad_cover(session, part.id)
+        cad, cad_key, image, refresh = part_cad_cover(session, part.id)
     characteristic_count = session.exec(
         select(func.count())
         .select_from(PartCharacteristic)
@@ -120,6 +121,7 @@ def part_card(
             "characteristic_count": characteristic_count,
             "cad": FilePublic.model_validate(cad) if cad else None,
             "cad_cache_key": cad_key,
+            "cover_needs_refresh": refresh,
             "deferred_cover_part_id": part.id if cad and defer_covers else None,
             "image": FilePublic.model_validate(image) if image else None,
             "measurement_status": measurement_status(session, part),
@@ -350,11 +352,12 @@ def read_part_cover(
     session: SessionDep, _current_user: CurrentUser, part_id: uuid.UUID
 ) -> PartCoverPublic:
     get_part_or_404(session, part_id)
-    cad, cad_key, image = part_cad_cover(session, part_id)
+    cad, cad_key, image, refresh = part_cad_cover(session, part_id)
     return PartCoverPublic(
         cad=FilePublic.model_validate(cad) if cad else None,
         cad_cache_key=cad_key,
         image=FilePublic.model_validate(image) if image else None,
+        cover_needs_refresh=refresh,
     )
 
 
@@ -373,14 +376,15 @@ def save_part_cover(
     cad = part_references(session, part_id).get("part")
     if cad is None or cad.id != body.file_id:
         raise HTTPException(409, "El CAD de la pieza ha cambiado.")
-    cad_key = document_cache_key(cad)
+    source_key = document_cache_key(cad)
+    cad_key = part_cover_key(source_key)
     if body.cad_cache_key is not None and body.cad_cache_key != cad_key:
         raise HTTPException(409, "El CAD ha cambiado. Vuelve a preparar su portada.")
     try:
         validate_document(cad, body.file_version, body.source_sha256)
     except SourceError as error:
         raise HTTPException(error.status_code, error.message)
-    if document_cache_key(cad) != cad_key:
+    if document_cache_key(cad) != source_key:
         raise HTTPException(409, "El CAD ha cambiado mientras se preparaba su portada.")
     image = session.get(StoredFile, body.image_id)
     if not image or image.content_type != "image/png" or image.source != "upload":
@@ -396,7 +400,11 @@ def save_part_cover(
     cover.file_id = cad.id
     cover.cache_key = cad_key
     cover.state = "ready"
-    cover.payload = {"image_id": str(image.id), "source_sha256": body.source_sha256}
+    cover.payload = {
+        "image_id": str(image.id),
+        "source_sha256": body.source_sha256,
+        "source_key": source_key,
+    }
     session.add(cover)
     if not session.get(PartDocument, (part_id, image.id)):
         session.add(PartDocument(part_id=part_id, file_id=image.id, kind="derived"))

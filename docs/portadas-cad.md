@@ -112,8 +112,14 @@ modal; las portadas CAD activan automáticamente el 3D con sus marcas y encuadre
 selector imagen/3D. Solo hay una X de cierre arriba, además de Esc. La captura se conserva
 mientras carga el CAD o si falla. Durante la carga aparece «Cargando modelo CAD…» con un
 indicador animado pequeño, sin recuadro, en la parte inferior de la imagen.
-La conversión STEP y la huella de geometría se calculan
-en un Web Worker: cerrar cancela la descarga y termina ese worker, incluso si está calculando.
+Al apuntar a la portada CAD o enfocarla con el teclado, la ficha adelanta la carga del
+código del visor. Al abrirla, el visor pide acceso al STEP y comprueba los bytes recibidos.
+La primera conversión calcula la geometría y las aristas en un worker. La pestaña conserva
+en memoria hasta cuatro modelos recientes con un presupuesto aproximado de 64 MiB. La
+portada automática, el visor y el editor reutilizan esa geometría cuando coincide el SHA-256.
+Cada vista aplica sus propias caras y cámara. Recargar la página libera la geometría y
+conserva el PNG guardado en el servidor. Cerrar el visor cancela su descarga y termina la
+conversión en curso si nadie más la está usando.
 Una ficha sin portada no abre una ampliación vacía.
 
 Todas las modales de portada ajustan su ancho al cuadrado, con 16 px de margen interior.

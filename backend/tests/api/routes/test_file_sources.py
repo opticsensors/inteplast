@@ -10,6 +10,48 @@ from app.core.config import settings
 BASE = f"{settings.API_V1_STR}/files"
 
 
+def test_attachment_screenshot_lifecycle(
+    client: TestClient, superuser_token_headers: dict[str, str], source: Path
+) -> None:
+    headers = superuser_token_headers
+    document = client.post(
+        f"{BASE}/reference", headers=headers, json={"path": "part.stp"}
+    ).json()
+    url = f"{BASE}/{document['id']}/screenshot"
+    assert client.get(url).status_code == 401
+    assert client.get(url, headers=headers).json() is None
+    image = client.post(
+        f"{BASE}/",
+        headers=headers,
+        files={"file": ("capture.png", b"capture", "image/png")},
+    ).json()
+    body = {"image_id": image["id"], "previous_id": None}
+    assert client.put(url, headers=headers, json=body).json()["id"] == image["id"]
+    assert client.put(url, headers=headers, json=body).status_code == 200
+    assert client.get(url, headers=headers).json()["filename"] == "capture.png"
+    assert (
+        client.put(
+            url, headers=headers, json={"image_id": None, "previous_id": None}
+        ).status_code
+        == 409
+    )
+    assert (
+        client.put(
+            url,
+            headers=headers,
+            json={"image_id": document["id"], "previous_id": image["id"]},
+        ).status_code
+        == 422
+    )
+    assert (
+        client.put(
+            url, headers=headers, json={"image_id": None, "previous_id": image["id"]}
+        ).json()
+        is None
+    )
+    assert client.get(url, headers=headers).json() is None
+
+
 @pytest.fixture
 def source(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     root = tmp_path / "source"

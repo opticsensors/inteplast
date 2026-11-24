@@ -31,7 +31,7 @@ def test_step_reduction_preserves_a_closed_surface(
     original_volume = mesh.volume
     # Reproduce the separate vertex arrays emitted for adjacent CAD faces.
     mesh.unmerge_vertices()
-    monkeypatch.setattr(converter, "step_mesh", lambda _path: mesh)
+    monkeypatch.setattr(converter, "step_mesh", lambda _path: (mesh, None))
     source, output = tmp_path / "synthetic.step", tmp_path / "web.glb"
     source.write_bytes(b"Synthetic tessellation fixture")
     result = convert(source, ".step", output)
@@ -303,6 +303,12 @@ def test_step_assembly_locations_and_winding(
     metadata = convert(source, ".step", output)
     assert metadata["triangles"] == 24
     assert metadata["step_faces"] == 12
+    glb = output.read_bytes()
+    (json_size,) = struct.unpack_from("<I", glb, 12)
+    tree = json.loads(glb[20 : 20 + json_size])
+    lines = next(p for p in tree["meshes"][0]["primitives"] if p.get("mode") == 1)
+    # Two boxes, twelve unique edges per box. Internal face diagonals are absent.
+    assert tree["accessors"][lines["indices"]]["count"] == 48
     assert (metadata["step_retried_faces"] > 0) == (skip_mesh_calls > 0)
     assert (metadata["step_repaired_faces"] > 0) == (skip_mesh_calls > 1)
     assert metadata["source_sha256"] == digest == sha256(source)

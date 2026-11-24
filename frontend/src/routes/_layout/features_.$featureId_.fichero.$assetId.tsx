@@ -9,6 +9,12 @@ import { assetName, partName } from "@/components/Features/parts"
 import { featureQueryOptions } from "@/components/Features/queries"
 import { SourceFilePicker } from "@/components/Features/SourceFilePicker"
 import { fileAction, usesWebPreview } from "@/components/Features/viewers"
+import {
+  AttachmentDetail,
+  AttachmentFolder,
+  isFolderAttachment,
+  SharePointFolders,
+} from "@/components/Parts/AttachmentActions"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -70,7 +76,7 @@ function EmptyState({
  *   STEP, IGES) se abre en el visor; STL/STEP grandes usan un GLB del servidor.
  * - **Bajarlo**: para los formatos distintos del plano PDF.
  * - **Saber que necesita**: cuando no hay visor posible —Moldflow, SolidWorks,
- *   CATIA— la pagina lo dice con palabras.
+ *   CATIA— la pagina ofrece la descarga del original.
  *
  * La aplicacion no integra el Explorador de Windows ni lanzadores de programas
  * locales; el usuario abre la descarga con la aplicacion que tenga asociada.
@@ -89,8 +95,9 @@ function AssetDetail() {
     retry: (failureCount, error) => !isNotFound(error) && failureCount < 3,
   })
   const asset = (feature?.assets ?? []).find((item) => item.id === assetId)
-  const access = useFileAccess(asset?.file?.id)
-  const status = useDocumentStatus(asset?.file)
+  const folderAttachment = isFolderAttachment(asset?.kind)
+  const access = useFileAccess(folderAttachment ? undefined : asset?.file?.id)
+  const status = useDocumentStatus(folderAttachment ? null : asset?.file)
 
   if (isPending) {
     return (
@@ -113,6 +120,39 @@ function AssetDetail() {
 
   const file = asset.file
   const name = assetName(asset)
+  const sourcePicker = file?.source === "local" && (
+    <SourceFilePicker
+      document={file}
+      initialPath={asset.part?.folder_path ?? ""}
+      onLinked={async (linked) => {
+        await FeaturesService.updateFeatureAsset({
+          assetId: asset.id,
+          requestBody: { file_id: linked.id, name: linked.filename },
+        })
+        await queryClient.invalidateQueries({ queryKey: ["features"] })
+      }}
+    />
+  )
+  if (file && isFolderAttachment(asset.kind)) {
+    const context = [
+      feature.name,
+      asset.part?.code,
+      asset.part && partName(asset.part),
+    ]
+      .filter(Boolean)
+      .join(" · ")
+    return (
+      <AttachmentDetail
+        key={`${file.id}:${file.version}`}
+        kind={asset.kind}
+        file={file}
+        partId={asset.part?.id}
+        name={name}
+        context={context}
+        sourcePicker={sourcePicker}
+      />
+    )
+  }
   const { action, viewer, reason } = fileAction(file)
   const unavailable =
     file?.source === "local" &&
@@ -140,33 +180,25 @@ function AssetDetail() {
 
         {file && (
           <div className="flex shrink-0 items-center gap-2">
-            {file.source === "local" && (
-              <SourceFilePicker
-                document={file}
-                initialPath={asset.part?.folder_path ?? ""}
-                onLinked={async (linked) => {
-                  await FeaturesService.updateFeatureAsset({
-                    assetId: asset.id,
-                    requestBody: { file_id: linked.id, name: linked.filename },
-                  })
-                  await queryClient.invalidateQueries({
-                    queryKey: ["features"],
-                  })
-                }}
-              />
-            )}
-            {viewer === "pdf" && access.url && !unavailable && (
-              <Button variant="outline" size="sm" asChild>
-                <a
-                  href={access.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  title="Abrir el PDF en una pestana nueva"
-                >
-                  <ExternalLink className="mr-2" />
-                  Abrir en pestana
-                </a>
-              </Button>
+            {sourcePicker}
+            {asset.kind === "drawing" ? (
+              <SharePointFolders kind={asset.kind} />
+            ) : (
+              viewer === "pdf" &&
+              access.url &&
+              !unavailable && (
+                <Button variant="outline" size="sm" asChild>
+                  <a
+                    href={access.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    title="Abrir el PDF en una pestana nueva"
+                  >
+                    <ExternalLink className="mr-2" />
+                    Abrir en pestana
+                  </a>
+                </Button>
+              )
             )}
             {viewer !== "pdf" && access.downloadUrl && !unavailable && (
               <Button size="sm" asChild>
@@ -183,6 +215,13 @@ function AssetDetail() {
       {!file ? (
         <EmptyState title="Sin archivo vinculado">
           <p>Los archivos se gestionan en la ficha de la pieza.</p>
+          {asset.part && isFolderAttachment(asset.kind) && (
+            <AttachmentFolder
+              partId={asset.part.id}
+              kind={asset.kind}
+              folderOnly
+            />
+          )}
           {asset.part && (
             <Button variant="link" asChild>
               <Link to="/parts/$partId" params={{ partId: asset.part.id }}>
@@ -252,9 +291,17 @@ function AssetDetail() {
           fallback={<Skeleton className="h-[70vh] w-full rounded-lg" />}
         >
           {usesWebPreview(file) ? (
-            <WebModelViewer key={`${file.id}:${file.version}`} file={file} />
+            <WebModelViewer
+              key={`${file.id}:${file.version}`}
+              file={file}
+              showCadEdges={asset.kind === "part"}
+            />
           ) : (
-            <ModelViewer key={`${file.id}:${file.version}`} file={file} />
+            <ModelViewer
+              key={`${file.id}:${file.version}`}
+              file={file}
+              showCadEdges={asset.kind === "part"}
+            />
           )}
         </Suspense>
       )}

@@ -262,6 +262,15 @@ const ready = async (page) => {
   }
 }
 
+const finishDialogEntrance = (page) =>
+  page
+    .getByRole("dialog")
+    .evaluate((dialog) =>
+      Promise.all(
+        dialog.getAnimations().map((animation) => animation.finished),
+      ),
+    )
+
 test("real STEP worker preserves existing cover-v1 surfaces and modal fits its square", async (t) => {
   const page = await mount(t)
   await page.evaluate(() => window.review.navigate("/cover"))
@@ -284,6 +293,54 @@ test("real STEP worker preserves existing cover-v1 surfaces and modal fits its s
     "only border and 16px padding on each side",
   )
   await screenshot(page, "expanded-cad.png")
+  await page.keyboard.press("Escape")
+  await page.getByRole("button", { name: "Ampliar portada" }).click()
+  await ready(page)
+  assert.equal(await page.evaluate(() => window.workerStats.started), 1)
+  await page.keyboard.press("Escape")
+  await page.route("**/files/part-step?*", (route) =>
+    route.fulfill({ status: 403 }),
+  )
+  await page.getByRole("button", { name: "Ampliar portada" }).click()
+  await expect(page.getByRole("alert")).toContainText("CAD no está disponible")
+  await expect(surface(page).locator("canvas")).toHaveCount(0)
+  await page.keyboard.press("Escape")
+  await page.route("**/files/part-step?*", (route) =>
+    route.fulfill({
+      contentType: "application/octet-stream",
+      body: Buffer.concat([step, Buffer.from("\n")]),
+    }),
+  )
+  await page.getByRole("button", { name: "Ampliar portada" }).click()
+  await expect(page.getByRole("alert")).toContainText("El CAD ha cambiado")
+  await expect(surface(page).locator("canvas")).toHaveCount(0)
+})
+
+test("a thumbnail and viewer can share STEP preparation and cancel independently", async (t) => {
+  const page = await mount(t)
+  const result = await page.evaluate(async (data) => {
+    const { loadCoverGeometry } = await import(
+      "/src/components/Features/coverGeometry.ts"
+    )
+    const { sha256 } = await import("/src/components/Features/cadCover.ts")
+    const bytes = Uint8Array.from(data)
+    const hash = await sha256(bytes.buffer)
+    const thumbnail = new AbortController()
+    const viewer = new AbortController()
+    const cancelled = loadCoverGeometry(
+      bytes.slice().buffer,
+      hash,
+      thumbnail.signal,
+    ).catch((error) => error.name)
+    const kept = loadCoverGeometry(bytes.buffer, hash, viewer.signal)
+    thumbnail.abort()
+    return [
+      await cancelled,
+      (await kept).geometryKey,
+      window.workerStats.started,
+    ]
+  }, Array.from(step))
+  assert.deepEqual(result, ["AbortError", cover.geometry_key, 1])
 })
 
 for (const method of ["Escape", "Close"]) {
@@ -336,6 +393,7 @@ for (const mobile of [false, true]) {
     await page.evaluate(() => window.review.navigate("/cover"))
     await page.getByRole("button", { name: "Ampliar portada" }).click()
     await ready(page)
+    await finishDialogEntrance(page)
     const viewerBounds = await page.getByRole("dialog").boundingBox(),
       viewerSquare = await surface(page).boundingBox()
     await page.keyboard.press("Escape")
@@ -345,6 +403,7 @@ for (const mobile of [false, true]) {
       .click()
     await ready(page)
     const modal = page.getByRole("dialog")
+    await finishDialogEntrance(page)
     const cadBounds = await modal.boundingBox(),
       cadSquare = await surface(page).boundingBox()
     assert.ok(Math.abs(cadBounds.width - viewerBounds.width) < 1)
@@ -406,8 +465,8 @@ for (const mobile of [false, true]) {
     await expect(page.getByRole("button", { name: "Aplicar" })).toBeDisabled()
     assert.equal(
       await page.evaluate(() => window.workerStats.started),
-      2,
-      "clearing marks does not reimport the CAD",
+      1,
+      "the viewer and editor reuse the same verified geometry after clearing marks",
     )
   })
 }
@@ -430,5 +489,5 @@ test("the same clear control recovers an obsolete saved selection on the current
   await ready(page)
   await expect(page.getByRole("alert")).toHaveCount(0)
   await expect(page.getByRole("button", { name: "Aplicar" })).toBeDisabled()
-  assert.equal(await page.evaluate(() => window.workerStats.started), 2)
+  assert.equal(await page.evaluate(() => window.workerStats.started), 1)
 })

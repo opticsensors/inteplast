@@ -2869,6 +2869,11 @@ export const PartCardPublicSchema = {
                 }
             ]
         },
+        cover_needs_refresh: {
+            type: 'boolean',
+            title: 'Cover Needs Refresh',
+            default: false
+        },
         code: {
             type: 'string',
             maxLength: 64,
@@ -3164,6 +3169,11 @@ export const PartCoverPublicSchema = {
                     type: 'null'
                 }
             ]
+        },
+        cover_needs_refresh: {
+            type: 'boolean',
+            title: 'Cover Needs Refresh',
+            default: false
         }
     },
     type: 'object',
@@ -4249,6 +4259,38 @@ export const RelinkFileReferenceSchema = {
     type: 'object',
     required: ['path', 'expected_version'],
     title: 'RelinkFileReference'
+} as const;
+
+export const ScreenshotChangeSchema = {
+    properties: {
+        image_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Image Id'
+        },
+        previous_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Previous Id'
+        }
+    },
+    type: 'object',
+    required: ['image_id', 'previous_id'],
+    title: 'ScreenshotChange'
 } as const;
 
 export const SourceEntrySchema = {

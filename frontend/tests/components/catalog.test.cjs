@@ -550,6 +550,15 @@ test("the initial catalogue mixes cards, filters by type, and cotas appear only 
 
 test("catalogue cards are usable while they wait for their shared CAD cover", async (t) => {
   const page = await mount(t)
+  await page.route("**/*saved-cover*", (route) =>
+    route.fulfill({
+      contentType: "image/png",
+      body: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/r8sAAAAASUVORK5CYII=",
+        "base64",
+      ),
+    }),
+  )
   await page.evaluate(() => {
     const state = window.review
     state.parts[0].deferred_cover_part_id =
@@ -558,6 +567,7 @@ test("catalogue cards are usable while they wait for their shared CAD cover", as
       state.deliverCover = () =>
         resolve({
           image: { id: "saved-cover", content_type: "image/png" },
+          cover_needs_refresh: true,
         })
     })
     return state.refreshCatalog()
@@ -574,6 +584,19 @@ test("catalogue cards are usable while they wait for their shared CAD cover", as
   assert.deepEqual(await page.evaluate(() => window.review.coverRequests), [
     "part-one",
   ])
+  for (const layout of ["Cuadrícula", "Lista"]) {
+    await page
+      .getByRole("group", { name: "Vista" })
+      .getByRole("button", { name: layout })
+      .click()
+    await page.waitForFunction(() => {
+      const images = [...document.querySelectorAll("img[src*='saved-cover']")]
+      return (
+        images.length === 2 &&
+        images.every((image) => image.complete && image.naturalWidth > 0)
+      )
+    })
+  }
 })
 
 test("a saved feature attachment URL with no file points to its own piece when available", async (t) => {

@@ -131,6 +131,9 @@ class ItemsPublic(SQLModel):
 # Location is resolved by app.file_sources, never by a viewer or feature.
 class StoredFile(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    screenshot_id: uuid.UUID | None = Field(
+        default=None, foreign_key="storedfile.id", ondelete="SET NULL"
+    )
     filename: str = Field(max_length=255)
     content_type: str = Field(default="application/octet-stream", max_length=255)
     size: int = 0

@@ -13,6 +13,7 @@ import {
   MAX_COVER_STEP_SIZE,
   sha256,
 } from "./cadCover"
+import { addCadEdges } from "./cadEdges"
 import { coverFaceRanges } from "./coverFaceRanges"
 import { loadCoverGeometry } from "./coverGeometry"
 import { createModelControls } from "./modelControls"
@@ -106,6 +107,7 @@ export default function StepCoverCanvas({
       setStatus("Preparando superficies…")
       const { meshes: prepared, geometryKey } = await loadCoverGeometry(
         buffer,
+        sourceHash,
         abort.signal,
       )
       if (stopped) return
@@ -129,6 +131,7 @@ export default function StepCoverCanvas({
         for (const mesh of meshes) mesh.geometry.dispose()
         for (const material of materials) material.dispose()
       })
+      let lastYield = performance.now()
       for (const mesh of prepared) {
         const geometry = new THREE.BufferGeometry()
         geometry.setAttribute(
@@ -143,13 +146,17 @@ export default function StepCoverCanvas({
           )
         else geometry.computeVertexNormals()
         const rendered = new THREE.Mesh(geometry, materials)
+        const edges = addCadEdges(rendered, mesh.edgeIndices)
+        cleanup.push(() => {
+          edges.geometry.dispose()
+          edges.material.dispose()
+        })
         meshes.push(rendered)
         object.add(rendered)
-        // Allow closing between meshes, including during renderer preparation.
-        await new Promise((resolve) => setTimeout(resolve, 0))
-        if (stopped) {
-          release()
-          return
+        if (performance.now() - lastYield >= 10) {
+          await new Promise((resolve) => setTimeout(resolve, 0))
+          if (stopped) return
+          lastYield = performance.now()
         }
       }
       const surfaces = new Map<string, Surface>()
@@ -194,7 +201,9 @@ export default function StepCoverCanvas({
         )
       }
       let hovered: string | null = null
+      let needsDraw = true
       const paint = () => {
+        needsDraw = true
         // Merge adjacent faces of the same color: a gray part needs one draw
         // call per mesh, instead of thousands of calls for its CAD surfaces.
         meshes.forEach((mesh, meshIndex) => {
@@ -285,6 +294,7 @@ export default function StepCoverCanvas({
         camera.aspect = width / height
         camera.updateProjectionMatrix()
         controls.handleResize()
+        needsDraw = true
       }
       const observer = new ResizeObserver(resize)
       observer.observe(container)
@@ -293,10 +303,16 @@ export default function StepCoverCanvas({
       const draw = () => {
         light.position.copy(camera.position)
         renderer.render(scene, camera)
+        needsDraw = false
       }
+      const invalidate = () => {
+        needsDraw = true
+      }
+      controls.addEventListener("change", invalidate)
+      cleanup.push(() => controls.removeEventListener("change", invalidate))
       renderer.setAnimationLoop(() => {
         controls.update()
-        draw()
+        if (needsDraw) draw()
       })
 
       const ray = new THREE.Raycaster()
@@ -339,8 +355,11 @@ export default function StepCoverCanvas({
             down.moved = true
           return
         }
-        hovered = pick(event)
-        paint()
+        const next = pick(event)
+        if (next !== hovered) {
+          hovered = next
+          paint()
+        }
       }
       const pointerUp = (event: PointerEvent) => {
         if (

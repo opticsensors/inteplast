@@ -5,6 +5,9 @@ import { CatalogService, FilesService } from "@/client"
 import { PartThumbnail } from "../../../src/components/Parts/PartCover"
 
 window.review = { captures: 0, saved: [] }
+window.review.refreshing = new Promise((resolve) => {
+  window.review.finishRefresh = resolve
+})
 FilesService.uploadFile = async () => ({
   id: `image-${window.review.captures}`,
   filename: "piece.png",
@@ -35,6 +38,11 @@ function Example() {
     code: "3212",
     name: "Test piece",
     cad_cache_key: version,
+    cover_needs_refresh: version === "remote-v1",
+    image:
+      version === "remote-v1"
+        ? { id: "legacy", content_type: "image/png" }
+        : null,
     cad: {
       id: "same-cad",
       version: "same-record",

@@ -229,7 +229,7 @@ Todo bajo `/api/v1`. Documentación interactiva en `http://localhost:8000/docs`.
 | `GET` `POST` | `/parts/` | Listar (incluye `feature_count` por pieza) y dar de alta piezas |
 | `PUT` | `/parts/{id}` | Editar código, nombre, descripción, `family_id`, `customer_id` (omitido conserva, `null` quita), carpeta y archivos/referencias según `PartUpdate`. El código es único: choque → `409`; familia o cliente inexistente → `422` |
 | `GET` | `/catalog` | Búsqueda paginada de piezas/features; cotas por pieza/revisión solo con texto. Filtros `part_id`, `feature_id`, `family_id`, `customer_id` y `kind=all/part/feature`. **Criterio único:** una pieza cumple si cumple todos los filtros de pieza a la vez; un feature, si está vinculado a al menos una pieza que los cumpla todos |
-| `GET` | `/parts/{id}/cover` | CAD vinculado, clave de la versión actual y captura vigente. La lista y la cuadrícula solicitan `/catalog?defer_covers=true` y usan `deferred_cover_part_id` para cargar esta información cuando la tarjeta entra en pantalla. |
+| `GET` | `/parts/{id}/cover` | CAD vinculado, clave de la versión actual y captura del mismo original. Si solo cambió el estilo, devuelve la imagen guardada con `cover_needs_refresh` mientras se prepara su sustituta. Comprueba acceso y versión antes de devolver la imagen. La lista y la cuadrícula usan `deferred_cover_part_id` para pedirla al entrar la tarjeta en pantalla. |
 | `GET` | `/catalog/graph` | Lo mismo que `/catalog` con los mismos filtros (`catalog_part_filters` y `crud.feature_conditions`), sin páginas: nodos de pieza (código, nombre, captura CAD guardada; nunca lanza una nueva), feature, familia y cliente, y uniones pieza–feature (pertenencia completa, como la lista), pieza–familia y pieza–cliente. Tope `limit` (máx. y por defecto 500 nodos): si se supera devuelve `truncated` y el `total` real |
 | `GET` | `/catalog/drawings` | «Planos» del catálogo: **todos** los planos de las piezas que cumplen los filtros (mismo criterio de pieza, familia, cliente y feature), no solo el principal. Cada pieza aporta los que muestra su ficha (`read_files`): su lista gestionada o, si no la tiene, sus referencias y los adjuntos de features (corregido el 18/11/2026; antes solo miraba `PartFile`). `q` busca en el nombre del archivo y en el código o nombre de la pieza. Cada tarjeta lleva componente y revisión si están asignados en «Organizar por componentes». Paginado (`skip`, `limit` ≤ 100) |
 | `POST` | `/files/{id}/thumbnail?page=1` | Miniatura PNG de la página indicada (por defecto la primera, 480 px de ancho). Devuelve el giro adicional en grados horarios (`rotation`) y un enlace firmado para esa página y versión (`purpose: file-thumbnail`). La caché está en `uploads/thumbnails/{id}/`. El proceso hijo de PyMuPDF tiene un límite de 60 s y admite hasta dos conversiones simultáneas por proceso de la API y una por documento. Si está ocupado responde `busy`. Los fallos de conversión devuelven `422`, el tiempo agotado `504` y los formatos distintos de PDF `415`. |
@@ -444,12 +444,14 @@ sus cotas asignadas en una transacción; conserva la pieza compartida, los otros
 los originales. Al volver a la ficha se conserva el desplegado de cada pieza en la sesión del
 navegador y se restaura el scroll de la ruta.
 
-En la ficha de pieza, **Archivos** muestra en cada fila el tipo, el nombre visible y el
-tamaño. El nombre abre la página del archivo (`/parts/{id}/fichero/{fileId}`) y el botón de
-la fila descarga el original. La página muestra el visor que corresponda o, si no hay visor
-posible, indica que hay que descargar el original para abrirlo en su aplicación. La cabecera
-del visor omite tipo, nombre interno, ruta y revisión técnica; esos metadatos siguen en la
-BD. En el modo local, un original ausente o modificado se rechaza y requiere revisar el vínculo
+En la ficha de pieza, **Archivos** muestra el tipo, el tamaño y la descarga del original.
+Pulsar el tipo abre la página del archivo (`/parts/{id}/fichero/{fileId}`). Allí se ve el
+nombre del fichero y, si se ha elegido un nombre distinto en edición, se conserva como título.
+La página muestra el visor del formato o la descarga. El plano tiene dos iconos de carpeta
+de SharePoint para el vigente y el histórico, pendientes de conectar. En Molde y Moldflow
+la cabecera ofrece la carpeta de SharePoint y la descarga. Cada fichero admite una captura
+opcional que se guarda desde el lápiz y se comparte entre sus enlaces de pieza y feature.
+En el modo local, un original ausente o modificado se rechaza y requiere revisar el vínculo
 en **Editar pieza**. El tratamiento de cambios en Graph sigue el
 [contrato del origen](ficheros-externos.md#sharepoint-microsoft-graph).
 
@@ -470,7 +472,12 @@ en el equipo del usuario.
 ### El visor 3D
 
 La aplicación muestra CAD y mallas y permite crear portadas seleccionando superficies y
-encuadre. Consultar [interacción y formatos](ficheros-externos.md#visores-de-archivos),
+encuadre. En Piezas y Features, el CAD de producto se muestra sombreado con aristas
+visibles. El STEP aporta el perímetro de cada cara, incluidas las uniones tangentes.
+La misma representación se usa al marcar caras y al generar las portadas automáticas.
+Las mallas que solo contienen triángulos permiten aproximar las aristas por el cambio de
+ángulo entre caras. Las capturas guardadas a mano se actualizan al volver a guardarlas.
+Consultar [interacción y formatos](ficheros-externos.md#visores-de-archivos),
 [portadas y selección de caras](portadas-cad.md) y
 [conversión de archivos grandes a GLB](vistas-3d.md).
 

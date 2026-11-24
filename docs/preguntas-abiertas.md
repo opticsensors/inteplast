@@ -774,6 +774,8 @@ Level*). Los planos que nos pasasteis están en `1- 2D y 3D pieza` y en `6- Mét
    anterior?**
 5. **3288: el nivel de la cabecera, ¿se refiere al conjunto o a la base y la tapa? ¿Qué nivel correspondía a
    `intern.04`?**
+6. **¿Qué nombre y qué ubicación tendrá la carpeta de planos históricos de cada pieza en SharePoint?**
+   Con la ruta de la 3237 como ejemplo podremos comprobar qué carpeta debe abrir el icono de histórico del visor.
 
 <details><summary>Contexto interno (no enviar)</summary>
 

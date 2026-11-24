@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Loader2 } from "lucide-react"
-import { lazy, Suspense, useState } from "react"
+import { Suspense, useState } from "react"
 import {
   CatalogService,
   type FilePublic,
@@ -11,6 +11,10 @@ import { CoverButton } from "@/components/Features/CoverButton"
 import { CoverDialog } from "@/components/Features/CoverDialog"
 import { CoverLoading } from "@/components/Features/CoverLoading"
 import { FeatureThumbnail } from "@/components/Features/FeatureCard"
+import {
+  preloadStepViewer,
+  StepCoverCanvas,
+} from "@/components/Features/lazyStepCoverCanvas"
 import { partLabel } from "@/components/Features/parts"
 import {
   Dialog,
@@ -21,9 +25,6 @@ import {
 import { useCatalogCover } from "@/hooks/useCatalogCover"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
 
-const StepCoverCanvas = lazy(
-  () => import("@/components/Features/StepCoverCanvas"),
-)
 // Catalogue thumbnails share one worker/WebGL slot, even when several cards mount together.
 let queue: Promise<unknown> = Promise.resolve()
 
@@ -39,7 +40,7 @@ function usePartImage(part: PartCardPublic) {
       part.cad_cache_key,
     ],
     enabled: Boolean(
-      !part.image &&
+      (!part.image || part.cover_needs_refresh) &&
         part.cad_cache_key &&
         cad &&
         /\.(step|stp)$/i.test(cad.filename),
@@ -74,6 +75,7 @@ function usePartImage(part: PartCardPublic) {
             cad,
             cad_cache_key: part.cad_cache_key,
             image: saved,
+            cover_needs_refresh: false,
           })
           void client.invalidateQueries({
             queryKey: ["parts", "detail", part.id],
@@ -84,8 +86,11 @@ function usePartImage(part: PartCardPublic) {
       return job
     },
   })
+  const renderedImage = part.cad_cache_key ? generated.data : undefined
   return {
-    image: part.image ?? (part.cad_cache_key ? generated.data : undefined),
+    image: part.cover_needs_refresh
+      ? (renderedImage ?? part.image)
+      : (part.image ?? renderedImage),
     loading: generated.isFetching,
     error: generated.error,
   }
@@ -143,6 +148,8 @@ export function PartCover({ part }: { part: PartCardPublic }) {
           <DialogTrigger asChild>
             <CoverButton
               image={image}
+              onPointerEnter={cad ? preloadStepViewer : undefined}
+              onFocus={cad ? preloadStepViewer : undefined}
               name={name}
               className="size-full sm:size-full"
             />

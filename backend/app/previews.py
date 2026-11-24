@@ -28,7 +28,7 @@ from app.core.config import settings
 from app.core.db import engine
 from app.file_sources import document_path, document_version
 from app.models import FilePreview, StoredFile
-from app.preview_converter import EXTENSIONS, MAX_INPUT_BYTES, RECIPE
+from app.preview_converter import EXTENSIONS, MAX_INPUT_BYTES, preview_recipe
 
 logger = logging.getLogger(__name__)
 WORKER_LOCK = 3212091501
@@ -44,7 +44,7 @@ def preview_key(document: StoredFile) -> str:
                 document.source_key,
                 document.source_path,
                 document_version(document),
-                RECIPE,
+                preview_recipe(Path(document.filename).suffix.lower()),
             ]
         ).encode()
     ).hexdigest()

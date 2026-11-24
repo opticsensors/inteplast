@@ -5,6 +5,7 @@ from sqlmodel import select
 
 from app.core.config import settings
 from app.evidence import job_id
+from app.file_sources import SourceError
 from app.knowledge_models import EvidenceJob, PartDocument
 from app.models import Part, StoredFile
 from tests.api.routes.test_part_setup import API, csv, source, write
@@ -402,3 +403,49 @@ def test_read_error_is_persisted_and_does_not_read_the_assets_root(
     assert response.json()["state"] == "error"
     assert response.json()["files"] == []
     assert client.get(url, headers=normal_user_token_headers).json() == response.json()
+
+
+def test_failed_read_keeps_the_previous_good_report(
+    client, db, normal_user_token_headers, monkeypatch
+):
+    from app import part_reading
+
+    good = {
+        "state": "ready",
+        "imported": 1,
+        "skipped": 0,
+        "measurements": {"context_key": "test", "files": [], "notices": []},
+        "corrections_state": "ready",
+        "notices": [],
+        "files": [
+            {
+                "path": "4- Metrologia/report.xls",
+                "group": "measurements",
+                "status": "imported",
+                "sheet": "DR",
+            }
+        ],
+        "updated_at": "2026-11-20T10:00:00+00:00",
+        "corrections_key": None,
+    }
+    part = Part(code=str(uuid.uuid4()), name="Read before", folder_path="piece")
+    part.last_read = good
+    db.add(part)
+    db.commit()
+
+    def expired(*_args):
+        raise SourceError(
+            "unavailable", "Inicia sesión con Microsoft para leer SharePoint.", 401
+        )
+
+    monkeypatch.setattr(part_reading, "refresh", expired)
+    url = f"{API}/{part.id}/read-data"
+    response = client.post(url, headers=normal_user_token_headers)
+    assert response.status_code == 200
+    assert response.json()["state"] == "error"
+    assert response.json()["notices"] == [
+        "Inicia sesión con Microsoft para leer SharePoint."
+    ]
+    assert client.get(url, headers=normal_user_token_headers).json() == good
+    db.refresh(part)
+    assert part.last_read == good

@@ -97,12 +97,16 @@ def _own_file_ids(session: Session, part_id: uuid.UUID) -> set[uuid.UUID]:
         # Covers of features on this piece: they go with their links.
         select(FeaturePartLink.image_id).where(FeaturePartLink.part_id == part_id),
     ]
-    return {
+    originals = {
         file_id
         for statement in statements
         for file_id in session.exec(statement).all()
         if file_id is not None
     }
+    screenshots = session.exec(
+        select(StoredFile.screenshot_id).where(col(StoredFile.id).in_(originals))
+    ).all()
+    return originals | {image for image in screenshots if image is not None}
 
 
 def _shared_file_ids(
@@ -141,7 +145,22 @@ def _shared_file_ids(
         for file_id in session.exec(statement).all()
         if file_id is not None
     }
-    return shared | (file_ids & _note_file_ids(session))
+    shared.update(file_ids & _note_file_ids(session))
+    references = session.exec(
+        select(StoredFile.id, StoredFile.screenshot_id).where(
+            col(StoredFile.screenshot_id).in_(ids)
+        )
+    ).all()
+    # Preserve every capture reachable from an attachment that survives the deletion.
+    while True:
+        images = {
+            image
+            for original, image in references
+            if image is not None and (original not in file_ids or original in shared)
+        }
+        if images <= shared:
+            return shared
+        shared.update(images)
 
 
 # Images inside warnings and lessons: `![name](file:<id>)`.

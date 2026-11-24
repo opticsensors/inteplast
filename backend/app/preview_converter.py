@@ -11,9 +11,14 @@ from pathlib import Path
 from typing import Any
 
 RECIPE = "glb-v8-occt7.9-weld-300k-stl-1m-step-limit"
+STEP_RECIPE = "glb-v9-step-face-boundaries"
 MAX_INPUT_BYTES = 512 * 1024 * 1024
 MAX_OUTPUT_BYTES = 25 * 1024 * 1024
 EXTENSIONS = {".stl", ".step", ".stp"}
+
+
+def preview_recipe(extension: str) -> str:
+    return RECIPE if extension == ".stl" else STEP_RECIPE
 
 
 def sha256(path: Path) -> str:
@@ -24,7 +29,7 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def step_mesh(path: Path) -> Any:
+def step_mesh(path: Path) -> tuple[Any, Any]:
     import numpy as np
     import trimesh
     from OCP.BRep import BRep_Tool
@@ -58,7 +63,7 @@ def step_mesh(path: Path) -> Any:
     if not mesher.IsDone():
         raise ValueError("STEP tessellation failed")
     explorer = TopExp_Explorer(shape, TopAbs_FACE)
-    vertices, faces = [], []
+    vertices, faces, outlines = [], [], []
     offset = 0
     retried, repaired = 0, 0
     face_index = 0
@@ -131,6 +136,14 @@ def step_mesh(path: Path) -> Any:
                 indices = indices[:, [0, 2, 1]]
             vertices.append(points)
             faces.append(indices + offset - 1)
+            # The perimeter of each CAD face includes tangent joins and openings.
+            # Within a single face every interior triangulation edge occurs twice.
+            segments = np.concatenate(
+                [indices[:, [0, 1]], indices[:, [1, 2]], indices[:, [2, 0]]]
+            )
+            segments.sort(axis=1)
+            unique, counts = np.unique(segments, axis=0, return_counts=True)
+            outlines.append(points[unique[counts == 1] - 1].astype("<f4"))
             offset += len(points)
         explorer.Next()
     if not faces:
@@ -139,7 +152,7 @@ def step_mesh(path: Path) -> Any:
     # problematic faces. This is a count limit, not an area/accuracy guarantee.
     if len(incomplete_faces) > face_index * 0.01:
         raise ValueError("More than 1% of STEP faces could not be tessellated")
-    return trimesh.Trimesh(
+    mesh = trimesh.Trimesh(
         vertices=np.concatenate(vertices),
         faces=np.concatenate(faces),
         process=False,
@@ -150,6 +163,49 @@ def step_mesh(path: Path) -> Any:
             "step_incomplete_faces": incomplete_faces,
         },
     )
+    return mesh, np.concatenate(outlines)
+
+
+def export_step_glb(mesh: Any, segments: Any) -> bytes:
+    import numpy as np
+    import trimesh
+
+    # Store a standard indexed LINES primitive separately from the simplified surface.
+    # Adjacent faces often describe the same line in opposite directions.
+    positions, inverse = np.unique(segments.reshape(-1, 3), axis=0, return_inverse=True)
+    pairs = np.unique(np.sort(inverse.reshape(-1, 2), axis=1), axis=0)
+    indices = pairs[pairs[:, 0] != pairs[:, 1]].flatten().astype("<u4")
+
+    def append_lines(buffers: Any, tree: Any) -> None:
+        attributes = tree["accessors"]
+        position_index = len(attributes)
+        for key, array, component, shape in (
+            ("cad_edge_positions", positions, 5126, "VEC3"),
+            ("cad_edge_indices", indices, 5125, "SCALAR"),
+        ):
+            attributes[key] = {
+                "bufferView": len(buffers),
+                "componentType": component,
+                "count": len(array),
+                "type": shape,
+                "min": np.atleast_1d(array.min(axis=0)).tolist(),
+                "max": np.atleast_1d(array.max(axis=0)).tolist(),
+            }
+            buffers[key] = array.tobytes()
+        tree["meshes"][0]["primitives"].append(
+            {
+                "mode": 1,
+                "attributes": {"POSITION": position_index},
+                "indices": position_index + 1,
+            }
+        )
+
+    data: bytes = trimesh.exchange.gltf.export_glb(
+        mesh.scene(),
+        include_normals=True,
+        buffer_postprocessor=append_lines if len(indices) else None,
+    )
+    return data
 
 
 def convert(source: Path, extension: str, output: Path) -> dict[str, Any]:
@@ -160,11 +216,11 @@ def convert(source: Path, extension: str, output: Path) -> dict[str, Any]:
         raise ValueError("Unsupported preview input")
     before = source.stat()
     digest = sha256(source)
-    mesh = (
-        trimesh.load_mesh(source, file_type="stl", process=True)
-        if extension == ".stl"
-        else step_mesh(source)
-    )
+    outlines = None
+    if extension == ".stl":
+        mesh = trimesh.load_mesh(source, file_type="stl", process=True)
+    else:
+        mesh, outlines = step_mesh(source)
     if not len(mesh.faces) or not np.isfinite(mesh.vertices).all():
         raise ValueError("Invalid or empty geometry")
     if extension != ".stl":
@@ -211,7 +267,14 @@ def convert(source: Path, extension: str, output: Path) -> dict[str, Any]:
             doubleSided=True,
         )
     )
-    data = trimesh.exchange.gltf.export_glb(mesh.scene(), include_normals=True)
+    if outlines is not None and len(outlines):
+        data = export_step_glb(mesh, outlines)
+        if len(data) > MAX_OUTPUT_BYTES:
+            # Preserve access to large assemblies. Their viewer derives sharp edges
+            # from the reduced geometry when the full contours exceed the web budget.
+            data = trimesh.exchange.gltf.export_glb(mesh.scene(), include_normals=True)
+    else:
+        data = trimesh.exchange.gltf.export_glb(mesh.scene(), include_normals=True)
     if len(data) > MAX_OUTPUT_BYTES:
         raise ValueError("Preview exceeds web size budget")
     after = source.stat()
@@ -229,7 +292,7 @@ def convert(source: Path, extension: str, output: Path) -> dict[str, Any]:
         "source_triangles": original_triangles,
         "bounds": bounds.tolist(),
         "preview_bounds": mesh.bounds.tolist(),
-        "recipe": RECIPE,
+        "recipe": preview_recipe(extension),
     }
 
 

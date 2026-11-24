@@ -387,10 +387,23 @@ test("the piece's drawing file opens its own page and Back restores the piece", 
     "/parts/part-one?cota=N170&view=correcciones&interval=03-05",
   )
   const previous = await state(page)
-  await page.getByRole("link", { name: "DRW_3212.pdf", exact: true }).click()
+  await expect(page.getByText("DRW_3212.pdf", { exact: true })).toHaveCount(0)
+  await page.getByRole("link", { name: "Plano 2D", exact: true }).click()
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "DRW_3212.pdf",
   )
+  for (const name of [
+    "Carpeta del plano en SharePoint",
+    "Histórico de planos en SharePoint",
+  ]) {
+    const folder = page.getByRole("button", { name })
+    await expect(folder).toBeVisible()
+    await expect(folder).toBeDisabled()
+    await expect(folder).toHaveText("")
+  }
+  await expect(
+    page.getByRole("link", { name: "Abrir en pestaña" }),
+  ).toHaveCount(0)
   await expect(
     page.getByRole("region", { name: "Plano de prueba" }),
   ).toBeVisible()
@@ -409,6 +422,216 @@ test("the piece's drawing file opens its own page and Back restores the piece", 
     "3212 Pump Housing",
   )
   assert.deepEqual(await state(page), previous)
+})
+
+test("Moldflow opens its folder and downloads the original beside it", async (t) => {
+  const page = await mount(t, "/features")
+  await page.evaluate(() => {
+    window.review.attachments = [
+      {
+        kind: "moldflow",
+        name: "Simulación de llenado",
+        primary: false,
+        file: {
+          id: "moldflow",
+          filename: "simulacion.mfr",
+          content_type: "application/octet-stream",
+          size: 18,
+          source: "upload",
+          version: "v1",
+        },
+      },
+    ]
+    window.review.attachmentFolders = {
+      moldflow: "https://example.invalid/studies",
+      mold: "https://example.invalid/tools",
+    }
+    return window.review.navigate({
+      to: "/parts/$partId",
+      params: { partId: "part-one" },
+    })
+  })
+  const link = page.getByRole("link", { name: "Moldflow", exact: true })
+  await expect(
+    page.getByRole("link", { name: "Carpeta de Molde en SharePoint" }),
+  ).toHaveAttribute("href", "https://example.invalid/tools")
+  await expect(link).toHaveAttribute("href", "/parts/part-one/fichero/moldflow")
+  for (const name of ["simulacion.mfr", "Simulación de llenado"])
+    await expect(page.getByText(name, { exact: true })).toHaveCount(0)
+  await link.click()
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Simulación de llenado",
+  )
+  await expect(page.getByText("simulacion.mfr", { exact: true })).toBeVisible()
+  const folder = page.getByRole("link", {
+    name: "Carpeta de Moldflow en SharePoint",
+  })
+  await expect(folder).toHaveAttribute(
+    "href",
+    "https://example.invalid/studies",
+  )
+  await expect(folder).toHaveAttribute("target", "_blank")
+  await expect(folder).toHaveText("")
+  await expect(
+    page.getByText("Descarga el original para abrirlo en su aplicación."),
+  ).toHaveCount(0)
+  const download = page.getByRole("link", {
+    name: "Descargar original de Moldflow",
+  })
+  await expect(
+    folder
+      .locator("..")
+      .getByRole("link", { name: "Descargar original de Moldflow" }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Seleccionar imagen" }),
+  ).toHaveCount(0)
+  await expect(download).toHaveText("")
+  const bytes = Buffer.from("original de prueba")
+  await page.route(
+    "https://files.invalid/api/v1/files/moldflow?token=review-only&download=true",
+    (route) =>
+      route.fulfill({
+        headers: {
+          "Content-Disposition": 'attachment; filename="simulacion.mfr"',
+        },
+        contentType: "application/octet-stream",
+        body: bytes,
+      }),
+  )
+  const [original] = await Promise.all([
+    page.waitForEvent("download"),
+    download.click(),
+  ])
+  assert.equal(original.suggestedFilename(), "simulacion.mfr")
+  assert.deepEqual(await fs.promises.readFile(await original.path()), bytes)
+})
+
+test("Molde edits, saves and removes a screenshot without loading the STEP viewer", async (t) => {
+  const page = await mount(t, "/features")
+  await page.evaluate(() => {
+    window.review.uploadRequests = []
+    window.review.attachments = [
+      {
+        kind: "mold",
+        name: "Molde completo",
+        primary: true,
+        file: {
+          id: "fixture-mold",
+          filename: "tool.step",
+          content_type: "model/step",
+          size: 98,
+          source: "upload",
+        },
+      },
+    ]
+    return window.review.navigate({
+      to: "/parts/$partId/fichero/$fileId",
+      params: { partId: "part-one", fileId: "fixture-mold" },
+    })
+  })
+  await expect(
+    page.getByRole("heading", { name: "Molde completo" }),
+  ).toBeVisible()
+  await expect(page.locator("canvas")).toHaveCount(0)
+  const placeholder = page.getByRole("img", {
+    name: "Vista previa de Molde",
+    exact: true,
+  })
+  await expect(placeholder).toBeVisible()
+  await expect(placeholder).toHaveClass(/lucide-image/)
+  await expect(placeholder.locator("..")).toHaveClass(/h-\[70vh\]/)
+  await page.getByRole("button", { name: "Editar captura" }).click()
+  const target = page.getByRole("button", { name: "Seleccionar imagen" })
+  await expect(target.locator("svg")).toHaveClass(/lucide-upload/)
+  await expect(target).toHaveClass(/h-\[70vh\]/)
+  const [chooser] = await Promise.all([
+    page.waitForEvent("filechooser"),
+    target.click(),
+  ])
+  await chooser.setFiles({
+    name: "molde.png",
+    mimeType: "image/png",
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/r8sAAAAASUVORK5CYII=",
+      "base64",
+    ),
+  })
+  await expect(
+    page.getByRole("button", { name: "Quitar imagen" }),
+  ).toBeVisible()
+  await page.getByRole("button", { name: "Guardar captura" }).click()
+  await expect(
+    page.getByRole("img", { name: "Captura de Molde completo" }),
+  ).toHaveAttribute("src", /uploaded-image/)
+  await page.getByRole("button", { name: "Editar captura" }).click()
+  await page.getByRole("button", { name: "Quitar imagen" }).click()
+  await page.getByRole("button", { name: "Cancelar" }).click()
+  await expect(
+    page.getByRole("img", { name: "Captura de Molde completo" }),
+  ).toBeVisible()
+  await page.getByRole("button", { name: "Editar captura" }).click()
+  await page.getByRole("button", { name: "Quitar imagen" }).click()
+  await page.getByRole("button", { name: "Guardar captura" }).click()
+  await expect(
+    page.getByRole("img", { name: "Captura de Molde completo" }),
+  ).toHaveCount(0)
+  await expect(
+    page.getByRole("link", { name: "Descargar original de Molde" }),
+  ).toBeVisible()
+  for (const gesture of ["paste", "drop"]) {
+    await page.getByRole("button", { name: "Editar captura" }).click()
+    const surface = page.getByRole("button", { name: "Seleccionar imagen" })
+    await expect(surface).toContainText("Ctrl+V")
+    await surface.evaluate((element, action) => {
+      const data = new DataTransfer()
+      data.items.add(
+        new File(["captura"], "captura.png", { type: "image/png" }),
+      )
+      element.dispatchEvent(
+        action === "paste"
+          ? new ClipboardEvent("paste", { clipboardData: data, bubbles: true })
+          : new DragEvent("drop", { dataTransfer: data, bubbles: true }),
+      )
+    }, gesture)
+    await expect(
+      page.getByRole("button", { name: "Quitar imagen" }),
+    ).toBeVisible()
+    await page.getByRole("button", { name: "Cancelar" }).click()
+  }
+})
+
+test("a denied original keeps the screenshot frame in consultation mode", async (t) => {
+  const page = await mount(t, "/features")
+  await page.evaluate(() => {
+    window.review.deniedCapture = "blocked"
+    window.review.attachments = [
+      {
+        kind: "moldflow",
+        name: "Estudio",
+        primary: false,
+        file: {
+          id: "blocked",
+          filename: "llenado.mfr",
+          source: "local",
+          size: 12,
+          content_type: "application/octet-stream",
+        },
+      },
+    ]
+    return window.review.navigate({
+      to: "/parts/$partId/fichero/$fileId",
+      params: { partId: "part-one", fileId: "blocked" },
+    })
+  })
+  await expect(page.getByRole("alert")).toContainText("Sin acceso")
+  await expect(
+    page.getByRole("img", { name: "Vista previa de Moldflow" }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Editar captura" }),
+  ).toHaveCount(0)
+  await expect(page.locator('input[type="file"]')).toHaveCount(0)
 })
 
 test("an explicitly removed drawing is not recovered automatically from historical documents", async (t) => {

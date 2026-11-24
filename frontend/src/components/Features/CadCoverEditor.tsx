@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { Loader2 } from "lucide-react"
-import { lazy, Suspense, useRef, useState } from "react"
+import { Suspense, useRef, useState } from "react"
 
 import {
   CatalogService,
@@ -15,9 +15,8 @@ import { COVER_EDITOR_ROWS } from "./CoverDialog"
 import { CoverLoading } from "./CoverLoading"
 import { type CoverControls, coverAssets } from "./cadCover"
 import { FeatureThumbnail } from "./FeatureCard"
+import { StepCoverCanvas } from "./lazyStepCoverCanvas"
 import { usePendingTask } from "./usePendingTask"
-
-const StepCoverCanvas = lazy(() => import("./StepCoverCanvas"))
 
 export function CadCoverEditor({
   feature,

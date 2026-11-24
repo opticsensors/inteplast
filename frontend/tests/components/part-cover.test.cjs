@@ -56,6 +56,9 @@ test("a remote revision regenerates the thumbnail despite unchanged CAD IDs; una
     name: "3212 - Test piece",
     exact: true,
   })
+  await expect(image).toHaveAttribute("src", /legacy\.png$/)
+  await page.waitForFunction(() => window.review.captures === 1)
+  await page.evaluate(() => window.review.finishRefresh())
   await expect(image).toHaveAttribute("src", /image-1\.png$/)
   await page.getByRole("button", { name: "Cambiar CAD remoto" }).click()
   await expect(image).toHaveAttribute("src", /image-2\.png$/)

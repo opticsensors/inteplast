@@ -25,6 +25,7 @@ interface FileUploadProps {
   className?: string
   /** Tamaño del cuadro de imagen. La ficha lo iguala al de su foto. */
   boxClassName?: string
+  imagePrompt?: string
   /** Fixed rows shared with the CAD tab in the cover dialog. */
   coverLayout?: boolean
   /** Restrict clipboard images to this editor's dialog. */
@@ -44,6 +45,7 @@ export function FileUpload({
   accept,
   className,
   boxClassName,
+  imagePrompt,
   coverLayout = false,
   pasteInDialog = false,
   onUploadStateChange,
@@ -152,14 +154,24 @@ export function FileUpload({
         >
           {mutation.isPending ? (
             <Loader2 className="size-6 animate-spin text-muted-foreground" />
-          ) : preview && url && isPreviewableImage(preview.content_type) ? (
+          ) : preview &&
+            url &&
+            isPreviewableImage(preview.content_type) &&
+            !(imagePrompt && isDragging) ? (
             <img
               src={url}
               alt={preview.filename}
               className="size-full object-contain"
             />
           ) : (
-            <ImageIcon className="size-8 text-muted-foreground" />
+            <span className="flex flex-col items-center gap-2 text-muted-foreground">
+              {imagePrompt ? (
+                <Upload className="size-8" />
+              ) : (
+                <ImageIcon className="size-8" />
+              )}
+              {imagePrompt && <span className="text-sm">{imagePrompt}</span>}
+            </span>
           )}
         </button>
         {value && !mutation.isPending && (
@@ -171,7 +183,9 @@ export function FileUpload({
               "absolute size-6 rounded-full",
               coverLayout
                 ? "right-2 top-[calc(3rem+0.5rem)]"
-                : "-top-2 -right-2",
+                : imagePrompt
+                  ? "right-2 top-2"
+                  : "-top-2 -right-2",
             )}
             onClick={() => onChange(null)}
           >
@@ -180,16 +194,18 @@ export function FileUpload({
           </Button>
         )}
         {input}
-        <p
-          className={cn(
-            "text-center text-xs text-muted-foreground",
-            coverLayout
-              ? "row-start-1 flex items-center justify-center"
-              : "mt-1",
-          )}
-        >
-          Arrastra, pega (Ctrl+V) o haz clic para elegir
-        </p>
+        {!imagePrompt && (
+          <p
+            className={cn(
+              "text-center text-xs text-muted-foreground",
+              coverLayout
+                ? "row-start-1 flex items-center justify-center"
+                : "mt-1",
+            )}
+          >
+            Arrastra, pega (Ctrl+V) o haz clic para elegir
+          </p>
+        )}
         <div
           className={
             coverLayout

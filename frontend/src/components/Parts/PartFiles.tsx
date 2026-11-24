@@ -23,6 +23,7 @@ import { fileErrorMessage } from "@/hooks/useFileAccess"
 import { pickSourcePath } from "@/lib/sourcePicker"
 import { cn } from "@/lib/utils"
 import { formatFileSize } from "@/utils"
+import { AttachmentFolder } from "./AttachmentActions"
 import {
   canBePrimary,
   FILE_ICONS,
@@ -131,6 +132,21 @@ export function PartFiles({
         const multiple =
           canBePrimary(file.kind) &&
           files.filter((other) => other.kind === file.kind).length > 1
+        const fileType = (
+          <span className="flex min-h-8 min-w-0 items-center gap-2 px-1 font-medium">
+            <Icon
+              aria-hidden="true"
+              className="size-5 shrink-0 text-muted-foreground"
+            />
+            <span className="truncate">{label}</span>
+            {file.primary && multiple && (
+              <Star
+                className="size-3 shrink-0 fill-primary text-primary"
+                aria-label="Archivo principal"
+              />
+            )}
+          </span>
+        )
         return (
           <fieldset
             key={file.key}
@@ -138,7 +154,7 @@ export function PartFiles({
             aria-label={`Fichero ${file.name}`}
             className="flex min-w-0 items-center gap-1 rounded-md border px-1.5 py-1.5 text-sm"
           >
-            {editing ? (
+            {editing && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -182,64 +198,49 @@ export function PartFiles({
                   })}
                 </DropdownMenuContent>
               </DropdownMenu>
-            ) : (
-              <span className="flex size-8 shrink-0 items-center justify-center text-muted-foreground">
-                <Icon className="size-5" />
-              </span>
             )}
             <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 items-center gap-2 px-1 leading-5">
-                <p className="truncate font-medium">{label}</p>
-                {!editing && file.primary && multiple && (
-                  <Star
-                    className="size-3 shrink-0 fill-primary text-primary"
-                    aria-label="Archivo principal"
-                  />
-                )}
-              </div>
               {editing ? (
-                <Input
-                  ref={(element) => {
-                    if (element && focus.current === file.key) {
-                      element.focus()
-                      element.select()
-                      focus.current = undefined
+                <>
+                  <p className="truncate px-1 font-medium leading-5">{label}</p>
+                  <Input
+                    ref={(element) => {
+                      if (element && focus.current === file.key) {
+                        element.focus()
+                        element.select()
+                        focus.current = undefined
+                      }
+                    }}
+                    value={file.name}
+                    aria-label={`Nombre de ${file.file?.filename ?? file.path?.split("/").pop() ?? label}`}
+                    title={file.name}
+                    maxLength={255}
+                    onChange={(event) =>
+                      onChange(
+                        files.map((row) =>
+                          row.key === file.key
+                            ? { ...row, name: event.target.value }
+                            : row,
+                        ),
+                      )
                     }
-                  }}
-                  value={file.name}
-                  aria-label={`Nombre de ${file.file?.filename ?? file.path?.split("/").pop() ?? label}`}
-                  title={file.name}
-                  maxLength={255}
-                  onChange={(event) =>
-                    onChange(
-                      files.map((row) =>
-                        row.key === file.key
-                          ? { ...row, name: event.target.value }
-                          : row,
-                      ),
-                    )
-                  }
-                  className={cn(
-                    "h-5 min-w-0 overflow-hidden text-ellipsis border-0 px-1 py-0 text-xs shadow-none focus-visible:ring-1 md:text-xs",
-                    !file.name.trim() && "ring-1 ring-destructive",
-                  )}
-                />
+                    className={cn(
+                      "h-5 min-w-0 overflow-hidden text-ellipsis border-0 px-1 py-0 text-xs shadow-none focus-visible:ring-1 md:text-xs",
+                      !file.name.trim() && "ring-1 ring-destructive",
+                    )}
+                  />
+                </>
               ) : file.file && partId ? (
                 <Link
                   to="/parts/$partId/fichero/$fileId"
                   params={{ partId, fileId: file.file.id }}
-                  title={file.name}
-                  className="block truncate px-1 text-xs leading-4 text-muted-foreground hover:underline"
+                  aria-description={file.name}
+                  className="block rounded-sm hover:underline focus-visible:outline-2 focus-visible:outline-ring"
                 >
-                  {file.name}
+                  {fileType}
                 </Link>
               ) : (
-                <p
-                  className="truncate px-1 text-xs leading-4"
-                  title={file.name}
-                >
-                  {file.name}
-                </p>
+                fileType
               )}
             </div>
             {file.file && (
@@ -326,7 +327,7 @@ export function PartFiles({
                   <FileLink
                     fileId={file.file.id}
                     downloadFile
-                    title={`Descargar ${file.name}`}
+                    title={`Descargar · ${label}`}
                   >
                     <Download className="size-3.5" />
                     <span className="sr-only">Descargar {file.name}</span>
@@ -368,6 +369,19 @@ export function PartFiles({
             </div>
           )
         })}
+      {!editing &&
+        partId &&
+        folder &&
+        (["mold", "moldflow"] as const)
+          .filter((kind) => !files.some((file) => file.kind === kind))
+          .map((kind) => (
+            <AttachmentFolder
+              key={kind}
+              kind={kind}
+              partId={partId}
+              folderOnly
+            />
+          ))}
       {!files.length && !editing && (
         <p className="text-sm text-muted-foreground">Sin archivos añadidos.</p>
       )}

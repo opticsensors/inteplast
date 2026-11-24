@@ -56,6 +56,12 @@ la aplicación lo vuelve a generar; al eliminar el documento se elimina su cach�
   falla. Este límite cuenta caras, no superficie ni importancia funcional: una vista parcial
   no garantiza que todos los componentes estén completos. No debe usarse para comprobar cotas.
 - El STEP se importa en mm. El STL no declara unidades y conserva sus coordenadas.
+- Al abrir el CAD de producto en una pieza o un feature, el visor dibuja las aristas
+  visibles sobre las superficies sombreadas. Para un STEP grande se calculan los
+  perímetros antes de simplificar y se incluyen como líneas en el GLB. Si esas líneas
+  hacen superar los 25 MiB, se conserva la superficie simplificada y el visor aproxima
+  sus aristas a partir del ángulo entre triángulos. La nueva receta regenera las vistas
+  STEP en su siguiente consulta.
 - Antes de reducir un STEP se unen vértices coincidentes de caras adyacentes (8 decimales
   en coordenadas mm). Mantener cada cara desconectada permitía colapsar superficies planas
   completas durante la reducción y abría huecos; la comprobación de límites globales no lo

@@ -38,6 +38,7 @@ from app.models import (
     FileStatus,
     LocalFileReference,
     Message,
+    Part,
     RelinkFileReference,
     SourceListing,
     StoredFile,
@@ -77,6 +78,85 @@ INLINE_TYPES = {
 
 def storage_path(file_id: uuid.UUID) -> Path:
     return settings.uploads_path / str(file_id)
+
+
+@router.get("/attachment-folder")
+def read_attachment_folder(
+    session: SessionDep,
+    _current_user: CurrentUser,
+    kind: Literal["mold", "moldflow"],
+    part_id: uuid.UUID | None = None,
+    file_id: uuid.UUID | None = None,
+) -> str | None:
+    if not sharepoint.enabled():
+        return None
+    part = session.get(Part, part_id) if part_id else None
+    document = session.get(StoredFile, file_id) if file_id else None
+    path = None
+    if (
+        document
+        and document.source == "local"
+        and document.source_key == settings.ASSETS_SOURCE_ID
+    ):
+        path = document.source_path
+    try:
+        return sharepoint.attachment_folder_url(
+            kind, part.folder_path if part else None, path
+        )
+    except SourceError as error:
+        raise HTTPException(error.status_code, error.message) from error
+
+
+class ScreenshotChange(BaseModel):
+    image_id: uuid.UUID | None
+    previous_id: uuid.UUID | None
+
+
+@router.get("/{file_id}/screenshot")
+def read_attachment_screenshot(
+    session: SessionDep, _current_user: CurrentUser, file_id: uuid.UUID
+) -> FilePublic | None:
+    document = session.get(StoredFile, file_id)
+    if not document:
+        raise HTTPException(404, "Archivo no encontrado.")
+    document_check(document)
+    image = (
+        session.get(StoredFile, document.screenshot_id)
+        if document.screenshot_id
+        else None
+    )
+    return FilePublic.model_validate(image) if image else None
+
+
+@router.put("/{file_id}/screenshot")
+def update_attachment_screenshot(
+    session: SessionDep,
+    _current_user: CurrentUser,
+    file_id: uuid.UUID,
+    body: ScreenshotChange,
+) -> FilePublic | None:
+    from app.feature_covers import COVER_IMAGE_TYPES
+
+    document = session.exec(
+        select(StoredFile).where(StoredFile.id == file_id).with_for_update()
+    ).first()
+    if not document:
+        raise HTTPException(404, "Archivo no encontrado.")
+    document_check(document)
+    if document.screenshot_id not in (body.previous_id, body.image_id):
+        raise HTTPException(409, "La captura ha cambiado. Vuelve a abrir el editor.")
+    image = session.get(StoredFile, body.image_id) if body.image_id else None
+    if body.image_id and (
+        not image
+        or image.id == file_id
+        or image.source != "upload"
+        or image.content_type.lower().split(";")[0].strip() not in COVER_IMAGE_TYPES
+    ):
+        raise HTTPException(422, "Selecciona una imagen subida para la captura.")
+    document.screenshot_id = body.image_id
+    session.add(document)
+    session.commit()
+    return FilePublic.model_validate(image) if image else None
 
 
 @router.get("/source", response_model=SourceListing)
@@ -212,6 +292,7 @@ def relink_file(
         select(FeatureAsset).where(FeatureAsset.file_id == file_id)
     ).all()
     document.sqlmodel_update(reference_metadata(body))
+    document.screenshot_id = None
     session.add(document)
     for asset in assets:
         asset.name = document.filename

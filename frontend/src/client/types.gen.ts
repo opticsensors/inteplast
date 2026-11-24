@@ -619,6 +619,7 @@ export type PartCardPublic = {
     cad?: (FilePublic | null);
     cad_cache_key?: (string | null);
     image?: (FilePublic | null);
+    cover_needs_refresh?: boolean;
     code: string;
     name?: (string | null);
     description?: (string | null);
@@ -654,6 +655,7 @@ export type PartCoverPublic = {
     cad?: (FilePublic | null);
     cad_cache_key?: (string | null);
     image?: (FilePublic | null);
+    cover_needs_refresh?: boolean;
 };
 
 export type PartCoverRequest = {
@@ -850,6 +852,11 @@ export type RelinkFileReference = {
     path: string;
     revision?: (string | null);
     expected_version: string;
+};
+
+export type ScreenshotChange = {
+    image_id: (string | null);
+    previous_id: (string | null);
 };
 
 export type SourceEntry = {
@@ -1233,6 +1240,27 @@ export type FeaturesDeleteFeatureAssetData = {
 };
 
 export type FeaturesDeleteFeatureAssetResponse = (Message);
+
+export type FilesReadAttachmentFolderData = {
+    fileId?: (string | null);
+    kind: 'mold' | 'moldflow';
+    partId?: (string | null);
+};
+
+export type FilesReadAttachmentFolderResponse = ((string | null));
+
+export type FilesReadAttachmentScreenshotData = {
+    fileId: string;
+};
+
+export type FilesReadAttachmentScreenshotResponse = ((FilePublic | null));
+
+export type FilesUpdateAttachmentScreenshotData = {
+    fileId: string;
+    requestBody: ScreenshotChange;
+};
+
+export type FilesUpdateAttachmentScreenshotResponse = ((FilePublic | null));
 
 export type FilesListSourceData = {
     directoriesOnly?: boolean;

@@ -71,6 +71,13 @@ def run_read(session: Session, part: Part, user_id: uuid.UUID) -> PartRefreshRes
                 str(error.detail if isinstance(error, HTTPException) else error.message)
             ],
         )
+        if part.last_read and part.last_read.get("state") != "error":
+            # A failed attempt (expired Microsoft session, unreachable source, file
+            # changed while reading) keeps the last good report: the catalogue labels
+            # and the component sheet names come from it. Only the caller sees the
+            # failure; the stored values are not touched either.
+            result.updated_at = get_datetime_utc().isoformat()
+            return result
     result.updated_at = get_datetime_utc().isoformat()
     part.last_read = result.model_dump(mode="json")
     session.add(part)

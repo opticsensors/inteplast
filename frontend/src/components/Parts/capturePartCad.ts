@@ -1,6 +1,7 @@
 import * as THREE from "three"
 import { type FilePublic, FilesService } from "@/client"
 import { MAX_COVER_STEP_SIZE, sha256 } from "@/components/Features/cadCover"
+import { addCadEdges } from "@/components/Features/cadEdges"
 import { loadCoverGeometry } from "@/components/Features/coverGeometry"
 import { createModelControls } from "@/components/Features/modelControls"
 import { absoluteFileUrl } from "@/hooks/useFileAccess"
@@ -14,7 +15,7 @@ export async function capturePartCad(file: FilePublic, signal: AbortSignal) {
   if (!response.ok) throw new Error("El CAD no está disponible.")
   const bytes = await response.arrayBuffer()
   const sourceHash = await sha256(bytes)
-  const { meshes } = await loadCoverGeometry(bytes, signal)
+  const { meshes } = await loadCoverGeometry(bytes, sourceHash, signal)
   signal.throwIfAborted()
   const object = new THREE.Group()
   const material = new THREE.MeshPhongMaterial({
@@ -22,6 +23,7 @@ export async function capturePartCad(file: FilePublic, signal: AbortSignal) {
     side: THREE.DoubleSide,
   })
   const geometries: THREE.BufferGeometry[] = []
+  const lineMaterials: THREE.LineBasicMaterial[] = []
   let renderer: THREE.WebGLRenderer | undefined
   let controller: ReturnType<typeof createModelControls> | undefined
   try {
@@ -39,7 +41,11 @@ export async function capturePartCad(file: FilePublic, signal: AbortSignal) {
           new THREE.BufferAttribute(mesh.normals, 3),
         )
       else geometry.computeVertexNormals()
-      object.add(new THREE.Mesh(geometry, material))
+      const surface = new THREE.Mesh(geometry, material)
+      const edges = addCadEdges(surface, mesh.edgeIndices)
+      geometries.push(edges.geometry)
+      lineMaterials.push(edges.material)
+      object.add(surface)
     }
     const bounds = new THREE.Box3().setFromObject(object)
     if (bounds.isEmpty()) throw new Error("El STEP no contiene geometría.")
@@ -71,6 +77,7 @@ export async function capturePartCad(file: FilePublic, signal: AbortSignal) {
   } finally {
     controller?.dispose()
     for (const geometry of geometries) geometry.dispose()
+    for (const lineMaterial of lineMaterials) lineMaterial.dispose()
     material.dispose()
     renderer?.dispose()
     renderer?.forceContextLoss()

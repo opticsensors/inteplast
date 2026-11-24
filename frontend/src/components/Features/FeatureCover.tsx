@@ -1,7 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import {
   type KeyboardEvent,
-  lazy,
   type MouseEvent,
   type ReactNode,
   Suspense,
@@ -26,8 +25,7 @@ import { CoverLoading } from "./CoverLoading"
 import { coverAsset } from "./cadCover"
 import { coverPieceLabel, coverSlides, step } from "./coverSlides"
 import { FeatureThumbnail } from "./FeatureCard"
-
-const StepCoverCanvas = lazy(() => import("./StepCoverCanvas"))
+import { preloadStepViewer, StepCoverCanvas } from "./lazyStepCoverCanvas"
 
 /** Bigger than the old single cover (192 px): the capture is what is looked at. */
 export const COVER_SIZE = "size-48 sm:size-[300px]"
@@ -184,6 +182,8 @@ export function FeatureCover({ feature }: { feature: FeatureDetail }) {
           <DialogTrigger asChild>
             <CoverButton
               image={view.image}
+              onPointerEnter={view.cover ? preloadStepViewer : undefined}
+              onFocus={view.cover ? preloadStepViewer : undefined}
               name={view.code ? `${feature.name} · ${view.code}` : feature.name}
               className="size-full sm:size-full"
             />

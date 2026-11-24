@@ -148,12 +148,15 @@ export function PartReadButton({
 }
 
 export function PartReadStatus({
-  reading: { busy, reading, error },
+  reading: { busy, reading, error, data },
 }: {
   reading: PartReading
 }) {
   // The detailed report remains stored on the server, outside the piece view.
-  if (!busy && !error) return null
+  // A failed read answers with an error report: the previous one stays stored.
+  const failure =
+    !busy && data?.state === "error" ? data.notices?.join(" ") : undefined
+  if (!busy && !error && !failure) return null
   return (
     <section
       className="mb-3 space-y-2 text-xs text-muted-foreground"
@@ -170,6 +173,11 @@ export function PartReadStatus({
       {error && (
         <p role="alert" className="text-destructive">
           {fileErrorMessage(error)}
+        </p>
+      )}
+      {!error && failure && (
+        <p role="alert" className="text-destructive">
+          No se han podido leer los datos: {failure}
         </p>
       )}
     </section>

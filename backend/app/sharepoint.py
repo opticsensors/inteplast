@@ -9,6 +9,7 @@ latest version is always served: a change in SharePoint never requires relinking
 
 import hashlib
 import logging
+import re
 import shutil
 import threading
 import time
@@ -17,7 +18,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from pathlib import Path, PurePosixPath
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import quote
 
 import httpx
@@ -198,6 +199,44 @@ def children(relative: str) -> list[SourceItem]:
             entries.append(as_item("/".join(filter(None, [relative, name])), data))
         url, params = page.get("@odata.nextLink", ""), None
     return entries
+
+
+def attachment_folder_url(
+    kind: Literal["mold", "moldflow"], part_folder: str | None, file_path: str | None
+) -> str | None:
+    """Use Graph's own folder URL, with the permissions of the current user."""
+    pattern = (
+        r"(?:\d+[\s_-]*)?(?:3d[\s_-]*)?(?:molde|mold|mould)"
+        if kind == "mold"
+        else r"(?:\d+[\s_-]*)?moldflow"
+    )
+
+    def matches(name: str) -> bool:
+        return re.fullmatch(pattern, name.strip(), re.IGNORECASE) is not None
+
+    found: SourceItem | None = None
+    if file_path:
+        parent = PurePosixPath(file_path).parent
+        if kind == "mold" and part_folder and parent.is_relative_to(part_folder):
+            segments = parent.relative_to(part_folder).parts
+            if segments and matches(segments[0]):
+                parent = PurePosixPath(part_folder, segments[0])
+        found = item("" if str(parent) == "." else str(parent), directory=True)
+    elif part_folder:
+        candidates = [
+            f for f in children(part_folder) if f.directory and matches(f.name)
+        ]
+        if len(candidates) > 1:
+            # Older deliveries can have an empty 2- Moldflow beside 7- Moldflow.
+            candidates = [
+                f
+                for f in candidates
+                if f.remote.get("folder", {}).get("childCount") != 0
+            ]
+        if len(candidates) == 1:
+            found = candidates[0]
+    url = (found.remote or {}).get("webUrl") if found else None
+    return url if isinstance(url, str) and url.startswith("https://") else None
 
 
 def walk(folder: str, *, too_wide: str, limit: int = 20000) -> list[SourceItem]:

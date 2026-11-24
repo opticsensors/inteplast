@@ -174,8 +174,8 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
   En móvil se apilan. Los features no repiten fotos: cada subtarjeta muestra el nombre
   enlazado y sus cotas de esta pieza. Pulsar una cota la consulta en la columna izquierda.
 - Los listados de features y piezas usan subtarjetas compactas y enlaces «Ver feature» /
-  «Ver pieza» en el color principal. En Archivos, cada fila muestra tipo y nombre en dos
-  líneas; el tamaño queda centrado verticalmente junto a los botones.
+  «Ver pieza» en el color principal. En Archivos se pulsa el tipo para abrir el fichero y
+  ver su nombre. El tamaño queda centrado verticalmente junto al icono de descarga.
 - La portada de pieza es una captura de todo el CAD STEP sin superficies marcadas.
   Al pulsarla abre el visor interactivo reutilizado de Features, sin edición de caras.
 - **Identidad de la pieza (17/11/2026):** el código es el título; el nombre, opcional, va a
@@ -255,12 +255,21 @@ fila compacta con etiqueta y nombre en la misma línea. El selector es nativo de
 modo local y está dentro de la web con SharePoint. Las propuestas siguen siendo borradores
 hasta **Crear pieza**; la interfaz inicia después la lectura de los CSV/XLS/XLSX compatibles.
 El registro y la lectura son operaciones separadas: un fallo al leer conserva la pieza creada
-y permite reintentar. Contrato de selección, archivos y guardado en
+y permite reintentar. La ficha muestra el aviso del fallo y conserva el informe de la última
+lectura correcta, del que salen las etiquetas del catálogo y los nombres de hoja de
+componentes (24/11/2026). Contrato de selección, archivos y guardado en
 [Uso en la ficha de pieza](ficheros-externos.md#uso-en-la-ficha-de-pieza).
 
-«Añadir fichero» usa el botón con Plus, borde y tamaño de «Añadir feature». Cada archivo
-ocupa como máximo dos líneas: tipo y nombre truncado debajo. El tamaño queda aparte,
-centrado verticalmente con los botones de carpeta/papelera en edición o descarga en consulta.
+«Añadir fichero» usa el botón con Plus, borde y tamaño de «Añadir feature». En edición el
+nombre editable aparece bajo el tipo. En consulta la fila muestra el tipo, el tamaño y la descarga.
+Al abrir un plano aparecen dos iconos de carpeta, para el plano y para el histórico.
+Molde y Moldflow tienen la carpeta de SharePoint y la descarga del original juntas en la
+cabecera. El lápiz abre el editor de captura con pegar, arrastrar o elegir imagen,
+Cancelar y Guardar captura. El recuadro ocupa todo el ancho y el 70 % de la altura de la
+ventana, como el visor CAD. En consulta se ve la captura o el icono de imagen del catálogo.
+Al editar, el recuadro vacío muestra el icono de subida y admite arrastrar, Ctrl+V y clic
+para elegir una imagen del ordenador. El lápiz requiere acceso al original con sesión activa.
+Una carpeta identificada sin fichero vinculado se abre desde Archivos de la pieza.
 En consulta, código y cliente aparecen juntos bajo la descripción, alineados a la izquierda.
 La tarjeta del catálogo muestra la descripción opcional bajo el nombre, hasta dos líneas
 como en Features. En la fila siguiente, «código · cliente» acompaña a la etiqueta azul

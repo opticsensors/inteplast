@@ -15,7 +15,7 @@ from app import microsoft_auth, sharepoint
 from app.core.config import settings
 from app.core.db import engine
 from app.evidence import drawing_key, drawing_project_files, job_id
-from app.file_sources import reference_key, twin_projects
+from app.file_sources import document_cache_key, reference_key, twin_projects
 from app.knowledge_models import EvidenceJob
 from app.measurement_models import MeasurementImport
 from app.models import Part, StoredFile
@@ -66,6 +66,7 @@ class FakeGraph:
             )
         else:
             data["folder"] = {}
+            data["webUrl"] = f"https://example.test/folders/{quote(path)}"
         return data
 
     def __call__(self, request: httpx.Request) -> httpx.Response:
@@ -107,6 +108,42 @@ def graph(monkeypatch: pytest.MonkeyPatch) -> FakeGraph:
     monkeypatch.setattr(sharepoint, "access_token", lambda user_id: f"t-{user_id}")
     monkeypatch.setattr(sharepoint.time, "sleep", lambda _seconds: None)
     return fake
+
+
+def test_attachment_folder_urls_use_delegated_folder_metadata(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    graph: FakeGraph,
+    db: Session,
+) -> None:
+    piece = f"test-{uuid.uuid4()}"
+    folder = f"{piece}/3- Molde"
+    path = f"{folder}/Tool/lado.step"
+    for name in (path, f"{piece}/7- Moldflow/estudio.mfr"):
+        graph.files[name] = b"model"
+        graph.versions[name] = 1
+    part = Part(code=piece, folder_path=piece)
+    db.add(part)
+    db.commit()
+    stored = client.post(
+        f"{API}/files/reference", headers=superuser_token_headers, json={"path": path}
+    )
+    assert stored.status_code == 200, stored.text
+    params = {"part_id": str(part.id), "kind": "mold", "file_id": stored.json()["id"]}
+    url = f"{API}/files/attachment-folder"
+    assert (
+        client.get(url, params=params, headers=superuser_token_headers).json()
+        == graph.meta(folder)["webUrl"]
+    )
+    assert (
+        client.get(
+            url,
+            params={"part_id": str(part.id), "kind": "moldflow"},
+            headers=superuser_token_headers,
+        ).json()
+        == graph.meta(f"{piece}/7- Moldflow")["webUrl"]
+    )
+    assert graph.downloads == 0
 
 
 def test_discover_remote_drawings_uses_evidence_and_respects_a_changed_version(
@@ -484,6 +521,62 @@ def test_remote_cover_invalidates_without_downloading_the_cad(
     }
     assert client.put(url, headers=headers, json=current).status_code == 200
     assert client.get(detail, headers=headers).json()["part"]["image"] is not None
+
+
+def test_legacy_cover_is_visible_until_replaced_only_for_the_same_remote_cad(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+    graph: FakeGraph,
+    remote_cover: dict[str, Any],
+) -> None:
+    headers = superuser_token_headers
+    part_id = uuid.UUID(remote_cover["part_id"])
+    url = f"{API}/parts/{part_id}/cover"
+    body = remote_cover["body"]
+    document = db.get(StoredFile, uuid.UUID(body["file_id"]))
+    assert document is not None
+    with sharepoint.acting_as(uuid.uuid4()):
+        source_key = document_cache_key(document)
+    # Jobs created before the edges release stored only the source key.
+    db.add(
+        EvidenceJob(
+            id=job_id("part-cover", part_id),
+            kind="part-cover",
+            part_id=part_id,
+            file_id=document.id,
+            cache_key=source_key,
+            state="ready",
+            payload={"image_id": body["image_id"]},
+        )
+    )
+    db.commit()
+    downloads = graph.downloads
+    cover = client.get(url, headers=headers).json()
+    assert cover["image"]["id"] == body["image_id"] and cover["cover_needs_refresh"]
+    assert graph.downloads == downloads
+    path = remote_cover["path"]
+    graph.versions[path] += 1
+    changed = client.get(url, headers=headers).json()
+    assert changed["image"] is None and not changed["cover_needs_refresh"]
+    assert (
+        client.put(
+            url, headers=headers, json={**body, "cad_cache_key": cover["cad_cache_key"]}
+        ).status_code
+        == 409
+    )
+    graph.versions[path] -= 1
+    assert (
+        client.put(
+            url, headers=headers, json={**body, "cad_cache_key": cover["cad_cache_key"]}
+        ).status_code
+        == 200
+    )
+    updated = client.get(url, headers=headers).json()
+    assert (
+        updated["image"]["id"] == body["image_id"]
+        and not updated["cover_needs_refresh"]
+    )
 
 
 def test_cover_rejects_a_change_during_validation(

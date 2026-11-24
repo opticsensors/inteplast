@@ -7,6 +7,7 @@ first one and the carousel follows `FeatureDetail.part_covers`. A feature withou
 keeps its own image.
 """
 
+import hashlib
 import re
 import uuid
 from collections.abc import Iterable
@@ -48,31 +49,37 @@ COVER_IMAGE_TYPES = {
 }
 
 
+def part_cover_key(source_key: str) -> str:
+    return hashlib.sha256(f"shaded-edges-v1:{source_key}".encode()).hexdigest()
+
+
 def part_cad_cover(
     session: Session, part_id: uuid.UUID
-) -> tuple[StoredFile | None, str | None, StoredFile | None]:
-    """The piece's CAD, the key of its current bytes and its saved capture, if current."""
+) -> tuple[StoredFile | None, str | None, StoredFile | None, bool]:
+    """A verified image of this CAD can be displayed while its style is refreshed."""
     cad = primary_files(session, part_id).get("part")
     cover = session.get(EvidenceJob, job_id("part-cover", part_id))
-    cad_key = None
+    source_key = None
     if cad:
         try:
-            cad_key = document_cache_key(cad)
+            source_key = document_cache_key(cad)
         except HTTPException as error:
             # Keep the catalogue usable when a CAD is missing/changed/inaccessible, but do not
             # present an old thumbnail as current. An expired login must still reach the browser.
             if error.status_code not in {404, 409, 503}:
                 raise
-    image = None
-    if (
-        cad
-        and cover
-        and cad_key is not None
-        and cover.cache_key == cad_key
-        and cover.file_id == cad.id
-    ):
-        image = session.get(StoredFile, uuid.UUID(cover.payload["image_id"]))
-    return cad, cad_key, image
+    if not cad or source_key is None:
+        return cad, None, None, False
+    cad_key = part_cover_key(source_key)
+    if not cover or cover.file_id != cad.id:
+        return cad, cad_key, None, False
+    refresh = cover.cache_key != cad_key
+    # Before shaded edges the job key was the source key itself. New jobs also
+    # retain that identity so a later display change can reuse a verified PNG.
+    if refresh and source_key not in (cover.cache_key, cover.payload.get("source_key")):
+        return cad, cad_key, None, False
+    image = session.get(StoredFile, uuid.UUID(cover.payload["image_id"]))
+    return cad, cad_key, image, refresh and image is not None
 
 
 def _auto_cover(

@@ -526,6 +526,7 @@ EvidenceService.readPartEvidence = async ({
     import_available: true,
     drawing_reference_set: window.review.drawingRemoved ?? false,
     documents: [
+      ...(window.review.attachments ?? []).map(({ file }) => file),
       {
         id: "source",
         filename: "measurement.csv",
@@ -575,6 +576,7 @@ CatalogService.readPartDetail = async ({ partId }) => {
       feature_count: item.features.length,
     },
     features: item.features,
+    files: window.review.attachments,
     references: [
       {
         kind: "drawing",

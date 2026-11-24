@@ -298,6 +298,19 @@ export const FeaturesService = {
 }
 
 export const FilesService = {
+  readAttachmentFolder: async ({ kind }) =>
+    state().attachmentFolders?.[kind] ?? null,
+  readAttachmentScreenshot: async ({ fileId }) => {
+    if (state().deniedCapture === fileId)
+      throw new Error("Sin acceso al original.")
+    return state().screenshots?.[fileId] ?? null
+  },
+  updateAttachmentScreenshot: async ({ fileId, requestBody }) => {
+    state().screenshots ??= {}
+    const image = state().documents?.[requestBody.image_id] ?? null
+    state().screenshots[fileId] = image
+    return image
+  },
   /** `window.review.icpVerified[fileId]`; `icpBusy[fileId]` answers "busy" first. */
   checkDrawingIcp: async ({ fileId }) => {
     state().icpRequests ??= []

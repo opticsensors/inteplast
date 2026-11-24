@@ -2,6 +2,7 @@ import occtimportjs from "occt-import-js"
 import wasmUrl from "occt-import-js/dist/occt-import-js.wasm?url"
 
 import { sha256 } from "./cadCover"
+import { cadBoundaryIndices } from "./coverFaceRanges"
 import type { CoverMesh, CoverWorkerResult } from "./coverGeometry"
 
 self.onmessage = async ({ data }: MessageEvent<ArrayBuffer>) => {
@@ -17,6 +18,11 @@ self.onmessage = async ({ data }: MessageEvent<ArrayBuffer>) => {
         ? Float32Array.from(mesh.attributes.normal.array)
         : undefined,
       indices: Uint32Array.from(mesh.index.array),
+      edgeIndices: cadBoundaryIndices(
+        mesh.index.array,
+        mesh.attributes.position.array.length / 3,
+        mesh.brep_faces ?? [],
+      ),
       faces: mesh.brep_faces ?? [],
     }))
     // Preserve the existing cover-v1 fingerprint exactly, including float32
@@ -35,6 +41,7 @@ self.onmessage = async ({ data }: MessageEvent<ArrayBuffer>) => {
     const transfer = meshes.flatMap((mesh) => [
       mesh.positions.buffer,
       mesh.indices.buffer,
+      ...(mesh.edgeIndices ? [mesh.edgeIndices.buffer] : []),
       ...(mesh.normals ? [mesh.normals.buffer] : []),
     ])
     self.postMessage({ meshes, geometryKey } satisfies CoverWorkerResult, {

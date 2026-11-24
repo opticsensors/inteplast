@@ -8,7 +8,13 @@ import { fileErrorMessage } from "@/hooks/useFileAccess"
 import ModelViewer from "./ModelViewer"
 
 /** The original stays downloadable; only the lightweight GLB reaches WebGL. */
-export default function WebModelViewer({ file }: { file: FilePublic }) {
+export default function WebModelViewer({
+  file,
+  showCadEdges = false,
+}: {
+  file: FilePublic
+  showCadEdges?: boolean
+}) {
   const [retrying, setRetrying] = useState(false)
   const preview = useQuery({
     queryKey: ["file-preview", file.id, file.version],
@@ -30,7 +36,11 @@ export default function WebModelViewer({ file }: { file: FilePublic }) {
             {preview.data.message}
           </output>
         )}
-        <ModelViewer file={file} previewUrl={preview.data.url} />
+        <ModelViewer
+          file={file}
+          previewUrl={preview.data.url}
+          showCadEdges={showCadEdges}
+        />
       </div>
     )
   }
