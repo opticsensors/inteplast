@@ -5,7 +5,7 @@ import type { FeaturePublic } from "@/client"
 import { FeatureWarnings } from "@/components/Catalog/CatalogWarnings"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { useCatalogCover } from "@/hooks/useCatalogCover"
+import { useFeaturePreview } from "@/hooks/useFeaturePreview"
 import { fileErrorMessage, useFileAccess } from "@/hooks/useFileAccess"
 import { cn } from "@/lib/utils"
 import { featureParts, partLabel } from "./parts"
@@ -140,17 +140,13 @@ export function FeatureCoverStack({
   /** Extra classes of the capture when it is shown alone. */
   flatClassName?: string
 }) {
-  const {
-    ref,
-    cover: fallback,
-    error,
-    retry,
-    checking,
-  } = useCatalogCover(feature.deferred_cover_part_id)
-  const cover = {
-    image: feature.cover_image ?? fallback?.image,
-    name: feature.name,
-  }
+  const { ref, image, checking, error, retry } = useFeaturePreview({
+    featureId: feature.id,
+    markedPartId: feature.first_marked_part_id,
+    deferredPartId: feature.deferred_cover_part_id,
+    original: feature.cover_image,
+  })
+  const cover = { image, name: feature.name }
   const count = feature.part_count ?? 0
   if (count < 2)
     return (

@@ -15,7 +15,13 @@ from app.api.routes.parts import get_part_or_404
 from app.cad_covers import validate_document
 from app.component_models import identity_expression, qualified
 from app.evidence import job_id
-from app.feature_covers import features_public, part_cad_cover, part_cover_key
+from app.face_colors import FaceColors, face_colors, marked_part
+from app.feature_covers import (
+    features_public,
+    part_cad_cover,
+    part_cover_key,
+    verified_gray_cover,
+)
 from app.feature_links import feature_membership
 from app.file_sources import SourceError, document_cache_key
 from app.knowledge_models import (
@@ -32,6 +38,7 @@ from app.measurement_status import (
 from app.models import (
     AssetKind,
     Feature,
+    FeaturePartLink,
     FeaturePublic,
     FilePublic,
     Part,
@@ -44,6 +51,7 @@ router = APIRouter(tags=["catalog"])
 
 
 class PartCoverPublic(BaseModel):
+    face_colors: FaceColors | None = None
     cad: FilePublic | None = None
     cad_cache_key: str | None = None
     image: FilePublic | None = None
@@ -51,6 +59,7 @@ class PartCoverPublic(BaseModel):
 
 
 class PartCardPublic(PartPublic, PartCoverPublic):
+    has_face_marks: bool = False
     feature_count: int = 0
     characteristic_count: int = 0
     deferred_cover_part_id: uuid.UUID | None = None
@@ -120,6 +129,7 @@ def part_card(
         part,
         update={
             "feature_count": count,
+            "has_face_marks": marked_part(session, part.id),
             "characteristic_count": characteristic_count,
             "cad": FilePublic.model_validate(cad) if cad else None,
             "cad_cache_key": cad_key,
@@ -355,9 +365,26 @@ def read_part_cover(
     session: SessionDep, _current_user: CurrentUser, part_id: uuid.UUID
 ) -> PartCoverPublic:
     get_part_or_404(session, part_id)
-    cad, cad_key, image, refresh = part_cad_cover(session, part_id, report_error=True)
+    return part_cover_metadata(session, part_id)
+
+
+def part_cover_metadata(
+    session: SessionDep, part_id: uuid.UUID, *, report_error: bool = True
+) -> PartCoverPublic:
+    cad = part_references(session, part_id).get("part")
+    if not cad:
+        return PartCoverPublic()
+    try:
+        source_key = document_cache_key(cad)
+    except HTTPException as error:
+        if report_error or error.status_code not in {404, 409, 503}:
+            raise
+        return PartCoverPublic()
+    gray = session.get(EvidenceJob, job_id("part-cover", part_id))
+    _, cad_key, image, refresh = verified_gray_cover(session, cad, gray, source_key)
     return PartCoverPublic(
-        cad=FilePublic.model_validate(cad) if cad else None,
+        face_colors=face_colors(session, part_id, cad, source_key, gray),
+        cad=FilePublic.model_validate(cad),
         cad_cache_key=cad_key,
         image=FilePublic.model_validate(image) if image else None,
         cover_needs_refresh=refresh,
@@ -409,6 +436,87 @@ def save_part_cover(
         "source_key": source_key,
     }
     session.add(cover)
+    if not session.get(PartDocument, (part_id, image.id)):
+        session.add(PartDocument(part_id=part_id, file_id=image.id, kind="derived"))
+    session.commit()
+    return FilePublic.model_validate(image)
+
+
+class FaceImageRequest(PartCoverRequest):
+    render_key: str = Field(pattern=r"^[0-9a-f]{64}$")
+    geometry_key: str = Field(pattern=r"^[0-9a-f]{64}$")
+    feature_id: uuid.UUID | None = None
+
+
+@router.put("/parts/{part_id}/face-image", response_model=FilePublic)
+def save_face_image(
+    session: SessionDep,
+    _current_user: CurrentUser,
+    part_id: uuid.UUID,
+    body: FaceImageRequest,
+) -> FilePublic:
+    part = session.exec(
+        select(Part).where(Part.id == part_id).with_for_update()
+    ).first()
+    if not part:
+        raise HTTPException(404, "Part not found")
+    cad = primary_files(session, part_id).get("part")
+    if not cad or cad.id != body.file_id:
+        raise HTTPException(409, "El CAD principal ha cambiado.")
+    source_key = document_cache_key(cad)
+    gray = session.get(EvidenceJob, job_id("part-cover", part_id))
+    colors = face_colors(session, part_id, cad, source_key, gray)
+    if not colors or colors.key != body.render_key:
+        raise HTTPException(409, "Las caras marcadas han cambiado.")
+    if body.feature_id and not any(
+        layer.feature_id == body.feature_id
+        and layer.selection.source_sha256 == body.source_sha256
+        and layer.selection.geometry_key == body.geometry_key
+        for layer in colors.layers
+    ):
+        raise HTTPException(409, "La selección ya no corresponde a este CAD.")
+    validate_document(cad, body.file_version, body.source_sha256)
+    if document_cache_key(cad) != source_key:
+        raise HTTPException(409, "El CAD ha cambiado durante la captura.")
+    image = session.get(StoredFile, body.image_id)
+    if not image or image.content_type != "image/png" or image.source != "upload":
+        raise HTTPException(422, "La portada debe ser una imagen PNG.")
+    identity = job_id("face-colors", part_id)
+    job = session.get(EvidenceJob, identity) or EvidenceJob(
+        id=identity, kind="face-colors", part_id=part_id
+    )
+    images = dict(job.payload.get("images", {})) if job.cache_key == colors.key else {}
+    images[str(body.feature_id or "part")] = str(image.id)
+    job.file_id, job.cache_key, job.state = cad.id, colors.key, "ready"
+    job.payload = {
+        "source_key": source_key,
+        "source_sha256": body.source_sha256,
+        "geometry_key": body.geometry_key,
+        "images": images,
+    }
+    session.add(job)
+    # Bind pre-colour annotations to a version only after the renderer has verified
+    # their bytes and topology. Re-read under lock in case a user just edited one.
+    for link in session.exec(
+        select(FeaturePartLink)
+        .where(FeaturePartLink.part_id == part_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    ):
+        selection = link.cover_3d or {}
+        if (
+            selection.get("faces")
+            and selection.get("file_id") == str(cad.id)
+            and selection.get("source_sha256") == body.source_sha256
+            and selection.get("geometry_key") == body.geometry_key
+            and not selection.get("source_key")
+        ):
+            link.cover_3d = {
+                **selection,
+                "source_key": source_key,
+                "primary_at_selection": True,
+            }
+            session.add(link)
     if not session.get(PartDocument, (part_id, image.id)):
         session.add(PartDocument(part_id=part_id, file_id=image.id, kind="derived"))
     session.commit()
@@ -512,7 +620,10 @@ def read_catalog_graph(
     nodes: list[GraphNode] = []
     for group, item in shown:
         if group == "part":
-            card = part_card(session, item, 0)
+            cover = part_cover_metadata(session, item.id, report_error=False)
+            colored = (
+                cover.face_colors.images.get("part") if cover.face_colors else None
+            )
             nodes.append(
                 GraphNode(
                     id=f"part:{item.id}",
@@ -520,7 +631,7 @@ def read_catalog_graph(
                     ref_id=item.id,
                     label=item.code,
                     name=item.name,
-                    image=card.image,
+                    image=colored or cover.image,
                 )
             )
         else:

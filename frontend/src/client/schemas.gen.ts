@@ -822,6 +822,131 @@ export const EvidenceDocumentSchema = {
     title: 'EvidenceDocument'
 } as const;
 
+export const FaceColorsSchema = {
+    properties: {
+        key: {
+            type: 'string',
+            title: 'Key'
+        },
+        layers: {
+            items: {
+                '$ref': '#/components/schemas/FaceLayer'
+            },
+            type: 'array',
+            title: 'Layers'
+        },
+        review: {
+            additionalProperties: {
+                type: 'string'
+            },
+            type: 'object',
+            title: 'Review'
+        },
+        images: {
+            additionalProperties: {
+                '$ref': '#/components/schemas/FilePublic'
+            },
+            type: 'object',
+            title: 'Images'
+        }
+    },
+    type: 'object',
+    required: ['key', 'layers', 'review', 'images'],
+    title: 'FaceColors'
+} as const;
+
+export const FaceImageRequestSchema = {
+    properties: {
+        file_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'File Id'
+        },
+        file_version: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'File Version'
+        },
+        cad_cache_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cad Cache Key'
+        },
+        source_sha256: {
+            type: 'string',
+            pattern: '^[0-9a-f]{64}$',
+            title: 'Source Sha256'
+        },
+        image_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Image Id'
+        },
+        render_key: {
+            type: 'string',
+            pattern: '^[0-9a-f]{64}$',
+            title: 'Render Key'
+        },
+        geometry_key: {
+            type: 'string',
+            pattern: '^[0-9a-f]{64}$',
+            title: 'Geometry Key'
+        },
+        feature_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Feature Id'
+        }
+    },
+    type: 'object',
+    required: ['file_id', 'source_sha256', 'image_id', 'render_key', 'geometry_key'],
+    title: 'FaceImageRequest'
+} as const;
+
+export const FaceLayerSchema = {
+    properties: {
+        feature_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Feature Id'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        color: {
+            type: 'string',
+            title: 'Color'
+        },
+        selection: {
+            '$ref': '#/components/schemas/FeatureCover3D'
+        }
+    },
+    type: 'object',
+    required: ['feature_id', 'name', 'color', 'selection'],
+    title: 'FaceLayer'
+} as const;
+
 export const FeatureAssetCreateSchema = {
     properties: {
         kind: {
@@ -1124,6 +1249,32 @@ export const FeatureDetailSchema = {
                 }
             ],
             title: 'Description'
+        },
+        color: {
+            type: 'string',
+            title: 'Color',
+            default: '#a635a6'
+        },
+        marked_part_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Marked Part Ids',
+            default: []
+        },
+        first_marked_part_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'First Marked Part Id'
         },
         id: {
             type: 'string',
@@ -1576,6 +1727,32 @@ export const FeaturePublicSchema = {
                 }
             ],
             title: 'Description'
+        },
+        color: {
+            type: 'string',
+            title: 'Color',
+            default: '#a635a6'
+        },
+        marked_part_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Marked Part Ids',
+            default: []
+        },
+        first_marked_part_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'First Marked Part Id'
         },
         id: {
             type: 'string',
@@ -2928,6 +3105,16 @@ export const NoteKindSchema = {
 
 export const PartCardPublicSchema = {
     properties: {
+        face_colors: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FaceColors'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         cad: {
             anyOf: [
                 {
@@ -3101,6 +3288,11 @@ export const PartCardPublicSchema = {
                     type: 'null'
                 }
             ]
+        },
+        has_face_marks: {
+            type: 'boolean',
+            title: 'Has Face Marks',
+            default: false
         },
         feature_count: {
             type: 'integer',
@@ -3304,6 +3496,16 @@ export const PartCatalogPublicSchema = {
 
 export const PartCoverPublicSchema = {
     properties: {
+        face_colors: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/FaceColors'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         cad: {
             anyOf: [
                 {

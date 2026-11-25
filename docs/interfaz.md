@@ -178,7 +178,12 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
 - Los listados de features y piezas usan subtarjetas compactas y enlaces «Ver feature» /
   «Ver pieza» en el color principal. En Archivos se pulsa el tipo para abrir el fichero y
   ver su nombre. El tamaño queda centrado verticalmente junto al icono de descarga.
-- La portada de pieza es una captura de todo el CAD STEP sin superficies marcadas.
+- La portada de pieza muestra el STEP completo con las caras compatibles de sus features.
+  La leyenda identifica los colores. Las casillas del visor permiten aislar un feature y
+  vuelven a aparecer marcadas al abrirlo. Una cara compartida adopta el color oscuro
+  de «Varios features» mientras se ven varias selecciones sobre ella.
+  En la ficha de feature, cada pieza usa su captura propia o la vista gris de la pieza.
+  «Caras por revisar» aparece al detectar selecciones incompatibles en las fichas y tarjetas.
   Las fichas de pieza y de feature comparten un cuadrado de 300 × 300 px a partir
   de 640 px de ancho y 192 × 192 px en pantallas menores. Consulta, edición y alta
   mantienen esa medida, incluso con el carrusel o con la portada vacía.

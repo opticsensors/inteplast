@@ -11,9 +11,13 @@ import {
 import { createRoot } from "react-dom/client"
 import { Toaster } from "sonner"
 import { FileLink } from "../../../src/components/Common/FileLink"
+import { coverSlides } from "../../../src/components/Features/coverSlides"
+import { FeatureCoverStack } from "../../../src/components/Features/FeatureCard"
 import { FeatureCover } from "../../../src/components/Features/FeatureCover"
+import { FeatureCoverEditor } from "../../../src/components/Features/FeatureCoverEditor"
 import { FeatureForm } from "../../../src/components/Features/FeatureForm"
 import { PartAssetList } from "../../../src/components/Features/PartAssetList"
+import { PartCover } from "../../../src/components/Parts/PartCover"
 import useAuth from "../../../src/hooks/useAuth"
 import { Route as LoginRoute } from "../../../src/routes/login"
 
@@ -138,6 +142,25 @@ const cover = createRoute({
   path: "/cover",
   component: () => <FeatureCover feature={window.review.feature} />,
 })
+const coloredPart = createRoute({
+  getParentRoute: () => root,
+  path: "/colored-part",
+  component: () => <PartCover part={window.review.coloredPart} />,
+})
+const featurePreviews = createRoute({
+  getParentRoute: () => root,
+  path: "/feature-previews",
+  component: () => {
+    const feature = window.review.feature
+    return (
+      <>
+        <FeatureCoverStack feature={feature} />
+        <FeatureCover feature={feature} />
+        <FeatureCoverEditor feature={feature} slides={coverSlides(feature)} />
+      </>
+    )
+  },
+})
 const router = createRouter({
   routeTree: root.addChildren([
     editor,
@@ -146,6 +169,8 @@ const router = createRouter({
     files,
     previews,
     cover,
+    coloredPart,
+    featurePreviews,
     LoginRoute.update({
       id: "/login",
       path: "/login",

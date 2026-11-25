@@ -14,8 +14,8 @@ pieza**: la captura y, si se hizo sobre el CAD, sus caras y su encuadre se guard
 [plan de portadas por pieza](plan-portadas-por-pieza-2026-11-18.md).
 
 - **Qué se ve de cada pieza:** su captura propia; si no tiene, la captura automática de su CAD
-  (la del catálogo, sin rojo); si tampoco, el icono de imagen. Nunca se genera una captura nueva
-  al abrir la ficha.
+  en gris. Si tampoco hay CAD, se muestra el icono de imagen. Para selecciones compatibles
+  se prepara progresivamente la captura en el color del feature con su cámara guardada.
 - **Ficha:** carrusel de 300 px (192 px en el móvil), sin nada debajo. Con una pieza, solo su
   código arriba a la izquierda. Con varias, además `n / N` arriba a la derecha, flechas a los
   lados (al pasar el ratón o enfocar; siempre en táctil), ← / → y deslizamiento con el dedo.
@@ -54,8 +54,9 @@ pieza**: la captura y, si se hizo sobre el CAD, sus caras y su encuadre se guard
 
 ## Piezas (22/09/2026)
 
-El catálogo y `/parts/{id}` comparten una captura PNG del STEP completo, sin selección
-de superficies. Se reutilizan la geometría preparada, los controles, `FeatureThumbnail`,
+El catálogo y `/parts/{id}` comparten la captura del STEP completo con todas sus selecciones
+compatibles. La versión en gris sirve de respaldo a los features sin captura propia.
+Se reutilizan la geometría preparada, los controles, `FeatureThumbnail`,
 `CoverButton`, `CoverDialog` y `StepCoverCanvas`. Las capturas nuevas se calculan una a una
 y se guardan para que volver al catálogo no vuelva a cargar todos los STEP.
 El indicador de preparación incluye el tiempo de espera en la cola. Una pieza sin CAD

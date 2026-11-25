@@ -70,6 +70,12 @@ def part_cad_cover(
                 raise
     if not cad or source_key is None:
         return cad, None, None, False
+    return verified_gray_cover(session, cad, cover, source_key)
+
+
+def verified_gray_cover(
+    session: Session, cad: StoredFile, cover: EvidenceJob | None, source_key: str
+) -> tuple[StoredFile, str, StoredFile | None, bool]:
     cad_key = part_cover_key(source_key)
     if not cover or cover.file_id != cad.id:
         return cad, cad_key, None, False
@@ -128,7 +134,7 @@ def _cover_3d(link: FeaturePartLink | None) -> FeatureCover3D | None:
     if not link or not link.cover_3d:
         return None
     try:
-        return FeatureCover3D.model_validate(link.cover_3d)
+        return FeatureCover3D.from_stored(link.cover_3d)
     except ValidationError:
         return None
 
@@ -169,12 +175,19 @@ def _card(
     first = uuid.UUID(order[0])
     link = links.get(first)
     own = _file(session, link.image_id) if link else None
+    marks = [
+        part_id for part_id, item in links.items() if (item.cover_3d or {}).get("faces")
+    ]
+    extra = {
+        "marked_part_ids": marks,
+        "first_marked_part_id": first if first in marks else None,
+    }
     if own is None and defer_covers:
-        return {"deferred_cover_part_id": first, "part_count": len(order)}
+        return {**extra, "deferred_cover_part_id": first, "part_count": len(order)}
     if own is None:
         auto = _auto_cover(session, first, cache)
         own = FilePublic.model_validate(auto) if auto else None
-    return {"cover_image": own, "part_count": len(order)}
+    return {**extra, "cover_image": own, "part_count": len(order)}
 
 
 def feature_public(
@@ -230,7 +243,9 @@ def apply_cover_changes(
     if len({change.part_id for change in changes}) != len(changes):
         raise HTTPException(422, "Hay dos portadas para la misma pieza.")
     links = _links(session, feature.id)
-    checked: list[tuple[FeaturePartLink, FeaturePartCoverChange]] = []
+    checked: list[
+        tuple[FeaturePartLink, FeaturePartCoverChange, dict[str, object] | None]
+    ] = []
     for change in changes:
         link = links.get(change.part_id)
         if link is None:
@@ -253,16 +268,23 @@ def apply_cover_changes(
             media = (image.content_type or "").split(";", 1)[0].strip().lower()
             if media not in COVER_IMAGE_TYPES:
                 raise HTTPException(422, "La portada debe ser una imagen.")
+        stored = None
         if change.cover_3d is not None:
             if change.cover_3d.part_id != change.part_id:
                 raise HTTPException(409, "La selección 3D es de otra pieza.")
-            validate_cover(session, feature, change.cover_3d)
-        checked.append((link, change))
-    for link, change in checked:
+            source_key = validate_cover(session, feature, change.cover_3d)
+            primary = primary_files(session, change.part_id).get("part")
+            stored = {
+                **change.cover_3d.model_dump(mode="json"),
+                "source_key": source_key,
+                "primary_at_selection": bool(
+                    primary and primary.id == change.cover_3d.file_id
+                ),
+            }
+        checked.append((link, change, stored))
+    for link, change, stored in checked:
         link.image_id = change.image_id
-        link.cover_3d = (
-            change.cover_3d.model_dump(mode="json") if change.cover_3d else None
-        )
+        link.cover_3d = stored
         session.add(link)
 
 

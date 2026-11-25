@@ -2,6 +2,7 @@ import { Box, ChevronLeft, ChevronRight, ImageIcon } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import type { FeatureCover3D, FeatureDetail, FilePublic } from "@/client"
+import { FeatureFaceWarning } from "@/components/Catalog/CatalogWarnings"
 import { FileUpload } from "@/components/Common/FileUpload"
 import { Button } from "@/components/ui/button"
 import {
@@ -12,8 +13,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useFeaturePreview } from "@/hooks/useFeaturePreview"
 import { CadCoverEditor } from "./CadCoverEditor"
-import { CoverButton } from "./CoverButton"
+import { CoverButton, RetryCoverButton } from "./CoverButton"
 import { COVER_EDITOR_ROWS, CoverDialog } from "./CoverDialog"
 import {
   type CoverDraft,
@@ -49,6 +51,21 @@ export function FeatureCoverEditor({
   const [busy, setBusy] = useState(false)
   const { current, many, go } = useCarousel(slides.length)
   const slide = slides[current]
+  const saved = feature?.part_covers?.find(
+    (item) => item.part_id === slide?.part.id,
+  )
+  const sameCapture = Boolean(
+    slide?.cover?.faces.length && saved?.image?.id === slide.image?.id,
+  )
+  const preview = useFeaturePreview({
+    featureId: feature?.id,
+    markedPartId:
+      sameCapture && slide && feature?.marked_part_ids?.includes(slide.part.id)
+        ? slide.part.id
+        : undefined,
+    original: slide?.image,
+    immediate: true,
+  })
   const name = feature?.name ?? "Portada del feature"
 
   return (
@@ -69,7 +86,9 @@ export function FeatureCoverEditor({
             <DialogTrigger asChild>
               <CoverButton
                 editable
-                image={slide.image}
+                image={preview.image}
+                hasCover={Boolean(slide.image)}
+                checking={preview.checking}
                 name={`${name} · ${slide.part.code}`}
                 className="size-full sm:size-full"
               />
@@ -80,6 +99,8 @@ export function FeatureCoverEditor({
             <CoverButton editable image={image} name={name} />
           </DialogTrigger>
         )}
+        {preview.error && <RetryCoverButton onRetry={preview.retry} />}
+        {feature && <FeatureFaceWarning feature={feature} />}
         <Button
           type="button"
           variant="outline"
@@ -119,6 +140,7 @@ export function FeatureCoverEditor({
             feature={feature}
             partId={slide?.part.id}
             image={slide ? (slide.own ? slide.image : null) : image}
+            previewImage={slide?.own ? (preview.image ?? null) : undefined}
             autoImage={
               feature?.part_covers?.find(
                 (item) => item.part_id === slide?.part.id,
@@ -207,6 +229,7 @@ function CoverEditorDraft({
   feature,
   partId,
   image: initialImage,
+  previewImage,
   autoImage,
   cover,
   onChange,
@@ -217,6 +240,7 @@ function CoverEditorDraft({
   /** The piece being edited; none while the feature has no pieces. */
   partId?: string
   image: FilePublic | null
+  previewImage?: FilePublic | null
   autoImage?: FilePublic | null
   cover: FeatureCover3D | null
   onChange: (image: FilePublic | null, cover: FeatureCover3D | null) => void
@@ -255,6 +279,7 @@ function CoverEditorDraft({
       <TabsContent value="image" className={COVER_EDITOR_ROWS}>
         <FileUpload
           value={image}
+          previewOverride={imageChanged ? undefined : previewImage}
           previewFallback={autoImage}
           variant="image"
           pasteInDialog
@@ -293,7 +318,7 @@ function CoverEditorDraft({
             feature={feature}
             partId={partId}
             initial={cover}
-            image={initialImage}
+            image={previewImage === undefined ? initialImage : previewImage}
             autoImage={autoImage}
             setBusy={setCadBusy}
             onSaved={onChange}

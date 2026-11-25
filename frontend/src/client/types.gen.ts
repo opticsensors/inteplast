@@ -188,6 +188,35 @@ export type EvidenceDocument = {
     relative_path?: (string | null);
 };
 
+export type FaceColors = {
+    key: string;
+    layers: Array<FaceLayer>;
+    review: {
+        [key: string]: (string);
+    };
+    images: {
+        [key: string]: FilePublic;
+    };
+};
+
+export type FaceImageRequest = {
+    file_id: string;
+    file_version?: (string | null);
+    cad_cache_key?: (string | null);
+    source_sha256: string;
+    image_id: string;
+    render_key: string;
+    geometry_key: string;
+    feature_id?: (string | null);
+};
+
+export type FaceLayer = {
+    feature_id: string;
+    name: string;
+    color: string;
+    selection: FeatureCover3D;
+};
+
 export type FeatureAssetCreate = {
     kind: AssetKind;
     name: string;
@@ -244,6 +273,9 @@ export type FeatureCreate = {
 export type FeatureDetail = {
     name: string;
     description?: (string | null);
+    color?: string;
+    marked_part_ids?: Array<(string)>;
+    first_marked_part_id?: (string | null);
     id: string;
     created_at?: (string | null);
     owner_id?: (string | null);
@@ -336,6 +368,9 @@ export type FeaturePartOrder = {
 export type FeaturePublic = {
     name: string;
     description?: (string | null);
+    color?: string;
+    marked_part_ids?: Array<(string)>;
+    first_marked_part_id?: (string | null);
     id: string;
     created_at?: (string | null);
     owner_id?: (string | null);
@@ -639,6 +674,7 @@ export type NewPassword = {
 export type NoteKind = 'warning' | 'lesson';
 
 export type PartCardPublic = {
+    face_colors?: (FaceColors | null);
     cad?: (FilePublic | null);
     cad_cache_key?: (string | null);
     image?: (FilePublic | null);
@@ -656,6 +692,7 @@ export type PartCardPublic = {
     family?: (CatalogNamePublic | null);
     customer?: (CatalogNamePublic | null);
     material?: (CatalogNamePublic | null);
+    has_face_marks?: boolean;
     feature_count?: number;
     characteristic_count?: number;
     deferred_cover_part_id?: (string | null);
@@ -682,6 +719,7 @@ export type PartCatalogPublic = {
 };
 
 export type PartCoverPublic = {
+    face_colors?: (FaceColors | null);
     cad?: (FilePublic | null);
     cad_cache_key?: (string | null);
     image?: (FilePublic | null);
@@ -1034,6 +1072,13 @@ export type CatalogSavePartCoverData = {
 };
 
 export type CatalogSavePartCoverResponse = (FilePublic);
+
+export type CatalogSaveFaceImageData = {
+    partId: string;
+    requestBody: FaceImageRequest;
+};
+
+export type CatalogSaveFaceImageResponse = (FilePublic);
 
 export type CatalogReadCatalogGraphData = {
     customerId?: (string | null);

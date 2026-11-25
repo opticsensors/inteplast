@@ -7,11 +7,11 @@ from pathlib import Path
 from fastapi import HTTPException
 from sqlmodel import Session
 
-from app.file_sources import document_path
+from app.file_sources import document_cache_key, document_path
 from app.models import AssetKind, Feature, FeatureAsset, FeatureCover3D, StoredFile
 
 
-def validate_cover(session: Session, feature: Feature, cover: FeatureCover3D) -> None:
+def validate_cover(session: Session, feature: Feature, cover: FeatureCover3D) -> str:
     asset = session.get(FeatureAsset, cover.asset_id)
     if (
         not asset
@@ -22,7 +22,12 @@ def validate_cover(session: Session, feature: Feature, cover: FeatureCover3D) ->
     ):
         raise HTTPException(409, "Vincula primero el STEP como CAD de este feature.")
     document = session.get(StoredFile, cover.file_id)
+    if document is None:
+        raise HTTPException(409, "El CAD vinculado ya no existe.")
+    source_key = document_cache_key(document)
     validate_document(document, cover.file_version, cover.source_sha256)
+    if document_cache_key(document) != source_key:
+        raise HTTPException(409, "El CAD ha cambiado mientras se guardaban las caras.")
     if not cover.faces and not any(
         other.part_id == cover.part_id
         and other.kind == AssetKind.part
@@ -32,6 +37,7 @@ def validate_cover(session: Session, feature: Feature, cover: FeatureCover3D) ->
         for other in feature.assets
     ):
         raise HTTPException(422, "Selecciona al menos una superficie para la portada.")
+    return source_key
 
 
 def validate_document(

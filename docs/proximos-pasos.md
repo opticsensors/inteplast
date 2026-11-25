@@ -19,8 +19,8 @@ La implementación de protecciones y criterios de aceptación para todas las pie
 
 ## Siguiente: colores por feature en el CAD de la pieza (25/11/2026)
 
-**Es lo próximo que se implementa en la app.** La ficha de pieza mostrará sobre su CAD las caras
-de todos sus features, cada feature con un color fijo y una leyenda. Decisiones de Eduard:
+**Primera entrega disponible en local para revisión.** La ficha de pieza muestra sobre su CAD las caras
+compatibles de sus features, cada feature con un color fijo y una leyenda. Decisiones de Eduard:
 
 - un color fijo por feature, el mismo en todas las piezas y también en la ficha del feature;
 - color reservado para las caras compartidas;

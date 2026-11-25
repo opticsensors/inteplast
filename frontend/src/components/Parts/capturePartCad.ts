@@ -1,27 +1,59 @@
 import * as THREE from "three"
-import type { FilePublic } from "@/client"
+import type { FaceLayer, FilePublic } from "@/client"
 import { MAX_COVER_STEP_SIZE } from "@/components/Features/cadCover"
 import { addCadEdges } from "@/components/Features/cadEdges"
-import { createModelControls } from "@/components/Features/modelControls"
+import { coverFaceRanges } from "@/components/Features/coverFaceRanges"
+import {
+  coloredFaces,
+  compatibleLayers,
+  paintFaceGroups,
+  SHARED_COLOR,
+} from "@/components/Features/faceColors"
+import {
+  createModelControls,
+  framePiece,
+} from "@/components/Features/modelControls"
 import { readCoverGeometry } from "@/components/Features/preparedCover"
 
 /** Reuse the STEP worker and the feature camera; render the complete, unmarked part. */
-export async function capturePartCad(file: FilePublic, signal: AbortSignal) {
+export async function capturePartCad(
+  file: FilePublic,
+  signal: AbortSignal,
+  layers: FaceLayer[] = [],
+  featureId?: string,
+) {
   if (file.size > MAX_COVER_STEP_SIZE)
     throw new Error("El STEP supera los 50 MB.")
-  const { meshes, sourceHash } = await readCoverGeometry(file.id, signal)
+  const { meshes, sourceHash, geometryKey } = await readCoverGeometry(
+    file.id,
+    signal,
+  )
+  const valid = compatibleLayers(layers, file, sourceHash, geometryKey, meshes)
+  const specific = featureId
+    ? valid.find((layer) => layer.feature_id === featureId)
+    : undefined
+  // If the old selection fails verification, produce the current piece instead.
+  const visible = specific ? [specific] : valid
+  const { faces } = coloredFaces(visible)
   signal.throwIfAborted()
   const object = new THREE.Group()
-  const material = new THREE.MeshPhongMaterial({
-    color: 0xb8bdc6,
-    side: THREE.DoubleSide,
-  })
+  const materials = [
+    "#b8bdc6",
+    SHARED_COLOR,
+    ...visible.map((layer) => layer.color),
+  ].map(
+    (color) =>
+      new THREE.MeshPhongMaterial({
+        color,
+        side: THREE.DoubleSide,
+      }),
+  )
   const geometries: THREE.BufferGeometry[] = []
   const lineMaterials: THREE.LineBasicMaterial[] = []
   let renderer: THREE.WebGLRenderer | undefined
   let controller: ReturnType<typeof createModelControls> | undefined
   try {
-    for (const mesh of meshes) {
+    for (const [meshIndex, mesh] of meshes.entries()) {
       const geometry = new THREE.BufferGeometry()
       geometries.push(geometry)
       geometry.setAttribute(
@@ -35,7 +67,16 @@ export async function capturePartCad(file: FilePublic, signal: AbortSignal) {
           new THREE.BufferAttribute(mesh.normals, 3),
         )
       else geometry.computeVertexNormals()
-      const surface = new THREE.Mesh(geometry, material)
+      if (faces.size)
+        paintFaceGroups(
+          geometry,
+          coverFaceRanges(mesh.faces, mesh.indices.length / 3),
+          (face) => faces.get(`${meshIndex}:${face}`) ?? 0,
+        )
+      const surface = new THREE.Mesh(
+        geometry,
+        faces.size ? materials : materials[0],
+      )
       const edges = addCadEdges(surface, mesh.edgeIndices)
       geometries.push(edges.geometry)
       lineMaterials.push(edges.material)
@@ -53,7 +94,16 @@ export async function capturePartCad(file: FilePublic, signal: AbortSignal) {
     renderer = new THREE.WebGLRenderer({ antialias: true })
     renderer.setSize(512, 512)
     controller = createModelControls(camera, renderer.domElement, size)
-    camera.position.multiplyScalar(0.72)
+    if (specific) {
+      const view = specific.selection.camera
+      camera.position.fromArray(view.position)
+      camera.up.fromArray(view.up)
+      controller.controls.target.fromArray(view.target)
+    } else
+      framePiece(
+        camera,
+        valid.length === 1 ? valid[0].selection.camera : undefined,
+      )
     controller.controls.update()
     light.position.copy(camera.position)
     renderer.render(scene, camera)
@@ -67,12 +117,12 @@ export async function capturePartCad(file: FilePublic, signal: AbortSignal) {
       ),
     )
     signal.throwIfAborted()
-    return { image, sourceHash }
+    return { image, sourceHash, geometryKey, featureId: specific?.feature_id }
   } finally {
     controller?.dispose()
     for (const geometry of geometries) geometry.dispose()
     for (const lineMaterial of lineMaterials) lineMaterial.dispose()
-    material.dispose()
+    for (const material of materials) material.dispose()
     renderer?.dispose()
     renderer?.forceContextLoss()
   }

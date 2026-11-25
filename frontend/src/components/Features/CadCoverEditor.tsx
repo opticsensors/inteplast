@@ -155,6 +155,7 @@ export function CadCoverEditor({
               key={`${asset.id}:${useSaved}`}
               file={asset.file}
               initial={saved}
+              color={feature?.color}
               editable
               allowWholeComponent={assets.length > 1}
               disabled={save.pending}

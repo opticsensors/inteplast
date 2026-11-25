@@ -1379,6 +1379,32 @@ test("Planos shows every drawing as a grid, with thumbnails, component and revis
   )
 })
 
+test("a feature without its own capture uses the gray PNG even when the piece has colored faces", async (t) => {
+  const page = await mount(t)
+  await serveCoverImage(page)
+  await page.evaluate(() => {
+    const state = window.review
+    state.feature.deferred_cover_part_id =
+      state.parts[0].deferred_cover_part_id = "part-one"
+    state.parts[0].has_face_marks = true
+    const image = { id: "saved-cover", content_type: "image/png" }
+    state.pendingCover = {
+      image,
+      face_colors: {
+        key: "colors",
+        layers: [],
+        review: { other: "Tetones" },
+        images: { part: { ...image, id: "colored-piece" } },
+      },
+    }
+    return state.refreshCatalog()
+  })
+  const gray = page.locator('img[alt="Bolt Eye"]')
+  await expect(gray).toHaveAttribute("src", /saved-cover/)
+  await expect(page.getByText("Caras por revisar: Tetones")).toBeVisible()
+  await expect(page.getByText(/Caras por revisar en/)).toHaveCount(0)
+})
+
 test("a name with HTML is shown as text in the graph and never runs", async (t) => {
   const page = await mount(t)
   const payload = '<img src=x onerror="window.__graphInjected=1">Bolt'

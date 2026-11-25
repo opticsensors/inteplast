@@ -1,6 +1,6 @@
 # Colores por feature y todos los features sobre el CAD de la pieza · plan
 
-**25 de noviembre de 2026 · Decisiones de Eduard en el chat del 25/11/2026 · Sin implementar.**
+**25 de noviembre de 2026 · Primera entrega en local para revisión visual.**
 
 Es el siguiente trabajo de la app ([próximos pasos](proximos-pasos.md#siguiente-colores-por-feature-en-el-cad-de-la-pieza-25112026)).
 Parte de la tarea «Varios features sobre un CAD» y del estado actual de las portadas
@@ -9,9 +9,9 @@ Parte de la tarea «Varios features sobre un CAD» y del estado actual de las po
 ## El problema
 
 Una pieza puede tener varios features, y cada feature marca sus caras sobre el CAD de esa pieza
-(`FeaturePartLink.cover_3d`). Hoy la portada de la pieza es el CAD entero sin caras marcadas
-([interfaz](interfaz.md)), y la del feature pinta sus caras en rojo. No hay ningún sitio donde se
-vean juntos todos los features de una pieza.
+(`FeaturePartLink.cover_3d`). Antes de esta entrega la portada de pieza mostraba el CAD en gris
+y la del feature pintaba sus caras en rojo. La vista conjunta permite localizar en la pieza
+las superficies que corresponden a cada feature.
 
 ## Decisiones de Eduard (25/11/2026)
 
@@ -94,15 +94,18 @@ Hoy no hay caras compartidas. La regla del punto 5 cubre los casos futuros.
   en su tarjeta, en la del feature y en las dos fichas. Un feature sin caras marcadas no lo genera.
   Volver a marcar las caras sobre el CAD actual lo quita.
 
-## Por concretar al implementar
+## Primera entrega local
 
-- Los colores concretos de la paleta y el reservado para caras compartidas: enseñarlos a Eduard
-  antes de fijarlos.
-- La posición y el aspecto de la leyenda, siguiendo [interfaz](interfaz.md) (Features es la
-  referencia visual).
-- Si el color se puede cambiar a mano (por ejemplo, en Admin). No se ha pedido.
-- Cómo se regeneran de una vez las portadas existentes de los features y las miniaturas de las
-  piezas sin bloquear el catálogo ([rendimiento pendiente](proximos-pasos.md)).
+- Paleta para revisión: Nervios de Soldadura en naranja, Planitudes en azul, Tetones en verde
+  y caras compartidas en gris violáceo oscuro. La posición de cada feature en la paleta
+  queda guardada. Al crear nuevos features se asigna el siguiente color.
+- Las casillas están arriba a la izquierda del visor. Con un único feature marcado se
+  conserva la orientación desde la que se marcó y se encuadra la pieza completa.
+- El navegador prepara las imágenes en una cola y las guarda para las siguientes visitas.
+  En la tarjeta, la ficha y la edición del feature se muestra un indicador mientras se prepara
+  su primera miniatura en color. La miniatura ya preparada sigue visible al comprobar la versión.
+  La versión del CAD, las caras, los colores y el encuadre identifican cada captura.
+  La imagen pegada y la captura gris siguen disponibles por separado.
 - Validar las 21 selecciones antiguas por su SHA-256 contra una versión del CAD comprobada. Si falta evidencia, verificar al preparar el CAD. Un fallo temporal de acceso conserva el estado de comprobación pendiente.
 - Primera revisión visual con la 3205 y la 3167.
 

@@ -1,5 +1,18 @@
-import { MOUSE, type PerspectiveCamera } from "three"
+import { MOUSE, type PerspectiveCamera, Vector3 } from "three"
 import { TrackballControls } from "three/examples/jsm/controls/TrackballControls.js"
+import type { CadCamera } from "@/client"
+
+/** Keep the whole piece framed, facing the side from which its only feature was marked. */
+export function framePiece(camera: PerspectiveCamera, view?: CadCamera) {
+  const distance = camera.position.length() * 0.72
+  if (view) {
+    camera.position
+      .fromArray(view.position)
+      .sub(new Vector3().fromArray(view.target))
+    camera.up.fromArray(view.up)
+  }
+  camera.position.setLength(distance)
+}
 
 /** Grab the model in screen space, with no fixed-up pole or residual inertia. */
 export function createModelControls(

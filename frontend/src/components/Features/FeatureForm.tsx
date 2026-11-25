@@ -267,6 +267,11 @@ function FeatureFormContent({
             throw error
           })
         : { id: await ensureFeatureId() }
+      for (const partId of partDraftsRef.current.keys()) {
+        void queryClient.invalidateQueries({
+          queryKey: ["parts", "detail", partId],
+        })
+      }
       partDraftsRef.current = new Map()
       setPartDrafts(partDraftsRef.current)
       return saved

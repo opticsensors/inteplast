@@ -11,6 +11,7 @@ import {
 } from "react"
 
 import type { FeatureCover3D, FeatureDetail, FilePublic } from "@/client"
+import { FeatureFaceWarning } from "@/components/Catalog/CatalogWarnings"
 import {
   Dialog,
   DialogDescription,
@@ -18,9 +19,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { useFeaturePreview } from "@/hooks/useFeaturePreview"
 import { usePrepareCover } from "@/hooks/usePrepareCover"
 import { cn } from "@/lib/utils"
-import { COVER_SIZE, CoverButton } from "./CoverButton"
+import { COVER_SIZE, CoverButton, RetryCoverButton } from "./CoverButton"
 import { CoverDialog } from "./CoverDialog"
 import { CoverLoading } from "./CoverLoading"
 import { coverAsset } from "./cadCover"
@@ -158,10 +160,19 @@ export function FeatureCover({ feature }: { feature: FeatureDetail }) {
   const [expanded, setExpanded] = useState(false)
   const { current, many, go } = useCarousel(slides.length)
   const slide = slides[current]
+  const preview = useFeaturePreview({
+    featureId: feature.id,
+    markedPartId:
+      slide && feature.marked_part_ids?.includes(slide.part.id)
+        ? slide.part.id
+        : undefined,
+    original: slide?.image,
+    immediate: true,
+  })
   const view: CoverView = slide
     ? {
-        image: slide.image,
-        cover: slide.cover,
+        image: preview.image ?? null,
+        cover: preview.review ? null : slide.cover,
         code: coverPieceLabel(feature, slide),
       }
     : { image: feature.image ?? null, cover: null }
@@ -175,31 +186,38 @@ export function FeatureCover({ feature }: { feature: FeatureDetail }) {
 
   return (
     <Dialog open={expanded} onOpenChange={setExpanded}>
-      <CarouselFrame
-        code={view.code}
-        current={current}
-        count={slides.length}
-        onStep={go}
-      >
-        {view.image ? (
-          <DialogTrigger asChild>
-            <CoverButton
-              image={view.image}
-              onPointerEnter={view.cover ? preloadStepViewer : undefined}
-              onFocus={view.cover ? preloadStepViewer : undefined}
-              name={view.code ? `${feature.name} · ${view.code}` : feature.name}
-              className="size-full sm:size-full"
+      <div className="flex w-fit shrink-0 flex-col">
+        <CarouselFrame
+          code={view.code}
+          current={current}
+          count={slides.length}
+          onStep={go}
+        >
+          {view.image || view.cover ? (
+            <DialogTrigger asChild>
+              <CoverButton
+                image={view.image}
+                checking={preview.checking}
+                onPointerEnter={view.cover ? preloadStepViewer : undefined}
+                onFocus={view.cover ? preloadStepViewer : undefined}
+                name={
+                  view.code ? `${feature.name} · ${view.code}` : feature.name
+                }
+                className="size-full sm:size-full"
+              />
+            </DialogTrigger>
+          ) : (
+            // A piece without any capture shows the image icon, with nothing to enlarge;
+            // never the feature's own image, which is only for features without pieces.
+            <FeatureThumbnail
+              feature={{ image: null, name: feature.name }}
+              className="size-full"
             />
-          </DialogTrigger>
-        ) : (
-          // A piece without any capture shows the image icon, with nothing to enlarge;
-          // never the feature's own image, which is only for features without pieces.
-          <FeatureThumbnail
-            feature={{ image: null, name: feature.name }}
-            className="size-full"
-          />
-        )}
-      </CarouselFrame>
+          )}
+        </CarouselFrame>
+        {preview.error && <RetryCoverButton onRetry={preview.retry} />}
+        <FeatureFaceWarning feature={feature} />
+      </div>
       {expanded && (
         <CoverViewer
           feature={feature}
@@ -281,6 +299,7 @@ function CoverViewer({
           key={asset.id}
           file={asset.file}
           initial={cover}
+          color={feature.color}
           fallback={image}
           className="size-full"
         />

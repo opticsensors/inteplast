@@ -2,7 +2,7 @@ import { Eraser, RotateCcw } from "lucide-react"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import * as THREE from "three"
 
-import type { FeatureCover3D, FilePublic } from "@/client"
+import type { FaceLayer, FeatureCover3D, FilePublic } from "@/client"
 import { Button } from "@/components/ui/button"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
 import { cn } from "@/lib/utils"
@@ -14,8 +14,16 @@ import {
 } from "./cadCover"
 import { addCadEdges } from "./cadEdges"
 import { coverFaceRanges } from "./coverFaceRanges"
-import { createModelControls } from "./modelControls"
+import {
+  coloredFaces,
+  compatibleLayers,
+  paintFaceGroups,
+  SHARED_COLOR,
+} from "./faceColors"
+import { createModelControls, framePiece } from "./modelControls"
 import { readCoverGeometry } from "./preparedCover"
+
+const EMPTY_LAYERS: FaceLayer[] = []
 
 type Surface = {
   meshIndex: number
@@ -26,6 +34,8 @@ type Surface = {
 export default function StepCoverCanvas({
   file,
   initial,
+  color = "#e32636",
+  layers = EMPTY_LAYERS,
   editable = false,
   className,
   fallback,
@@ -38,6 +48,8 @@ export default function StepCoverCanvas({
 }: {
   file: FilePublic
   initial?: FeatureCover3D | null
+  color?: string
+  layers?: FaceLayer[]
   editable?: boolean
   className?: string
   fallback?: ReactNode
@@ -53,6 +65,10 @@ export default function StepCoverCanvas({
   callbacks.current = { onReady, onSelectionChange }
   const reset = useRef<() => void>(() => {})
   const clearSelection = useRef<() => void>(() => {})
+  const [legend, setLegend] = useState<FaceLayer[]>([])
+  const [hidden, setHidden] = useState<Set<string>>(new Set())
+  const [shared, setShared] = useState(false)
+  const toggleLayers = useRef<(ids: Set<string>) => void>(() => {})
   const [selectedCount, setSelectedCount] = useState(0)
   const [restartable, setRestartable] = useState(false)
   const [status, setStatus] = useState("Cargando CAD…")
@@ -69,6 +85,9 @@ export default function StepCoverCanvas({
     }
     callbacks.current.onReady?.(null)
     setSelectedCount(0)
+    setLegend([])
+    setHidden(new Set())
+    setShared(false)
     setRestartable(false)
     setError("")
     setStatus("Cargando CAD…")
@@ -101,20 +120,23 @@ export default function StepCoverCanvas({
       setStatus("Preparando superficies…")
       const object = new THREE.Group()
       const meshes: THREE.Mesh[] = []
-      const materials = [
-        new THREE.MeshPhongMaterial({
-          color: 0xb8bdc6,
-          side: THREE.DoubleSide,
-        }),
-        new THREE.MeshPhongMaterial({
-          color: 0xe32636,
-          side: THREE.DoubleSide,
-        }),
-        new THREE.MeshPhongMaterial({
-          color: 0xf5ac54,
-          side: THREE.DoubleSide,
-        }),
-      ]
+      const valid = compatibleLayers(
+        layers,
+        { id: file.id, version: file.version },
+        sourceHash,
+        geometryKey,
+        prepared,
+      )
+      const palette = wholePart
+        ? ["#b8bdc6", SHARED_COLOR, ...valid.map((layer) => layer.color)]
+        : ["#b8bdc6", color, "#f5ac54"]
+      const materials = palette.map(
+        (tint) =>
+          new THREE.MeshPhongMaterial({ color: tint, side: THREE.DoubleSide }),
+      )
+      let painted = coloredFaces(valid)
+      setLegend(valid)
+      setShared(painted.shared)
       cleanup.push(() => {
         for (const mesh of meshes) mesh.geometry.dispose()
         for (const material of materials) material.dispose()
@@ -150,7 +172,7 @@ export default function StepCoverCanvas({
       const surfaces = new Map<string, Surface>()
       const ranges = meshes.map((mesh, meshIndex) => {
         mesh.userData.meshIndex = meshIndex
-        if (wholePart) return []
+        if (wholePart && !valid.length) return []
         const faces = coverFaceRanges(
           prepared[meshIndex].faces,
           (mesh.geometry.index?.count ?? 0) / 3,
@@ -195,32 +217,22 @@ export default function StepCoverCanvas({
         // Merge adjacent faces of the same color: a gray part needs one draw
         // call per mesh, instead of thousands of calls for its CAD surfaces.
         meshes.forEach((mesh, meshIndex) => {
-          const geometry = mesh.geometry
-          geometry.clearGroups()
-          const append = (first: number, count: number, color: number) => {
-            if (!count) return
-            const last = geometry.groups[geometry.groups.length - 1]
-            if (
-              last &&
-              last.materialIndex === color &&
-              last.start + last.count === first
-            )
-              last.count += count
-            else geometry.addGroup(first, count, color)
-          }
-          let next = 0
-          ranges[meshIndex].forEach((face) => {
-            append(next * 3, (face.first - next) * 3, 0)
-            const key = `${meshIndex}:${face.faceIndex}`
-            append(
-              face.first * 3,
-              (face.last - face.first + 1) * 3,
-              selected.has(key) ? 1 : key === hovered ? 2 : 0,
-            )
-            next = face.last + 1
+          paintFaceGroups(mesh.geometry, ranges[meshIndex], (face) => {
+            const key = `${meshIndex}:${face}`
+            return wholePart
+              ? (painted.faces.get(key) ?? 0)
+              : selected.has(key)
+                ? 1
+                : key === hovered
+                  ? 2
+                  : 0
           })
-          append(next * 3, (geometry.index?.count ?? 0) - next * 3, 0)
         })
+      }
+      toggleLayers.current = (ids) => {
+        painted = coloredFaces(valid, ids)
+        setShared(painted.shared)
+        paint()
       }
       const changed = () => {
         paint()
@@ -268,7 +280,12 @@ export default function StepCoverCanvas({
           controls.update()
         } else {
           controls.reset()
-          camera.position.multiplyScalar(0.72)
+          framePiece(
+            camera,
+            wholePart && valid.length === 1
+              ? valid[0].selection.camera
+              : undefined,
+          )
           controls.update()
         }
       }
@@ -457,6 +474,8 @@ export default function StepCoverCanvas({
     initial,
     editable,
     wholePart,
+    layers,
+    color,
     allowWholeComponent,
   ])
 
@@ -472,6 +491,47 @@ export default function StepCoverCanvas({
         <div className="absolute inset-0">{fallback}</div>
       )}
       {status && !error && <CoverLoading />}
+      {!status && !error && legend.length > 0 && (
+        <fieldset
+          aria-label="Features visibles"
+          className="absolute left-2 top-2 max-w-[70%] space-y-1 rounded-md border bg-background/95 px-2 py-1 text-xs shadow-sm"
+        >
+          {legend.map((layer) => (
+            <label
+              key={layer.feature_id}
+              className="flex cursor-pointer items-center gap-1.5"
+            >
+              <input
+                type="checkbox"
+                checked={!hidden.has(layer.feature_id)}
+                onChange={() => {
+                  const next = new Set(hidden)
+                  if (next.has(layer.feature_id)) next.delete(layer.feature_id)
+                  else next.add(layer.feature_id)
+                  setHidden(next)
+                  toggleLayers.current(next)
+                }}
+              />
+              <span
+                aria-hidden
+                className="size-2.5 rounded-sm"
+                style={{ backgroundColor: layer.color }}
+              />
+              {layer.name}
+            </label>
+          ))}
+          {shared && (
+            <span className="flex items-center gap-1.5">
+              <span
+                aria-hidden
+                className="size-2.5 rounded-sm"
+                style={{ backgroundColor: SHARED_COLOR }}
+              />
+              Varios features
+            </span>
+          )}
+        </fieldset>
+      )}
       {error && (
         <p
           role="alert"

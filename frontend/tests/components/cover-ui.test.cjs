@@ -271,6 +271,191 @@ const finishDialogEntrance = (page) =>
       ),
     )
 
+test("a missing coloured PNG is rendered once for each view and keeps the gray fallback", async (t) => {
+  const page = await mount(t)
+  await page.evaluate(async () => {
+    const state = window.review
+    const { FilesService, CatalogService } = await import(
+      "/tests/components/fixtures/api.js"
+    )
+    const feature = state.feature
+    const { image, cover_3d: selection } = feature.part_covers[0]
+    const cad = feature.assets[0].file
+    const partId = selection.part_id
+    feature.marked_part_ids = [partId]
+    feature.first_marked_part_id = partId
+    feature.cover_image = image
+    feature.color = "#23844d"
+    const layer = {
+      feature_id: feature.id,
+      name: feature.name,
+      color: feature.color,
+      selection,
+    }
+    state.pendingCover = {
+      cad,
+      image,
+      cad_cache_key: "checked",
+      face_colors: { key: "layers", layers: [layer], review: {}, images: {} },
+    }
+    state.coloredPart = {
+      id: partId,
+      code: "test",
+      has_face_marks: true,
+      ...state.pendingCover,
+    }
+    const uploaded = { ...image, id: "uploaded-image" }
+    state.renders = []
+    FilesService.uploadFile = async ({ formData }) => {
+      if (formData.file.type !== "image/png" || formData.file.size < 100)
+        throw Error("Expected CAD PNG")
+      const bitmap = await createImageBitmap(formData.file)
+      const ctx = new OffscreenCanvas(bitmap.width, bitmap.height).getContext(
+        "2d",
+      )
+      ctx.drawImage(bitmap, 0, 0)
+      const pixels = ctx.getImageData(0, 0, bitmap.width, bitmap.height).data
+      bitmap.close()
+      let green = 0,
+        red = 0
+      for (let i = 0; i < pixels.length; i += 4) {
+        const [r, g, b] = pixels.subarray(i, i + 3)
+        if (g > r + 25 && g > b + 15) green++
+        if (r > g + 25 && r > b + 25) red++
+      }
+      state.tint = { green, red }
+      return uploaded
+    }
+    CatalogService.saveFaceImage = async ({ requestBody: body }) => {
+      if (
+        body.geometry_key !== selection.geometry_key ||
+        body.source_sha256 !== selection.source_sha256
+      )
+        throw Error("Incorrect source geometry")
+      const key = body.feature_id ?? "part"
+      if (body.feature_id)
+        await new Promise((resolve) => {
+          state.finishCapture = resolve
+        })
+      state.renders.push(key)
+      const colors = state.pendingCover.face_colors
+      state.pendingCover = {
+        ...state.pendingCover,
+        face_colors: {
+          ...colors,
+          images: { ...colors.images, [key]: uploaded },
+        },
+      }
+      return uploaded
+    }
+    await state.navigate("/colored-part")
+  })
+  const png = page.locator('img[src*="uploaded-image"]')
+  await expect(png).toBeVisible({ timeout: 30000 })
+  await page.evaluate(() => window.review.navigate("/feature-previews"))
+  await page.waitForFunction(
+    () => typeof window.review.finishCapture === "function",
+  )
+  const oldRed = page.locator('img[src*="saved-image"]')
+  await expect(oldRed).toHaveCount(0)
+  await expect(page.getByLabel("Comprobando portada")).toHaveCount(3)
+  await expect(
+    page.getByRole("button", { name: "Ampliar portada" }),
+  ).toBeEnabled()
+  await expect(
+    page.getByRole("button", { name: "Editar portada" }),
+  ).toBeEnabled()
+  await page.evaluate(() => window.review.finishCapture())
+  await expect(png).toHaveCount(3, { timeout: 30000 })
+  await page.evaluate(async () => {
+    const { CatalogService } = await import("/tests/components/fixtures/api.js")
+    CatalogService.readPartCover = async () => {
+      await new Promise((resolve) => {
+        window.review.finishCheck = resolve
+      })
+      return window.review.pendingCover
+    }
+    void window.review.refetch()
+  })
+  await page.waitForFunction(
+    () => typeof window.review.finishCheck === "function",
+  )
+  await expect(png).toHaveCount(3)
+  await expect(oldRed).toHaveCount(0)
+  await page.evaluate(() => window.review.finishCheck())
+  const result = await page.evaluate(() => ({
+    renders: window.review.renders,
+    expected: ["part", window.review.feature.id],
+    gray: window.review.pendingCover.image.id,
+    original: window.review.feature.part_covers[0].image.id,
+    tint: window.review.tint,
+  }))
+  assert.deepEqual(result.renders, result.expected)
+  assert.equal(result.gray, "saved-image")
+  assert.equal(result.original, "saved-image")
+  assert.ok(result.tint.green > 100, JSON.stringify(result.tint))
+  assert.equal(result.tint.red, 0)
+})
+
+test("piece legend filters shared CAD faces without rebuilding the viewer", async (t) => {
+  const page = await mount(t)
+  await page.evaluate(async () => {
+    const feature = window.review.feature
+    const { image, cover_3d: selection } = feature.part_covers[0]
+    const cad = feature.assets[0].file
+    const layer = (id, color, faces) => ({
+      feature_id: id,
+      name: id,
+      color,
+      selection: { ...selection, faces },
+    })
+    const layers = [
+      layer("Nervios", "#e47c18", selection.faces),
+      layer("Planitudes", "#216bc4", [selection.faces[0]]),
+    ]
+    const metadata = {
+      cad,
+      image,
+      cad_cache_key: "source",
+      face_colors: {
+        key: "test-colors",
+        layers,
+        review: {},
+        images: { part: image },
+      },
+    }
+    window.review.pendingCover = metadata
+    window.review.coloredPart = {
+      id: "part-one",
+      code: "3205",
+      has_face_marks: true,
+      ...metadata,
+    }
+    await window.review.navigate("/colored-part")
+  })
+  const open = page.getByRole("button", { name: "Ampliar portada" })
+  await open.click()
+  await ready(page)
+  const dialog = page.getByRole("dialog")
+  const shared = dialog.getByText("Varios features", { exact: true })
+  const planes = dialog.getByRole("checkbox", { name: "Planitudes" })
+  await expect(shared).toBeVisible()
+  const canvas = dialog.locator("canvas")
+  await canvas.evaluate((el) => {
+    el.dataset.original = "true"
+  })
+  await planes.uncheck()
+  await expect(shared).toHaveCount(0)
+  await expect(canvas).toHaveAttribute("data-original", "true")
+  await expect(dialog.getByRole("checkbox", { name: "Nervios" })).toBeChecked()
+  await planes.check()
+  await expect(shared).toBeVisible()
+  await planes.uncheck()
+  await page.keyboard.press("Escape")
+  await open.click()
+  await expect(planes).toBeChecked()
+})
+
 test("real STEP worker preserves existing cover-v1 surfaces and modal fits its square", async (t) => {
   const page = await mount(t)
   await page.evaluate(() => window.review.navigate("/cover"))
@@ -538,10 +723,10 @@ test("the same clear control recovers an obsolete saved selection on the current
   await page
     .getByRole("button", { name: "Editar portada", exact: true })
     .click()
-  await page
-    .getByRole("alert")
-    .getByText(/La geometría ha cambiado/)
-    .waitFor()
+  await expect(page.getByRole("alert")).toContainText(
+    "La geometría ha cambiado",
+    { timeout: 20000 },
+  )
   await page.getByRole("button", { name: "Limpiar selección" }).click()
   await ready(page)
   await expect(page.getByRole("alert")).toHaveCount(0)

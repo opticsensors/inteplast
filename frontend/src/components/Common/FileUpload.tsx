@@ -17,6 +17,7 @@ import { formatFileSize, handleError } from "@/utils"
 
 interface FileUploadProps {
   value: FilePublic | null
+  previewOverride?: FilePublic | null
   previewFallback?: FilePublic | null
   onChange: (file: FilePublic | null) => void
   /** "image" pinta el cuadro con vista previa; "file" una fila con el nombre. */
@@ -39,6 +40,7 @@ interface FileUploadProps {
  */
 export function FileUpload({
   value,
+  previewOverride,
   previewFallback,
   onChange,
   variant = "file",
@@ -54,7 +56,8 @@ export function FileUpload({
   const inputRef = useRef<HTMLInputElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const { showErrorToast } = useCustomToast()
-  const preview = value ?? previewFallback
+  const preview =
+    (previewOverride === undefined ? value : previewOverride) ?? previewFallback
   const { url } = useFileAccess(preview?.id)
 
   const mutation = useMutation({

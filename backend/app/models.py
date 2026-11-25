@@ -11,7 +11,7 @@ from pydantic import (
     StringConstraints,
     model_validator,
 )
-from sqlalchemy import JSON, Column, DateTime
+from sqlalchemy import JSON, Column, DateTime, Integer, text
 from sqlmodel import AutoString, Field, Relationship, SQLModel
 
 
@@ -488,6 +488,17 @@ class FeatureCover3D(BaseModel):
     faces: list[CadFaceSelection] = Field(max_length=5000)
     camera: CadCamera
 
+    @classmethod
+    def from_stored(cls, value: dict[str, Any]) -> "FeatureCover3D":
+        # Version attestations are server-owned and never accepted from the editor.
+        return cls.model_validate(
+            {
+                key: val
+                for key, val in value.items()
+                if key not in {"source_key", "primary_at_selection"}
+            }
+        )
+
     @model_validator(mode="after")
     def unique_faces(self) -> "FeatureCover3D":
         if len({(face.mesh, face.face) for face in self.faces}) != len(self.faces):
@@ -532,7 +543,30 @@ class FeatureUpdate(SQLModel):
 
 
 # Database model, database table inferred from class name
+FEATURE_COLORS = (
+    "#a635a6",
+    "#cc4149",
+    "#008a9b",
+    "#e47c18",
+    "#7854c5",
+    "#216bc4",
+    "#a28713",
+    "#23844d",
+)
+
+
 class Feature(FeatureBase, table=True):
+    color_slot: int | None = Field(
+        default=None,
+        sa_column=Column(
+            Integer, nullable=False, server_default=text("nextval('feature_color_seq')")
+        ),
+    )
+
+    @property
+    def color(self) -> str:
+        return FEATURE_COLORS[((self.color_slot or 1) - 1) % len(FEATURE_COLORS)]
+
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     created_at: datetime | None = Field(
         default_factory=get_datetime_utc,
@@ -675,6 +709,9 @@ class FeaturePartCoverPublic(BaseModel):
 
 # Lo que se pinta en una tarjeta de resultado
 class FeaturePublic(FeatureBase):
+    color: str = FEATURE_COLORS[0]
+    marked_part_ids: list[uuid.UUID] = []
+    first_marked_part_id: uuid.UUID | None = None
     id: uuid.UUID
     created_at: datetime | None = None
     owner_id: uuid.UUID | None = None

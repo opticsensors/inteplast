@@ -1,16 +1,12 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Loader2 } from "lucide-react"
 import { Suspense, useState } from "react"
-import {
-  CatalogService,
-  type FilePublic,
-  FilesService,
-  type PartCardPublic,
-} from "@/client"
+import type { PartCardPublic } from "@/client"
+import { FaceReviewList } from "@/components/Catalog/CatalogWarnings"
 import { COVER_SIZE, CoverButton } from "@/components/Features/CoverButton"
 import { CoverDialog } from "@/components/Features/CoverDialog"
 import { CoverLoading } from "@/components/Features/CoverLoading"
 import { FeatureThumbnail } from "@/components/Features/FeatureCard"
+import { coloredFaces, SHARED_COLOR } from "@/components/Features/faceColors"
 import {
   preloadStepViewer,
   StepCoverCanvas,
@@ -23,81 +19,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { useCatalogCover } from "@/hooks/useCatalogCover"
+import { useFaceImage } from "@/hooks/useFaceImage"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
+import { useGrayImage } from "@/hooks/useGrayImage"
 import { usePrepareCover } from "@/hooks/usePrepareCover"
 import { cn } from "@/lib/utils"
-
-// Catalogue thumbnails share one worker/WebGL slot, even when several cards mount together.
-let queue: Promise<unknown> = Promise.resolve()
-
-function usePartImage(part: PartCardPublic) {
-  const client = useQueryClient()
-  const cad = part.cad
-  const generated = useQuery({
-    queryKey: [
-      "part-cover",
-      part.id,
-      cad?.id,
-      cad?.version,
-      part.cad_cache_key,
-    ],
-    enabled: Boolean(
-      (!part.image || part.cover_needs_refresh) &&
-        part.cad_cache_key &&
-        cad &&
-        /\.(step|stp)$/i.test(cad.filename),
-    ),
-    staleTime: Infinity,
-    retry: false,
-    refetchOnWindowFocus: false,
-    queryFn: ({ signal }): Promise<FilePublic> => {
-      const job = queue
-        .catch(() => undefined)
-        .then(async () => {
-          signal.throwIfAborted()
-          const { capturePartCad } = await import("./capturePartCad")
-          const { image, sourceHash } = await capturePartCad(cad!, signal)
-          const uploaded = await FilesService.uploadFile({
-            formData: {
-              file: new File([image], "pieza-cad.png", { type: "image/png" }),
-            },
-          })
-          signal.throwIfAborted()
-          const saved = await CatalogService.savePartCover({
-            partId: part.id,
-            requestBody: {
-              file_id: cad!.id,
-              file_version: cad!.version,
-              cad_cache_key: part.cad_cache_key,
-              source_sha256: sourceHash,
-              image_id: uploaded.id,
-            },
-          })
-          client.setQueryData(["features", "catalog", "cover", part.id], {
-            cad,
-            cad_cache_key: part.cad_cache_key,
-            image: saved,
-            cover_needs_refresh: false,
-          })
-          void client.invalidateQueries({
-            queryKey: ["parts", "detail", part.id],
-          })
-          return saved
-        })
-      queue = job
-      return job
-    },
-  })
-  const renderedImage = part.cad_cache_key ? generated.data : undefined
-  return {
-    image: part.cover_needs_refresh
-      ? (renderedImage ?? part.image)
-      : (part.image ?? renderedImage),
-    loading: generated.isFetching,
-    error: generated.error,
-    retry: generated.refetch,
-  }
-}
 
 export function PartThumbnail({
   part,
@@ -108,11 +34,14 @@ export function PartThumbnail({
   className?: string
   wrapperClassName?: string
 }) {
-  const check = useCatalogCover(part.deferred_cover_part_id)
-  const { image, loading, error, retry } = usePartImage({
+  const check = useCatalogCover(
+    part.deferred_cover_part_id ?? (part.has_face_marks ? part.id : undefined),
+  )
+  const { image, loading, error, retry } = useGrayImage({
     ...part,
     ...check.cover,
   })
+  const colored = useFaceImage(part.id, check.settledCover)
   return (
     <div
       ref={check.ref}
@@ -120,14 +49,16 @@ export function PartThumbnail({
       title={error ? fileErrorMessage(error) : undefined}
     >
       <FeatureThumbnail
-        feature={{ name: partLabel(part), image }}
+        feature={{ name: partLabel(part), image: colored.image ?? image }}
         className={className}
         fit="contain"
-        coverError={check.error || (!image && error)}
+        coverError={check.error || colored.error || (!image && error)}
         checking={check.checking}
-        retryCover={check.error ? check.retry : retry}
+        retryCover={
+          check.error ? check.retry : colored.error ? colored.retry : retry
+        }
       />
-      {loading && (
+      {(loading || colored.loading) && (
         <Loader2
           aria-label="Preparando portada"
           className="absolute bottom-2 right-2 size-4 animate-spin text-muted-foreground"
@@ -139,7 +70,12 @@ export function PartThumbnail({
 
 export function PartCover({ part }: { part: PartCardPublic }) {
   const [expanded, setExpanded] = useState(false)
-  const { image, loading } = usePartImage(part)
+  const gray = useGrayImage(part)
+  const check = useCatalogCover(part.has_face_marks ? part.id : undefined, true)
+  const colors = check.settledCover?.face_colors
+  const colored = useFaceImage(part.id, check.settledCover)
+  const image = colored.image ?? gray.image
+  const loading = gray.loading || colored.loading
   const cad =
     part.cad && /\.(step|stp)$/i.test(part.cad.filename) ? part.cad : undefined
   const name = partLabel(part)
@@ -153,26 +89,56 @@ export function PartCover({ part }: { part: PartCardPublic }) {
   )
   return (
     <Dialog open={expanded} onOpenChange={setExpanded}>
-      <div className={cn("relative shrink-0", COVER_SIZE)}>
-        {cad || image ? (
-          <DialogTrigger asChild>
-            <CoverButton
-              image={image}
-              onPointerEnter={cad ? preloadStepViewer : undefined}
-              onFocus={cad ? preloadStepViewer : undefined}
-              name={name}
-              className="size-full sm:size-full"
+      <div className="flex w-fit shrink-0 flex-col">
+        <div className={cn("relative shrink-0", COVER_SIZE)}>
+          {cad || image ? (
+            <DialogTrigger asChild>
+              <CoverButton
+                image={image}
+                onPointerEnter={cad ? preloadStepViewer : undefined}
+                onFocus={cad ? preloadStepViewer : undefined}
+                name={name}
+                className="size-full sm:size-full"
+              />
+            </DialogTrigger>
+          ) : (
+            fallback
+          )}
+          {loading && (
+            <Loader2
+              aria-label="Preparando portada"
+              className="absolute bottom-2 left-2 size-4 animate-spin text-muted-foreground"
             />
-          </DialogTrigger>
-        ) : (
-          fallback
-        )}
-        {loading && (
-          <Loader2
-            aria-label="Preparando portada"
-            className="absolute bottom-2 left-2 size-4 animate-spin text-muted-foreground"
-          />
-        )}
+          )}
+        </div>
+        {colored.image && colors?.layers.length ? (
+          <ul
+            aria-label="Colores de los features"
+            className="mt-1.5 flex max-w-48 flex-wrap gap-x-3 gap-y-1 text-xs sm:max-w-[300px]"
+          >
+            {colors.layers.map((layer) => (
+              <li key={layer.feature_id} className="flex items-center gap-1">
+                <span
+                  aria-hidden
+                  className="size-2.5 rounded-sm"
+                  style={{ backgroundColor: layer.color }}
+                />
+                {layer.name}
+              </li>
+            ))}
+            {coloredFaces(colors.layers).shared && (
+              <li className="flex items-center gap-1">
+                <span
+                  aria-hidden
+                  className="size-2.5 rounded-sm"
+                  style={{ backgroundColor: SHARED_COLOR }}
+                />
+                Varios features
+              </li>
+            )}
+          </ul>
+        ) : null}
+        <FaceReviewList review={colors?.review} />
       </div>
       {expanded && (
         <CoverDialog aria-describedby={undefined}>
@@ -197,6 +163,7 @@ export function PartCover({ part }: { part: PartCardPublic }) {
                   fallback={fallback}
                   className="size-full"
                   wholePart
+                  layers={colors?.layers}
                 />
               </Suspense>
             ) : (

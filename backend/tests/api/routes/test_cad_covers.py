@@ -107,6 +107,125 @@ def test_attachment_creates_the_piece_link(db: Session) -> None:
     assert db.get(FeaturePartLink, (feature.id, part.id)) is not None
 
 
+def test_colored_capture_is_versioned_separately_from_the_original_and_gray(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    headers = superuser_token_headers
+    feature, part, body = cover_example(client, headers, db)
+    url = f"{API}/parts/{part}/cover"
+    selection = body["cover_3d"]
+    assert (
+        save(client, headers, feature, [{"part_id": part, **body}]).status_code == 200
+    )
+    first = client.get(url, headers=headers).json()
+    colors = first["face_colors"]
+    assert colors["review"] == {}
+    assert [
+        (layer["feature_id"], layer["selection"]) for layer in colors["layers"]
+    ] == [(feature, selection)]
+    assert detail(client, headers, feature)["marked_part_ids"] == [part]
+    # Simulate a persisted annotation from before colour support.
+    link = db.get(FeaturePartLink, (uuid.UUID(feature), uuid.UUID(part)))
+    assert link and link.cover_3d
+    link.cover_3d = {
+        key: value
+        for key, value in link.cover_3d.items()
+        if key not in {"source_key", "primary_at_selection"}
+    }
+    db.add(link)
+    db.commit()
+    png = upload(
+        client, headers, "colores.png", b"different derived image", "image/png"
+    )
+    request = {
+        **{
+            k: selection[k]
+            for k in ("file_id", "file_version", "source_sha256", "geometry_key")
+        },
+        "render_key": colors["key"],
+        "image_id": png["id"],
+    }
+    for variant in (None, feature):
+        response = client.put(
+            f"{API}/parts/{part}/face-image",
+            headers=headers,
+            json={**request, "feature_id": variant},
+        )
+        assert response.status_code == 200, response.text
+    colored = client.get(url, headers=headers).json()
+    assert set(colored["face_colors"]["images"]) == {"part", feature}
+    assert colored["image"] == first["image"]
+    graph = client.get(
+        f"{API}/catalog/graph",
+        headers=headers,
+        params={"part_id": part, "kind": "part"},
+    ).json()
+    piece_node = next(node for node in graph["nodes"] if node["kind"] == "part")
+    assert piece_node["image"]["id"] == png["id"]
+    assert detail(client, headers, feature)["cover_image"]["id"] == body["image_id"]
+    db.refresh(link)
+    assert link.cover_3d and link.cover_3d["source_key"]
+    updated = {**selection, "faces": [{"mesh": 0, "face": 4}]}
+    assert (
+        save(
+            client, headers, feature, [{"part_id": part, **body, "cover_3d": updated}]
+        ).status_code
+        == 200
+    )
+    assert (
+        client.put(
+            f"{API}/parts/{part}/face-image", headers=headers, json=request
+        ).status_code
+        == 409
+    )
+    assert client.get(url, headers=headers).json()["face_colors"]["images"] == {}
+    cleared = save(
+        client, headers, feature, [{"part_id": part, "image_id": body["image_id"]}]
+    )
+    assert cleared.status_code == 200
+    assert cleared.json()["marked_part_ids"] == []
+    assert client.get(url, headers=headers).json()["face_colors"] is None
+
+
+def test_face_review_follows_the_marked_piece_even_when_it_is_not_first(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    from app.file_sources import document_path
+
+    headers = superuser_token_headers
+    feature, part, body = cover_example(client, headers, db)
+    first = create_random_part(db)
+    link(client, headers, feature, first)
+    assert (
+        save(client, headers, feature, [{"part_id": part, **body}]).status_code == 200
+    )
+    order = client.put(
+        f"{API}/features/{feature}/parts/order",
+        headers=headers,
+        json={"part_ids": [str(first.id), part]},
+    )
+    assert order.status_code == 200, order.text
+    card = detail(client, headers, feature)
+    assert card["marked_part_ids"] == [part] and card["first_marked_part_id"] is None
+    doc = db.get(StoredFile, uuid.UUID(body["cover_3d"]["file_id"]))
+    assert doc
+    document_path(doc).write_bytes(b"changed STEP in the test upload directory")
+    colors = client.get(f"{API}/parts/{part}/cover", headers=headers).json()[
+        "face_colors"
+    ]
+    assert colors["review"] == {feature: card["name"]} and colors["layers"] == []
+    assert (
+        client.get(f"{API}/parts/{first.id}/cover", headers=headers).json()[
+            "face_colors"
+        ]
+        is None
+    )
+    assert (
+        cover_of(detail(client, headers, feature), part)["image"]["id"]
+        == body["image_id"]
+    )
+
+
 @pytest.mark.parametrize(
     "attach_first", [True, False], ids=["attach-first", "unlink-first"]
 )
