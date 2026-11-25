@@ -107,13 +107,11 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
 - Las tarjetas de lista y cuadrícula se pueden abrir en cuanto llega el catálogo.
   Al acercarse a la pantalla, cada portada CAD se comprueba por separado. Una pieza
   y los features que usan su misma captura comparten la consulta.
-- **Medidas (18/11/2026):** tarjeta y celda de pieza llevan una etiqueta con lo que la app
-  ha leído: «Medidas detectadas» (algún valor válido con cota y fuente, aunque la lectura
-  siga en curso), «Informe pendiente de interpretar» (lectura terminada con un informe de
-  medidas que no se pudo leer) o «Sin medidas detectadas» (lectura terminada sin informes).
-  Sin etiqueta mientras la pieza no se ha leído o la lectura sigue sin valores.
-  «Documentación de retoques» se añade cuando la lectura encontró documentos de
-  correcciones; solo indica disponibilidad (no que se haya entendido o ejecutado un retoque).
+- En lista y cuadrícula, los avisos llevan un triángulo ámbar. «Sin mediciones detectadas»
+  aparece cuando ha terminado la lectura de la pieza y no se ha extraído ningún valor válido.
+  «Sin correcciones detectadas» aparece cuando la lectura registra que no ha encontrado
+  documentos de correcciones. Los vínculos guardados determinan «Sin features asociados»
+  en una pieza y «Sin piezas asociadas» en un feature. Una tarjeta sin avisos queda limpia.
 - La vista inicial solo muestra piezas y features. Las cotas aparecen al buscar,
   identificadas por pieza y revisión; abren esa consulta dentro de la ficha de pieza.
 - **Vistas (17/11/2026):** junto al buscador, antes de Filtros, el grupo «Vista» con Lista y
@@ -177,14 +175,20 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
   «Ver pieza» en el color principal. En Archivos se pulsa el tipo para abrir el fichero y
   ver su nombre. El tamaño queda centrado verticalmente junto al icono de descarga.
 - La portada de pieza es una captura de todo el CAD STEP sin superficies marcadas.
+  Las fichas de pieza y de feature comparten un cuadrado de 300 × 300 px a partir
+  de 640 px de ancho y 192 × 192 px en pantallas menores. Consulta, edición y alta
+  mantienen esa medida, incluso con el carrusel o con la portada vacía.
   Al pulsarla abre el visor interactivo reutilizado de Features, sin edición de caras.
 - **Identidad de la pieza (17/11/2026):** el código es el título; el nombre, opcional, va a
   su lado en tono secundario, sin repetir el código («3212 Pump Housing»). Debajo, una línea
   «Familia · Cliente» con lo que tenga. La tarjeta del catálogo sigue el mismo orden, y los
   selectores, enlaces, cotas encontradas y metrología muestran el código primero.
 - En edición, la primera fila tiene **Código** (grande y estrecho) y **Nombre (opcional)**;
-  debajo, **Familia** y **Cliente** con `CatalogNameSelect` (`SearchSelect` con buscador).
-  La última fila del desplegable es siempre «+ Añadir familia» / «+ Añadir cliente», con el
+  debajo, **Familia**, **Cliente**, **Material** y **Nº de cavidades** comparten fila en
+  escritorio. Los tres primeros usan `CatalogNameSelect` con buscador. El número de
+  cavidades admite enteros positivos. Material y cavidades son datos opcionales que la
+  persona introduce y guarda en la ficha. Elegir carpeta y actualizar datos los conserva.
+  La última fila del desplegable permite añadir una familia, un cliente o un material, con el
   mismo botón que «Añadir feature» o «Añadir fichero». Al pulsarla aparece un campo vacío,
   como en «Añadir cota», relleno con lo ya buscado; Intro o salir del campo lo crea y lo
   elige, Esc lo cancela. Un nombre que ya existe (otras mayúsculas o espacios) elige el

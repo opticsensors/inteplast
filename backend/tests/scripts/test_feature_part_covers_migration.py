@@ -10,7 +10,7 @@ from alembic.config import Config
 from sqlmodel import Session
 
 from app.core.db import engine
-from app.models import Feature, FeatureAsset, Part
+from app.models import Feature, FeatureAsset
 
 PREVIOUS = "o16d92fa1c07"
 
@@ -32,6 +32,16 @@ def insert_image(connection: sa.Connection, filename: str) -> uuid.UUID:
     return image_id
 
 
+def insert_part(session: Session, code: str) -> uuid.UUID:
+    # The historical part table predates fields on the current ORM model.
+    part_id = uuid.uuid4()
+    session.execute(
+        sa.text("INSERT INTO part (id, code) VALUES (:id, :code)"),
+        {"id": part_id, "code": code},
+    )
+    return part_id
+
+
 def test_cad_cover_moves_to_its_piece_and_comes_back(db: Session) -> None:
     # Release the shared session so that the schema changes do not wait for it.
     db.commit()
@@ -44,11 +54,9 @@ def test_cad_cover_moves_to_its_piece_and_comes_back(db: Session) -> None:
         with Session(engine) as session:
             cad_image = insert_image(session.connection(), f"cad-{token}.png")
             pasted = insert_image(session.connection(), f"pasted-{token}.png")
-            linked = Part(code=f"L{token}")
-            attached = Part(code=f"A{token}")
-            session.add_all([linked, attached])
-            session.flush()
-            cover = {"asset_id": str(uuid.uuid4()), "part_id": str(linked.id)}
+            linked = insert_part(session, f"L{token}")
+            attached = insert_part(session, f"A{token}")
+            cover = {"asset_id": str(uuid.uuid4()), "part_id": str(linked)}
             with_cad = Feature(name=f"CAD {token}", image_id=cad_image, cover_3d=cover)
             with_image = Feature(name=f"Image {token}", image_id=pasted)
             session.add_all([with_cad, with_image])
@@ -56,15 +64,15 @@ def test_cad_cover_moves_to_its_piece_and_comes_back(db: Session) -> None:
             # The second piece belongs to the CAD feature only through an attachment.
             session.add(
                 FeatureAsset(
-                    feature_id=with_cad.id, part_id=attached.id, kind="mold", name="m"
+                    feature_id=with_cad.id, part_id=attached, kind="mold", name="m"
                 )
             )
             session.commit()
             ids = {
                 "cad_image": cad_image,
                 "pasted": pasted,
-                "linked": linked.id,
-                "attached": attached.id,
+                "linked": linked,
+                "attached": attached,
                 "with_cad": with_cad.id,
                 "with_image": with_image.id,
             }
@@ -155,14 +163,12 @@ def test_downgrade_does_not_bring_back_a_removed_cad_cover(
     try:
         with Session(engine) as session:
             image_id = insert_image(session.connection(), f"cad-{token}.png")
-            part = Part(code=f"L{token}")
-            session.add(part)
-            session.flush()
-            cover = {"asset_id": str(uuid.uuid4()), "part_id": str(part.id)}
+            part_id = insert_part(session, f"L{token}")
+            cover = {"asset_id": str(uuid.uuid4()), "part_id": str(part_id)}
             feature = Feature(name=f"CAD {token}", image_id=image_id, cover_3d=cover)
             session.add(feature)
             session.commit()
-            feature_id, part_id = feature.id, part.id
+            feature_id = feature.id
         with engine.begin() as connection:
             connection.execute(
                 sa.text(

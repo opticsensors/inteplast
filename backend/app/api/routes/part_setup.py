@@ -55,6 +55,8 @@ class PartRegistration(BaseModel):
     code: str = Field(min_length=1, max_length=64)
     family_id: uuid.UUID | None = None
     customer_id: uuid.UUID | None = None
+    material_id: uuid.UUID | None = None
+    cavity_count: int | None = Field(default=None, ge=1, le=2147483647)
     description: str | None = Field(default=None, max_length=2000)
     files: list[PartFileInput] = Field(default_factory=list, max_length=200)
     feature_ids: list[uuid.UUID] = Field(default_factory=list, max_length=200)
@@ -82,7 +84,7 @@ def register_part(
             )
         if not body.code.strip():
             raise HTTPException(422, "Escribe el código de la pieza.")
-        check_names(session, body.family_id, body.customer_id)
+        check_names(session, body.family_id, body.customer_id, body.material_id)
         if session.exec(select(Part).where(Part.code == body.code.strip())).first():
             raise HTTPException(409, "Ya existe una pieza con ese código.")
         features = []
@@ -98,6 +100,8 @@ def register_part(
             code=body.code.strip(),
             family_id=body.family_id,
             customer_id=body.customer_id,
+            material_id=body.material_id,
+            cavity_count=body.cavity_count,
             description=body.description,
             folder_path=body.folder_path,
         )

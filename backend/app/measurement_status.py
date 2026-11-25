@@ -71,13 +71,13 @@ def measurement_status(session: Session, part: Part) -> MeasurementStatus | None
     return "none"
 
 
-def corrections_documented(session: Session, part: Part) -> bool:
-    """«Documentación de retoques»: the read found correction documents.
-
-    Only availability: whether a proposal was understood, or executed, is not claimed.
-    False before the piece is read.
-    """
+def corrections_documented(session: Session, part: Part) -> bool | None:
+    """Only a completed read can establish that correction documents are absent."""
     from app.part_reading import read_report
 
     report = read_report(session, part)
-    return report is not None and report.corrections_state != "empty"
+    if report is None or "corrections_state" not in report.model_fields_set:
+        return None
+    if report.corrections_state != "empty":
+        return True
+    return False if report.state in {"ready", "partial"} else None

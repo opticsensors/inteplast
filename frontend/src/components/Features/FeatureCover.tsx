@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog"
 import { usePrepareCover } from "@/hooks/usePrepareCover"
 import { cn } from "@/lib/utils"
-import { CoverButton } from "./CoverButton"
+import { COVER_SIZE, CoverButton } from "./CoverButton"
 import { CoverDialog } from "./CoverDialog"
 import { CoverLoading } from "./CoverLoading"
 import { coverAsset } from "./cadCover"
@@ -28,8 +28,6 @@ import { coverPieceLabel, coverSlides, step } from "./coverSlides"
 import { FeatureThumbnail } from "./FeatureCard"
 import { preloadStepViewer, StepCoverCanvas } from "./lazyStepCoverCanvas"
 
-/** Bigger than the old single cover (192 px): the capture is what is looked at. */
-export const COVER_SIZE = "size-48 sm:size-[300px]"
 /** Minimum horizontal travel, in px, for a finger swipe to change piece. */
 const SWIPE = 40
 /** A click this soon (ms) after a swipe is the end of the gesture, not a tap. */

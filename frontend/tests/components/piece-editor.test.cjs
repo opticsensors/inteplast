@@ -101,6 +101,121 @@ async function choose(page, selected = "9001 New housing") {
   )
 }
 
+test("piece covers keep the feature carousel size in creation, consultation and editing", async (t) => {
+  const page = await mount(t)
+  const pieceCover = page
+    .locator("main fieldset")
+    .first()
+    .locator(":scope > div")
+    .first()
+  await page.evaluate(() => {
+    window.review.feature.parts.push({ id: "second-part", code: "9002" })
+  })
+  for (const [width, size] of [
+    [1440, 300],
+    [800, 300],
+    [390, 192],
+  ]) {
+    await page.setViewportSize({ width, height: 950 })
+    await page.evaluate(() => window.review.navigate({ to: "/parts/nueva" }))
+    await expect(page.getByLabel("Código de la pieza")).toBeVisible()
+    await expect(pieceCover).toHaveCSS("width", `${size}px`)
+    await expect(pieceCover).toHaveCSS("height", `${size}px`)
+
+    await page.evaluate(() =>
+      window.review.navigate({
+        to: "/parts/$partId",
+        params: { partId: "part-one" },
+      }),
+    )
+    const edit = page.getByRole("button", { name: "Editar pieza", exact: true })
+    await expect(edit).toBeVisible()
+    const before = await pieceCover.boundingBox()
+    assert.equal(before.width, size)
+    assert.equal(before.height, size)
+    await edit.click()
+    await expect(page.getByLabel("Código de la pieza")).toBeVisible()
+    assert.deepEqual(await pieceCover.boundingBox(), before)
+
+    await page.evaluate(() =>
+      window.review.navigate({
+        to: "/features/$featureId",
+        params: { featureId: "feature-one" },
+      }),
+    )
+    const carousel = page.getByRole("region", {
+      name: "Capturas de las piezas",
+    })
+    await expect(carousel).toHaveCSS("width", `${size}px`)
+    await expect(carousel).toHaveCSS("height", `${size}px`)
+    await page
+      .getByRole("button", { name: "Editar feature", exact: true })
+      .click()
+    await expect(
+      page.getByRole("button", { name: "Cambiar imagen" }),
+    ).toBeVisible()
+    await expect(carousel).toHaveCSS("width", `${size}px`)
+    await expect(carousel).toHaveCSS("height", `${size}px`)
+  }
+})
+
+test("manual material and cavity count share the editor row and survive folder selection", async (t) => {
+  const page = await mount(t)
+  const material = page.getByRole("combobox", { name: "Material", exact: true })
+  const cavities = page.getByRole("spinbutton", { name: "Nº de cavidades" })
+  await material.click()
+  await page.getByRole("button", { name: "Añadir material" }).click()
+  const entry = page.getByRole("textbox", { name: "Añadir material" })
+  await entry.fill("PA66 GF30")
+  await entry.press("Enter")
+  await expect(material).toHaveText("PA66 GF30")
+  await cavities.fill("4")
+  await choose(page)
+  await expect(material).toHaveText("PA66 GF30")
+  await expect(cavities).toHaveValue("4")
+  const create = page.getByRole("button", { name: "Crear pieza", exact: true })
+  await cavities.fill("0")
+  await expect(create).toBeDisabled()
+  await cavities.fill("4")
+  await create.click()
+  await expect(page.getByText("PA66 GF30", { exact: true })).toBeVisible()
+  await page.getByRole("button", { name: "Editar pieza", exact: true }).click()
+  await expect(cavities).toHaveValue("4")
+  const fields = [
+    page.getByRole("combobox", { name: "Familia", exact: true }),
+    page.getByRole("combobox", { name: "Cliente", exact: true }),
+    material,
+    cavities,
+  ]
+  const rects = await Promise.all(fields.map((field) => field.boundingBox()))
+  for (let i = 1; i < rects.length; i++) {
+    assert.ok(Math.abs(rects[i].y - rects[0].y) <= 1, JSON.stringify(rects))
+    assert.ok(rects[i].x > rects[i - 1].x)
+  }
+  assert.ok(rects[3].width < rects[2].width)
+  const header = page
+    .locator("fieldset")
+    .filter({ has: page.getByLabel("Código de la pieza") })
+    .first()
+  const cover = await header.locator(":scope > div").first().boundingBox()
+  const description = await page.locator("#piece-description").boundingBox()
+  assert.ok(Math.abs(cover.height - cover.width) <= 1)
+  assert.ok(
+    Math.abs(cover.y + cover.height - description.y - description.height) <= 1,
+    JSON.stringify({ cover, description }),
+  )
+  await header.screenshot({
+    path: path.join(artifacts, "material-cavities-header.png"),
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(cavities).toBeVisible()
+  assert.ok(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  )
+})
+
 test("a multi-component piece opens Componentes on creation and reads its data when closed", async (t) => {
   const page = await mount(t)
   await choose(page)

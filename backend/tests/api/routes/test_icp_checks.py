@@ -157,13 +157,19 @@ def read(state: str, corrections: str) -> dict[str, Any]:
 
 
 @pytest.mark.parametrize(
-    ("last_read", "expected"),
+    ("last_read", "expected", "missing"),
     [
-        (None, False),
-        (read("ready", "empty"), False),
-        (read("partial", "needs_review"), True),
-        (read("processing", "queued"), True),
-        (read("partial", "error"), True),
+        (None, False, False),
+        (
+            {"state": "ready", "measurements": {"context_key": "", "files": []}},
+            False,
+            False,
+        ),
+        (read("ready", "empty"), False, True),
+        (read("error", "empty"), False, False),
+        (read("partial", "needs_review"), True, False),
+        (read("processing", "queued"), True, False),
+        (read("partial", "error"), True, False),
     ],
 )
 def test_correction_documents_are_shown_as_available(
@@ -172,6 +178,7 @@ def test_correction_documents_are_shown_as_available(
     db: Session,
     last_read: dict[str, Any] | None,
     expected: bool,
+    missing: bool,
 ) -> None:
     part = create_random_part(db)
     part.last_read = last_read
@@ -181,6 +188,7 @@ def test_correction_documents_are_shown_as_available(
         f"{API}/parts/{part.id}/detail", headers=superuser_token_headers
     ).json()
     assert detail["part"]["corrections_documented"] is expected
+    assert detail["part"]["corrections_missing"] is missing
     assert uuid.UUID(detail["part"]["id"]) == part.id
 
 

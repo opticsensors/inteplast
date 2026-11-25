@@ -52,6 +52,51 @@ def register_piece(client, headers, folder):
     return response.json()["part"], data
 
 
+def test_manual_material_and_cavities_survive_folder_changes_and_reads(
+    client: TestClient, normal_user_token_headers, source
+):
+    folder, root = source
+    headers = normal_user_token_headers
+    material = client.post(
+        f"{settings.API_V1_STR}/materials", headers=headers, json={"name": "PA66 GF30"}
+    ).json()
+    request = {
+        "folder_path": folder,
+        "code": folder.split()[0],
+        "material_id": material["id"],
+        "cavity_count": 4,
+    }
+    response = client.post(f"{API}/register", headers=headers, json=request)
+    assert response.status_code == 200, response.text
+    part = response.json()
+    assert part["material"] == material and part["cavity_count"] == 4
+    url = f"{API}/{part['id']}"
+    other = root.with_name(f"{folder} ABS 8 cavidades")
+    other.mkdir()
+    saved = client.put(
+        url, headers=headers, json={"folder_path": other.name, "files": []}
+    )
+    assert saved.status_code == 200, saved.text
+    assert client.post(f"{url}/read-data", headers=headers).status_code == 200
+    reread = client.get(f"{url}/detail", headers=headers).json()["part"]
+    assert reread["material"] == material and reread["cavity_count"] == 4
+    for invalid in (0, -1, 1.5):
+        assert (
+            client.put(url, headers=headers, json={"cavity_count": invalid}).status_code
+            == 422
+        )
+    assert (
+        client.put(
+            url, headers=headers, json={"material_id": str(uuid.uuid4())}
+        ).status_code
+        == 422
+    )
+    cleared = client.put(
+        url, headers=headers, json={"material_id": None, "cavity_count": None}
+    ).json()
+    assert cleared["material"] is None and cleared["cavity_count"] is None
+
+
 def test_refresh_keeps_spc_pending_and_imports_supported_files(
     client: TestClient, normal_user_token_headers, source
 ):

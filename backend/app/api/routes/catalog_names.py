@@ -1,4 +1,4 @@
-"""Shared lists of piece families and customers.
+"""Shared lists of piece families, customers and materials.
 
 Users extend them from the piece editor. Adding a name that already exists, with other
 case or extra spaces, returns the existing entry. Renaming, merging and deleting are left
@@ -18,13 +18,14 @@ from app.models import (
     CatalogNamePublic,
     CatalogNamesPublic,
     Customer,
+    Material,
     PartFamily,
     catalog_key,
 )
 
 router = APIRouter(tags=["catalog"])
 
-CatalogName = type[PartFamily] | type[Customer]
+CatalogName = type[PartFamily] | type[Customer] | type[Material]
 
 
 def list_names(session: Session, model: CatalogName) -> CatalogNamesPublic:
@@ -55,12 +56,17 @@ def add_name(session: Session, model: CatalogName, body: CatalogNameCreate) -> A
 
 
 def check_names(
-    session: Session, family_id: uuid.UUID | None, customer_id: uuid.UUID | None
+    session: Session,
+    family_id: uuid.UUID | None,
+    customer_id: uuid.UUID | None,
+    material_id: uuid.UUID | None,
 ) -> None:
     if family_id and not session.get(PartFamily, family_id):
         raise HTTPException(422, "La familia elegida ya no existe.")
     if customer_id and not session.get(Customer, customer_id):
         raise HTTPException(422, "El cliente elegido ya no existe.")
+    if material_id and not session.get(Material, material_id):
+        raise HTTPException(422, "El material elegido ya no existe.")
 
 
 @router.get("/families", response_model=CatalogNamesPublic)
@@ -89,3 +95,15 @@ def create_customer(
 ) -> Any:
     """Add a customer, or return the one with the same name."""
     return add_name(session, Customer, body)
+
+
+@router.get("/materials", response_model=CatalogNamesPublic)
+def read_materials(session: SessionDep, _current_user: CurrentUser) -> Any:
+    return list_names(session, Material)
+
+
+@router.post("/materials", response_model=CatalogNamePublic)
+def create_material(
+    session: SessionDep, _current_user: CurrentUser, body: CatalogNameCreate
+) -> Any:
+    return add_name(session, Material, body)

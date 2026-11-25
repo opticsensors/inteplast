@@ -107,8 +107,8 @@ const AddUser = () => {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button disabled={!methods}>
-          <Plus className="mr-2" />
+        <Button disabled={!methods} className="h-11">
+          <Plus />
           Añadir usuario
         </Button>
       </DialogTrigger>

@@ -762,6 +762,9 @@ const withCatalogNames = (part) => ({
   customer:
     catalogNames("customers").find((item) => item.id === part.customer_id) ??
     null,
+  material:
+    catalogNames("materials").find((item) => item.id === part.material_id) ??
+    null,
 })
 
 export const CatalogService = {
@@ -782,6 +785,8 @@ export const CatalogService = {
   }),
   createFamily: (data) => addCatalogName("families", data),
   createCustomer: (data) => addCatalogName("customers", data),
+  readMaterials: async () => ({ data: clone(catalogNames("materials")) }),
+  createMaterial: (data) => addCatalogName("materials", data),
   searchCatalog: async (params = {}) => {
     const features =
       params.kind === "part"

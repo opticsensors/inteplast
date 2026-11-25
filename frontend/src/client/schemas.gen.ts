@@ -3018,6 +3018,31 @@ export const PartCardPublicSchema = {
             ],
             title: 'Customer Id'
         },
+        material_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Material Id'
+        },
+        cavity_count: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 2147483647,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cavity Count'
+        },
         folder_path: {
             anyOf: [
                 {
@@ -3067,6 +3092,16 @@ export const PartCardPublicSchema = {
                 }
             ]
         },
+        material: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/CatalogNamePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         feature_count: {
             type: 'integer',
             title: 'Feature Count',
@@ -3104,6 +3139,11 @@ export const PartCardPublicSchema = {
         corrections_documented: {
             type: 'boolean',
             title: 'Corrections Documented',
+            default: false
+        },
+        corrections_missing: {
+            type: 'boolean',
+            title: 'Corrections Missing',
             default: false
         }
     },
@@ -3168,6 +3208,31 @@ export const PartCatalogPublicSchema = {
             ],
             title: 'Customer Id'
         },
+        material_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Material Id'
+        },
+        cavity_count: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 2147483647,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cavity Count'
+        },
         folder_path: {
             anyOf: [
                 {
@@ -3208,6 +3273,16 @@ export const PartCatalogPublicSchema = {
             ]
         },
         customer: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/CatalogNamePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        material: {
             anyOf: [
                 {
                     '$ref': '#/components/schemas/CatalogNamePublic'
@@ -3371,6 +3446,31 @@ export const PartCreateSchema = {
                 }
             ],
             title: 'Customer Id'
+        },
+        material_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Material Id'
+        },
+        cavity_count: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 2147483647,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cavity Count'
         },
         folder_path: {
             anyOf: [
@@ -3780,6 +3880,31 @@ export const PartPublicSchema = {
             ],
             title: 'Customer Id'
         },
+        material_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Material Id'
+        },
+        cavity_count: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 2147483647,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cavity Count'
+        },
         folder_path: {
             anyOf: [
                 {
@@ -3820,6 +3945,16 @@ export const PartPublicSchema = {
             ]
         },
         customer: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/CatalogNamePublic'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        material: {
             anyOf: [
                 {
                     '$ref': '#/components/schemas/CatalogNamePublic'
@@ -3968,6 +4103,31 @@ export const PartRegistrationSchema = {
             ],
             title: 'Customer Id'
         },
+        material_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Material Id'
+        },
+        cavity_count: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 2147483647,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cavity Count'
+        },
         description: {
             anyOf: [
                 {
@@ -4097,6 +4257,31 @@ export const PartUpdateSchema = {
                 }
             ],
             title: 'Customer Id'
+        },
+        material_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Material Id'
+        },
+        cavity_count: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    maximum: 2147483647,
+                    minimum: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Cavity Count'
         },
         folder_path: {
             anyOf: [

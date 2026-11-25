@@ -1076,11 +1076,13 @@ test("the catalogue switches between list and grid, remembers it and fits a phon
     .getByRole("button", { name: "Abrir Bolt Eye" })
     .boundingBox()
   assert.ok(Math.abs(first.x - second.x) < 2, "one column on a phone")
-  assert.ok(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  )
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    )
+    .toBe(true)
   await views.getByRole("button", { name: "Lista" }).click()
   await expect(page.locator("[data-view]")).toHaveAttribute("data-view", "list")
 })
@@ -1440,7 +1442,7 @@ test("a feature in several pieces shows a stack with their number; in one, a sin
   }
 })
 
-test("cards and grid show what the app read of each piece's measurements", async (t) => {
+test("piece warnings show extraction results and missing links in list and grid", async (t) => {
   const page = await mount(t)
   await page.evaluate(() => {
     window.review.parts[0].measurement_status = "detected"
@@ -1451,6 +1453,7 @@ test("cards and grid show what the app read of each piece's measurements", async
       name: null,
       characteristic_count: 0,
       measurement_status: status,
+      corrections_missing: status === "none",
     })
     window.review.parts.push(
       piece("pending-piece", "3226", "pending"),
@@ -1460,38 +1463,61 @@ test("cards and grid show what the app read of each piece's measurements", async
     window.review.navigate({ to: "/features", search: { kind: "part" } })
   })
   const expected = {
-    "3212 Pump Housing": "Medidas detectadas",
-    3226: "Informe pendiente de interpretar",
-    2820: "Sin medidas detectadas",
+    "3212 Pump Housing": [],
+    3226: ["Sin mediciones detectadas", "Sin features asociados"],
+    2820: [
+      "Sin mediciones detectadas",
+      "Sin correcciones detectadas",
+      "Sin features asociados",
+    ],
+    9999: ["Sin features asociados"],
   }
-  const labels = Object.values(expected)
   for (const view of ["Lista", "Cuadrícula"]) {
     await page
       .getByRole("group", { name: "Vista" })
       .getByRole("button", { name: view })
       .click()
-    for (const [identity, label] of Object.entries(expected)) {
+    for (const [identity, labels] of Object.entries(expected)) {
       const card = page
         .getByRole("button", { name: `Abrir ${identity}`, exact: true })
         .locator("..")
-      await expect(card.getByText(label, { exact: true })).toBeVisible()
+      const notices = card.getByRole("list", { name: "Avisos de la pieza" })
+      await expect(notices).toHaveCount(labels.length ? 1 : 0)
+      await expect(notices.getByRole("listitem")).toHaveText(labels)
+      for (const label of labels)
+        await expect(notices.getByText(label)).toBeVisible()
     }
-    // Correction documents: only where the read found them.
-    await expect(
-      page
-        .getByRole("button", { name: "Abrir 3212 Pump Housing", exact: true })
+  }
+})
+
+test("a feature only warns when it has zero linked pieces in list and grid", async (t) => {
+  const page = await mount(t)
+  for (const linked of [false, true]) {
+    await page.evaluate((linked) => {
+      const feature = window.review.feature
+      feature.parts = linked ? [window.review.parts[0]] : []
+      feature.part_count = feature.parts.length
+      return window.review.navigate({
+        to: "/features",
+        search: { kind: "feature", q: linked ? "Bolt" : "Eye" },
+      })
+    }, linked)
+    for (const view of ["Lista", "Cuadrícula"]) {
+      await page
+        .getByRole("group", { name: "Vista" })
+        .getByRole("button", { name: view })
+        .click()
+      const card = page
+        .getByRole("button", { name: "Abrir Bolt Eye", exact: true })
         .locator("..")
-        .getByText("Documentación de retoques", { exact: true }),
-    ).toBeVisible()
-    await expect(
-      page.getByText("Documentación de retoques", { exact: true }),
-    ).toHaveCount(1)
-    // Not read yet: no label at all.
-    const unread = page
-      .getByRole("button", { name: "Abrir 9999", exact: true })
-      .locator("..")
-    for (const label of labels)
-      await expect(unread.getByText(label, { exact: true })).toHaveCount(0)
+      await expect(card).toBeVisible()
+      const notices = card.getByRole("list", { name: "Avisos del feature" })
+      if (linked) await expect(notices).toHaveCount(0)
+      else
+        await expect(notices.getByRole("listitem")).toHaveText([
+          "Sin piezas asociadas",
+        ])
+    }
   }
 })
 

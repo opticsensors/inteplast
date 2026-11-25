@@ -3,36 +3,41 @@ import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query"
 import { type CatalogNamePublic, CatalogService } from "@/client"
 import { SearchSelect } from "@/components/Common/SearchSelect"
 
-export type CatalogNameKind = "families" | "customers"
-
-const LABELS: Record<
-  CatalogNameKind,
-  { label: string; placeholder: string; empty: string }
-> = {
+const catalogs = {
   families: {
     label: "Familia",
-    placeholder: "Sin familia",
     empty: "Sin familia",
+    add: "Añadir familia",
+    read: CatalogService.readFamilies,
+    create: CatalogService.createFamily,
   },
   customers: {
     label: "Cliente",
-    placeholder: "Sin cliente",
     empty: "Sin cliente",
+    add: "Añadir cliente",
+    read: CatalogService.readCustomers,
+    create: CatalogService.createCustomer,
+  },
+  materials: {
+    label: "Material",
+    empty: "Sin material",
+    add: "Añadir material",
+    read: CatalogService.readMaterials,
+    create: CatalogService.createMaterial,
   },
 }
+
+export type CatalogNameKind = keyof typeof catalogs
 
 export const catalogNamesQueryOptions = (kind: CatalogNameKind) =>
   queryOptions({
     queryKey: ["catalog-names", kind],
-    queryFn: () =>
-      kind === "families"
-        ? CatalogService.readFamilies()
-        : CatalogService.readCustomers(),
+    queryFn: () => catalogs[kind].read(),
     staleTime: 60_000,
   })
 
 /**
- * Familia o cliente de una pieza: lista compartida con buscador y «Añadir» al final.
+ * Familia, cliente o material de una pieza, con buscador y alta en la lista compartida.
  * Añadir un nombre que ya existe, con otras mayúsculas o espacios, elige el existente.
  */
 export function CatalogNameSelect({
@@ -51,23 +56,19 @@ export function CatalogNameSelect({
 }) {
   const client = useQueryClient()
   const names = useQuery(catalogNamesQueryOptions(kind))
-  const text = LABELS[kind]
+  const catalog = catalogs[kind]
   const create = async (name: string) => {
-    const requestBody = { name }
-    const created =
-      kind === "families"
-        ? await CatalogService.createFamily({ requestBody })
-        : await CatalogService.createCustomer({ requestBody })
+    const created = await catalog.create({ requestBody: { name } })
     await client.invalidateQueries({ queryKey: ["catalog-names", kind] })
     return created.id
   }
   return (
     <SearchSelect
       showLabel
-      label={text.label}
+      label={catalog.label}
       value={value}
-      placeholder={text.placeholder}
-      emptyLabel={text.empty}
+      placeholder={catalog.empty}
+      emptyLabel={catalog.empty}
       selectedLabel={selected?.id === value ? selected?.name : undefined}
       options={(names.data?.data ?? []).map((item) => ({
         value: item.id,
@@ -75,7 +76,7 @@ export function CatalogNameSelect({
       }))}
       onChange={(next) => onChange(next ?? null)}
       onCreate={create}
-      createLabel={kind === "families" ? "Añadir familia" : "Añadir cliente"}
+      createLabel={catalog.add}
       disabled={disabled}
     />
   )

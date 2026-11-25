@@ -5,6 +5,9 @@ import type { FilePublic } from "@/client"
 import { cn } from "@/lib/utils"
 import { FeatureThumbnail } from "./FeatureCard"
 
+/** Square shared by piece and feature headers, including their empty covers. */
+export const COVER_SIZE = "size-48 sm:size-[300px]"
+
 /** One click target, including the corner icon; never nest a second button. */
 export function CoverButton({
   image,
@@ -29,7 +32,8 @@ export function CoverButton({
       aria-label={label}
       title={label}
       className={cn(
-        "group relative size-32 shrink-0 cursor-pointer rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:size-48",
+        "group relative shrink-0 cursor-pointer rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        COVER_SIZE,
         className,
       )}
       {...props}

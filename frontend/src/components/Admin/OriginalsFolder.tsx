@@ -149,7 +149,7 @@ export default function OriginalsFolder() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
+        <Button variant="outline" className="h-11">
           <FolderOpen /> SharePoint
         </Button>
       </DialogTrigger>

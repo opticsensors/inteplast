@@ -1,8 +1,7 @@
 import type { ReactNode } from "react"
 import type { PartCardPublic } from "@/client"
+import { PartWarnings } from "@/components/Catalog/CatalogWarnings"
 import { partClassification, partName } from "@/components/Features/parts"
-import { Badge } from "@/components/ui/badge"
-import { CorrectionsBadge, MeasurementBadge } from "./MeasurementBadge"
 import { PartThumbnail } from "./PartCover"
 
 /** Código como título, el nombre al lado y debajo «Familia · Cliente». */
@@ -29,7 +28,7 @@ export function PartCard({
         <span className="sr-only">Abrir {identity}</span>
       </button>
       <PartThumbnail part={part} className="size-24 self-center sm:size-36" />
-      <div className="h-36 min-w-0 flex-1 space-y-1.5">
+      <div className="min-h-36 min-w-0 flex-1 space-y-1.5">
         <div className="flex items-start gap-2">
           <h3 className="line-clamp-2 min-w-0 flex-1 break-words leading-tight">
             <span className="font-semibold">{part.code}</span>
@@ -57,19 +56,7 @@ export function PartCard({
             {part.description}
           </p>
         )}
-        <div className="flex min-w-0 items-center gap-2 overflow-hidden">
-          <Badge
-            variant="outline"
-            className="shrink-0 border-sky-500/40 text-sky-700 dark:text-sky-300"
-          >
-            Pieza
-          </Badge>
-          <MeasurementBadge status={part.measurement_status} />
-          <CorrectionsBadge documented={part.corrections_documented} />
-          <p className="truncate text-sm text-muted-foreground">
-            {part.feature_count} features · {part.characteristic_count} cotas
-          </p>
-        </div>
+        <PartWarnings part={part} />
       </div>
     </div>
   )

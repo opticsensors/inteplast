@@ -648,16 +648,20 @@ export type PartCardPublic = {
     description?: (string | null);
     family_id?: (string | null);
     customer_id?: (string | null);
+    material_id?: (string | null);
+    cavity_count?: (number | null);
     folder_path?: (string | null);
     id: string;
     created_at?: (string | null);
     family?: (CatalogNamePublic | null);
     customer?: (CatalogNamePublic | null);
+    material?: (CatalogNamePublic | null);
     feature_count?: number;
     characteristic_count?: number;
     deferred_cover_part_id?: (string | null);
     measurement_status?: ('detected' | 'pending' | 'none' | null);
     corrections_documented?: boolean;
+    corrections_missing?: boolean;
 };
 
 export type PartCatalogPublic = {
@@ -666,11 +670,14 @@ export type PartCatalogPublic = {
     description?: (string | null);
     family_id?: (string | null);
     customer_id?: (string | null);
+    material_id?: (string | null);
+    cavity_count?: (number | null);
     folder_path?: (string | null);
     id: string;
     created_at?: (string | null);
     family?: (CatalogNamePublic | null);
     customer?: (CatalogNamePublic | null);
+    material?: (CatalogNamePublic | null);
     feature_count: number;
 };
 
@@ -695,6 +702,8 @@ export type PartCreate = {
     description?: (string | null);
     family_id?: (string | null);
     customer_id?: (string | null);
+    material_id?: (string | null);
+    cavity_count?: (number | null);
     folder_path?: (string | null);
 };
 
@@ -775,11 +784,14 @@ export type PartPublic = {
     description?: (string | null);
     family_id?: (string | null);
     customer_id?: (string | null);
+    material_id?: (string | null);
+    cavity_count?: (number | null);
     folder_path?: (string | null);
     id: string;
     created_at?: (string | null);
     family?: (CatalogNamePublic | null);
     customer?: (CatalogNamePublic | null);
+    material?: (CatalogNamePublic | null);
 };
 
 export type PartReferencePublic = {
@@ -805,6 +817,8 @@ export type PartRegistration = {
     code: string;
     family_id?: (string | null);
     customer_id?: (string | null);
+    material_id?: (string | null);
+    cavity_count?: (number | null);
     description?: (string | null);
     files?: Array<PartFileInput>;
     feature_ids?: Array<(string)>;
@@ -831,6 +845,8 @@ export type PartUpdate = {
     description?: (string | null);
     family_id?: (string | null);
     customer_id?: (string | null);
+    material_id?: (string | null);
+    cavity_count?: (number | null);
     folder_path?: (string | null);
     references?: (Array<ReferenceChoice> | null);
     files?: (Array<PartFileInput> | null);
@@ -1058,6 +1074,14 @@ export type CatalogCreateCustomerData = {
 };
 
 export type CatalogCreateCustomerResponse = (CatalogNamePublic);
+
+export type CatalogReadMaterialsResponse = (CatalogNamesPublic);
+
+export type CatalogCreateMaterialData = {
+    requestBody: CatalogNameCreate;
+};
+
+export type CatalogCreateMaterialResponse = (CatalogNamePublic);
 
 export type EvidenceReadMetrologyFiltersResponse = (MetrologyFilters);
 

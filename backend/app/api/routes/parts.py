@@ -116,7 +116,7 @@ def create_part(
         raise HTTPException(
             status_code=409, detail="Ya existe una pieza con ese codigo"
         )
-    check_names(session, part_in.family_id, part_in.customer_id)
+    check_names(session, part_in.family_id, part_in.customer_id, part_in.material_id)
     if part_in.folder_path is not None:
         name = folder_name(part_in.folder_path)
         if not part_in.name or part_in.name == "Nueva pieza":
@@ -193,7 +193,12 @@ def update_part(
                 status_code=409, detail="Ya existe una pieza con ese codigo"
             )
     changes = part_in.model_dump(exclude_unset=True, exclude={"references", "files"})
-    check_names(session, changes.get("family_id"), changes.get("customer_id"))
+    check_names(
+        session,
+        changes.get("family_id"),
+        changes.get("customer_id"),
+        changes.get("material_id"),
+    )
     if (
         part.files_managed
         and "folder_path" in changes

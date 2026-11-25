@@ -2,6 +2,7 @@ import { ImageIcon, Package2 } from "lucide-react"
 import type { CSSProperties, ReactNode, Ref } from "react"
 
 import type { FeaturePublic } from "@/client"
+import { FeatureWarnings } from "@/components/Catalog/CatalogWarnings"
 import { Badge } from "@/components/ui/badge"
 import { useCatalogCover } from "@/hooks/useCatalogCover"
 import { useFileAccess } from "@/hooks/useFileAccess"
@@ -178,7 +179,7 @@ export function FeatureCard({
         feature={feature}
         className="size-24 self-center sm:size-36"
       />
-      <div className="h-36 min-w-0 flex-1 space-y-1.5">
+      <div className="min-h-36 min-w-0 flex-1 space-y-1.5">
         <div className="flex items-start gap-2">
           <h3
             className="line-clamp-2 min-w-0 flex-1 break-words font-semibold leading-tight"
@@ -201,6 +202,7 @@ export function FeatureCard({
           )}
         </div>
         <PartSummary feature={feature} />
+        <FeatureWarnings feature={feature} />
       </div>
     </div>
   )

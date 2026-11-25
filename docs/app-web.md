@@ -91,7 +91,8 @@ StoredFile                    identidad común de un documento subido o referenc
 
 Part                          registro de pieza; no es una tabla independiente de moldes
   id, code ("3212", UNIQUE), name (opcional), description, folder_path
-  family_id → PartFamily, customer_id → Customer (opcionales, RESTRICT)
+  family_id → PartFamily, customer_id → Customer, material_id → Material (opcionales, RESTRICT)
+  cavity_count (entero positivo opcional introducido por el usuario)
   files_managed, last_read, created_at
 
 PartFamily / Customer         listas compartidas (17/11/2026)
@@ -212,7 +213,7 @@ Todo bajo `/api/v1`. Documentación interactiva en `http://localhost:8000/docs`.
 |---|---|---|
 | `GET` | `/features/` | Buscar. Params: `q`, `part_id`, `feature_id`, `skip`, `limit` (`category` y `tag` de enlaces antiguos se ignoran) |
 | `GET` | `/features/filters` | Features con sus vínculos y piezas **que algún feature usa**, para los desplegables |
-| `GET` `POST` | `/families`, `/customers` | Listar y añadir familias y clientes, con usuario autenticado. Añadir un nombre existente (otras mayúsculas o espacios) devuelve el existente |
+| `GET` `POST` | `/families`, `/customers`, `/materials` | Listar y añadir familias, clientes y materiales con usuario autenticado. Añadir un nombre existente con otras mayúsculas o espacios devuelve el existente |
 | `POST` | `/features/` | Crear |
 | `GET` | `/features/{id}` | Ficha completa: + `notes` + `assets` + `part_covers` (una por pieza, en su orden definitivo) |
 | `PUT` `DELETE` | `/features/{id}` | Editar / borrar. `PUT` guarda la cabecera y las portadas cambiadas (`part_covers`) en una sola transacción; una pieza retirada mientras tanto da 409 y rechaza `cover_3d` suelto con 422. Ver [portadas CAD](portadas-cad.md#una-portada-por-pieza-19112026) |
@@ -227,7 +228,7 @@ Todo bajo `/api/v1`. Documentación interactiva en `http://localhost:8000/docs`.
 | `POST` | `/evidence/drawings/{id}/marks` | Etiqueta de lectura de la tarjeta de plano. Prepara un índice de búsqueda ausente o desactualizado en el trabajador de evidencia y devuelve `pending` mientras se procesa. La respuesta contiene solo el estado de las marcas. La verificación estricta del proyecto se consulta con `icp-check`. |
 | `POST` | `/parts/from-folder` | Registrar o reutilizar una carpeta de pieza existente, sin duplicados |
 | `GET` `POST` | `/parts/` | Listar (incluye `feature_count` por pieza) y dar de alta piezas |
-| `PUT` | `/parts/{id}` | Editar código, nombre, descripción, `family_id`, `customer_id` (omitido conserva, `null` quita), carpeta y archivos/referencias según `PartUpdate`. El código es único: choque → `409`; familia o cliente inexistente → `422` |
+| `PUT` | `/parts/{id}` | Editar la identidad, familia, cliente, material, número de cavidades, carpeta y archivos según `PartUpdate`. Omitir un campo opcional conserva su valor y `null` lo quita. Un código duplicado devuelve `409` y una referencia de catálogo inexistente devuelve `422` |
 | `GET` | `/catalog` | Búsqueda paginada de piezas/features; cotas por pieza/revisión solo con texto. Filtros `part_id`, `feature_id`, `family_id`, `customer_id` y `kind=all/part/feature`. **Criterio único:** una pieza cumple si cumple todos los filtros de pieza a la vez; un feature, si está vinculado a al menos una pieza que los cumpla todos |
 | `GET` | `/parts/{id}/cover` | CAD vinculado, clave de la versión actual y captura del mismo original. Si solo cambió el estilo, devuelve la imagen guardada con `cover_needs_refresh` mientras se prepara su sustituta. Comprueba acceso y versión antes de devolver la imagen. La lista y la cuadrícula usan `deferred_cover_part_id` para pedirla al entrar la tarjeta en pantalla. |
 | `GET` | `/catalog/graph` | Lo mismo que `/catalog` con los mismos filtros (`catalog_part_filters` y `crud.feature_conditions`), sin páginas: nodos de pieza (código, nombre, captura CAD guardada; nunca lanza una nueva), feature, familia y cliente, y uniones pieza–feature (pertenencia completa, como la lista), pieza–familia y pieza–cliente. Tope `limit` (máx. y por defecto 500 nodos): si se supera devuelve `truncated` y el `total` real |
@@ -401,7 +402,8 @@ Se reutilizan registros existentes, sin crear carpetas ni duplicar piezas. Códi
 son únicos; un código asociado a otra carpeta produce conflicto.
 
 En la ficha de pieza, **Editar pieza** permite cambiar código, nombre, familia, cliente,
-descripción, carpeta y archivos; **Guardar cambios** los guarda juntos y **Cancelar** los descarta.
+material, número de cavidades, descripción, carpeta y archivos. **Guardar cambios** los guarda
+juntos y **Cancelar** los descarta.
 Cambiar la carpeta propone sus archivos y conserva el título y el código ya editados. Uso
 detallado en [archivos externos](ficheros-externos.md#uso-en-la-ficha-de-pieza). Código y
 nombre también se editan en la cabecera de cada pieza dentro del editor del feature, con

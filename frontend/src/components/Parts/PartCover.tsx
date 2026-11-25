@@ -7,7 +7,7 @@ import {
   FilesService,
   type PartCardPublic,
 } from "@/client"
-import { CoverButton } from "@/components/Features/CoverButton"
+import { COVER_SIZE, CoverButton } from "@/components/Features/CoverButton"
 import { CoverDialog } from "@/components/Features/CoverDialog"
 import { CoverLoading } from "@/components/Features/CoverLoading"
 import { FeatureThumbnail } from "@/components/Features/FeatureCard"
@@ -25,6 +25,7 @@ import {
 import { useCatalogCover } from "@/hooks/useCatalogCover"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
 import { usePrepareCover } from "@/hooks/usePrepareCover"
+import { cn } from "@/lib/utils"
 
 // Catalogue thumbnails share one worker/WebGL slot, even when several cards mount together.
 let queue: Promise<unknown> = Promise.resolve()
@@ -145,7 +146,7 @@ export function PartCover({ part }: { part: PartCardPublic }) {
   )
   return (
     <Dialog open={expanded} onOpenChange={setExpanded}>
-      <div className="relative size-32 shrink-0 sm:size-48">
+      <div className={cn("relative shrink-0", COVER_SIZE)}>
         {cad || image ? (
           <DialogTrigger asChild>
             <CoverButton

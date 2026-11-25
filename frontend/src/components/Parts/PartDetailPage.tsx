@@ -22,6 +22,7 @@ import {
   PartsService,
 } from "@/client"
 import { CollapsibleSection } from "@/components/Common/CollapsibleSection"
+import { COVER_SIZE } from "@/components/Features/CoverButton"
 import { FeatureThumbnail } from "@/components/Features/FeatureCard"
 import {
   FEATURE_COLUMNS,
@@ -119,6 +120,8 @@ function PartPage({
     code: part?.code ?? "",
     familyId: part?.family_id ?? null,
     customerId: part?.customer_id ?? null,
+    materialId: part?.material_id ?? null,
+    cavities: part?.cavity_count?.toString() ?? "",
     folder: part?.folder_path ?? "",
     files: savedFiles(data),
   }).current
@@ -127,6 +130,9 @@ function PartPage({
   const [code, setCode] = useState(initial.code)
   const [familyId, setFamilyId] = useState(initial.familyId)
   const [customerId, setCustomerId] = useState(initial.customerId)
+  const [materialId, setMaterialId] = useState(initial.materialId)
+  const [cavities, setCavities] = useState(initial.cavities)
+  const [invalidCavities, setInvalidCavities] = useState(false)
   const [folder, setFolder] = useState(initial.folder)
   const [organizeBeforeReading, setOrganizeBeforeReading] = useState(false)
   const [files, setFiles] = useState(initial.files)
@@ -149,6 +155,8 @@ function PartPage({
       code !== initial.code ||
       familyId !== initial.familyId ||
       customerId !== initial.customerId ||
+      materialId !== initial.materialId ||
+      cavities !== initial.cavities ||
       folder !== initial.folder ||
       JSON.stringify(fileRequest(files)) !==
         JSON.stringify(fileRequest(initial.files)) ||
@@ -186,6 +194,8 @@ function PartPage({
         code: code.trim(),
         family_id: familyId,
         customer_id: customerId,
+        material_id: materialId,
+        cavity_count: cavities ? Number(cavities) : null,
         folder_path: folder || null,
         files: fileRequest(files),
       }
@@ -307,13 +317,13 @@ function PartPage({
     else void navigate({ to: "/features", search: { kind: "part" } })
   }
   return (
-    <div className="flex min-w-0 flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="@container flex min-w-0 flex-col gap-5">
+      <div className="grid items-center gap-3 @min-[34rem]:grid-cols-[minmax(0,1fr)_16rem]">
         <FeatureBreadcrumb
           kind="part"
           name={part ? partLabel(part) : "Nueva pieza"}
         />
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 @min-[34rem]:justify-end">
           {editing ? (
             <>
               <Button
@@ -329,6 +339,7 @@ function PartPage({
                   Boolean(duplicate) ||
                   (!folder && (!part || Boolean(initial.folder))) ||
                   !code.trim() ||
+                  invalidCavities ||
                   files.some((file) => !file.name.trim())
                 }
                 onClick={() => save.mutate()}
@@ -374,17 +385,23 @@ function PartPage({
       )}
       <fieldset
         disabled={busy}
-        className="flex min-w-0 flex-col gap-4 rounded-lg border bg-card p-4 sm:flex-row sm:gap-6 sm:p-5"
+        className="flex min-w-0 flex-col gap-4 rounded-lg border bg-card p-4 sm:gap-6 sm:p-5 lg:flex-row"
       >
         {part ? (
           <PartCover part={part} />
         ) : (
           <FeatureThumbnail
             feature={{ name: name || "Nueva pieza" }}
-            className="size-32 sm:size-48"
+            className={COVER_SIZE}
           />
         )}
-        <div className="min-w-0 flex-1 space-y-3">
+        <div
+          className={
+            editing
+              ? "flex min-w-0 flex-1 flex-col gap-3"
+              : "min-w-0 flex-1 space-y-3"
+          }
+        >
           {editing ? (
             <>
               {/* El código es el título; el nombre, opcional, va a su lado. */}
@@ -419,7 +436,7 @@ function PartPage({
                   />
                 </div>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_7rem]">
                 <CatalogNameSelect
                   kind="families"
                   value={familyId}
@@ -434,8 +451,34 @@ function PartPage({
                   onChange={setCustomerId}
                   disabled={busy}
                 />
+                <CatalogNameSelect
+                  kind="materials"
+                  value={materialId}
+                  selected={part?.material}
+                  onChange={setMaterialId}
+                  disabled={busy}
+                />
+                <fieldset className="min-w-0">
+                  <legend className="mb-1.5 text-sm font-medium">
+                    <label htmlFor="piece-cavities">Nº de cavidades</label>
+                  </legend>
+                  <Input
+                    id="piece-cavities"
+                    type="number"
+                    min={1}
+                    max={2147483647}
+                    step={1}
+                    inputMode="numeric"
+                    value={cavities}
+                    aria-invalid={invalidCavities}
+                    onChange={(event) => {
+                      setCavities(event.currentTarget.value)
+                      setInvalidCavities(!event.currentTarget.validity.valid)
+                    }}
+                  />
+                </fieldset>
               </div>
-              <div className="grid gap-2">
+              <div className="flex flex-1 flex-col gap-2">
                 <Label htmlFor="piece-description">
                   Descripción{" "}
                   <span className="font-normal text-muted-foreground">
@@ -448,7 +491,7 @@ function PartPage({
                   onChange={(event) => setDescription(event.target.value)}
                   maxLength={2000}
                   placeholder="Descripción de la pieza"
-                  className="min-h-16"
+                  className="min-h-16 flex-1 lg:field-sizing-fixed lg:resize-none"
                 />
               </div>
             </>
@@ -469,6 +512,22 @@ function PartPage({
                 <p className="break-words text-sm text-muted-foreground">
                   {partClassification(part)}
                 </p>
+              )}
+              {(part?.material || part?.cavity_count != null) && (
+                <dl className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
+                  {part.material && (
+                    <div className="flex gap-2">
+                      <dt className="text-muted-foreground">Material</dt>
+                      <dd>{part.material.name}</dd>
+                    </div>
+                  )}
+                  {part.cavity_count != null && (
+                    <div className="flex gap-2">
+                      <dt className="text-muted-foreground">Nº de cavidades</dt>
+                      <dd>{part.cavity_count}</dd>
+                    </div>
+                  )}
+                </dl>
               )}
               {part?.description && (
                 <p className="whitespace-pre-wrap break-words text-muted-foreground">

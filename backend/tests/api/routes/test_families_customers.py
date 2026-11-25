@@ -12,7 +12,7 @@ from tests.utils.feature import create_random_feature, create_random_part
 API = settings.API_V1_STR
 
 
-@pytest.mark.parametrize("kind", ["families", "customers"])
+@pytest.mark.parametrize("kind", ["families", "customers", "materials"])
 def test_adding_an_existing_name_returns_it(
     client: TestClient, superuser_token_headers: dict[str, str], kind: str
 ) -> None:

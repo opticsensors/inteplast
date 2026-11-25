@@ -20,7 +20,7 @@ import {
   type CoverSlide,
   coverPieceLabel,
 } from "./coverSlides"
-import { CarouselFrame, COVER_SIZE, useCarousel } from "./FeatureCover"
+import { CarouselFrame, useCarousel } from "./FeatureCover"
 
 interface CoverEditorProps {
   feature?: FeatureDetail
@@ -58,7 +58,7 @@ export function FeatureCoverEditor({
         if (!busy) setOpen(next)
       }}
     >
-      <div className="flex w-48 shrink-0 flex-col gap-2 sm:w-[300px]">
+      <div className="flex w-fit shrink-0 flex-col gap-2">
         {slide ? (
           <CarouselFrame
             code={coverPieceLabel(feature, slide)}
@@ -77,12 +77,7 @@ export function FeatureCoverEditor({
           </CarouselFrame>
         ) : (
           <DialogTrigger asChild>
-            <CoverButton
-              editable
-              image={image}
-              name={name}
-              className={COVER_SIZE}
-            />
+            <CoverButton editable image={image} name={name} />
           </DialogTrigger>
         )}
         <Button

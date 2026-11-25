@@ -58,6 +58,7 @@ class PartCardPublic(PartPublic, PartCoverPublic):
     measurement_status: MeasurementStatus | None = None
     # Catalogue label «Documentación de retoques»: correction documents were found.
     corrections_documented: bool = False
+    corrections_missing: bool = False
 
 
 class PartReferencePublic(BaseModel):
@@ -114,6 +115,7 @@ def part_card(
         .select_from(PartCharacteristic)
         .where(PartCharacteristic.part_id == part.id)
     ).one()
+    documented = corrections_documented(session, part)
     return PartCardPublic.model_validate(
         part,
         update={
@@ -125,7 +127,8 @@ def part_card(
             "deferred_cover_part_id": part.id if cad and defer_covers else None,
             "image": FilePublic.model_validate(image) if image else None,
             "measurement_status": measurement_status(session, part),
-            "corrections_documented": corrections_documented(session, part),
+            "corrections_documented": documented is True,
+            "corrections_missing": documented is False,
         },
     )
 

@@ -287,6 +287,12 @@ class Customer(SQLModel, table=True):
     key: str = Field(max_length=255, unique=True, index=True)
 
 
+class Material(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    name: str = Field(min_length=1, max_length=255)
+    key: str = Field(max_length=255, unique=True, index=True)
+
+
 class PartBase(SQLModel):
     code: str = Field(min_length=1, max_length=64, unique=True, index=True)
     name: str | None = Field(default=None, max_length=255)
@@ -297,6 +303,10 @@ class PartBase(SQLModel):
     customer_id: uuid.UUID | None = Field(
         default=None, foreign_key="customer.id", index=True, ondelete="RESTRICT"
     )
+    material_id: uuid.UUID | None = Field(
+        default=None, foreign_key="material.id", index=True, ondelete="RESTRICT"
+    )
+    cavity_count: int | None = Field(default=None, ge=1, le=2147483647)
     # Relative to the configured source; never an absolute workstation path.
     folder_path: str | None = Field(
         default=None, max_length=2048, unique=True, index=True
@@ -339,6 +349,8 @@ class PartUpdate(SQLModel):
     # Omitted keeps the value; null leaves the piece without family or customer.
     family_id: uuid.UUID | None = None
     customer_id: uuid.UUID | None = None
+    material_id: uuid.UUID | None = None
+    cavity_count: int | None = Field(default=None, ge=1, le=2147483647)
     folder_path: str | None = Field(default=None, max_length=2048)
     references: list[ReferenceChoice] | None = Field(default=None, max_length=4)
     files: list[PartFileInput] | None = Field(default=None, max_length=200)
@@ -401,6 +413,7 @@ class Part(PartBase, table=True):
     )
     family: PartFamily | None = Relationship()
     customer: Customer | None = Relationship()
+    material: Material | None = Relationship()
 
 
 class PartPublic(PartBase):
@@ -408,6 +421,7 @@ class PartPublic(PartBase):
     created_at: datetime | None = None
     family: CatalogNamePublic | None = None
     customer: CatalogNamePublic | None = None
+    material: CatalogNamePublic | None = None
 
 
 class PartCatalogPublic(PartPublic):

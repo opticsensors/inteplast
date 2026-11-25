@@ -2,12 +2,9 @@ import type { ReactNode } from "react"
 import type { FeaturePublic, PartCardPublic } from "@/client"
 import { FeatureCoverStack } from "@/components/Features/FeatureCard"
 import { partClassification, partName } from "@/components/Features/parts"
-import {
-  CorrectionsBadge,
-  MeasurementBadge,
-} from "@/components/Parts/MeasurementBadge"
 import { PartThumbnail } from "@/components/Parts/PartCover"
 import { cn } from "@/lib/utils"
+import { FeatureWarnings, PartWarnings } from "./CatalogWarnings"
 
 /** Grid cell: large cover, then the identity. The colour edge tells the type apart. */
 function Tile({
@@ -88,16 +85,7 @@ export function PartTile({
           {classification}
         </p>
       )}
-      <div className="mt-1 flex min-w-0 flex-wrap gap-1">
-        <MeasurementBadge
-          status={part.measurement_status}
-          className="max-w-full truncate"
-        />
-        <CorrectionsBadge
-          documented={part.corrections_documented}
-          className="max-w-full truncate"
-        />
-      </div>
+      <PartWarnings part={part} />
     </Tile>
   )
 }
@@ -128,6 +116,7 @@ export function FeatureTile({
       <h3 className="line-clamp-2 break-words font-semibold leading-tight">
         {feature.name}
       </h3>
+      <FeatureWarnings feature={feature} />
     </Tile>
   )
 }
