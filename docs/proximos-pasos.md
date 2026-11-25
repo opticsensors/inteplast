@@ -17,6 +17,31 @@ La implementación de protecciones y criterios de aceptación para todas las pie
 1. **Desplegado en Eurecat.** Un enlace guardado a un adjunto sin archivo indica que los archivos se gestionan en la ficha de la pieza. Si el adjunto tiene pieza, «Abrir pieza» lleva a su ficha. La prueba local de navegador cubre ambos casos.
 2. **Completado en Eurecat.** Con Microsoft activo, **Admin → Add User** solo pide el correo corporativo. El alta crea un usuario normal activo.
 
+## Siguiente: colores por feature en el CAD de la pieza (25/11/2026)
+
+**Es lo próximo que se implementa en la app.** La ficha de pieza mostrará sobre su CAD las caras
+de todos sus features, cada feature con un color fijo y una leyenda. Decisiones de Eduard:
+
+- un color fijo por feature, el mismo en todas las piezas y también en la ficha del feature;
+- color reservado para las caras compartidas;
+- colores también en la miniatura del catálogo.
+
+La primera revisión visual se hará con 3205 y 3167. Plan completo en
+[plan-colores-por-feature-2026-11-25.md](plan-colores-por-feature-2026-11-25.md).
+
+## Otros siguientes pasos (25/11/2026)
+
+1. **Bug del grafo: el encuadre se reinicia solo.** Eduard, 25/11/2026: con cierto zoom, al
+   arrastrar una parte del grafo, poco después la vista se reinicia sola y cambia el encuadre y el
+   zoom, sin que el usuario lo pida. No debería pasar: el zoom y el encuadre elegidos por el usuario
+   se mantienen hasta que él los cambie. Pendiente: reproducirlo en local y localizar qué vuelve a
+   encuadrar la vista.
+2. **Asistente con Copilot en la web.** Llevar al servidor el asistente con Copilot de empresa,
+   la solución definitiva decidida por Eduard el 17/11/2026, en lugar de la prueba local con Codex.
+   Ya está descrito en [Asistente](#2-asistente-prueba-local-con-codex-antes-del-servidor-copilot-definitivo):
+   falta evaluar la prueba local con preguntas representativas y acordar con IT la integración
+   de Copilot, sus permisos, usuarios simultáneos y límites.
+
 ## 🔴 Reorganizar Metrología de las 21 piezas (prueba de concepto, 24/11/2026)
 
 **Decisión de Eduard: es un cambio importante y se hará en breve.** La reorganización la hacemos nosotros, no INTEPLAST. Se aplica en una copia de `Exemples` a las 21 piezas, para ver cómo quedaría y cómo de bien funciona la app. Después se enseña el resultado a INTEPLAST. La app es la misma; deben mejorar sus resultados. El código del backend queda así como versión definitiva, preparada para la estructura que habrá de verdad.
@@ -66,8 +91,8 @@ Acuerdos de la reunión del viernes 20 recogidos para el lunes 23. El piloto sig
 | Carpeta del molde | El botón abre los ficheros del molde en SharePoint. Probar en el servidor con otra cuenta que tenga acceso, incluida una pieza con despiece y sin ensamblaje vinculado. |
 | Carpeta de fotos | Acordar dónde se guardan las fotos y cómo se identifica la carpeta de cada pieza. Añadir un adjunto de tipo carpeta y comprobar que permite abrir todas sus fotos. |
 | Material y cavidades | Pedir a INTEPLAST la plantilla Excel de datos de pieza y un ejemplo rellenado. Identificar los campos, leer automáticamente el material y el número de cavidades y mostrarlos junto a Cliente y Familia. Acordar si interesan otros campos. |
-| Varios features sobre un CAD | Mostrar juntas las caras ya marcadas por el usuario sobre el CAD de la pieza, con un color por feature y una leyenda con los nombres. Probar con dos features y decidir cómo representar una cara compartida. |
-| Piloto en el servidor de Eurecat | Ángel concedió `Files.Read.All` el 25/11 y se verificó en el token de Eduard. Pablo ya abre modelos 3D en la web. En sus capturas, 7 de 10 tarjetas carecían de miniatura. Queda comprobar las portadas con Pablo tras el despliegue. Fortinet sigue pendiente para descargas nuevas. [Diagnóstico](despliegue-servidor.md#estado-del-servidor-de-eurecat-y-punto-de-reanudación-23112026). |
+| Varios features sobre un CAD | Decidido el 25/11/2026 y es el siguiente paso: [plan de colores por feature](plan-colores-por-feature-2026-11-25.md). |
+| Piloto en el servidor de Eurecat | Ángel concedió `Files.Read.All` el 25/11 y se verificó en el token de Eduard. Pablo ya abre modelos 3D en la web. En sus capturas, 7 de 10 tarjetas carecían de miniatura. Tras desplegar `7fe7ca0`, Pablo confirmó que ya ve bien las miniaturas. Fortinet sigue pendiente para descargas nuevas. [Diagnóstico](despliegue-servidor.md#estado-del-servidor-de-eurecat-y-punto-de-reanudación-23112026). |
 | Excel de cotas y plano correspondiente | Pedir a INTEPLAST un informe rellenado y el plano numerado de la misma revisión, con el CSV de máquina cuando exista. Acordar cómo identificar pieza, componente, plano, revisión y muestreo. Contrastar el mismo número de cota en Excel y plano, con nominal, tolerancias, unidad, cavidad y valor medido. Pedir que se distingan las mediciones nuevas de las copiadas. |
 
 ## Portadas y carga del catálogo (19/11/2026)

@@ -383,10 +383,11 @@ dentro de la web).
   local. Guardar también el ID del elemento permitiría seguirlo.
 - La caché de descargas no tiene límite de tamaño más allá de una versión por archivo. La
   primera apertura de un original grande (molde STEP de unos 247 MiB) espera a la descarga completa.
-- Las mediciones, cotas y estudios ya importados son datos compartidos de la aplicación,
-  aunque un usuario no tenga acceso al original en SharePoint. Lo mismo ocurre con las
-  miniaturas PNG guardadas como imágenes. En cambio, las vistas GLB y el índice del plano
-  vuelven a comprobar el acceso y la versión del original mediante Graph antes de servirse.
+- Las mediciones, cotas y estudios ya importados son datos compartidos de la aplicación.
+  Para mostrar la portada automática de una pieza, la app comprueba con Graph la
+  versión del CAD. Si Graph deniega la lectura, la ficha omite esa portada aunque
+  ya exista el PNG. Las vistas GLB y el índice del plano también comprueban el
+  acceso y la versión del original.
 - Sin una carpeta seleccionada en Admin ni un `SHAREPOINT_DRIVE_ID` fijo, cada usuario
   busca los originales en su propio OneDrive.
 

@@ -57,7 +57,9 @@ mosaicos debajo de la portada escala a 20–30 piezas, y Eduard no quiere nada d
    | **2 o más** | Carrusel completo | Pila con número |
 
    En la lista sigue el resumen de debajo («1 pieza · 3212»), que ya existe y no es parte de la pila.
-6. **Resaltado:** en CAD, caras rojas sobre la pieza en gris, como hoy. Sobre las fotos la app no
+6. **Resaltado:** en CAD, caras rojas sobre la pieza en gris, como hoy. *(El 25/11/2026 Eduard
+   decide sustituir el rojo por el color fijo de cada feature: ver el
+   [plan de colores por feature](plan-colores-por-feature-2026-11-25.md).)* Sobre las fotos la app no
    dibuja marcas; una herramienta de círculo o elipse queda **descartada de momento**.
 
 ## Modelo de datos

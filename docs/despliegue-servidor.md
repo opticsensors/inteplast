@@ -27,6 +27,51 @@ y los archivos subidos. Eduard ha confirmado la lectura de PDF y CAD desde su ca
 `Exemples` de OneDrive. Queda probar con un segundo usuario desde otro equipo.
 [Casos de trabajo](proximos-pasos.md#casos-de-trabajo-del-23-de-noviembre).
 
+**Acceso de un segundo usuario (24/11).** El usuario pudo navegar por el catálogo
+y ver las ocho subcarpetas de `Exemples` mediante el enlace de OneDrive. En la web
+fallaron las imágenes y los CAD de todas las piezas que probó. La captura de la
+3205 muestra el mensaje correspondiente a un 403 de Graph.
+Queda comprobar si esa misma cuenta puede descargar desde OneDrive el fichero
+`2- Nervios de Soldadura/3205/1- 2D y 3D pieza/20230403_213137-10300_sp.stp`
+y qué permisos delegados tiene concedidos la aplicación en Entra.
+
+Con la cuenta de Eduard se verificó la lectura del STEP con la configuración
+inicial. Se seleccionó temporalmente la misma carpeta por su identificador en
+Admin. La portada PNG se leyó, pero una descarga nueva del STEP devolvió 503.
+Desde Ubuntu y desde el contenedor del backend, la conexión HTTPS a
+`eurecatcloud-my.sharepoint.com:443` recibió un certificado emitido por Fortinet
+(`FG6H1ETB19903076`) y falló con `unable to get local issuer certificate`.
+Se retiró la selección temporal tras verificar su identificador y revisión. El servidor
+volvió a usar la ruta inicial `Escritorio/proyectos/11. inteplast/Exemples`.
+Desde la ficha 3205 en producción, con la cuenta de Eduard, se verificaron la miniatura
+y la apertura del modelo 3D con el control «Encuadrar». Quedan pendientes la revisión
+de la cadena de confianza para descargas nuevas y la prueba con la cuenta del compañero.
+
+**Diagnóstico del segundo usuario (25/11). A la espera de Ángel Rey (IT).** Sin cambios
+en el código ni en la configuración. Comprobado:
+
+- El compañero descargó desde el enlace de SharePoint el STEP de la 3205
+  (`20230403_213137-10300_sp.stp`). Su cuenta puede leer ese original.
+- `GET /api/v1/admin/originals`, con la cuenta de Eduard, devolvió
+  `name: "Escritorio/proyectos/11. inteplast/Exemples"`, `per_user: false` y un `web_url`
+  en `personal/eduard_almar_eurecat_org`. Según `originals.py:171-180`, no hay carpeta
+  guardada en Admin y el servidor tiene un `SHAREPOINT_DRIVE_ID` con la unidad del
+  OneDrive de Eduard. La configuración privada del servidor (`~/.config/inteplast`) no se
+  sobrescribe al desplegar (`deploy.ps1:30-32`). El 25/11 se completó ese valor en la
+  copia privada del PC. Graph devolvió el mismo identificador de carpeta al consultar
+  `Exemples` por la ruta del OneDrive de Eduard y por la unidad configurada.
+- La web pide cada archivo por ruta desde la raíz de esa unidad
+  (`/drives/{id}/root:/Escritorio/…/Exemples/…`, `sharepoint.py:180-189`). El mensaje que
+  vio el compañero corresponde a un 403 de Graph, que la API devuelve como 409.
+- Desde el servidor, el 25/11, la conexión a `graph.microsoft.com` presentó un certificado
+  de Microsoft y respondió 301. La conexión a `eurecatcloud-my.sharepoint.com` presentó el
+  certificado de Fortinet `FG6H1ETB19903076` y `curl` falló con
+  `unable to get local issuer certificate`. El bloqueo sigue y afecta a cualquier
+  descarga nueva, con cualquier cuenta. Los archivos que ya están en la caché siguen abriéndose.
+- La prueba en Graph Explorer, por ruta y por identificador con la cuenta del compañero,
+  no se pudo hacer: Eurecat exige aprobación de un administrador para `Files.Read.All` en
+  Graph Explorer. Eduard tampoco tiene acceso al registro de la app en Entra (401).
+
 **Actualización del 25/11: permiso concedido.** Ángel confirmó que la app
 `ECAT-OneDrive-POC` no tenía `Files.Read.All`, porque se pensó para el OneDrive propio.
 Lo añadió y, tras un primer intento sin efecto, concedió el consentimiento de administrador.
@@ -35,6 +80,25 @@ pasó de `Files.Read, User.Read, email, openid, profile` a incluir `Files.Read.A
 Pablo ha podido abrir modelos 3D en la web. En sus capturas del catálogo, 3 de 10 piezas
 mostraban miniatura y 7 aparecían sin ella. La causa de las miniaturas en su sesión
 sigue por confirmar. Fortinet sigue pendiente con IT.
+
+**Cierre de la incidencia de miniaturas.** Tras el despliegue de `7fe7ca0`, Pablo confirmó que ya ve bien las portadas en producción.
+
+Causas que se consideraban para el 403:
+
+1. **Permisos de la app:** el registro solo concede `Files.Read`, que no alcanza los archivos
+   compartidos por otro usuario. Se ha pedido a Ángel una captura de **API permissions**
+   para ver si figura `Files.Read.All` delegado con consentimiento para Eurecat.
+2. **Acceso por ruta (hipótesis de Ángel):** el compañero solo tiene permiso sobre `Exemples`
+   y Graph le deniega el recorrido desde la raíz de la unidad. Se corregiría guardando la
+   carpeta en **Admin → SharePoint**, que accede por identificador.
+
+No guardar la carpeta en Admin hasta que IT resuelva lo de Fortinet. Al cambiar a acceso por
+identificador cambia la clave de versión (`sharepoint.py:201-202`), y la web volvería a descargar
+los originales. Con el bloqueo actual también dejarían de abrirse los de Eduard. Admin no
+permite quitar la selección: para deshacerla hace falta acceso por SSH.
+El bloqueo se ha comunicado a Ángel. La solución corresponde a IT: excluir el servidor
+de la inspección SSL hacia `*.sharepoint.com` o facilitar el certificado raíz de Fortinet
+para instalarlo en el servidor y en el contenedor.
 
 **Actualización de Planos del 23/11.** Se desplegó el código `8dbadfb`. Desde el PC se verificaron
 por HTTPS la salud de la API, el parámetro de página y el campo de giro de las miniaturas,
