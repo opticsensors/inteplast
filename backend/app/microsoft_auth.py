@@ -13,8 +13,6 @@ token until Microsoft requires an interactive sign-in again.
 import hashlib
 import json
 import secrets
-import threading
-import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -23,10 +21,9 @@ from urllib.parse import parse_qsl, urlsplit
 import msal
 import requests
 from sqlalchemy import delete
-from sqlmodel import Session, col, func, select
+from sqlmodel import Session, col, create_engine, func, select
 
 from app.core.config import settings
-from app.core.db import engine
 from app.core.security import decrypt_text, encrypt_text
 from app.microsoft_models import MicrosoftAccount, MicrosoftLogin
 from app.models import User, get_datetime_utc
@@ -36,8 +33,11 @@ FLOW_TTL = timedelta(minutes=15)
 TICKET_TTL = timedelta(minutes=2)
 # MSAL metadata responses (authority discovery); they contain no tokens.
 _HTTP_CACHE: dict[Any, Any] = {}
-_TOKENS: dict[uuid.UUID, tuple[str, float]] = {}
-_LOCK = threading.Lock()
+# Graph callers can already hold a connection from the application's pool.
+# Keep token transactions independent, including when several cards load at once.
+_token_engine = create_engine(
+    str(settings.SQLALCHEMY_DATABASE_URI), pool_size=2, max_overflow=0
+)
 
 
 class LoginError(Exception):
@@ -166,7 +166,6 @@ def complete(session: Session, response: dict[str, str]) -> User:
     account.updated_at = get_datetime_utc()
     session.add(account)
     session.commit()
-    forget(user.id)
     return user
 
 
@@ -201,12 +200,6 @@ def sign_out(session: Session, user_id: uuid.UUID) -> None:
     if account is not None:
         session.delete(account)
         session.commit()
-    forget(user_id)
-
-
-def forget(user_id: uuid.UUID) -> None:
-    with _LOCK:
-        _TOKENS.pop(user_id, None)
 
 
 def session_expired() -> SourceError:
@@ -220,13 +213,10 @@ def session_expired() -> SourceError:
 
 def access_token(user_id: uuid.UUID) -> str:
     """A Graph access token for this user, renewed silently while possible."""
-    now = time.time()
-    with _LOCK:
-        cached = _TOKENS.get(user_id)
-    if cached and cached[1] > now + 300:
-        return cached[0]
-    with Session(engine) as session:
-        account = session.get(MicrosoftAccount, user_id)
+    # Every worker reads the same MSAL cache. Serialize refreshes with each
+    # other and with the login/logout writes to this user's row.
+    with Session(_token_engine) as session:
+        account = session.get(MicrosoftAccount, user_id, with_for_update=True)
         serialized = decrypt_text(account.token_cache) if account else None
         if account is None or serialized is None:
             raise session_expired()
@@ -249,7 +239,4 @@ def access_token(user_id: uuid.UUID) -> str:
             account.updated_at = get_datetime_utc()
             session.add(account)
             session.commit()
-    token = str(result["access_token"])
-    with _LOCK:
-        _TOKENS[user_id] = (token, now + float(result.get("expires_in") or 0))
-    return token
+    return str(result["access_token"])

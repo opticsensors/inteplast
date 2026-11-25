@@ -548,9 +548,8 @@ test("the initial catalogue mixes cards, filters by type, and cotas appear only 
   )
 })
 
-test("catalogue cards are usable while they wait for their shared CAD cover", async (t) => {
-  const page = await mount(t)
-  await page.route("**/*saved-cover*", (route) =>
+function serveCoverImage(page) {
+  return page.route("**/*saved-cover*", (route) =>
     route.fulfill({
       contentType: "image/png",
       body: Buffer.from(
@@ -559,6 +558,11 @@ test("catalogue cards are usable while they wait for their shared CAD cover", as
       ),
     }),
   )
+}
+
+test("catalogue cards are usable while they wait for their shared CAD cover", async (t) => {
+  const page = await mount(t)
+  await serveCoverImage(page)
   await page.evaluate(() => {
     const state = window.review
     state.parts[0].deferred_cover_part_id =
@@ -597,6 +601,66 @@ test("catalogue cards are usable while they wait for their shared CAD cover", as
       )
     })
   }
+})
+
+test("catalogue covers retry a temporary error and offer a shared manual retry after denied access", async (t) => {
+  const page = await mount(t)
+  // Keep both cards in view throughout. Scrolling a new card into view also checks its cover.
+  await page.setViewportSize({ width: 1440, height: 3000 })
+  await serveCoverImage(page)
+  await page.evaluate(() => {
+    const state = window.review
+    state.parts[0].deferred_cover_part_id =
+      state.feature.deferred_cover_part_id = "part-one"
+    state.coverFailures = [503, 409]
+    state.pendingCover = {
+      image: { id: "saved-cover", content_type: "image/png" },
+    }
+    return state.refreshCatalog()
+  })
+  await expect(
+    page.getByText("Portada no disponible", { exact: true }),
+  ).toHaveCount(2)
+  assert.equal(await page.evaluate(() => window.review.coverRequests.length), 2)
+  await page.getByRole("button", { name: /Reintentar portada de 3212/ }).click()
+  await expect(page.locator("img[src*='saved-cover']")).toHaveCount(2)
+  await expect(
+    page.getByText("Portada no disponible", { exact: true }),
+  ).toHaveCount(0)
+  assert.deepEqual(await page.evaluate(() => window.review.coverRequests), [
+    "part-one",
+    "part-one",
+    "part-one",
+  ])
+})
+
+test("a missing catalogue PNG can be retried without opening the piece", async (t) => {
+  const page = await mount(t)
+  await serveCoverImage(page)
+  let missing = true
+  await page.route("**/*saved-cover*", (route) =>
+    missing ? route.fulfill({ status: 404 }) : route.fallback(),
+  )
+  await page.evaluate(() => {
+    window.review.parts[0].deferred_cover_part_id = "part-one"
+    window.review.pendingCover = {
+      image: { id: "saved-cover", content_type: "image/png" },
+    }
+    return window.review.refreshCatalog()
+  })
+  const retry = page.getByRole("button", { name: /Reintentar portada de 3212/ })
+  await expect(retry).toBeVisible()
+  missing = false
+  await retry.click()
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll("img[src*='saved-cover']")].some(
+      (image) => image.naturalWidth > 0,
+    ),
+  )
+  await expect(
+    page.getByRole("heading", { name: "Catálogo", exact: true }),
+  ).toBeVisible()
+  await expect(retry).toHaveCount(0)
 })
 
 test("a saved feature attachment URL with no file points to its own piece when available", async (t) => {

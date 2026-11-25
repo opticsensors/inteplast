@@ -771,6 +771,12 @@ export const CatalogService = {
   readPartCover: async ({ partId }) => {
     state().coverRequests ??= []
     state().coverRequests.push(partId)
+    const failure = state().coverFailures?.shift()
+    if (failure) {
+      throw Object.assign(new ApiError("No se ha podido comprobar el CAD."), {
+        status: failure,
+      })
+    }
     return state().pendingCover ?? { image: null }
   },
   readFamilies: async () => ({

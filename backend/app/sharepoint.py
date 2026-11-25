@@ -26,7 +26,7 @@ from sqlmodel import Session
 
 from app.core.config import settings
 from app.core.db import engine
-from app.microsoft_auth import access_token, forget
+from app.microsoft_auth import access_token
 from app.microsoft_models import SharePointFolder
 from app.source_types import SourceError, SourceItem
 
@@ -127,9 +127,6 @@ def request(url: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         time.sleep(retry_delay(response, attempt))
     assert response is not None
     if response.status_code == 401:
-        user_id = acting_user.get()
-        if user_id is not None:
-            forget(user_id)
         raise SourceError(
             "unavailable",
             "Tu sesión de Microsoft ha caducado. Vuelve a iniciar sesión.",

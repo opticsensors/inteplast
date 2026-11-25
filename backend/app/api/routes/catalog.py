@@ -355,7 +355,7 @@ def read_part_cover(
     session: SessionDep, _current_user: CurrentUser, part_id: uuid.UUID
 ) -> PartCoverPublic:
     get_part_or_404(session, part_id)
-    cad, cad_key, image, refresh = part_cad_cover(session, part_id)
+    cad, cad_key, image, refresh = part_cad_cover(session, part_id, report_error=True)
     return PartCoverPublic(
         cad=FilePublic.model_validate(cad) if cad else None,
         cad_cache_key=cad_key,

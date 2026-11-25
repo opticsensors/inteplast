@@ -95,6 +95,7 @@ function usePartImage(part: PartCardPublic) {
       : (part.image ?? renderedImage),
     loading: generated.isFetching,
     error: generated.error,
+    retry: generated.refetch,
   }
 }
 
@@ -107,11 +108,14 @@ export function PartThumbnail({
   className?: string
   wrapperClassName?: string
 }) {
-  const { ref, cover } = useCatalogCover(part.deferred_cover_part_id)
-  const { image, loading, error } = usePartImage({ ...part, ...cover })
+  const check = useCatalogCover(part.deferred_cover_part_id)
+  const { image, loading, error, retry } = usePartImage({
+    ...part,
+    ...check.cover,
+  })
   return (
     <div
-      ref={ref}
+      ref={check.ref}
       className={wrapperClassName}
       title={error ? fileErrorMessage(error) : undefined}
     >
@@ -119,6 +123,9 @@ export function PartThumbnail({
         feature={{ name: partLabel(part), image }}
         className={className}
         fit="contain"
+        coverError={check.error || (!image && error)}
+        checking={check.checking}
+        retryCover={check.error ? check.retry : retry}
       />
       {loading && (
         <Loader2

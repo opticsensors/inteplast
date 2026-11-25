@@ -27,6 +27,15 @@ y los archivos subidos. Eduard ha confirmado la lectura de PDF y CAD desde su ca
 `Exemples` de OneDrive. Queda probar con un segundo usuario desde otro equipo.
 [Casos de trabajo](proximos-pasos.md#casos-de-trabajo-del-23-de-noviembre).
 
+**Actualización del 25/11: permiso concedido.** Ángel confirmó que la app
+`ECAT-OneDrive-POC` no tenía `Files.Read.All`, porque se pensó para el OneDrive propio.
+Lo añadió y, tras un primer intento sin efecto, concedió el consentimiento de administrador.
+El token delegado de Eduard, renovado desde la instalación local con el mismo registro,
+pasó de `Files.Read, User.Read, email, openid, profile` a incluir `Files.Read.All`.
+Pablo ha podido abrir modelos 3D en la web. En sus capturas del catálogo, 3 de 10 piezas
+mostraban miniatura y 7 aparecían sin ella. La causa de las miniaturas en su sesión
+sigue por confirmar. Fortinet sigue pendiente con IT.
+
 **Actualización de Planos del 23/11.** Se desplegó el código `8dbadfb`. Desde el PC se verificaron
 por HTTPS la salud de la API, el parámetro de página y el campo de giro de las miniaturas,
 el módulo del visor que aplica ese giro y el enlace a la pieza en la página antigua del adjunto.

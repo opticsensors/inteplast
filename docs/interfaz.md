@@ -107,6 +107,10 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
 - Las tarjetas de lista y cuadrícula se pueden abrir en cuanto llega el catálogo.
   Al acercarse a la pantalla, cada portada CAD se comprueba por separado. Una pieza
   y los features que usan su misma captura comparten la consulta.
+- Si la comprobación del CAD falla temporalmente, el catálogo vuelve a intentarla
+  hasta dos veces. Si persiste el fallo o se deniega el acceso, la tarjeta muestra
+  «Portada no disponible» y «Reintentar». Una pieza sin CAD principal conserva el
+  icono de imagen. La ficha se puede abrir en ambos casos.
 - En lista y cuadrícula, los avisos llevan un triángulo ámbar. «Sin mediciones detectadas»
   aparece cuando ha terminado la lectura de la pieza y no se ha extraído ningún valor válido.
   «Sin correcciones detectadas» aparece cuando la lectura registra que no ha encontrado

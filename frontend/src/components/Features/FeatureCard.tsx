@@ -1,11 +1,12 @@
-import { ImageIcon, Package2 } from "lucide-react"
-import type { CSSProperties, ReactNode, Ref } from "react"
+import { ImageIcon, Loader2, Package2 } from "lucide-react"
+import { type CSSProperties, type ReactNode, type Ref, useState } from "react"
 
 import type { FeaturePublic } from "@/client"
 import { FeatureWarnings } from "@/components/Catalog/CatalogWarnings"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { useCatalogCover } from "@/hooks/useCatalogCover"
-import { useFileAccess } from "@/hooks/useFileAccess"
+import { fileErrorMessage, useFileAccess } from "@/hooks/useFileAccess"
 import { cn } from "@/lib/utils"
 import { featureParts, partLabel } from "./parts"
 import { isPreviewableImage } from "./viewers"
@@ -47,16 +48,26 @@ export function FeatureThumbnail({
   style,
   fit = "cover",
   elementRef,
+  coverError,
+  retryCover,
+  checking,
 }: {
   feature: Pick<FeaturePublic, "image" | "name">
   className?: string
   style?: CSSProperties
   elementRef?: Ref<HTMLDivElement>
+  coverError?: unknown
+  retryCover?: () => void
+  checking?: boolean
   /** En la tarjeta se recorta para que cuadre; en la ficha, no: la geometria
    *  es lo que se va a mirar y cortarla por los bordes seria absurdo. */
   fit?: "cover" | "contain"
 }) {
-  const { url } = useFileAccess(feature.image?.id)
+  const access = useFileAccess(feature.image?.id)
+  const { url } = access
+  const [failedUrl, setFailedUrl] = useState<string>()
+  const failedImage =
+    feature.image && (access.isError || (url && url === failedUrl))
   return (
     <div
       ref={elementRef}
@@ -66,11 +77,40 @@ export function FeatureThumbnail({
       )}
       style={style}
     >
-      {feature.image &&
-      url &&
-      isPreviewableImage(feature.image.content_type) ? (
+      {retryCover && (coverError || failedImage) ? (
+        <div
+          className="flex flex-col items-center gap-1 p-1 text-center text-xs"
+          title={fileErrorMessage(coverError || access.error)}
+        >
+          <span>Portada no disponible</span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="relative z-20"
+            aria-label={`Reintentar portada de ${feature.name}`}
+            disabled={checking || access.isFetching}
+            onClick={() => {
+              if (failedImage && !coverError) {
+                setFailedUrl(undefined)
+                void access.refetch()
+              } else retryCover()
+            }}
+          >
+            Reintentar
+          </Button>
+        </div>
+      ) : checking && !feature.image ? (
+        <Loader2
+          aria-label="Comprobando portada"
+          className="size-4 animate-spin text-muted-foreground"
+        />
+      ) : feature.image &&
+        url &&
+        isPreviewableImage(feature.image.content_type) ? (
         <img
           src={url}
+          onError={retryCover ? () => setFailedUrl(url) : undefined}
           alt={feature.name}
           className={cn(
             "size-full",
@@ -100,9 +140,13 @@ export function FeatureCoverStack({
   /** Extra classes of the capture when it is shown alone. */
   flatClassName?: string
 }) {
-  const { ref, cover: fallback } = useCatalogCover(
-    feature.deferred_cover_part_id,
-  )
+  const {
+    ref,
+    cover: fallback,
+    error,
+    retry,
+    checking,
+  } = useCatalogCover(feature.deferred_cover_part_id)
   const cover = {
     image: feature.cover_image ?? fallback?.image,
     name: feature.name,
@@ -112,6 +156,9 @@ export function FeatureCoverStack({
     return (
       <FeatureThumbnail
         elementRef={ref}
+        coverError={error}
+        retryCover={retry}
+        checking={checking}
         feature={cover}
         className={cn(className, flatClassName)}
       />
@@ -128,6 +175,9 @@ export function FeatureCoverStack({
       <div aria-hidden className={cn(layer, "inset-1")} />
       <FeatureThumbnail
         feature={cover}
+        coverError={error}
+        retryCover={retry}
+        checking={checking}
         className={cn("relative size-full [&>svg]:text-neutral-600", surface)}
       />
       <span

@@ -1,9 +1,11 @@
 """SharePoint source and Microsoft sign-in, with Graph and MSAL simulated (no network)."""
 
 import hashlib
+import json
 import uuid
 from pathlib import Path
 from typing import Any
+from unittest.mock import Mock
 from urllib.parse import parse_qs, quote, unquote, urlsplit
 
 import httpx
@@ -14,15 +16,18 @@ from sqlmodel import Session, select
 from app import microsoft_auth, sharepoint
 from app.core.config import settings
 from app.core.db import engine
+from app.core.security import encrypt_text
 from app.evidence import drawing_key, drawing_project_files, job_id
 from app.file_sources import document_cache_key, reference_key, twin_projects
 from app.knowledge_models import EvidenceJob
 from app.measurement_models import MeasurementImport
+from app.microsoft_models import MicrosoftAccount
 from app.models import Part, StoredFile
 from app.pilot import is_pilot
 from app.rebase_source import RebaseError, rebase
 from app.source_types import SourceError
 from tests.api.routes.test_cad_covers import cover_example
+from tests.utils.user import create_random_user
 
 API = settings.API_V1_STR
 PIECE = "0- Bolt Eye/3212 Pump Housing"
@@ -636,6 +641,14 @@ def test_unavailable_cad_never_returns_a_stale_cover(
         assert response.json()["part"]["image"] is None
         assert response.json()["part"]["cad_cache_key"] is None
 
+    graph.fail = [status] * sharepoint.ATTEMPTS
+    cover_url = f"{API}/parts/{remote_cover['part_id']}/cover"
+    failure = client.get(cover_url, headers=headers)
+    assert failure.status_code == (409 if status == 403 else status)
+    assert failure.json()["detail"]
+    graph.fail.clear()
+    assert client.get(cover_url, headers=headers).json()["image"] is not None
+
 
 def test_cover_is_not_reused_when_switching_from_sharepoint_to_local(
     client: TestClient,
@@ -802,6 +815,43 @@ def test_microsoft_callback_hands_a_one_time_ticket(
 def test_graph_token_requires_a_microsoft_session() -> None:
     with pytest.raises(SourceError) as error:
         microsoft_auth.access_token(uuid.uuid4())
+    assert error.value.status_code == 401
+
+
+def test_graph_worker_observes_relogin_and_logout_from_another_worker(
+    db: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    user_id = create_random_user(db).id
+
+    def application(cache: Any) -> Mock:
+        client = Mock()
+        client.get_accounts.return_value = [{"username": "test"}]
+        client.acquire_token_silent_with_error.return_value = {
+            "access_token": json.loads(cache.serialize())["session"],
+            "expires_in": 3600,
+        }
+        return client
+
+    monkeypatch.setattr(microsoft_auth, "application", application)
+    account = MicrosoftAccount(
+        user_id=user_id,
+        object_id=str(uuid.uuid4()),
+        username="test",
+        tenant_id="test",
+        token_cache=encrypt_text('{"session":"first"}'),
+    )
+    db.add(account)
+    db.commit()
+    assert microsoft_auth.access_token(user_id) == "first"
+    # Separate DB writes, without invalidating any state in the calling worker.
+    account.token_cache = encrypt_text('{"session":"second"}')
+    db.add(account)
+    db.commit()
+    assert microsoft_auth.access_token(user_id) == "second"
+    db.delete(account)
+    db.commit()
+    with pytest.raises(SourceError) as error:
+        microsoft_auth.access_token(user_id)
     assert error.value.status_code == 401
 
 

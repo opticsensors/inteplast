@@ -54,7 +54,7 @@ def part_cover_key(source_key: str) -> str:
 
 
 def part_cad_cover(
-    session: Session, part_id: uuid.UUID
+    session: Session, part_id: uuid.UUID, *, report_error: bool = False
 ) -> tuple[StoredFile | None, str | None, StoredFile | None, bool]:
     """A verified image of this CAD can be displayed while its style is refreshed."""
     cad = primary_files(session, part_id).get("part")
@@ -66,7 +66,7 @@ def part_cad_cover(
         except HTTPException as error:
             # Keep the catalogue usable when a CAD is missing/changed/inaccessible, but do not
             # present an old thumbnail as current. An expired login must still reach the browser.
-            if error.status_code not in {404, 409, 503}:
+            if report_error or error.status_code not in {404, 409, 503}:
                 raise
     if not cad or source_key is None:
         return cad, None, None, False

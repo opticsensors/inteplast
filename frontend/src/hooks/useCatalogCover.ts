@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
-import { CatalogService } from "@/client"
+import { ApiError, CatalogService } from "@/client"
 
 /** A part and its features share one version check when their cards enter view. */
 export function useCatalogCover(partId: string | null | undefined) {
@@ -22,10 +22,17 @@ export function useCatalogCover(partId: string | null | undefined) {
     queryFn: () => CatalogService.readPartCover({ partId: partId! }),
     enabled: Boolean(partId && visible),
     refetchOnWindowFocus: false,
-    retry: false,
+    retry: (attempt, error) =>
+      attempt < 2 &&
+      (!(error instanceof ApiError) ||
+        error.status === 429 ||
+        error.status >= 500),
   })
   return {
     ref,
     cover: query.isSuccess && !query.isFetching ? query.data : undefined,
+    error: query.error,
+    retry: query.refetch,
+    checking: query.isFetching,
   }
 }

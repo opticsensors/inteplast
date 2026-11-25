@@ -283,6 +283,8 @@ cambia de comportamiento.
   `SECRET_KEY`) en la tabla `microsoftaccount`. Graph se llama con
   `acquire_token_silent_with_error`, que intenta renovar el acceso con la sesión Microsoft
   ([tokens de renovación](https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens)).
+  Cada proceso consulta esa fila al pedir un token. PostgreSQL serializa las
+  renovaciones de la misma cuenta con los cambios de inicio y cierre de sesión.
   Si Microsoft exige iniciar sesión otra vez, la API devuelve 401 y la web vuelve al login.
 - **Permisos de cada persona**: se lee con los permisos delegados del usuario, así que
   Microsoft aplica sus propios permisos. Un elemento sin permiso devuelve 409 con mensaje (no
