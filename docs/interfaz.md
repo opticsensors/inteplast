@@ -136,7 +136,10 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
   `package.json`. Piezas: círculo con la captura CAD guardada o, sin ella, con el código
   dentro. Features: píldora con su nombre en el color principal. Familias (ámbar) y
   clientes (rosa) se añaden con dos casillas, apagadas al empezar, en una leyenda superpuesta arriba a la izquierda del grafo (una por línea, con su color). Sin texto de ayuda encima del grafo. Fondo, texto y uniones
-  salen del tema y se repintan al cambiarlo. Arrastrar, zoom (máximo ×4), nombre al pasar el
+  salen del tema y se repintan al cambiarlo. El grafo muestra primero las conexiones y añade
+  las capturas guardadas a medida que comprueba sus archivos. Un nodo arrastrado queda donde
+  se suelta. El encuadre se ajusta al abrir o cambiar de filtros. La rueda dentro del grafo
+  controla el zoom, incluso en sus límites. Fuera del grafo desplaza la página. Zoom máximo ×4 y nombre al pasar el
   ratón (el nombre se escapa: la etiqueta emergente de `force-graph` es HTML); clic en
   pieza o feature abre su ficha y en familia o cliente filtra el catálogo. Las cotas
   encontradas siguen encima del grafo con «Mostrar más cotas (N de M)»; lista y cuadrícula
@@ -178,6 +181,7 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
 - Los listados de features y piezas usan subtarjetas compactas y enlaces «Ver feature» /
   «Ver pieza» en el color principal. En Archivos se pulsa el tipo para abrir el fichero y
   ver su nombre. El tamaño queda centrado verticalmente junto al icono de descarga.
+- En Archivos, los tipos de geometría se llaman «CAD pieza» y «CAD molde».
 - La portada de pieza muestra el STEP completo con las caras compatibles de sus features.
   La leyenda de colores aparece solo al ampliar el CAD. Mientras se carga el modelo,
   la captura permanece centrada. Los laterales y el visor 3D comparten el gris claro

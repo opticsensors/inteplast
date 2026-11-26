@@ -23,7 +23,7 @@ before(async () => {
       {
         name: "isolated-api",
         setup(build) {
-          build.onResolve({ filter: /^\.\/StepCoverCanvas$/ }, () => ({
+          build.onResolve({ filter: /\/StepCoverCanvas$/ }, () => ({
             path: path.join(__dirname, "fixtures/cad-canvas.jsx"),
           }))
           build.onResolve({ filter: /^\/assets\// }, ({ path: asset }) => ({
@@ -371,7 +371,7 @@ async function openCover(page, mode = "image") {
   await page.getByRole("button", { name: /^(Añadir|Editar) portada$/ }).click()
   await page
     .getByRole("tab", {
-      name: mode === "cad" ? "CAD" : "Imagen",
+      name: mode === "cad" ? "CAD pieza" : "Imagen",
       exact: true,
     })
     .click()
@@ -802,7 +802,7 @@ test("series editing keeps one draft per piece, saves them all at once and Cance
   await dialog.getByRole("button", { name: "Pieza siguiente" }).click()
   await expect(dialog).toContainText("2 / 3")
   // No CAD selector: the piece is the one in the carousel.
-  await page.getByRole("tab", { name: "CAD", exact: true }).click()
+  await page.getByRole("tab", { name: "CAD pieza", exact: true }).click()
   await expect(dialog.getByRole("combobox")).toHaveCount(0)
   await page.getByRole("tab", { name: "Imagen", exact: true }).click()
   await uploadAndApply(page)
@@ -1169,7 +1169,7 @@ test("CAD editing stays in one modal, retains selection across tabs and cancels 
   await page.getByRole("button", { name: "Limpiar selección" }).click()
   await expect(page.getByRole("button", { name: "Aplicar" })).toBeDisabled()
   await page.getByRole("tab", { name: "Imagen", exact: true }).click()
-  await page.getByRole("tab", { name: "CAD", exact: true }).click()
+  await page.getByRole("tab", { name: "CAD pieza", exact: true }).click()
   await expect(page.getByRole("button", { name: "Aplicar" })).toBeDisabled()
   assert.equal(await page.getByRole("dialog").count(), 1)
   await page

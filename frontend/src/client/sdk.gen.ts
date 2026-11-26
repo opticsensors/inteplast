@@ -182,6 +182,7 @@ export class CatalogService {
      * @param data.familyId
      * @param data.customerId
      * @param data.limit
+     * @param data.deferCovers
      * @returns CatalogGraph Successful Response
      * @throws ApiError
      */
@@ -196,7 +197,8 @@ export class CatalogService {
                 feature_id: data.featureId,
                 family_id: data.familyId,
                 customer_id: data.customerId,
-                limit: data.limit
+                limit: data.limit,
+                defer_covers: data.deferCovers
             },
             errors: {
                 422: 'Validation Error'

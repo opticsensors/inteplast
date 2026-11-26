@@ -10,6 +10,7 @@ import { type ReactNode, useState } from "react"
 import { type FilePublic, FilesService } from "@/client"
 import { FileLink } from "@/components/Common/FileLink"
 import { FileUpload } from "@/components/Common/FileUpload"
+import { ASSET_KIND_LABELS } from "@/components/Features/constants"
 import { Button } from "@/components/ui/button"
 import { fileErrorMessage, useFileAccess } from "@/hooks/useFileAccess"
 
@@ -47,7 +48,6 @@ export function isFolderAttachment(kind?: string): kind is AttachmentKind {
   return kind === "mold" || kind === "moldflow"
 }
 
-const kindNames = { mold: "Molde", moldflow: "Moldflow" }
 const previewFrame = "h-[70vh] w-full overflow-hidden rounded-lg bg-muted/30"
 
 export function AttachmentFolder({
@@ -70,7 +70,7 @@ export function AttachmentFolder({
     staleTime: 60_000,
     retry: false,
   })
-  const name = kindNames[kind]
+  const name = ASSET_KIND_LABELS[kind]
   const label = `Carpeta de ${name} en SharePoint`
   if (folderOnly && !folder.data) return null
   if (!folder.data) {
@@ -151,7 +151,7 @@ export function AttachmentDetail({
     },
     onError: () => void saved.refetch(),
   })
-  const download = `Descargar original de ${kindNames[kind]}`
+  const download = `Descargar original de ${ASSET_KIND_LABELS[kind]}`
   // Reading and editing captures both require an active user with access to the original.
   const canEdit = saved.isSuccess
   return (
@@ -257,7 +257,7 @@ export function AttachmentDetail({
             />
           ) : (
             <ImageIcon
-              aria-label={`Vista previa de ${kindNames[kind]}`}
+              aria-label={`Vista previa de ${ASSET_KIND_LABELS[kind]}`}
               role="img"
               className="size-8 text-muted-foreground"
             />

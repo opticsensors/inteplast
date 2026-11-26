@@ -31,11 +31,10 @@ La primera revisión visual se hará con 3205 y 3167. Plan completo en
 
 ## Otros siguientes pasos (25/11/2026)
 
-1. **Bug del grafo: el encuadre se reinicia solo.** Eduard, 25/11/2026: con cierto zoom, al
-   arrastrar una parte del grafo, poco después la vista se reinicia sola y cambia el encuadre y el
-   zoom, sin que el usuario lo pida. No debería pasar: el zoom y el encuadre elegidos por el usuario
-   se mantienen hasta que él los cambie. Pendiente: reproducirlo en local y localizar qué vuelve a
-   encuadrar la vista.
+1. **Grafo del catálogo (26/11/2026).** El fin de la simulación volvía a encuadrar la vista tras
+   arrastrar un nodo. El nodo conserva ahora su posición y la cámara mantiene el encuadre y el zoom.
+   La rueda actúa dentro del grafo y el desplazamiento de página se recupera al salir. Los nodos y
+   las conexiones se muestran mientras se comprueban las miniaturas de las piezas.
 2. **Asistente con Copilot en la web.** Llevar al servidor el asistente con Copilot de empresa,
    la solución definitiva decidida por Eduard el 17/11/2026, en lugar de la prueba local con Codex.
    Ya está descrito en [Asistente](#2-asistente-prueba-local-con-codex-antes-del-servidor-copilot-definitivo):

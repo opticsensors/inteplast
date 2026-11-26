@@ -696,7 +696,7 @@ for (const mobile of [false, true]) {
       page,
       mobile ? "mobile-image-editor.png" : "image-editor.png",
     )
-    await page.getByRole("tab", { name: "CAD", exact: true }).click()
+    await page.getByRole("tab", { name: "CAD pieza", exact: true }).click()
     await ready(page)
     assert.equal(
       await page

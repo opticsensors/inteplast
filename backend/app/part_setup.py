@@ -46,7 +46,12 @@ from app.reference_selection import (
 )
 
 KINDS: tuple[ReferenceKind, ...] = ("part", "scan", "mold", "drawing")
-LABELS = {"part": "CAD", "scan": "Escaneo", "mold": "Molde", "drawing": "Plano"}
+LABELS = {
+    "part": "CAD pieza",
+    "scan": "Escaneo",
+    "mold": "CAD molde",
+    "drawing": "Plano",
+}
 
 
 class ReferenceCandidate(BaseModel):

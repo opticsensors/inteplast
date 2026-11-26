@@ -17,6 +17,7 @@ import { useFeaturePreview } from "@/hooks/useFeaturePreview"
 import { CadCoverEditor } from "./CadCoverEditor"
 import { CoverButton, RetryCoverButton } from "./CoverButton"
 import { COVER_EDITOR_ROWS, CoverDialog } from "./CoverDialog"
+import { ASSET_KIND_LABELS } from "./constants"
 import {
   type CoverDraft,
   type CoverSlide,
@@ -273,7 +274,7 @@ function CoverEditorDraft({
         </TabsTrigger>
         <TabsTrigger value="cad" disabled={busy}>
           <Box />
-          CAD
+          {ASSET_KIND_LABELS.part}
         </TabsTrigger>
       </TabsList>
       <TabsContent value="image" className={COVER_EDITOR_ROWS}>

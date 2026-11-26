@@ -503,6 +503,7 @@ export type GraphNode = {
     label: string;
     name?: (string | null);
     image?: (FilePublic | null);
+    deferred_cover_part_id?: (string | null);
 };
 
 export type kind2 = 'part' | 'feature' | 'family' | 'customer';
@@ -1105,6 +1106,7 @@ export type CatalogSaveFaceImageResponse = (FilePublic);
 
 export type CatalogReadCatalogGraphData = {
     customerId?: (string | null);
+    deferCovers?: boolean;
     familyId?: (string | null);
     featureId?: (string | null);
     kind?: 'all' | 'part' | 'feature';

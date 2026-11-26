@@ -162,6 +162,15 @@ def test_colored_capture_is_versioned_separately_from_the_original_and_gray(
     ).json()
     piece_node = next(node for node in graph["nodes"] if node["kind"] == "part")
     assert piece_node["image"]["id"] == png["id"]
+    deferred = client.get(
+        f"{API}/catalog/graph",
+        headers=headers,
+        params={"part_id": part, "kind": "part", "defer_covers": True},
+    )
+    assert deferred.status_code == 200
+    pending_node = next(n for n in deferred.json()["nodes"] if n["kind"] == "part")
+    assert pending_node["deferred_cover_part_id"] == part
+    assert pending_node["image"] is None
     assert detail(client, headers, feature)["cover_image"]["id"] == body["image_id"]
     db.refresh(link)
     assert link.cover_3d and link.cover_3d["source_key"]

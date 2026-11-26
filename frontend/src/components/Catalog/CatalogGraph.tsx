@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import ForceGraph, {
   type ForceGraphInstance,
   type GraphData,
@@ -10,14 +10,18 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import {
   type CatalogGraph as CatalogGraphData,
   CatalogService,
-  FilesService,
   type GraphNode,
 } from "@/client"
 import { partName } from "@/components/Features/parts"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
-import { absoluteFileUrl, fileErrorMessage } from "@/hooks/useFileAccess"
+import { coverQuery } from "@/hooks/useCatalogCover"
+import {
+  absoluteFileUrl,
+  fileAccessQueryOptions,
+  fileErrorMessage,
+} from "@/hooks/useFileAccess"
 
 export type CatalogGraphRequest = {
   q: string
@@ -71,34 +75,44 @@ function useThemeColors() {
 }
 
 /** The saved CAD capture of each piece; the graph never asks for a new one. */
-function usePartImages(nodes: Node[]) {
+function usePartImages(nodes: GraphNode[] | undefined) {
+  const client = useQueryClient()
   const [images, setImages] = useState<Record<string, HTMLImageElement>>({})
-  // "nodeId=fileId,…": a stable key, so that new node objects do not reload images.
-  const wanted = nodes
-    .filter((node) => node.kind === "part" && node.image)
-    .map((node) => `${node.id}=${node.image!.id}`)
-    .join(",")
   useEffect(() => {
     let cancelled = false
-    for (const pair of wanted.split(",").filter(Boolean)) {
-      const [nodeId, fileId] = pair.split("=")
-      FilesService.createFileAccessUrl({ fileId })
-        .then((access) => {
+    const queue = (nodes ?? []).filter(
+      (node) => node.deferred_cover_part_id || node.image,
+    )
+    setImages({})
+    async function load() {
+      for (let node = queue.shift(); node && !cancelled; node = queue.shift()) {
+        try {
+          const cover = node.deferred_cover_part_id
+            ? await client.fetchQuery(coverQuery(node.deferred_cover_part_id))
+            : undefined
+          const file =
+            cover?.face_colors?.images.part ?? cover?.image ?? node.image
+          if (!file || cancelled) continue
+          const access = await client.fetchQuery(
+            fileAccessQueryOptions(file.id),
+          )
           if (cancelled) return
           const image = new Image()
-          image.onload = () => {
-            if (!cancelled) setImages((all) => ({ ...all, [nodeId]: image }))
-          }
           image.src = absoluteFileUrl(access.url)
-        })
-        .catch(() => {
-          // Without the capture the piece is drawn with its code.
-        })
+          await image.decode()
+          const id = node.id
+          if (!cancelled) setImages((all) => ({ ...all, [id]: image }))
+        } catch {
+          // The piece keeps its code when its capture cannot be read.
+        }
+      }
     }
+    const workers = Math.min(4, queue.length)
+    for (let i = 0; i < workers; i++) void load()
     return () => {
       cancelled = true
     }
-  }, [wanted])
+  }, [nodes, client])
   return images
 }
 
@@ -138,6 +152,7 @@ export default function CatalogGraph({
     queryKey: ["features", "catalog-graph", request],
     queryFn: () =>
       CatalogService.readCatalogGraph({
+        deferCovers: true,
         q: request.q,
         kind: request.kind,
         partId: request.partId,
@@ -160,13 +175,15 @@ export default function CatalogGraph({
       .map((link) => ({ ...link }))
     return { nodes, links }
   }, [query.data, families, customers])
-  const images = usePartImages(data.nodes)
+  const images = usePartImages(query.data?.nodes)
   const container = useRef<HTMLDivElement>(null)
   const graph = useRef<ForceGraphInstance | null>(null)
   // The data whose layout has settled: positions are final and nodes can be clicked.
   const [settled, setSettled] = useState<object | null>(null)
-  const latest = useRef({ colors, images, onOpen, onFilter, data })
-  latest.current = { colors, images, onOpen, onFilter, data }
+  const viewKey = JSON.stringify([request, families, customers])
+  const fittedView = useRef<string | null>(null)
+  const latest = useRef({ colors, images, onOpen, onFilter, data, viewKey })
+  latest.current = { colors, images, onOpen, onFilter, data, viewKey }
 
   useEffect(() => {
     const element = container.current
@@ -258,17 +275,43 @@ export default function CatalogGraph({
           latest.current.onFilter(node.kind, node.ref_id)
         else latest.current.onOpen(node)
       })
+      .onNodeDragEnd((node) => {
+        node.fx = node.x
+        node.fy = node.y
+      })
       // A few nodes must not fill the screen when the graph fits them.
       .maxZoom(4)
-      .warmupTicks(150)
-      .cooldownTicks(80)
-      .onEngineStop(() => {
-        instance.zoomToFit(0, 40)
-        setSettled(latest.current.data)
+      .warmupTicks(100)
+      .cooldownTicks(24)
+      .onEngineTick(() => {
+        const { data, viewKey } = latest.current
+        if (
+          data.nodes.length &&
+          fittedView.current !== viewKey &&
+          instance.graphData().nodes === data.nodes
+        ) {
+          fittedView.current = viewKey
+          instance.zoomToFit(0, 40)
+        }
       })
+      .onEngineStop(() => setSettled(latest.current.data))
     instance.d3Force("charge")?.strength(-160)
     instance.d3Force("link")?.distance(55).strength(0.55)
     graph.current = instance
+    const keepView = () => {
+      fittedView.current = latest.current.viewKey
+    }
+    const captureWheel = (event: WheelEvent) => {
+      keepView()
+      // d3 handles the zoom but allows native scrolling at its scale limits.
+      event.preventDefault()
+    }
+    const frame = element.parentElement!
+    frame.addEventListener("wheel", captureWheel, {
+      capture: true,
+      passive: false,
+    })
+    element.addEventListener("pointerdown", keepView, true)
     // Tests reach the real node positions through the element; there is no other API.
     Object.defineProperty(element, "catalogGraph", {
       value: instance,
@@ -279,6 +322,8 @@ export default function CatalogGraph({
     )
     resize.observe(element)
     return () => {
+      frame.removeEventListener("wheel", captureWheel, true)
+      element.removeEventListener("pointerdown", keepView, true)
       resize.disconnect()
       instance._destructor()
       graph.current = null
@@ -288,6 +333,22 @@ export default function CatalogGraph({
   useEffect(() => {
     const instance = graph.current
     if (!instance) return
+    const pinned = new Map(
+      instance
+        .graphData()
+        .nodes.filter((n) => n.fx != null && n.fy != null)
+        .map((n) => [n.id, n]),
+    )
+    for (const node of data.nodes) {
+      const previous = pinned.get(node.id)
+      if (previous)
+        Object.assign(node, {
+          x: previous.fx,
+          y: previous.fy,
+          fx: previous.fx,
+          fy: previous.fy,
+        })
+    }
     instance.graphData(data as unknown as GraphData)
   }, [data])
 

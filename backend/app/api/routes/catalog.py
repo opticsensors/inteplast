@@ -537,6 +537,7 @@ class GraphNode(BaseModel):
     # Pieces only: their optional name and the saved CAD capture, never a new capture.
     name: str | None = None
     image: FilePublic | None = None
+    deferred_cover_part_id: uuid.UUID | None = None
 
 
 class GraphLink(BaseModel):
@@ -563,6 +564,7 @@ def read_catalog_graph(
     family_id: uuid.UUID | None = None,
     customer_id: uuid.UUID | None = None,
     limit: int = Query(default=GRAPH_LIMIT, ge=1, le=GRAPH_LIMIT),
+    defer_covers: bool = False,
 ) -> CatalogGraph:
     """What the list shows with the same search and filters, as nodes and links.
 
@@ -617,13 +619,32 @@ def read_catalog_graph(
                 seen.add(f"{relation}:{value.id}")
                 candidates.append((relation, value))
     shown = candidates[:limit]
+    shown_parts = [item.id for group, item in shown if group == "part"]
+    saved_covers = (
+        set(
+            session.exec(
+                select(EvidenceJob.part_id)
+                .where(
+                    col(EvidenceJob.part_id).in_(shown_parts),
+                    col(EvidenceJob.kind).in_(("part-cover", "face-colors")),
+                    EvidenceJob.state == "ready",
+                )
+                .distinct()
+            ).all()
+        )
+        if defer_covers and shown_parts
+        else set()
+    )
     nodes: list[GraphNode] = []
     for group, item in shown:
         if group == "part":
-            cover = part_cover_metadata(session, item.id, report_error=False)
-            colored = (
-                cover.face_colors.images.get("part") if cover.face_colors else None
-            )
+            image = None
+            if not defer_covers:
+                cover = part_cover_metadata(session, item.id, report_error=False)
+                colored = (
+                    cover.face_colors.images.get("part") if cover.face_colors else None
+                )
+                image = colored or cover.image
             nodes.append(
                 GraphNode(
                     id=f"part:{item.id}",
@@ -631,7 +652,8 @@ def read_catalog_graph(
                     ref_id=item.id,
                     label=item.code,
                     name=item.name,
-                    image=colored or cover.image,
+                    image=image,
+                    deferred_cover_part_id=item.id if item.id in saved_covers else None,
                 )
             )
         else:
@@ -645,7 +667,6 @@ def read_catalog_graph(
             )
     present = {node.id for node in nodes}
     links: list[GraphLink] = []
-    shown_parts = [item.id for group, item in shown if group == "part"]
     shown_features = [item.id for group, item in shown if group == "feature"]
     if shown_parts and shown_features:
         membership = feature_membership()

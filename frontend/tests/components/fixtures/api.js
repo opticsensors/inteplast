@@ -846,7 +846,9 @@ export const CatalogService = {
         ref_id: part.id,
         label: part.code,
         name: part.name ?? null,
-        image: part.image ?? null,
+        image: params.deferCovers ? null : (part.image ?? null),
+        deferred_cover_part_id:
+          params.deferCovers && part.image ? part.id : null,
       })),
       ...list.features.map((feature) => ({
         id: `feature:${feature.id}`,

@@ -10,8 +10,8 @@ export const MAX_HEADER_DESCRIPTION_LENGTH = 200
  * dentro de cada pieza: primero el molde y la pieza, luego los documentos.
  */
 export const ASSET_KIND_LABELS: Record<AssetKind, string> = {
-  mold: "Molde",
-  part: "CAD",
+  mold: "CAD molde",
+  part: "CAD pieza",
   scan: "Escaneo",
   drawing: "Plano 2D",
   moldflow: "Moldflow",

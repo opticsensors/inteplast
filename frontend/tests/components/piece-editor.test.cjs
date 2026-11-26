@@ -536,16 +536,19 @@ test("new piece is an empty labelled page; folder proposals, arbitrary named fil
     .getByLabel("Nombre de alternative.step", { exact: true })
     .fill("CAD de revisión")
   await page
-    .getByRole("button", { name: "Tipo de CAD de revisión: CAD", exact: true })
-    .click()
-  await page.getByRole("menuitem", { name: "Molde", exact: true }).click()
-  await page
     .getByRole("button", {
-      name: "Tipo de CAD de revisión: Molde",
+      name: "Tipo de CAD de revisión: CAD pieza",
       exact: true,
     })
     .click()
-  await page.getByRole("menuitem", { name: "CAD", exact: true }).click()
+  await page.getByRole("menuitem", { name: "CAD molde", exact: true }).click()
+  await page
+    .getByRole("button", {
+      name: "Tipo de CAD de revisión: CAD molde",
+      exact: true,
+    })
+    .click()
+  await page.getByRole("menuitem", { name: "CAD pieza", exact: true }).click()
   await page
     .getByRole("button", { name: "Usar CAD de revisión como principal" })
     .click()
@@ -1048,6 +1051,131 @@ test("on a phone the identity fields are stacked without horizontal scroll", asy
     path: path.join(artifacts, "identity-mobile.png"),
     fullPage: true,
   })
+})
+
+test("dragging a graph node preserves its position and camera, and only the graph consumes its wheel", async (t) => {
+  const page = await mount(t)
+  await page.evaluate(() =>
+    window.review.navigate({ to: "/features", search: {} }),
+  )
+  await page.getByRole("button", { name: "Grafo", exact: true }).click()
+  const graph = page.getByTestId("catalog-graph")
+  await expect(graph).toHaveAttribute("data-ready", "true")
+  await page.addStyleTag({ content: "body { padding-bottom: 150vh }" })
+  await graph.evaluate((el) => el.scrollIntoView({ block: "center" }))
+  const start = await graph.evaluate((el) => {
+    const g = el.catalogGraph
+    g.zoom(1.6).centerAt(12, 4)
+    const node = g.graphData().nodes.find((n) => n.kind === "part")
+    const p = g.graph2ScreenCoords(node.x, node.y)
+    const rect = el.getBoundingClientRect()
+    const previousStop = g.onEngineStop()
+    window.review.afterDrag = new Promise((resolve) =>
+      g.onEngineStop(() => {
+        previousStop()
+        resolve()
+      }),
+    )
+    return {
+      x: rect.left + p.x,
+      y: rect.top + p.y,
+      id: node.id,
+      center: g.centerAt(),
+    }
+  })
+  await page.mouse.move(start.x, start.y)
+  await expect(graph).toHaveCSS("cursor", "pointer")
+  await page.mouse.down()
+  await page.mouse.move(start.x + 80, start.y + 35, { steps: 10 })
+  await page.mouse.up()
+  await page.evaluate(() => window.review.afterDrag)
+  const end = await graph.evaluate((el, id) => {
+    const g = el.catalogGraph
+    const n = g.graphData().nodes.find((n) => n.id === id)
+    const point = g.graph2ScreenCoords(n.x, n.y),
+      rect = el.getBoundingClientRect()
+    return {
+      x: rect.left + point.x,
+      y: rect.top + point.y,
+      zoom: g.zoom(),
+      center: g.centerAt(),
+    }
+  }, start.id)
+  assert.equal(end.zoom, 1.6)
+  assert.deepEqual(end.center, start.center)
+  assert.ok(
+    Math.abs(end.x - start.x - 80) < 2 && Math.abs(end.y - start.y - 35) < 2,
+  )
+
+  const scroll = () => page.evaluate(() => scrollY)
+  const before = await scroll()
+  await page.mouse.wheel(0, -80)
+  await expect
+    .poll(() => graph.evaluate((el) => el.catalogGraph.zoom()))
+    .toBeGreaterThan(1.6)
+  await graph.evaluate((el) => el.catalogGraph.zoom(el.catalogGraph.maxZoom()))
+  await page.mouse.wheel(0, -400)
+  await graph.evaluate((el) => el.catalogGraph.zoom(el.catalogGraph.minZoom()))
+  await page.mouse.wheel(0, 400)
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  )
+  assert.equal(await scroll(), before)
+  const bounds = await graph.boundingBox()
+  await page.mouse.move(
+    bounds.x + bounds.width / 2,
+    bounds.y + bounds.height + 8,
+  )
+  await page.mouse.wheel(0, 240)
+  await expect.poll(scroll).toBeGreaterThan(before)
+})
+
+test("the graph can be used while a saved thumbnail is being checked", async (t) => {
+  const page = await mount(t)
+  await page.evaluate(async () => {
+    const { CatalogService } = await import("/tests/components/fixtures/api.js")
+    const image = {
+      id: "graph-image",
+      filename: "stored.png",
+      content_type: "image/png",
+    }
+    window.review.parts[0].image = image
+    CatalogService.readPartCover = async () => {
+      await new Promise((resolve) => {
+        window.review.releaseGraphCover = resolve
+      })
+      return { image }
+    }
+    const draw = CanvasRenderingContext2D.prototype.drawImage
+    CanvasRenderingContext2D.prototype.drawImage = function (image, ...args) {
+      if (
+        image instanceof HTMLImageElement &&
+        image.src.includes("graph-image")
+      )
+        window.review.paintedGraphCover = true
+      return draw.call(this, image, ...args)
+    }
+    await window.review.navigate({ to: "/features", search: {} })
+  })
+  await page.route("**/files/graph-image?*", (route) =>
+    route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><rect width="8" height="8" fill="red"/></svg>',
+    }),
+  )
+  await page.getByRole("button", { name: "Grafo", exact: true }).click()
+  const graph = page.getByTestId("catalog-graph")
+  await expect(graph).toHaveAttribute("data-ready", "true")
+  await page.waitForFunction(
+    () => typeof window.review.releaseGraphCover === "function",
+  )
+  await graph.evaluate((el) => el.catalogGraph.zoom(2))
+  await page.evaluate(() => window.review.releaseGraphCover())
+  await page.waitForFunction(() => window.review.paintedGraphCover)
+  assert.equal(await graph.evaluate((el) => el.catalogGraph.zoom()), 2)
 })
 
 test("the catalogue graph is drawn with the theme colours, light and dark", async (t) => {

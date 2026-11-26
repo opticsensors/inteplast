@@ -2396,6 +2396,18 @@ export const GraphNodeSchema = {
                     type: 'null'
                 }
             ]
+        },
+        deferred_cover_part_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deferred Cover Part Id'
         }
     },
     type: 'object',

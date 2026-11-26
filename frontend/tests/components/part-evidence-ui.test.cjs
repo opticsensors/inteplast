@@ -453,7 +453,7 @@ test("Moldflow opens its folder and downloads the original beside it", async (t)
   })
   const link = page.getByRole("link", { name: "Moldflow", exact: true })
   await expect(
-    page.getByRole("link", { name: "Carpeta de Molde en SharePoint" }),
+    page.getByRole("link", { name: "Carpeta de CAD molde en SharePoint" }),
   ).toHaveAttribute("href", "https://example.invalid/tools")
   await expect(link).toHaveAttribute("href", "/parts/part-one/fichero/moldflow")
   for (const name of ["simulacion.mfr", "Simulación de llenado"])
@@ -535,7 +535,7 @@ test("Molde edits, saves and removes a screenshot without loading the STEP viewe
   ).toBeVisible()
   await expect(page.locator("canvas")).toHaveCount(0)
   const placeholder = page.getByRole("img", {
-    name: "Vista previa de Molde",
+    name: "Vista previa de CAD molde",
     exact: true,
   })
   await expect(placeholder).toBeVisible()
@@ -577,7 +577,7 @@ test("Molde edits, saves and removes a screenshot without loading the STEP viewe
     page.getByRole("img", { name: "Captura de Molde completo" }),
   ).toHaveCount(0)
   await expect(
-    page.getByRole("link", { name: "Descargar original de Molde" }),
+    page.getByRole("link", { name: "Descargar original de CAD molde" }),
   ).toBeVisible()
   for (const gesture of ["paste", "drop"]) {
     await page.getByRole("button", { name: "Editar captura" }).click()

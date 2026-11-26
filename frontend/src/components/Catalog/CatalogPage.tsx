@@ -73,7 +73,7 @@ export function CatalogPage({ params }: { params: FeatureSearchParams }) {
         limit: 40,
         deferCovers: true,
       }),
-    enabled: !drawings,
+    enabled: !drawings && (view !== "graph" || Boolean(q.trim())),
     getNextPageParam: (last, pages) =>
       pages.length * 40 <
       Math.max(last.feature_count, last.part_count, last.cota_count)
@@ -185,12 +185,17 @@ export function CatalogPage({ params }: { params: FeatureSearchParams }) {
             })
           }
         />
-      ) : result.isPending ? (
+      ) : result.isPending && view !== "graph" ? (
         <PendingFeatures />
-      ) : result.error ? (
+      ) : result.error && view !== "graph" ? (
         <p role="alert">{fileErrorMessage(result.error)}</p>
       ) : (
         <>
+          {view === "graph" && q.trim() && result.error && (
+            <p role="alert" className="text-sm text-destructive">
+              {fileErrorMessage(result.error)}
+            </p>
+          )}
           {q.trim() && cotas.length > 0 && (
             <section aria-label="Cotas encontradas" className="space-y-2">
               <h2 className="text-lg font-semibold">Cotas</h2>
