@@ -24,6 +24,7 @@ export function CoverButton({
   editable = false,
   hasCover = Boolean(image),
   checking,
+  cadBackground,
   className,
   ...props
 }: ComponentProps<"button"> & {
@@ -32,6 +33,7 @@ export function CoverButton({
   editable?: boolean
   hasCover?: boolean
   checking?: boolean
+  cadBackground?: boolean
 }) {
   const label = editable
     ? hasCover
@@ -53,6 +55,7 @@ export function CoverButton({
     >
       <FeatureThumbnail
         feature={{ image, name }}
+        cadBackground={cadBackground}
         checking={checking}
         fit="contain"
         className="size-full"

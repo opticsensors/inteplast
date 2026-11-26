@@ -5,7 +5,6 @@ import { FaceReviewList } from "@/components/Catalog/CatalogWarnings"
 import { COVER_SIZE, CoverButton } from "@/components/Features/CoverButton"
 import { CoverDialog } from "@/components/Features/CoverDialog"
 import { CoverLoading } from "@/components/Features/CoverLoading"
-import { CAD_COVER_BACKGROUND } from "@/components/Features/cadCover"
 import { FeatureThumbnail } from "@/components/Features/FeatureCard"
 import {
   preloadStepViewer,
@@ -85,7 +84,7 @@ export function PartCover({ part }: { part: PartCardPublic }) {
       feature={{ name, image }}
       fit="contain"
       className="size-full"
-      style={{ backgroundColor: CAD_COVER_BACKGROUND }}
+      cadBackground
     />
   )
   return (

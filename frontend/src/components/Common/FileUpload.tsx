@@ -19,6 +19,7 @@ interface FileUploadProps {
   value: FilePublic | null
   previewOverride?: FilePublic | null
   previewFallback?: FilePublic | null
+  previewBackground?: string
   onChange: (file: FilePublic | null) => void
   /** "image" pinta el cuadro con vista previa; "file" una fila con el nombre. */
   variant?: "image" | "file"
@@ -42,6 +43,7 @@ export function FileUpload({
   value,
   previewOverride,
   previewFallback,
+  previewBackground,
   onChange,
   variant = "file",
   accept,
@@ -145,6 +147,7 @@ export function FileUpload({
           data-slot={coverLayout ? "cover-surface" : undefined}
           title="Seleccionar imagen del ordenador"
           disabled={upload.pending}
+          style={{ backgroundColor: isDragging ? undefined : previewBackground }}
           onClick={() => inputRef.current?.click()}
           {...dropHandlers}
           className={cn(

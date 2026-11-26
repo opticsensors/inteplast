@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useFeaturePreview } from "@/hooks/useFeaturePreview"
+import { CAD_COVER_BACKGROUND } from "./cadCover"
 import { CadCoverEditor } from "./CadCoverEditor"
 import { CoverButton, RetryCoverButton } from "./CoverButton"
 import { COVER_EDITOR_ROWS, CoverDialog } from "./CoverDialog"
@@ -88,6 +89,7 @@ export function FeatureCoverEditor({
               <CoverButton
                 editable
                 image={preview.image}
+                cadBackground={Boolean(slide.cover || !slide.own)}
                 hasCover={Boolean(slide.image)}
                 checking={preview.checking}
                 name={`${name} · ${slide.part.code}`}
@@ -282,6 +284,11 @@ function CoverEditorDraft({
           value={image}
           previewOverride={imageChanged ? undefined : previewImage}
           previewFallback={autoImage}
+          previewBackground={
+            (!imageChanged && cover) || (!image && autoImage)
+              ? CAD_COVER_BACKGROUND
+              : undefined
+          }
           variant="image"
           pasteInDialog
           coverLayout
@@ -306,6 +313,7 @@ function CoverEditorDraft({
             disabled={busy || upload.error || !imageChanged}
             onClick={() => {
               onChange(image, null)
+              setCadVisited(false)
               setImageChanged(false)
             }}
           >

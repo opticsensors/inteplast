@@ -11,9 +11,8 @@ import {
 } from "@/client"
 import { Button } from "@/components/ui/button"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
-import { COVER_EDITOR_ROWS } from "./CoverDialog"
 import { CoverLoading } from "./CoverLoading"
-import { type CoverControls, coverAssets } from "./cadCover"
+import { CAD_COVER_BACKGROUND, type CoverControls, coverAssets } from "./cadCover"
 import { FeatureThumbnail } from "./FeatureCard"
 import { StepCoverCanvas } from "./lazyStepCoverCanvas"
 import { usePendingTask } from "./usePendingTask"
@@ -41,16 +40,17 @@ export function CadCoverEditor({
   const assets = partId
     ? coverAssets(feature).filter((item) => item.part?.id === partId)
     : []
-  const [assetId, setAssetId] = useState(
-    initial?.asset_id ?? assets[0]?.id ?? "",
-  )
-  const [useSaved, setUseSaved] = useState(true)
+  // The open canvas already has the camera and faces that Aplicar just captured.
+  // Read the latest draft when opening a CAD, not when writing that draft back.
+  const [view, setView] = useState(() => ({
+    assetId: initial?.asset_id ?? assets[0]?.id ?? "",
+    initial,
+  }))
   const [ready, setReady] = useState(false)
   const [count, setCount] = useState(0)
   const [error, setError] = useState("")
   const controls = useRef<CoverControls | null>(null)
-  const asset = assets.find((item) => item.id === assetId)
-  const saved = useSaved && initial?.asset_id === assetId ? initial : null
+  const asset = assets.find((item) => item.id === view.assetId)
   const save = usePendingTask(async (_: undefined) => {
     if (!asset?.file || !asset.part || !controls.current)
       throw new Error("Selecciona un CAD.")
@@ -98,22 +98,29 @@ export function CadCoverEditor({
       }}
       fit="contain"
       className="size-full"
+      cadBackground
     />
   ) : (
-    <div className="size-full rounded-lg border bg-muted" />
+    <div
+      className="size-full rounded-lg border"
+      style={{ backgroundColor: CAD_COVER_BACKGROUND }}
+    />
   )
 
   return (
-    <div className={COVER_EDITOR_ROWS}>
-      {assets.length > 1 ? (
+    <div className="flex h-full min-h-0 flex-col gap-3">
+      {assets.length > 1 && (
         <select
           aria-label="CAD para la portada"
-          className="h-9 w-full min-w-0 rounded-md border bg-background px-2 text-sm"
+          className="h-9 w-full min-w-0 shrink-0 rounded-md border bg-background px-2 text-sm"
           value={asset?.id ?? ""}
           disabled={save.pending}
           onChange={(event) => {
-            setAssetId(event.target.value)
-            setUseSaved(true)
+            const assetId = event.target.value
+            setView({
+              assetId,
+              initial: initial?.asset_id === assetId ? initial : null,
+            })
             setError("")
             setReady(false)
             setCount(0)
@@ -126,21 +133,11 @@ export function CadCoverEditor({
             </option>
           ))}
         </select>
-      ) : (
-        <p
-          className="flex min-w-0 items-center truncate text-sm text-muted-foreground"
-          title={asset?.name}
-        >
-          {asset?.name}
-        </p>
       )}
       <div
         data-slot="cover-surface"
-        className={
-          save.pending
-            ? "relative size-full pointer-events-none"
-            : "relative size-full"
-        }
+        className="relative min-h-0 flex-1 aria-busy:pointer-events-none"
+        aria-busy={save.pending}
       >
         {asset?.file ? (
           <Suspense
@@ -152,9 +149,9 @@ export function CadCoverEditor({
             }
           >
             <StepCoverCanvas
-              key={`${asset.id}:${useSaved}`}
+              key={asset.id}
               file={asset.file}
-              initial={saved}
+              initial={view.initial}
               color={feature?.color}
               editable
               allowWholeComponent={assets.length > 1}
@@ -167,7 +164,7 @@ export function CadCoverEditor({
               }}
               onSelectionChange={setCount}
               onResetSelection={() => {
-                setUseSaved(false)
+                setView({ assetId: asset.id, initial: null })
                 setReady(false)
                 setCount(0)
                 setError("")

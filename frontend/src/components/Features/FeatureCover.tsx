@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils"
 import { COVER_SIZE, CoverButton, RetryCoverButton } from "./CoverButton"
 import { CoverDialog } from "./CoverDialog"
 import { CoverLoading } from "./CoverLoading"
-import { CAD_COVER_BACKGROUND, coverAsset } from "./cadCover"
+import { coverAsset } from "./cadCover"
 import { coverPieceLabel, coverSlides, step } from "./coverSlides"
 import { FeatureThumbnail } from "./FeatureCard"
 import { preloadStepViewer, StepCoverCanvas } from "./lazyStepCoverCanvas"
@@ -42,6 +42,7 @@ const chip =
 interface CoverView {
   image: FilePublic | null
   cover: FeatureCover3D | null
+  cadBackground: boolean
   code?: string
 }
 
@@ -173,9 +174,10 @@ export function FeatureCover({ feature }: { feature: FeatureDetail }) {
     ? {
         image: preview.image ?? null,
         cover: preview.review ? null : slide.cover,
+        cadBackground: Boolean(slide.cover || !slide.own),
         code: coverPieceLabel(feature, slide),
       }
-    : { image: feature.image ?? null, cover: null }
+    : { image: feature.image ?? null, cover: null, cadBackground: false }
   usePrepareCover(
     view.cover ? coverAsset(feature, view.cover)?.file : null,
     view.cover?.source_sha256,
@@ -197,6 +199,7 @@ export function FeatureCover({ feature }: { feature: FeatureDetail }) {
             <DialogTrigger asChild>
               <CoverButton
                 image={view.image}
+                cadBackground={view.cadBackground}
                 checking={preview.checking}
                 onPointerEnter={view.cover ? preloadStepViewer : undefined}
                 onFocus={view.cover ? preloadStepViewer : undefined}
@@ -280,7 +283,7 @@ function CoverViewer({
       feature={{ image: view.image, name: feature.name }}
       fit="contain"
       className="size-full bg-white"
-      style={cover ? { backgroundColor: CAD_COVER_BACKGROUND } : undefined}
+      cadBackground={view.cadBackground}
     />
   )
   let content: ReactNode = image

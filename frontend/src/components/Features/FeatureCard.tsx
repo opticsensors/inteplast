@@ -1,5 +1,5 @@
 import { ImageIcon, Loader2, Package2 } from "lucide-react"
-import { type CSSProperties, type ReactNode, type Ref, useState } from "react"
+import { type ReactNode, type Ref, useState } from "react"
 
 import type { FeaturePublic } from "@/client"
 import { FeatureWarnings } from "@/components/Catalog/CatalogWarnings"
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { useFeaturePreview } from "@/hooks/useFeaturePreview"
 import { fileErrorMessage, useFileAccess } from "@/hooks/useFileAccess"
 import { cn } from "@/lib/utils"
+import { CAD_COVER_BACKGROUND } from "./cadCover"
 import { featureParts, partLabel } from "./parts"
 import { isPreviewableImage } from "./viewers"
 
@@ -45,7 +46,7 @@ function PartSummary({ feature }: { feature: FeaturePublic }) {
 export function FeatureThumbnail({
   feature,
   className,
-  style,
+  cadBackground,
   fit = "cover",
   elementRef,
   coverError,
@@ -54,7 +55,7 @@ export function FeatureThumbnail({
 }: {
   feature: Pick<FeaturePublic, "image" | "name">
   className?: string
-  style?: CSSProperties
+  cadBackground?: boolean
   elementRef?: Ref<HTMLDivElement>
   coverError?: unknown
   retryCover?: () => void
@@ -75,7 +76,9 @@ export function FeatureThumbnail({
         "flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted",
         className,
       )}
-      style={style}
+      style={
+        cadBackground ? { backgroundColor: CAD_COVER_BACKGROUND } : undefined
+      }
     >
       {retryCover && (coverError || failedImage) ? (
         <div

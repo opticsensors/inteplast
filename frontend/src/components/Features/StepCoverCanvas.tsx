@@ -498,6 +498,7 @@ export default function StepCoverCanvas({
         "relative size-full min-h-0 overflow-hidden rounded-lg border [container-type:size]",
         className,
       )}
+      style={{ backgroundColor: CAD_COVER_BACKGROUND }}
     >
       <div ref={host} className="size-full" />
       {editable && !status && !error && (

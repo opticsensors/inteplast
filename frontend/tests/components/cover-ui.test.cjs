@@ -666,6 +666,8 @@ for (const mobile of [false, true]) {
     assert.ok(Math.abs(cadSquare.width - viewerSquare.width) < 1)
     assert.ok(Math.abs(cadBounds.height - viewerBounds.height) < 1)
     assert.ok(cadSquare.height > page.viewportSize().height / 2)
+    const tabs = await modal.getByRole("tablist").boundingBox()
+    assert.ok(Math.abs(cadSquare.y - tabs.y - tabs.height - 12) < 1)
     const cancelBounds = await modal
       .getByRole("button", { name: "Cancelar" })
       .boundingBox()
@@ -681,11 +683,13 @@ for (const mobile of [false, true]) {
         Math.abs(cadBounds[field] - imageBounds[field]) < 1,
         `modal ${field}`,
       )
-      assert.ok(
-        Math.abs(cadSquare[field] - imageSquare[field]) < 1,
-        `square ${field}`,
-      )
     }
+    assert.ok(Math.abs(cadSquare.x - imageSquare.x) < 1)
+    assert.ok(Math.abs(cadSquare.width - imageSquare.width) < 1)
+    assert.ok(cadSquare.height > imageSquare.height)
+    const cadBottom = cadSquare.y + cadSquare.height
+    const imageBottom = imageSquare.y + imageSquare.height
+    assert.ok(Math.abs(cadBottom - imageBottom) < 1)
     assert.ok(imageBounds.height >= page.viewportSize().height * 0.89)
     assert.ok(Math.abs(imageBounds.width - imageSquare.width - 34) < 1)
     assert.ok(imageBounds.y >= 0)
@@ -803,6 +807,30 @@ test("changing personal navigation keeps the editor, marks and shared covers int
   await page.waitForFunction(() => window.review.captureSize)
   const [w, h] = await page.evaluate(() => window.review.captureSize)
   assert.ok(w > 100 && w === h)
+})
+
+test("applying a CAD cover in the carousel keeps its live canvas", async (t) => {
+  const page = await mount(t)
+  await page.evaluate(async () => {
+    window.review.holdUploads = true
+    window.review.feature.parts.push({ id: "part-two", code: "3205" })
+    await window.review.refetch()
+  })
+  await page
+    .getByRole("button", { name: "Editar portada", exact: true })
+    .click()
+  await ready(page)
+  const canvas = surface(page).locator("canvas")
+  await canvas.evaluate((el) => {
+    el.dataset.original = "yes"
+  })
+  const apply = page.getByRole("button", { name: "Aplicar", exact: true })
+  await apply.click()
+  await page.waitForFunction(() => Boolean(window.review.releaseUpload))
+  await expect(canvas).toHaveAttribute("data-original", "yes")
+  await page.evaluate(() => window.review.releaseUpload())
+  await expect(apply).toBeEnabled()
+  await expect(canvas).toHaveAttribute("data-original", "yes")
 })
 
 test("the same clear control recovers an obsolete saved selection on the current geometry", async (t) => {
