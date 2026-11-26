@@ -62,6 +62,7 @@ export function CatalogPage({ params }: { params: FeatureSearchParams }) {
     featureId: search.featureId,
     familyId: search.familyId,
     customerId: search.customerId,
+    materialId: search.materialId,
   }
   const result = useInfiniteQuery({
     queryKey: ["features", "catalog", request],
@@ -177,6 +178,7 @@ export function CatalogPage({ params }: { params: FeatureSearchParams }) {
             featureId: search.featureId,
             familyId: search.familyId,
             customerId: search.customerId,
+            materialId: search.materialId,
           }}
           onOpen={(card) =>
             void navigate({
@@ -246,6 +248,7 @@ export function CatalogPage({ params }: { params: FeatureSearchParams }) {
                   featureId: search.featureId,
                   familyId: search.familyId,
                   customerId: search.customerId,
+                  materialId: search.materialId,
                 }}
                 onOpen={(node) =>
                   node.kind === "part"
@@ -349,7 +352,8 @@ export function CatalogPage({ params }: { params: FeatureSearchParams }) {
                     search.partId ||
                     search.featureId ||
                     search.familyId ||
-                    search.customerId
+                    search.customerId ||
+                    search.materialId
                       ? "No hay resultados"
                       : "Todavía no hay piezas ni features"}
                   </p>

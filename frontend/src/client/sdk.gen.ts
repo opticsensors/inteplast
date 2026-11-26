@@ -54,6 +54,7 @@ export class CatalogService {
      * @param data.featureId
      * @param data.familyId
      * @param data.customerId
+     * @param data.materialId
      * @param data.skip
      * @param data.limit
      * @param data.deferCovers
@@ -71,6 +72,7 @@ export class CatalogService {
                 feature_id: data.featureId,
                 family_id: data.familyId,
                 customer_id: data.customerId,
+                material_id: data.materialId,
                 skip: data.skip,
                 limit: data.limit,
                 defer_covers: data.deferCovers
@@ -181,6 +183,7 @@ export class CatalogService {
      * @param data.featureId
      * @param data.familyId
      * @param data.customerId
+     * @param data.materialId
      * @param data.limit
      * @param data.deferCovers
      * @returns CatalogGraph Successful Response
@@ -197,6 +200,7 @@ export class CatalogService {
                 feature_id: data.featureId,
                 family_id: data.familyId,
                 customer_id: data.customerId,
+                material_id: data.materialId,
                 limit: data.limit,
                 defer_covers: data.deferCovers
             },
@@ -220,6 +224,7 @@ export class CatalogService {
      * @param data.featureId
      * @param data.familyId
      * @param data.customerId
+     * @param data.materialId
      * @param data.skip
      * @param data.limit
      * @returns DrawingsPublic Successful Response
@@ -235,6 +240,7 @@ export class CatalogService {
                 feature_id: data.featureId,
                 family_id: data.familyId,
                 customer_id: data.customerId,
+                material_id: data.materialId,
                 skip: data.skip,
                 limit: data.limit
             },

@@ -24,9 +24,13 @@ test("CAD preferences persist across sessions and reset independently of covers"
   })
   const radio = (name: string) => page.getByRole("radio", { name, exact: true })
   await expect(radio("Ortográfica")).toBeChecked()
-  await expect(radio("Tipo SolidWorks")).toBeChecked()
-  await expect(radio("Hacia la pantalla")).toBeChecked()
-  for (const name of ["Perspectiva 45°", "Clásicos", "Hacia ti"]) {
+  await expect(radio("Trackball")).toBeChecked()
+  const zoom = "Invertir zoom con la ruedilla"
+  const pickCenter = "Elegir el centro de giro con un clic de la ruedilla"
+  await expect(page.getByRole("checkbox", { name: pickCenter })).toBeChecked()
+  await expect(page.getByRole("checkbox", { name: zoom })).toBeChecked()
+  const choices = ["Perspectiva 45°", "Clásico"]
+  for (const name of choices) {
     const saved = page.waitForResponse(
       (response) =>
         response.url().endsWith("/users/me/cad-preferences") &&
@@ -36,11 +40,26 @@ test("CAD preferences persist across sessions and reset independently of covers"
     await saved
     await expect(radio(name)).toBeChecked()
   }
+  for (const name of [pickCenter, zoom]) {
+    const checkbox = page.getByRole("checkbox", { name })
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.url().endsWith("/users/me/cad-preferences") && response.ok(),
+      ),
+      checkbox.click(),
+    ])
+    await expect(checkbox).not.toBeChecked()
+  }
   const second = await browser.newPage({ baseURL: new URL(page.url()).origin })
   try {
     await logInUser(second, email, password)
     await second.goto("/settings")
-    for (const name of ["Perspectiva 45°", "Clásicos", "Hacia ti"]) {
+    await expect(
+      second.getByRole("checkbox", { name: pickCenter }),
+    ).not.toBeChecked()
+    await expect(second.getByRole("checkbox", { name: zoom })).not.toBeChecked()
+    for (const name of choices) {
       await expect(
         second.getByRole("radio", { name, exact: true }),
       ).toBeChecked()
@@ -53,13 +72,12 @@ test("CAD preferences persist across sessions and reset independently of covers"
       response.url().endsWith("/users/me/cad-preferences") &&
       response.status() === 200,
   )
-  await page
-    .getByRole("button", { name: "Restablecer valores predeterminados" })
-    .click()
+  await page.getByRole("button", { name: "Restablecer" }).click()
   await saved
   await page.reload()
+  await expect(radio("Trackball")).toBeChecked()
+  await expect(page.getByRole("checkbox", { name: pickCenter })).toBeChecked()
   await expect(radio("Ortográfica")).toBeChecked()
-  await expect(radio("Tipo SolidWorks")).toBeChecked()
-  await expect(radio("Hacia la pantalla")).toBeChecked()
+  await expect(page.getByRole("checkbox", { name: zoom })).toBeChecked()
   expect(coverWrites).toEqual([])
 })

@@ -83,18 +83,18 @@ cinco minutos. La comprobación de estado se repite al volver a abrir el adjunto
 | CAD de molde y Moldflow | La ficha abre la carpeta devuelta por Graph con los permisos del usuario. Junto al botón de carpeta está la descarga del original vinculado. El lápiz edita una captura opcional y la consulta muestra la imagen guardada. El CAD de molde prescinde del visor 3D. |
 | Otros formatos 3D grandes o sin lector (SolidWorks, CATIA, DWG/DXF…) | **Descargar original** para abrirlo en su aplicación |
 
-Los controles 3D usan `ArcballControls` de Three.js. Arrastrar con la rueda pulsada gira
-la pieza alrededor de su centroide de volumen. En mallas abiertas o inconsistentes se usa
-el centro de la caja que envuelve la pieza. El centro de giro se mantiene al desplazar la
-vista y al abrir un encuadre guardado. Ajustes de usuario guarda en cada cuenta la
-proyección (ortográfica por defecto o perspectiva de 45°), los controles (tipo
-SolidWorks por defecto o clásicos) y el sentido de la rueda. Con los clásicos, el
+**Trackball**, el control predeterminado, gira al arrastrar con la rueda pulsada. El
+centro inicial es el centroide de volumen de la pieza. En mallas abiertas o inconsistentes
+se usa el centro de la caja que la envuelve. Un clic breve con la rueda sobre la superficie
+elige otro centro y lo señala con un punto azul. Ajustes de usuario guarda en cada cuenta
+esta opción, la proyección (ortográfica por defecto o perspectiva de 45°), los controles
+y el sentido de la rueda. **Clásico** usa `ArcballControls` de Three.js. En este perfil, el
 arrastre izquierdo gira y el central o derecho desplaza. Estas preferencias se
 aplican a los visores interactivos. Las miniaturas automáticas usan ortográfica.
 Rodar hacia la pantalla acerca la zona bajo el cursor y hacia el usuario la aleja. Ctrl más
 arrastre con la rueda pulsada desplaza la vista, al igual que el arrastre derecho.
 En el editor, cada clic izquierdo marca o desmarca una cara. **Encuadrar** recupera la
-vista inicial. Los módulos se cargan de forma diferida; generar una portada STEP que falta en el
+vista y el centro iniciales. Los módulos se cargan de forma diferida; generar una portada STEP que falta en el
 catálogo también puede cargar three.js y el worker de CAD, sin abrir un visor manualmente.
 No existe integración con programas del escritorio: los archivos sin visor se descargan.
 

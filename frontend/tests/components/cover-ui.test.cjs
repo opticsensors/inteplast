@@ -782,6 +782,12 @@ test("changing personal navigation keeps the editor, marks and shared covers int
     )
   })
   await expect(canvas).toHaveAttribute("data-original", "yes")
+  await expect(
+    page.getByRole("combobox", { name: "Modo de giro" }),
+  ).toHaveCount(0)
+  await expect(
+    page.getByRole("button", { name: /Elegir el centro de giro/ }),
+  ).toHaveCount(0)
   await expect(page.getByRole("radio")).toHaveCount(0)
   assert.equal(await page.evaluate(() => window.workerStats.started), 1)
   assert.equal(await page.evaluate(() => window.review.captureSize), undefined)

@@ -66,7 +66,10 @@ async function mount(t, initialPath = "/") {
   }, initialPath)
   await page.addScriptTag({ content: bundle })
   await page.getByRole("heading", { name: "Catálogo", exact: true }).waitFor()
-  await page.getByRole("button", { name: "Abrir Bolt Eye" }).waitFor()
+  await page
+    .getByRole("button", { name: /^Abrir / })
+    .first()
+    .waitFor()
   return page
 }
 
@@ -242,27 +245,67 @@ test("shared searchable selectors filter by piece, feature, family and customer,
       .innerText(),
     /Bosch/,
   )
-  await page.getByRole("button", { name: "Filtros (3)", exact: true }).click()
+  await page.getByRole("combobox", { name: "Cliente", exact: true }).click()
   await page
-    .getByRole("button", { name: "Quitar filtro Cliente: Bosch", exact: true })
+    .getByRole("option", { name: "Todos los clientes", exact: true })
     .click()
   const remaining = await page.evaluate(() => window.review.location().search)
   assert.equal(remaining.customer, undefined)
   assert.equal(remaining.part, "part-one")
   assert.equal(remaining.family, "family-pump")
-  await page.getByRole("button", { name: "Filtros (2)", exact: true }).waitFor()
+  await page.getByRole("button", { name: "Filtros (2)", exact: true }).click()
   await page
     .getByRole("button", { name: "Limpiar filtros", exact: true })
     .click()
   const cleared = await page.evaluate(() => window.review.location().search)
   assert.equal(cleared.part, undefined)
   assert.equal(cleared.family, undefined)
+  await expect(
+    page.getByRole("button", { name: "Filtros", exact: true }),
+  ).toBeFocused()
   assert.equal(
     await page
       .getByRole("button", { name: "Limpiar filtros", exact: true })
       .count(),
     0,
   )
+})
+
+test("clearing the active material from the filter control collapses the panel", async (t) => {
+  const page = await mount(t)
+  await page.getByRole("button", { name: "Filtros", exact: true }).click()
+  await page.getByRole("combobox", { name: "Material", exact: true }).click()
+  await page.getByRole("option", { name: "PA66", exact: true }).click()
+  await page.waitForFunction(() =>
+    window.review.catalogRequests.some((p) => p.materialId === "material-pa"),
+  )
+  assert.equal(
+    await page.evaluate(() => window.review.location().search.material),
+    "material-pa",
+  )
+  await expect(
+    page.getByRole("button", { name: "Abrir 3212 Pump Housing" }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("button", { name: "Abrir Bolt Eye" }),
+  ).toHaveCount(0)
+  const group = page.getByRole("group", { name: "Filtros del catálogo" })
+  await expect(
+    group.getByRole("button", { name: "Filtros (1)" }),
+  ).toHaveAttribute("aria-expanded", "true")
+  await group.getByRole("button", { name: "Limpiar filtros" }).press("Enter")
+  await expect(
+    group.getByRole("button", { name: "Filtros", exact: true }),
+  ).toHaveAttribute("aria-expanded", "false")
+  await expect(
+    page.getByRole("combobox", { name: "Material", exact: true }),
+  ).toHaveCount(0)
+  await expect(
+    group.getByRole("button", { name: "Limpiar filtros" }),
+  ).toHaveCount(0)
+  await expect(
+    page.getByRole("button", { name: "Abrir Bolt Eye" }),
+  ).toBeVisible()
 })
 
 test("a family and customer filter hides pieces that do not meet both", async (t) => {
@@ -317,8 +360,11 @@ test("old home links preserve filters and cards open in read mode", async (t) =>
     await page.getByRole("link", { name: "Dashboard", exact: true }).count(),
     0,
   )
-  await page.getByRole("button", { name: "Abrir Bolt Eye" }).click()
-  await readHeading(page)
+  await expect(
+    page.getByRole("button", { name: "Abrir Bolt Eye" }),
+  ).toHaveCount(0)
+  await page.getByRole("button", { name: "Abrir 3212 Pump Housing" }).click()
+  await readHeading(page, "3212 Pump Housing")
   assert.equal(await page.getByPlaceholder("Nombre del feature").count(), 0)
   assert.equal(
     await page
@@ -335,13 +381,10 @@ test("old home links preserve filters and cards open in read mode", async (t) =>
       .inputValue(),
     "3212",
   )
-  await page.getByRole("button", { name: "Filtros (2)", exact: true }).waitFor()
-  await page
-    .getByRole("button", {
-      name: "Quitar filtro Feature: Bolt Eye",
-      exact: true,
-    })
-    .waitFor()
+  await page.getByRole("button", { name: "Filtros (2)", exact: true }).click()
+  await expect(
+    page.getByRole("combobox", { name: "Feature", exact: true }),
+  ).toContainText("Bolt Eye")
 })
 
 test("the searchable feature selector keeps the text search and sends an exact ID filter", async (t) => {
@@ -387,6 +430,7 @@ test("the searchable feature selector keeps the text search and sends an exact I
   assert.equal(cleared.feature, undefined)
   assert.equal(String(cleared.q), "3212")
   assert.equal(cleared.kind, "feature")
+  await page.getByRole("button", { name: "Filtros", exact: true }).click()
   await page.getByRole("combobox", { name: "Feature", exact: true }).click()
   await page.getByRole("option", { name: "Bolt Eye", exact: true }).click()
   await page
@@ -400,8 +444,7 @@ test("the searchable feature selector keeps the text search and sends an exact I
 
 test("direct Edit saves into read mode and Back restores the search", async (t) => {
   const page = await mount(t)
-  await page.getByPlaceholder("Buscar piezas, features o cotas…").fill("3212")
-  // Pieces sort by code, so the feature card is not the first one any more.
+  await page.getByPlaceholder("Buscar piezas, features o cotas…").fill("Bolt")
   await page
     .getByRole("button", { name: "Abrir Bolt Eye" })
     .locator("..")
@@ -422,7 +465,7 @@ test("direct Edit saves into read mode and Back restores the search", async (t) 
     await page
       .getByPlaceholder("Buscar piezas, features o cotas…")
       .inputValue(),
-    "3212",
+    "Bolt",
   )
 })
 

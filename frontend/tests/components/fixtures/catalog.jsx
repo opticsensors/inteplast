@@ -51,9 +51,11 @@ window.review = {
       name: "Pump Housing",
       family_id: "family-pump",
       customer_id: "customer-bosch",
+      material_id: "material-pa",
       characteristic_count: 2,
     },
   ],
+  materials: [{ id: "material-pa", name: "PA66" }],
   families: [{ id: "family-pump", name: "Pump Housing" }],
   customers: [{ id: "customer-bosch", name: "Bosch" }],
 }

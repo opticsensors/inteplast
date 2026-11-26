@@ -1,6 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { createRoot } from "react-dom/client"
-import { BufferGeometry, Float32BufferAttribute, Mesh, Vector3 } from "three"
+import {
+  BoxGeometry,
+  BufferGeometry,
+  Float32BufferAttribute,
+  Mesh,
+  Vector3,
+} from "three"
 import {
   captureCamera,
   createModelCamera,
@@ -19,12 +25,13 @@ if (location.hash === "#model") {
   document.getElementById("root").appendChild(host)
   host.appendChild(canvas)
   let camera, controller, front, center
+  const solid = new Mesh(new BoxGeometry(4, 4, 4))
   function open(size = 10, pivot = [0, 0, 0], saved) {
     controller?.dispose()
     camera = createModelCamera(size)
     center = new Vector3(...pivot)
     const target = frameCover(camera, saved)
-    controller = createModelControls(camera, canvas, center, target)
+    controller = createModelControls(camera, canvas, center, target, solid)
     controller.resize(800 / 600)
     front = camera.position.clone().sub(target).normalize().multiplyScalar(5)
   }
@@ -33,6 +40,7 @@ if (location.hash === "#model") {
     open,
     configure: (preferences) => controller.setPreferences(preferences),
     position: () => camera.position.toArray(),
+    orientation: () => camera.quaternion.toArray(),
     front: () => front.clone().project(camera).toArray(),
     zoom: () => camera.zoom,
     target: () => controller.target.toArray(),

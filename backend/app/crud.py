@@ -111,6 +111,7 @@ def part_conditions(
     part_id: uuid.UUID | None = None,
     family_id: uuid.UUID | None = None,
     customer_id: uuid.UUID | None = None,
+    material_id: uuid.UUID | None = None,
 ) -> list[ColumnElement[bool]]:
     """Piece filters of the catalogue. A piece matches when it meets all of them."""
     conditions: list[ColumnElement[bool]] = []
@@ -120,6 +121,8 @@ def part_conditions(
         conditions.append(col(Part.family_id) == family_id)
     if customer_id:
         conditions.append(col(Part.customer_id) == customer_id)
+    if material_id:
+        conditions.append(col(Part.material_id) == material_id)
     return conditions
 
 
@@ -201,16 +204,23 @@ def feature_conditions(
     family_id: uuid.UUID | None = None,
     customer_id: uuid.UUID | None = None,
     feature_id: uuid.UUID | None = None,
+    material_id: uuid.UUID | None = None,
+    name_contains: str | None = None,
 ) -> list[ColumnElement[bool]]:
     """Features shown by the catalogue: the list, the grid and the graph use this."""
     conditions = _search_conditions(
         q=q,
         parts=part_conditions(
-            part_id=part_id, family_id=family_id, customer_id=customer_id
+            part_id=part_id,
+            family_id=family_id,
+            customer_id=customer_id,
+            material_id=material_id,
         ),
     )
     if feature_id:
         conditions.append(col(Feature.id) == feature_id)
+    if name_contains:
+        conditions.append(col(Feature.name).icontains(name_contains, autoescape=True))
     return conditions
 
 
@@ -222,6 +232,8 @@ def search_features(
     family_id: uuid.UUID | None = None,
     customer_id: uuid.UUID | None = None,
     feature_id: uuid.UUID | None = None,
+    material_id: uuid.UUID | None = None,
+    name_contains: str | None = None,
     skip: int = 0,
     limit: int = 100,
 ) -> tuple[list[Feature], int]:
@@ -231,6 +243,8 @@ def search_features(
         family_id=family_id,
         customer_id=customer_id,
         feature_id=feature_id,
+        material_id=material_id,
+        name_contains=name_contains,
     )
 
     count_statement = select(func.count()).select_from(Feature)

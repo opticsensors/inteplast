@@ -64,6 +64,7 @@ class CadPreferences(BaseModel):
     model_config = ConfigDict(extra="forbid")
     cad_projection: Literal["orthographic", "perspective"] = "orthographic"
     cad_controls: Literal["solidworks", "classic"] = "solidworks"
+    pick_rotation_center: bool = True
     invert_zoom: bool = False
 
 
@@ -73,6 +74,7 @@ class User(UserBase, table=True):
     hashed_password: str
     cad_projection: str = "orthographic"
     cad_controls: str = "solidworks"
+    pick_rotation_center: bool = True
     invert_zoom: bool = False
     created_at: datetime | None = Field(
         default_factory=get_datetime_utc,

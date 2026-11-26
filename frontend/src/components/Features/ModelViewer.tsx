@@ -264,6 +264,8 @@ export default function ModelViewer({
           camera,
           renderer.domElement,
           modelPivot(object),
+          undefined,
+          object,
         )
         resetRef.current = controller.reset
         configureViewer(controller)

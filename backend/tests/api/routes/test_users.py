@@ -515,6 +515,7 @@ def test_cad_preferences_are_independent_and_private_to_each_account(
     defaults = {
         "cad_projection": "orthographic",
         "cad_controls": "solidworks",
+        "pick_rotation_center": True,
         "invert_zoom": False,
     }
     assert client.get(url, headers=headers).json().items() >= defaults.items()
@@ -522,6 +523,7 @@ def test_cad_preferences_are_independent_and_private_to_each_account(
         for patch in (
             {"cad_projection": "perspective"},
             {"cad_controls": "classic"},
+            {"pick_rotation_center": False},
             {"invert_zoom": True},
         ):
             assert client.patch(prefs, headers=headers, json=patch).status_code == 200
@@ -530,6 +532,7 @@ def test_cad_preferences_are_independent_and_private_to_each_account(
             >= {
                 "cad_projection": "perspective",
                 "cad_controls": "classic",
+                "pick_rotation_center": False,
                 "invert_zoom": True,
             }.items()
         )

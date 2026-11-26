@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { SlidersHorizontal, X } from "lucide-react"
-import { type ReactNode, useId, useState } from "react"
+import { type ReactNode, useId, useRef, useState } from "react"
 
 import { EvidenceService, type PartPublic } from "@/client"
 import { SearchField } from "@/components/Common/SearchField"
@@ -8,6 +8,7 @@ import { SearchSelect } from "@/components/Common/SearchSelect"
 import { SearchToolbar } from "@/components/Common/SearchToolbar"
 import { catalogNamesQueryOptions } from "@/components/Parts/CatalogNameSelect"
 import { Button } from "@/components/ui/button"
+import { ButtonGroup } from "@/components/ui/button-group"
 import { partLabel } from "./parts"
 import { featureFiltersQueryOptions } from "./queries"
 
@@ -17,6 +18,7 @@ export interface FeatureSearchState {
   featureId: string | null
   familyId: string | null
   customerId: string | null
+  materialId: string | null
 }
 
 export const EMPTY_SEARCH: FeatureSearchState = {
@@ -25,6 +27,7 @@ export const EMPTY_SEARCH: FeatureSearchState = {
   featureId: null,
   familyId: null,
   customerId: null,
+  materialId: null,
 }
 
 /**
@@ -39,6 +42,7 @@ export interface FeatureSearchParams {
   feature?: string
   family?: string
   customer?: string
+  material?: string
 }
 
 /**
@@ -71,6 +75,7 @@ export const validateFeatureSearch = (
     feature: text(search.feature),
     family: text(search.family),
     customer: text(search.customer),
+    material: text(search.material),
   }
 }
 
@@ -82,6 +87,7 @@ export const toSearchState = (
   featureId: params.feature ?? null,
   familyId: params.family ?? null,
   customerId: params.customer ?? null,
+  materialId: params.material ?? null,
 })
 
 /** Los vacios se omiten para no arrastrar un `?q=&part=` por toda la app. */
@@ -93,16 +99,21 @@ export const toSearchParams = (
   feature: state.featureId ?? undefined,
   family: state.familyId ?? undefined,
   customer: state.customerId ?? undefined,
+  material: state.materialId ?? undefined,
 })
 
 /** The same piece criterion as the server: every active piece filter at once. */
 const pieceMatches = (
-  part: Pick<PartPublic, "id" | "family_id" | "customer_id">,
-  value: Pick<FeatureSearchState, "partId" | "familyId" | "customerId">,
+  part: Pick<PartPublic, "id" | "family_id" | "customer_id" | "material_id">,
+  value: Pick<
+    FeatureSearchState,
+    "partId" | "familyId" | "customerId" | "materialId"
+  >,
 ) =>
   (!value.partId || part.id === value.partId) &&
   (!value.familyId || part.family_id === value.familyId) &&
-  (!value.customerId || part.customer_id === value.customerId)
+  (!value.customerId || part.customer_id === value.customerId) &&
+  (!value.materialId || part.material_id === value.materialId)
 
 interface FeatureSearchProps {
   value: FeatureSearchState
@@ -121,6 +132,7 @@ export function FeatureSearch({
 }: FeatureSearchProps) {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const filtersId = useId()
+  const toggleRef = useRef<HTMLButtonElement>(null)
   // Solo se ofrecen los valores que existen en la base de datos
   const { data: featureFilters } = useQuery(featureFiltersQueryOptions())
   const all = useQuery({
@@ -130,13 +142,14 @@ export function FeatureSearch({
   })
   const families = useQuery(catalogNamesQueryOptions("families"))
   const customers = useQuery(catalogNamesQueryOptions("customers"))
+  const materials = useQuery(catalogNamesQueryOptions("materials"))
   const filters =
     catalog && all.data ? { ...featureFilters, ...all.data } : featureFilters
 
   const allParts = filters?.parts ?? []
   const features = filters?.features ?? []
   const pieceFilters = Boolean(
-    value.partId || value.familyId || value.customerId,
+    value.partId || value.familyId || value.customerId || value.materialId,
   )
   const matchingParts = new Set(
     allParts.filter((part) => pieceMatches(part, value)).map((part) => part.id),
@@ -161,6 +174,9 @@ export function FeatureSearch({
   const customerName = customers.data?.data.find(
     (item) => item.id === value.customerId,
   )?.name
+  const materialName = materials.data?.data.find(
+    (item) => item.id === value.materialId,
+  )?.name
   const set = (patch: Partial<FeatureSearchState>) => {
     const next = { ...value, ...patch }
     const part = allParts.find((item) => item.id === next.partId)
@@ -174,34 +190,19 @@ export function FeatureSearch({
     )
     if (
       selected &&
-      (next.partId || next.familyId || next.customerId) &&
+      (next.partId || next.familyId || next.customerId || next.materialId) &&
       !(selected.part_ids ?? []).some((id) => stillMatching.has(id))
     )
       next.featureId = null
     onChange(next)
   }
-  const activeFilters = [
-    {
-      key: "partId" as const,
-      label: "Pieza",
-      text: selectedPart ? partLabel(selectedPart) : "Selección no disponible",
-    },
-    {
-      key: "featureId" as const,
-      label: "Feature",
-      text: selectedFeature?.name ?? "Selección no disponible",
-    },
-    {
-      key: "familyId" as const,
-      label: "Familia",
-      text: familyName ?? "Selección no disponible",
-    },
-    {
-      key: "customerId" as const,
-      label: "Cliente",
-      text: customerName ?? "Selección no disponible",
-    },
-  ].filter((filter) => value[filter.key])
+  const activeCount = [
+    value.partId,
+    value.featureId,
+    value.familyId,
+    value.customerId,
+    value.materialId,
+  ].filter(Boolean).length
 
   return (
     <div className="space-y-3">
@@ -209,17 +210,37 @@ export function FeatureSearch({
         action={
           <div className="flex shrink-0 items-start gap-2">
             {actions}
-            <Button
-              type="button"
-              variant="outline"
-              className="h-11 shrink-0"
-              aria-expanded={filtersOpen}
-              aria-controls={filtersId}
-              onClick={() => setFiltersOpen(!filtersOpen)}
-            >
-              <SlidersHorizontal className="size-4" /> Filtros
-              {activeFilters.length ? ` (${activeFilters.length})` : ""}
-            </Button>
+            <ButtonGroup aria-label="Filtros del catálogo">
+              <Button
+                ref={toggleRef}
+                type="button"
+                variant="outline"
+                className="h-11"
+                aria-expanded={filtersOpen}
+                aria-controls={filtersOpen ? filtersId : undefined}
+                onClick={() => setFiltersOpen((open) => !open)}
+              >
+                <SlidersHorizontal className="size-4" /> Filtros
+                {activeCount > 0 && ` (${activeCount})`}
+              </Button>
+              {activeCount > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-11 w-9 text-muted-foreground"
+                  aria-label="Limpiar filtros"
+                  title="Limpiar filtros"
+                  onClick={() => {
+                    onChange({ ...EMPTY_SEARCH, q: value.q })
+                    setFiltersOpen(false)
+                    toggleRef.current?.focus()
+                  }}
+                >
+                  <X className="size-4" />
+                </Button>
+              )}
+            </ButtonGroup>
           </div>
         }
       >
@@ -235,39 +256,10 @@ export function FeatureSearch({
           onClear={() => set({ q: "" })}
         />
       </SearchToolbar>
-      {activeFilters.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          {activeFilters.map((filter) => (
-            <Button
-              key={filter.key}
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="h-7 max-w-full gap-1.5 rounded-full text-xs font-normal"
-              aria-label={`Quitar filtro ${filter.label}: ${filter.text}`}
-              onClick={() => set({ [filter.key]: null })}
-            >
-              <span className="truncate">
-                {filter.label}: {filter.text}
-              </span>
-              <X className="size-3 shrink-0" />
-            </Button>
-          ))}
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs font-normal text-muted-foreground"
-            onClick={() => onChange({ ...EMPTY_SEARCH, q: value.q })}
-          >
-            Limpiar filtros
-          </Button>
-        </div>
-      )}
       {filtersOpen && (
         <div
           id={filtersId}
-          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+          className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5"
         >
           <SearchSelect
             showLabel
@@ -320,6 +312,19 @@ export function FeatureSearch({
               label: item.name,
             }))}
             onChange={(customerId) => set({ customerId: customerId ?? null })}
+          />
+          <SearchSelect
+            showLabel
+            label="Material"
+            value={value.materialId}
+            selectedLabel={materialName}
+            placeholder="Todos los materiales"
+            emptyLabel="Todos los materiales"
+            options={(materials.data?.data ?? []).map((item) => ({
+              value: item.id,
+              label: item.name,
+            }))}
+            onChange={(materialId) => set({ materialId: materialId ?? null })}
           />
         </div>
       )}

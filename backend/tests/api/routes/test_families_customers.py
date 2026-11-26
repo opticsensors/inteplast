@@ -127,11 +127,14 @@ def test_filters_combine_family_and_customer_on_the_same_piece(
     parts, features, _ = catalog(family_id=pump, customer_id=bosch)
     assert parts == {p1}
     # `split` has a Pump Housing and a Bosch piece, but not one that is both.
-    assert features == {str(both.id)}
+    assert not features
+    assert catalog(family_id=pump, customer_id=bosch, kind="feature")[1] == {
+        str(both.id)
+    }
     parts, features, _ = catalog(family_id=pump)
     assert parts == {p1, p2} and features == {str(both.id), str(split.id)}
     parts, features, _ = catalog(customer_id=other)
-    assert parts == {p2} and features == {str(split.id)}
+    assert parts == {p2} and not features
     assert catalog(family_id=pot, customer_id=other)[:2] == (set(), set())
     _, _, cotas = catalog(q="N901", family_id=pump, customer_id=bosch)
     assert cotas == {p1}

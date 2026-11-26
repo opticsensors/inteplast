@@ -30,6 +30,7 @@ export type CatalogGraphRequest = {
   featureId: string | null
   familyId: string | null
   customerId: string | null
+  materialId: string | null
 }
 
 type Node = GraphNode & { x?: number; y?: number; width?: number }
@@ -159,6 +160,7 @@ export default function CatalogGraph({
         featureId: request.featureId,
         familyId: request.familyId,
         customerId: request.customerId,
+        materialId: request.materialId,
       }),
   })
   const colors = useThemeColors()

@@ -21,6 +21,7 @@ export type CatalogDrawingsRequest = {
   featureId: string | null
   familyId: string | null
   customerId: string | null
+  materialId: string | null
 }
 
 const PAGE = 40
@@ -171,6 +172,7 @@ export function CatalogDrawings({
         featureId: request.featureId,
         familyId: request.familyId,
         customerId: request.customerId,
+        materialId: request.materialId,
         skip: pageParam,
         limit: PAGE,
       }),

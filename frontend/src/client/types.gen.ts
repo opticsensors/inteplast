@@ -47,6 +47,7 @@ export type CadFaceSelection = {
 export type CadPreferences = {
     cad_projection?: 'orthographic' | 'perspective';
     cad_controls?: 'solidworks' | 'classic';
+    pick_rotation_center?: boolean;
     invert_zoom?: boolean;
 };
 
@@ -161,6 +162,7 @@ export type CotaSearchResult = {
 export type CurrentUserPublic = {
     cad_projection?: 'orthographic' | 'perspective';
     cad_controls?: 'solidworks' | 'classic';
+    pick_rotation_center?: boolean;
     invert_zoom?: boolean;
     email: string;
     is_active?: boolean;
@@ -1071,6 +1073,7 @@ export type CatalogSearchCatalogData = {
     featureId?: (string | null);
     kind?: 'all' | 'part' | 'feature';
     limit?: number;
+    materialId?: (string | null);
     partId?: (string | null);
     q?: string;
     skip?: number;
@@ -1111,6 +1114,7 @@ export type CatalogReadCatalogGraphData = {
     featureId?: (string | null);
     kind?: 'all' | 'part' | 'feature';
     limit?: number;
+    materialId?: (string | null);
     partId?: (string | null);
     q?: string;
 };
@@ -1122,6 +1126,7 @@ export type CatalogReadCatalogDrawingsData = {
     familyId?: (string | null);
     featureId?: (string | null);
     limit?: number;
+    materialId?: (string | null);
     partId?: (string | null);
     q?: string;
     skip?: number;

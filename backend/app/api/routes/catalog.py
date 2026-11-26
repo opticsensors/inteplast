@@ -6,8 +6,8 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import case, or_
-from sqlmodel import col, func, select
+from sqlalchemy import or_
+from sqlmodel import Session, col, func, select
 
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
@@ -37,10 +37,12 @@ from app.measurement_status import (
 )
 from app.models import (
     AssetKind,
+    Customer,
     Feature,
     FeaturePartLink,
     FeaturePublic,
     FilePublic,
+    Material,
     Part,
     PartPublic,
     StoredFile,
@@ -143,70 +145,76 @@ def part_card(
     )
 
 
-def _text_patterns(needle: str) -> tuple[str, str, str]:
-    """LIKE pattern for text, LIKE pattern for cota numbers and the compact number."""
-    escaped = needle.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
-    like = f"%{escaped}%"
-    code_query = re.sub(r"\s+", "", needle.upper())
-    code_like = (
-        f"%{code_query}%" if re.fullmatch(r"N?\d+(?:\.\d+)?", code_query) else like
+def catalog_term(session: Session, needle: str) -> tuple[str, str]:
+    """An exact piece code takes priority. Explicit cota numbers select only cotas."""
+    if not needle:
+        return "text", ""
+    if session.exec(
+        select(Part.id).where(func.lower(Part.code) == needle.lower())
+    ).first():
+        return "part", needle
+    match = re.fullmatch(
+        r"(?:(.+):)?(?:cota\s+(?:n\s*)?|n\s*)(\d+(?:\.\d+)*)", needle, re.I
     )
-    return like, code_like, code_query
-
-
-def _scoped_features(feature_id: uuid.UUID | None) -> Any:
-    scoped = select(Feature.id)
-    return scoped.where(Feature.id == feature_id) if feature_id else scoped
+    if match:
+        return "cota", qualified("N" + match[2], (match[1] or "").strip())
+    if re.fullmatch(r"\d+(?:\.\d+)*", needle):
+        code = "N" + needle
+        if session.exec(
+            select(PartCharacteristic.id)
+            .where(PartCharacteristic.code == code)
+            .limit(1)
+        ).first():
+            return "cota", code
+    return "text", needle
 
 
 def catalog_part_filters(
-    needle: str, piece: list[Any], feature_id: uuid.UUID | None
+    needle: str, piece: list[Any], feature_id: uuid.UUID | None, *, exact: bool = False
 ) -> list[Any]:
-    """Pieces shown by the catalogue: the list, the grid and the graph use this.
-
-    Every piece filter at once; with a feature, only its pieces; with text, pieces whose
-    code, name, cotas or linked features match it.
-    """
-    links = feature_membership()
-    scoped_features = _scoped_features(feature_id)
-    part_filters: list[Any] = list(piece)
+    conditions = list(piece)
     if feature_id:
-        part_filters.append(
+        links = feature_membership()
+        conditions.append(
             col(Part.id).in_(
-                select(links.c.part_id).where(links.c.feature_id.in_(scoped_features))
+                select(links.c.part_id).where(links.c.feature_id == feature_id)
             )
         )
-    if needle:
-        like, code_like, _ = _text_patterns(needle)
-        matching_features = scoped_features.where(
+    if exact:
+        conditions.append(func.lower(Part.code) == needle.lower())
+    elif needle:
+        conditions.append(
             or_(
-                col(Feature.name).ilike(like, escape="\\"),
-                col(Feature.description).ilike(like, escape="\\"),
-            )
-        )
-        matching_cotas = select(PartCharacteristic.part_id).where(
-            or_(
-                identity_expression().ilike(code_like, escape="\\"),
-                col(PartCharacteristic.title).ilike(like, escape="\\"),
-            )
-        )
-        if feature_id:
-            matching_cotas = matching_cotas.join(FeatureCharacteristicLink).where(
-                col(FeatureCharacteristicLink.feature_id).in_(scoped_features)
-            )
-        part_filters.append(
-            or_(
-                col(Part.name).ilike(like, escape="\\"),
-                col(Part.code).ilike(like, escape="\\"),
-                col(Part.id).in_(matching_cotas),
-                col(Part.id).in_(
-                    select(links.c.part_id).where(
-                        links.c.feature_id.in_(matching_features)
+                col(Part.code).icontains(needle, autoescape=True),
+                col(Part.name).icontains(needle, autoescape=True),
+                col(Part.customer_id).in_(
+                    select(Customer.id).where(
+                        col(Customer.name).icontains(needle, autoescape=True)
+                    )
+                ),
+                col(Part.material_id).in_(
+                    select(Material.id).where(
+                        col(Material.name).icontains(needle, autoescape=True)
                     )
                 ),
             )
         )
-    return part_filters
+    return conditions
+
+
+def include_catalog_features(
+    kind: str,
+    term: str,
+    needle: str,
+    feature_id: uuid.UUID | None,
+    customer_id: uuid.UUID | None,
+    material_id: uuid.UUID | None,
+) -> bool:
+    if term != "text" or kind == "part":
+        return False
+    return bool(
+        needle or feature_id or kind == "feature" or not (customer_id or material_id)
+    )
 
 
 @router.get("/catalog", response_model=CatalogPublic)
@@ -219,6 +227,7 @@ def search_catalog(
     feature_id: uuid.UUID | None = None,
     family_id: uuid.UUID | None = None,
     customer_id: uuid.UUID | None = None,
+    material_id: uuid.UUID | None = None,
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=40, ge=1, le=100),
     defer_covers: bool = False,
@@ -229,14 +238,18 @@ def search_catalog(
     matches when it is linked to at least one piece that meets all of them at once.
     Old links with `category` or `tag` are accepted and ignored.
     """
-    needle = q.strip()
+    term, needle = catalog_term(session, q.strip())
     piece = crud.part_conditions(
-        part_id=part_id, family_id=family_id, customer_id=customer_id
+        part_id=part_id,
+        family_id=family_id,
+        customer_id=customer_id,
+        material_id=material_id,
     )
     features, feature_count = (
         crud.search_features(
             session=session,
-            q=needle or None,
+            name_contains=needle or None,
+            material_id=material_id,
             part_id=part_id,
             family_id=family_id,
             customer_id=customer_id,
@@ -244,14 +257,13 @@ def search_catalog(
             skip=skip,
             limit=limit,
         )
-        if kind != "part"
+        if include_catalog_features(
+            kind, term, needle, feature_id, customer_id, material_id
+        )
         else ([], 0)
     )
     links = feature_membership()
-    scoped_features = _scoped_features(feature_id)
-    scoped = bool(feature_id)
-    part_filters = catalog_part_filters(needle, piece, feature_id)
-    like, code_like, code_query = _text_patterns(needle)
+    part_filters = catalog_part_filters(needle, piece, feature_id, exact=term == "part")
     parts = (
         session.exec(
             select(Part)
@@ -260,12 +272,12 @@ def search_catalog(
             .offset(skip)
             .limit(limit)
         ).all()
-        if kind != "feature"
+        if kind != "feature" and term != "cota"
         else []
     )
     part_count = (
         session.exec(select(func.count()).select_from(Part).where(*part_filters)).one()
-        if kind != "feature"
+        if kind != "feature" and term != "cota"
         else 0
     )
     counts = (
@@ -280,29 +292,27 @@ def search_catalog(
         else {}
     )
     cotas, cota_count = [], 0
-    if needle and kind != "feature":
-        cota_filters: list[Any] = [
-            or_(
-                identity_expression().ilike(code_like, escape="\\"),
-                col(PartCharacteristic.title).ilike(like, escape="\\"),
-            )
-        ]
+    if needle and kind != "feature" and term != "part":
+        code = needle
+        identity = (
+            identity_expression() if ":" in code else col(PartCharacteristic.code)
+        )
+        cota_filters: list[Any] = [func.lower(identity) == code.lower()]
         if piece:
             cota_filters.append(
                 col(PartCharacteristic.part_id).in_(select(Part.id).where(*piece))
             )
-        if scoped:
+        if feature_id:
             cota_filters.append(
                 col(PartCharacteristic.id).in_(
                     select(FeatureCharacteristicLink.characteristic_id).where(
-                        col(FeatureCharacteristicLink.feature_id).in_(scoped_features)
+                        FeatureCharacteristicLink.feature_id == feature_id
                     )
                 )
             )
         cota_count = session.exec(
             select(func.count()).select_from(PartCharacteristic).where(*cota_filters)
         ).one()
-        exact = code_query if code_query.startswith("N") else "N" + code_query
         cotas = [
             CotaSearchResult(
                 id=c.id,
@@ -316,7 +326,6 @@ def search_catalog(
                 .join(Part, col(PartCharacteristic.part_id) == Part.id)
                 .where(*cota_filters)
                 .order_by(
-                    case((col(PartCharacteristic.code) == exact, 0), else_=1),
                     Part.code,
                     PartCharacteristic.code,
                     PartCharacteristic.revision,
@@ -563,6 +572,7 @@ def read_catalog_graph(
     feature_id: uuid.UUID | None = None,
     family_id: uuid.UUID | None = None,
     customer_id: uuid.UUID | None = None,
+    material_id: uuid.UUID | None = None,
     limit: int = Query(default=GRAPH_LIMIT, ge=1, le=GRAPH_LIMIT),
     defer_covers: bool = False,
 ) -> CatalogGraph:
@@ -572,19 +582,26 @@ def read_catalog_graph(
     as nodes too. Past `limit` nodes the answer is cut and says so with the real total,
     so that a part is never presented as the whole.
     """
-    needle = q.strip()
+    term, needle = catalog_term(session, q.strip())
     piece = crud.part_conditions(
-        part_id=part_id, family_id=family_id, customer_id=customer_id
+        part_id=part_id,
+        family_id=family_id,
+        customer_id=customer_id,
+        material_id=material_id,
     )
     parts = (
         list(
             session.exec(
                 select(Part)
-                .where(*catalog_part_filters(needle, piece, feature_id))
+                .where(
+                    *catalog_part_filters(
+                        needle, piece, feature_id, exact=term == "part"
+                    )
+                )
                 .order_by(Part.code, col(Part.id))
             ).all()
         )
-        if kind != "feature"
+        if kind != "feature" and term != "cota"
         else []
     )
     features = (
@@ -593,7 +610,8 @@ def read_catalog_graph(
                 select(Feature)
                 .where(
                     *crud.feature_conditions(
-                        q=needle or None,
+                        name_contains=needle or None,
+                        material_id=material_id,
                         part_id=part_id,
                         family_id=family_id,
                         customer_id=customer_id,
@@ -603,7 +621,9 @@ def read_catalog_graph(
                 .order_by(Feature.name, col(Feature.id))
             ).all()
         )
-        if kind != "part"
+        if include_catalog_features(
+            kind, term, needle, feature_id, customer_id, material_id
+        )
         else []
     )
     candidates: list[tuple[NodeKind, Any]] = [
@@ -740,6 +760,7 @@ def read_catalog_drawings(
     feature_id: uuid.UUID | None = None,
     family_id: uuid.UUID | None = None,
     customer_id: uuid.UUID | None = None,
+    material_id: uuid.UUID | None = None,
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=40, ge=1, le=100),
 ) -> DrawingsPublic:
@@ -751,7 +772,10 @@ def read_catalog_drawings(
     the text matches the file name or the piece's code or name.
     """
     piece = crud.part_conditions(
-        part_id=part_id, family_id=family_id, customer_id=customer_id
+        part_id=part_id,
+        family_id=family_id,
+        customer_id=customer_id,
+        material_id=material_id,
     )
     parts = session.exec(
         select(Part)

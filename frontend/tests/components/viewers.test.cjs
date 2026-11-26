@@ -316,6 +316,112 @@ test("3D follows screen-space drag, crosses the poles, and stops when released",
   await page.waitForFunction((zoom) => window.viewer.zoom() < zoom, zoom)
 })
 
+test("Trackball responds equally at the edges and switching control presets keeps framing", async (t) => {
+  const page = await mount(t, "model")
+  const configure = (mode) =>
+    page.evaluate(
+      (cad_controls) => window.viewer.configure({ cad_controls }),
+      mode,
+    )
+  const orientation = () => page.evaluate(() => window.viewer.orientation())
+  const framing = () =>
+    page.evaluate(() => [
+      ...window.viewer.position(),
+      ...window.viewer.target(),
+      ...window.viewer.orientation(),
+      window.viewer.zoom(),
+    ])
+  const close = (a, b) =>
+    Math.hypot(...a.map((value, i) => value - b[i])) < 1e-7
+  const drag = async (x, y) => {
+    await page.mouse.move(x, y)
+    await page.mouse.down({ button: "middle" })
+    await page.mouse.move(x + 60, y + 40, { steps: 8 })
+    await page.mouse.up({ button: "middle" })
+  }
+  await configure("solidworks")
+  const initial = await orientation()
+  await drag(400, 300)
+  const atCenter = await orientation()
+  assert.ok(!close(atCenter, initial))
+  await page.evaluate(() => window.viewer.reset())
+  await drag(25, 25)
+  assert.ok(close(await orientation(), atCenter))
+  await page.waitForTimeout(120)
+  assert.ok(close(await orientation(), atCenter))
+  await page.mouse.wheel(0, -200)
+  await page.waitForFunction(() => window.viewer.zoom() > 1)
+  const before = await framing()
+  for (const mode of ["classic", "solidworks"]) {
+    await configure(mode)
+    assert.ok(close(await framing(), before))
+  }
+})
+
+test("a middle click picks a stationary surface pivot in each rotation and projection", async (t) => {
+  const page = await mount(t, "model")
+  const marker = page.locator("[data-cad-pivot]")
+  const point = () =>
+    marker.evaluate((el) => [
+      parseFloat(el.style.left),
+      parseFloat(el.style.top),
+    ])
+  const click = (x, y) => page.mouse.click(x, y, { button: "middle" })
+  for (const projection of ["orthographic", "perspective"]) {
+    for (const mode of ["solidworks", "classic"]) {
+      await page.evaluate(
+        ([cad_controls, cad_projection]) => {
+          window.viewer.reset()
+          window.viewer.configure({
+            cad_controls,
+            cad_projection,
+            pick_rotation_center: true,
+          })
+        },
+        [mode, projection],
+      )
+      await page.mouse.move(455, 287)
+      await page.mouse.wheel(0, -100)
+      await page.waitForFunction(() => window.viewer.zoom() > 1)
+      await page.keyboard.down("Control")
+      await page.mouse.down({ button: "middle" })
+      await page.mouse.move(480, 300, { steps: 4 })
+      await page.mouse.up({ button: "middle" })
+      await page.keyboard.up("Control")
+      const position = await page.evaluate(() => window.viewer.position())
+      await click(443, 290)
+      assert.equal(await marker.evaluate((el) => el.hidden), false)
+      const picked = await point()
+      assert.ok(
+        Math.abs(picked[0] * 8 - 443) < 0.01 &&
+          Math.abs(picked[1] * 6 - 290) < 0.01,
+        `${mode} / ${projection}: picked at ${picked}`,
+      )
+      assert.deepEqual(
+        await page.evaluate(() => window.viewer.position()),
+        position,
+      )
+      const button = mode === "classic" ? "left" : "middle"
+      await page.mouse.move(385, 340)
+      await page.mouse.down({ button })
+      await page.mouse.move(475, 390, { steps: 8 })
+      await page.mouse.up({ button })
+      assert.notDeepEqual(
+        await page.evaluate(() => window.viewer.position()),
+        position,
+      )
+      await click(12, 10)
+      const rotated = await point()
+      assert.ok(
+        Math.hypot(...picked.map((v, i) => v - rotated[i])) < 0.001,
+        `${mode} / ${projection}: ${picked} moved to ${rotated}`,
+      )
+      await page.evaluate(() => window.viewer.reset())
+      assert.equal(await marker.evaluate((el) => el.hidden), true)
+    }
+  }
+})
+
 test("classic drag, perspective and inverted wheel are independent", async (t) => {
   const page = await mount(t, "model")
   await page.evaluate(() =>

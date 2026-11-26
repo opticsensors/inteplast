@@ -798,26 +798,52 @@ export const CatalogService = {
       params.kind === "part"
         ? { data: [], count: 0 }
         : await FeaturesService.readFeatures(params)
-    const parts =
-      params.kind === "feature"
-        ? { data: [], count: 0 }
-        : await PartsService.readParts()
-    // The server's criterion: a piece meets every piece filter at once.
+    const parts = (await PartsService.readParts()).data
+    const needle = (params.q ?? "").trim().toLowerCase()
+    const contains = (text) => text?.toLowerCase().includes(needle)
+    const exact = parts.find((part) => part.code.toLowerCase() === needle)
     const pieceMatches = (part) =>
       (!params.partId || part.id === params.partId) &&
       (!params.familyId || part.family_id === params.familyId) &&
-      (!params.customerId || part.customer_id === params.customerId)
-    const filtered = params.familyId || params.customerId
-    const shownParts = filtered ? parts.data.filter(pieceMatches) : parts.data
-    const matching = new Set(shownParts.map((part) => part.id))
-    const shownFeatures = filtered
-      ? features.data.filter((feature) =>
-          [
-            ...(feature.parts ?? []),
-            ...(feature.assets ?? []).map((asset) => asset.part),
-          ].some((part) => part && matching.has(part.id)),
+      (!params.customerId || part.customer_id === params.customerId) &&
+      (!params.materialId || part.material_id === params.materialId)
+    const eligible = parts.filter(pieceMatches)
+    const shownParts =
+      params.kind === "feature"
+        ? []
+        : eligible.filter(
+            (part) =>
+              (!params.featureId ||
+                state().feature.parts.some((link) => link.id === part.id)) &&
+              (exact
+                ? part.id === exact.id
+                : [
+                    part.code,
+                    part.name,
+                    part.customer?.name,
+                    part.material?.name,
+                  ].some(contains)),
+          )
+    const matching = new Set(eligible.map((part) => part.id))
+    const filtered =
+      params.partId || params.familyId || params.customerId || params.materialId
+    const showFeatures =
+      !exact &&
+      (needle ||
+        params.kind === "feature" ||
+        params.featureId ||
+        !(params.customerId || params.materialId))
+    const shownFeatures = showFeatures
+      ? features.data.filter(
+          (feature) =>
+            contains(feature.name) &&
+            (!filtered ||
+              [
+                ...(feature.parts ?? []),
+                ...(feature.assets ?? []).map((asset) => asset.part),
+              ].some((part) => part && matching.has(part.id))),
         )
-      : features.data
+      : []
     state().catalogRequests ??= []
     state().catalogRequests.push(clone(params))
     // Paged like the server; counts stay the totals.
@@ -829,8 +855,8 @@ export const CatalogService = {
       features: page(shownFeatures),
       parts: page(shownParts),
       cotas: [],
-      feature_count: filtered ? shownFeatures.length : features.count,
-      part_count: filtered ? shownParts.length : parts.count,
+      feature_count: shownFeatures.length,
+      part_count: shownParts.length,
       cota_count: 0,
     }
   },
@@ -919,6 +945,7 @@ export const CatalogService = {
         (!params.partId || card.part.id === params.partId) &&
         (!params.familyId || part?.family_id === params.familyId) &&
         (!params.customerId || part?.customer_id === params.customerId) &&
+        (!params.materialId || part?.material_id === params.materialId) &&
         (!params.q ||
           card.name.toLowerCase().includes(params.q.toLowerCase()) ||
           card.part.code.includes(params.q))

@@ -288,6 +288,7 @@ export default function StepCoverCanvas({
         canvas,
         modelPivot(object),
         target,
+        object,
       )
       cleanup.push(controller.dispose)
       configureViewer(controller)

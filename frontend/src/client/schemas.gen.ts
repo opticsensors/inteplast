@@ -206,6 +206,11 @@ export const CadPreferencesSchema = {
             title: 'Cad Controls',
             default: 'solidworks'
         },
+        pick_rotation_center: {
+            type: 'boolean',
+            title: 'Pick Rotation Center',
+            default: true
+        },
         invert_zoom: {
             type: 'boolean',
             title: 'Invert Zoom',
@@ -667,6 +672,11 @@ export const CurrentUserPublicSchema = {
             enum: ['solidworks', 'classic'],
             title: 'Cad Controls',
             default: 'solidworks'
+        },
+        pick_rotation_center: {
+            type: 'boolean',
+            title: 'Pick Rotation Center',
+            default: true
         },
         invert_zoom: {
             type: 'boolean',

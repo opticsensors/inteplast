@@ -251,7 +251,7 @@ Todo bajo `/api/v1`. Documentación interactiva en `http://localhost:8000/docs`.
 | `GET` | `/files/{id}` | Servirlo con bearer o enlace firmado válido |
 | `DELETE` | `/files/{id}` | Borrar el registro; no borra el original externo |
 
-**La búsqueda `q` es global**: mira en el nombre, la descripción, el **código y el
+**La búsqueda `q` de `GET /features` es global**: mira en el nombre, la descripción, el **código y el
 nombre de las piezas** (por adjunto y por declaración), el nombre de los adjuntos, y el título y
 el cuerpo de warnings y lessons learned. Es lo que permite encontrar el Bolt Eye escribiendo
 `3212`, `Pump Housing` o `N170`.
@@ -312,7 +312,10 @@ y `Parts/DeletePart.tsx`.
 Las reglas compartidas de búsqueda, filtros, gráficas y navegación están en
 [Patrones de interfaz](interfaz.md). Se aplican también a nuevas pantallas.
 
-**Catálogo** (`/features`) reúne tarjetas de piezas y features. Las cotas aparecen solo
+**Catálogo** (`/features`) reúne tarjetas de piezas y features.
+Su buscador consulta el código, nombre, cliente y material de la pieza y el nombre del
+feature. Un código de pieza exacto limita los resultados a esa pieza. Las cotas se
+buscan por su código, con componente opcional. Las cotas aparecen solo
 al buscar y conservan pieza/revisión en el enlace. `/parts` redirige al mismo catálogo
 filtrado por piezas. `/parts/{id}` muestra portada CAD, features, cotas y referencias.
 La ficha comparte el diseño del feature: cabecera con portada y acciones, Cotas a la
@@ -359,7 +362,7 @@ Componentes en `components/Features/`:
 
 | Fichero | Qué |
 |---|---|
-| `FeatureSearch.tsx` | Buscador + Pieza, Feature, Familia y Cliente bajo Filtros. Selectores con búsqueda interna poblados desde `/features/filters`, `/families` y `/customers`; `feature_id` filtra por identidad exacta; en la URL quedan `part`, `feature`, `family` y `customer` |
+| `FeatureSearch.tsx` | Buscador + Pieza, Feature, Familia, Cliente y Material bajo Filtros. Selectores con búsqueda interna poblados desde `/features/filters`, `/families` y `/customers`; `feature_id` filtra por identidad exacta; en la URL quedan `part`, `feature`, `family`, `customer` y `material` |
 | `FeatureCard.tsx` | La tarjeta: imagen, nombre, descripción y el resumen *«2 piezas · 3197, 3212»* |
 | `PartAssetList.tsx` | 🔑 **Las piezas del feature con sus cotas**: un desplegable por pieza con su fila COTAS y «Ver pieza». Los documentos se consultan en la ficha de pieza. **El mismo componente sirve la ficha y el formulario** (`editable`) |
 | `Parts/FeaturePartEvidence.tsx` | Fila **COTAS** compacta: números, plano, añadir y papelera. Añadir permite seleccionar una cota importada con su revisión o escribir otra al final de la fila. |

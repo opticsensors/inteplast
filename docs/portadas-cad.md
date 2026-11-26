@@ -99,10 +99,14 @@ coloreadas, a la misma selección y colores. Cambiar las preferencias del visor 
 actualiza la cuenta. El editor usa la proyección elegida en Ajustes de usuario. Los
 encuadres nuevos guardan la altura visible. Al abrir uno antiguo se recupera su escala
 en el plano de enfoque.
-Arrastrar con la rueda pulsada gira alrededor del centro de la pieza, incluso en una
-vista de detalle. Rodar hacia la pantalla acerca la zona bajo el cursor y rodar hacia
-el usuario la aleja. Ctrl más arrastre con la rueda pulsada desplaza la vista. **Encuadrar**
-recupera la vista inicial. **Aplicar** genera una imagen y la coloca en el borrador
+En **Ajustes de usuario → Visor CAD**, **Trackball** usa los gestos tipo SolidWorks y
+es el control predeterminado. **Clásico** gira con el botón izquierdo. Con Trackball,
+arrastrar con la rueda pulsada gira la pieza. Un clic breve con la rueda sobre una
+superficie fija allí el centro de giro. Un punto azul señala el centro elegido.
+Esta opción viene activada. Con **Invertir zoom con la ruedilla** marcado, rodar
+hacia la pantalla acerca la pieza.
+Ctrl más arrastre con la rueda pulsada desplaza la vista. **Encuadrar**
+recupera la vista y el centro de giro iniciales. **Aplicar** genera una imagen y la coloca en el borrador
 de cabecera. Las imágenes elegidas, pegadas o arrastradas también requieren **Aplicar**.
 **Cancelar**, la X o Esc en la modal descartan solo los cambios de esa apertura;
 durante una subida se espera a que termine antes de aplicar o cerrar. **Guardar** en la ficha

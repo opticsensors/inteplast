@@ -18,15 +18,15 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
   a la derecha. Features, Metrología, cotas y el visor del plano comparten este componente.
 - Colocar la búsqueda arriba, seguida de filtros horizontales que se apilan en móvil.
   No introducir listas laterales para escoger cotas.
-- En el catálogo, reunir Pieza, Feature, Familia y Cliente bajo «Filtros», junto al buscador
+- En el catálogo, reunir Pieza, Feature, Familia, Cliente y Material bajo «Filtros», junto al buscador
   (Categoría y Tag se retiraron el 17/11/2026; sus parámetros en enlaces antiguos se ignoran).
-  Los cuatro desplegables usan `Common/SearchSelect` con etiqueta visible y búsqueda interna.
-  Una pieza cumple si cumple a la vez pieza, familia y cliente; un feature, si tiene al menos
+  Los cinco desplegables usan `Common/SearchSelect` con etiqueta visible y búsqueda interna.
+  Una pieza cumple si cumple a la vez pieza, familia, cliente y material; un feature, si tiene al menos
   una pieza que los cumpla todos. El servidor aplica ese criterio.
-  Plegar los filtros conserva la selección; el botón cuenta los cuatro criterios activos.
-  Mostrar etiquetas eliminables y «Limpiar filtros» solo cuando haya filtros aplicados.
-  Limpiar filtros conserva el texto buscado y el tipo de resultado; limpiar la búsqueda
-  solo borra el texto.
+  El botón Filtros abre o repliega el panel y muestra el número de criterios activos.
+  Cuando hay alguno, la × del mismo control los limpia y repliega el panel.
+  Se conservan el texto buscado y el tipo de resultado. Cada selector permite quitar
+  su propio filtro al elegir la opción «Todos» o «Todas».
 - El selector Feature filtra por identidad exacta, se combina con el texto buscado y
   se conserva en la URL. Pieza y Feature ofrecen las relaciones realmente vinculadas.
   El catálogo ofrece todas las piezas registradas, también las que aún no tienen features.

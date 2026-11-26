@@ -1,4 +1,5 @@
 import {
+  type Object3D,
   OrthographicCamera,
   PerspectiveCamera,
   Quaternion,
@@ -7,6 +8,7 @@ import {
 import { ArcballControls } from "three/examples/jsm/controls/ArcballControls.js"
 import type { CadCamera } from "@/client"
 import type { ViewerPreferences } from "@/hooks/useCadPreferences"
+import { bindModelRotation } from "./modelRotation"
 
 export function createModelCamera(size: number) {
   const half = size * 0.53
@@ -68,8 +70,9 @@ export function captureCamera(
 export function createModelControls(
   camera: OrthographicCamera,
   canvas: HTMLCanvasElement,
-  pivot: Vector3,
+  defaultPivot: Vector3,
   initialTarget = new Vector3(),
+  model?: Object3D,
 ) {
   let classic = false
   let usePerspective = false
@@ -83,12 +86,13 @@ export function createModelControls(
 
   // Arcball handles the gestures on a second camera. Its own focus moves on
   // pan and cursor zoom. Apply those translations to the framing, while every
-  // change of orientation carries the view rigidly around the part's fixed pivot.
+  // change of orientation carries the view rigidly around the active pivot.
   const navigation = camera.clone()
   navigation.position.sub(initialTarget)
   navigation.up.set(0, 1, 0) // Arcball expects camera-local up when rotating.
   const focusDistance = navigation.position.length()
   const controls = new ArcballControls(navigation, canvas.parentElement!)
+  controls.enableRotate = false
   navigation.up.copy(camera.up)
   controls.enableAnimations = false
   controls.enableFocus = false
@@ -108,6 +112,10 @@ export function createModelControls(
   const focus = new Vector3()
   const previousFocus = new Vector3()
   const previousRotation = navigation.quaternion.clone()
+  const basis = new Quaternion()
+  const orientation = new Quaternion()
+  const translation = new Vector3()
+  const pivot = defaultPivot.clone()
   const rotation = new Quaternion()
   const target = initialTarget.clone()
   function syncPerspective() {
@@ -133,19 +141,40 @@ export function createModelControls(
       .getWorldDirection(focus)
       .multiplyScalar(focusDistance)
       .add(navigation.position)
-    rotation.copy(previousRotation).invert().premultiply(navigation.quaternion)
+    orientation.multiplyQuaternions(basis, navigation.quaternion)
+    rotation.copy(previousRotation).invert().premultiply(orientation)
     target.sub(pivot).applyQuaternion(rotation).add(pivot)
-    target.add(focus).sub(previousFocus)
+    target.add(
+      translation.subVectors(focus, previousFocus).applyQuaternion(basis),
+    )
     previousFocus.copy(focus)
-    previousRotation.copy(navigation.quaternion)
-    camera.position.copy(navigation.position).sub(focus).add(target)
-    camera.quaternion.copy(navigation.quaternion)
+    previousRotation.copy(orientation)
+    camera.position
+      .copy(navigation.position)
+      .sub(focus)
+      .applyQuaternion(basis)
+      .add(target)
+    camera.quaternion.copy(orientation)
     camera.up.set(0, 1, 0).applyQuaternion(camera.quaternion)
     camera.zoom = navigation.zoom
     camera.updateProjectionMatrix()
     camera.updateMatrixWorld()
     syncPerspective()
+    gestures.updateMarker()
   }
+  const viewCamera = () => (usePerspective ? perspective : camera)
+  const gestures = bindModelRotation(
+    canvas,
+    model,
+    viewCamera,
+    (next) => {
+      // Keep Arcball's pan and wheel working in the axes of the displayed view.
+      basis.copy(navigation.quaternion).invert().premultiply(next).normalize()
+      controls.dispatchEvent({ type: "change" })
+    },
+    pivot,
+    defaultPivot,
+  )
   controls.addEventListener("change", syncView)
   syncView()
   const half = camera.top
@@ -153,11 +182,13 @@ export function createModelControls(
     controls,
     target,
     get viewCamera() {
-      return usePerspective ? perspective : camera
+      return viewCamera()
     },
     setPreferences(preferences: ViewerPreferences) {
       classic = preferences.cad_controls === "classic"
       usePerspective = preferences.cad_projection === "perspective"
+      gestures.setOptions(classic, preferences.pick_rotation_center ?? true)
+      controls.enableRotate = classic
       controls.scaleFactor = preferences.invert_zoom ? 1 / 1.2 : 1.2
       controls.cursorZoom = !classic
       if (classic) controls.setMouseAction("ROTATE", 0)
@@ -175,14 +206,18 @@ export function createModelControls(
       }
       controls.update()
       syncPerspective()
+      gestures.updateMarker()
     },
     reset() {
+      gestures.resetPivot()
+      basis.identity()
       controls.reset()
       target.copy(initialTarget)
-      syncView()
+      controls.dispatchEvent({ type: "change" })
     },
     dispose() {
       canvas.removeEventListener("pointerdown", routePointer)
+      gestures.dispose()
       controls.removeEventListener("change", syncView)
       controls.dispose()
     },

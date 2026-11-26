@@ -5,7 +5,7 @@ from sqlmodel import Session
 
 from app.core.config import settings
 from app.knowledge_models import FeatureCharacteristicLink, PartCharacteristic
-from app.models import FeaturePartLink, StoredFile
+from app.models import Customer, FeaturePartLink, Material, StoredFile
 from tests.api.routes.test_cad_covers import cover_example
 from tests.utils.feature import create_random_feature, create_random_part
 
@@ -29,11 +29,12 @@ def test_catalog_shows_parts_without_features_and_cotas_only_when_searching(
     assert data["cotas"] == []
     assert data["parts"][0]["characteristic_count"] == 1
     assert data["parts"][0]["feature_count"] == 0
-    for query in ("170", "N 170", "Diameter"):
+    for query in ("170", "N 170", "cota N170"):
         data = client.get(
             url, headers=superuser_token_headers, params={**params, "q": query}
         ).json()
-        assert data["part_count"] == 1
+        assert data["part_count"] == 0
+        assert data["feature_count"] == 0
         assert data["cota_count"] == 1
         assert data["cotas"][0]["revision"] == "07"
         assert data["cotas"][0]["part"]["id"] == str(part.id)
@@ -60,14 +61,14 @@ def test_catalog_scopes_cotas_to_the_same_feature_and_part(
         FeatureCharacteristicLink(feature_id=feature.id, characteristic_id=linked.id)
     )
     db.commit()
-    params = {"q": "17", "feature_id": str(feature.id)}
+    params = {"q": "N170", "feature_id": str(feature.id)}
     result = client.get(
         f"{BASE}/catalog", headers=superuser_token_headers, params=params
     )
     assert result.status_code == 200, result.text
     data = result.json()
     assert [c["id"] for c in data["cotas"]] == [str(linked.id)]
-    assert data["parts"][0]["feature_count"] == 1
+    assert data["parts"] == data["features"] == []
     # Old links with category or tag open the same, ignoring those filters.
     old = client.get(
         f"{BASE}/catalog",
@@ -76,6 +77,50 @@ def test_catalog_scopes_cotas_to_the_same_feature_and_part(
     )
     assert old.status_code == 200
     assert [c["id"] for c in old.json()["cotas"]] == [str(linked.id)]
+
+
+def test_catalog_matches_only_the_identity_of_each_result(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    part, feature = create_random_part(db), create_random_feature(db)
+    token = uuid.uuid4().hex[:8]
+    customer = Customer(name=f"Cliente {token}", key=f"cliente {token}")
+    material = Material(name=f"Resina {token}", key=f"resina {token}")
+    db.add_all([customer, material])
+    db.flush()
+    part.name = f"Cuerpo {token}"
+    part.customer_id, part.material_id = customer.id, material.id
+    feature.name = f"Nervios de soldadura {token}"
+    feature.description = f"Plano {token} {part.code} {customer.name}"
+    cota = PartCharacteristic(
+        part_id=part.id, code="N170", title=f"Plano {token}", revision="01"
+    )
+    db.add_all(
+        [part, feature, cota, FeaturePartLink(feature_id=feature.id, part_id=part.id)]
+    )
+    db.commit()
+
+    def search(**params: str) -> tuple[list[str], list[str], list[str]]:
+        result = client.get(
+            f"{BASE}/catalog", headers=superuser_token_headers, params=params
+        )
+        assert result.status_code == 200, result.text
+        data = result.json()
+        return tuple(
+            [item["id"] for item in data[k]] for k in ("parts", "features", "cotas")
+        )
+
+    for q in (part.code, part.name.upper(), customer.name, material.name):
+        assert search(q=q) == ([str(part.id)], [], [])
+    assert search(q=f"soldadura {token}") == ([], [str(feature.id)], [])
+    assert search(q=f"Plano {token}") == ([], [], [])
+    assert search(q="N170", material_id=str(material.id)) == ([], [], [str(cota.id)])
+    assert search(customer_id=str(customer.id), material_id=str(material.id)) == (
+        [str(part.id)],
+        [],
+        [],
+    )
+    assert search(q="%", part_id=str(part.id)) == ([], [], [])
 
 
 def test_part_detail_uses_the_existing_bidirectional_membership(

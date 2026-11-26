@@ -6,6 +6,7 @@ export type ViewerPreferences = Required<CadPreferences>
 export const defaultCadPreferences: ViewerPreferences = {
   cad_projection: "orthographic",
   cad_controls: "solidworks",
+  pick_rotation_center: true,
   invert_zoom: false,
 }
 
@@ -19,16 +20,18 @@ export function useConfigureCadViewer() {
   const preferences = useRef(defaultCadPreferences)
   type Controller = { setPreferences: (value: ViewerPreferences) => void }
   const controller = useRef<Controller | null>(null)
-  const { cad_projection, cad_controls, invert_zoom } =
+  const { cad_projection, cad_controls, pick_rotation_center, invert_zoom } =
     user ?? defaultCadPreferences
   useLayoutEffect(() => {
     preferences.current = {
       cad_projection: cad_projection ?? defaultCadPreferences.cad_projection,
       cad_controls: cad_controls ?? defaultCadPreferences.cad_controls,
+      pick_rotation_center:
+        pick_rotation_center ?? defaultCadPreferences.pick_rotation_center,
       invert_zoom: invert_zoom ?? defaultCadPreferences.invert_zoom,
     }
     controller.current?.setPreferences(preferences.current)
-  }, [cad_projection, cad_controls, invert_zoom])
+  }, [cad_projection, cad_controls, invert_zoom, pick_rotation_center])
   return useCallback((next: Controller | null) => {
     controller.current = next
     next?.setPreferences(preferences.current)

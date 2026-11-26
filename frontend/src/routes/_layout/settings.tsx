@@ -81,11 +81,13 @@ function UserSettings() {
   const {
     cad_projection = "orthographic",
     cad_controls = "solidworks",
+    pick_rotation_center = true,
     invert_zoom = false,
   } = user
   const isDefault =
     cad_projection === defaultCadPreferences.cad_projection &&
     cad_controls === defaultCadPreferences.cad_controls &&
+    pick_rotation_center === defaultCadPreferences.pick_rotation_center &&
     invert_zoom === defaultCadPreferences.invert_zoom
   return (
     <section className="max-w-2xl space-y-6">
@@ -110,20 +112,31 @@ function UserSettings() {
             label="Controles"
             value={cad_controls}
             options={[
-              ["solidworks", "Tipo SolidWorks"],
-              ["classic", "Clásicos"],
+              ["solidworks", "Trackball"],
+              ["classic", "Clásico"],
             ]}
             change={(cad_controls) => save.mutate({ cad_controls })}
           />
-          <Choice
-            label="Acercar con la rueda"
-            value={invert_zoom ? "back" : "forward"}
-            options={[
-              ["forward", "Hacia la pantalla"],
-              ["back", "Hacia ti"],
-            ]}
-            change={(value) => save.mutate({ invert_zoom: value === "back" })}
-          />
+          <label className="flex cursor-pointer items-center justify-between gap-3 py-4 text-sm font-medium">
+            Elegir el centro de giro con un clic de la ruedilla
+            <input
+              type="checkbox"
+              checked={pick_rotation_center}
+              onChange={(event) =>
+                save.mutate({ pick_rotation_center: event.target.checked })
+              }
+            />
+          </label>
+          <label className="flex cursor-pointer items-center justify-between gap-3 py-4 text-sm font-medium">
+            Invertir zoom con la ruedilla
+            <input
+              type="checkbox"
+              checked={!invert_zoom}
+              onChange={(event) =>
+                save.mutate({ invert_zoom: !event.target.checked })
+              }
+            />
+          </label>
         </fieldset>
         <div className="flex justify-end border-t pt-3">
           <Button
@@ -133,7 +146,7 @@ function UserSettings() {
             onClick={() => save.mutate(defaultCadPreferences)}
           >
             <RotateCcw />
-            Restablecer valores predeterminados
+            Restablecer
           </Button>
         </div>
         {save.isError && (

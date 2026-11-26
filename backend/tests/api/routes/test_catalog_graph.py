@@ -83,7 +83,6 @@ def test_graph_nodes_and_links_follow_the_catalogue_filters(
     graph = _graph(client, headers, family_id=ids["pump"], customer_id=ids["bosch"])
     assert _by_kind(graph) == {
         "part": {ids["p1"]},
-        "feature": {ids["both"]},
         "family": {ids["pump"]},
         "customer": {ids["bosch"]},
     }
@@ -91,11 +90,10 @@ def test_graph_nodes_and_links_follow_the_catalogue_filters(
     assert {
         (link["source"], link["target"], link["kind"]) for link in graph["links"]
     } == {
-        (p1, f"feature:{ids['both']}", "feature"),
         (p1, f"family:{ids['pump']}", "family"),
         (p1, f"customer:{ids['bosch']}", "customer"),
     }
-    assert graph["total"] == 4 and graph["truncated"] is False
+    assert graph["total"] == 3 and graph["truncated"] is False
     piece = next(node for node in graph["nodes"] if node["kind"] == "part")
     assert piece["name"] == f"Housing {ids['token']}" and piece["image"] is None
     # With a family only, the feature split between two pieces appears too.
