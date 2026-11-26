@@ -57,6 +57,10 @@ import { fileErrorMessage } from "@/hooks/useFileAccess"
 import { pickSourcePath } from "@/lib/sourcePicker"
 import { AddFeatureButton } from "./AddFeatureButton"
 import { CatalogNameSelect } from "./CatalogNameSelect"
+import {
+  CorrectionEditor,
+  useCorrectionTextDrafts,
+} from "./correctionTextDrafts"
 import { DeletePart } from "./DeletePart"
 import { FeaturePartEvidence } from "./FeaturePartEvidence"
 import { MetrologyPage } from "./MetrologyPage"
@@ -140,6 +144,7 @@ function PartPage({
   const [folder, setFolder] = useState(initial.folder)
   const [organizeBeforeReading, setOrganizeBeforeReading] = useState(false)
   const [files, setFiles] = useState(initial.files)
+  const corrections = useCorrectionTextDrafts()
   const [selectedFeatures, setSelectedFeatures] = useState<
     { id: string; name: string }[]
   >([])
@@ -152,7 +157,7 @@ function PartPage({
   const suggestedIdentity = useRef({ name: "", code: "" })
   const suggestedFeatures = useRef<string[]>([])
   const bypass = useRef(false)
-  const dirty =
+  const partDirty =
     editing &&
     (name !== initial.name ||
       description !== initial.description ||
@@ -165,6 +170,7 @@ function PartPage({
       JSON.stringify(fileRequest(files)) !==
         JSON.stringify(fileRequest(initial.files)) ||
       selectedFeatures.length > 0)
+  const dirty = partDirty || corrections.drafts.length > 0
   const blocker = useBlocker({
     shouldBlockFn: ({ current, next }) =>
       !bypass.current && dirty && current.pathname !== next.pathname,
@@ -204,7 +210,15 @@ function PartPage({
         files: fileRequest(files),
       }
       return part
-        ? PartsService.updatePart({ partId: part.id, requestBody: values })
+        ? PartsService.updatePart({
+            partId: part.id,
+            requestBody: corrections.drafts.length
+              ? {
+                  ...(partDirty ? values : {}),
+                  correction_texts: corrections.drafts,
+                }
+              : values,
+          })
         : PartsService.registerPart({
             requestBody: {
               ...values,
@@ -685,7 +699,11 @@ function PartPage({
             {part ? (
               <>
                 <PartReadStatus reading={reading} />
-                <MetrologyPage partId={part.id} search={search} embedded />
+                <CorrectionEditor.Provider
+                  value={editing ? { ...corrections, disabled: busy } : null}
+                >
+                  <MetrologyPage partId={part.id} search={search} embedded />
+                </CorrectionEditor.Provider>
               </>
             ) : (
               <p className="text-sm text-muted-foreground">

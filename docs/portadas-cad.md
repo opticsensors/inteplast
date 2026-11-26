@@ -93,6 +93,12 @@ ficha los descarta todos. La pestaña **Imagen** admite:
 
 El editor CAD permite marcar varias superficies con clics, quitar una marca
 con otro clic y limpiar la selección con el icono de borrador junto a **Encuadrar**.
+Con **Trackball**, arrastrar con el botón izquierdo dibuja un rectángulo. Con
+**Clásico** se usa **Mayús + arrastre izquierdo**. Al soltar se añaden las caras
+visibles cuya geometría cabe entera dentro del rectángulo en la vista actual.
+El gesto funciona en ambos sentidos. Escape cancela el arrastre. Si se supera
+el límite de 5.000 caras, el editor conserva la selección anterior.
+
 Las miniaturas automáticas nuevas usan siempre proyección ortográfica. Se reutilizan
 las miniaturas anteriores en perspectiva mientras correspondan al mismo CAD y, en las
 coloreadas, a la misma selección y colores. Cambiar las preferencias del visor solo
@@ -267,6 +273,28 @@ regenerado con `cad_cache_key` en la tarjeta y en la petición de guardado (opci
 clientes anteriores, que siguen sujetos a la comprobación SHA-256).
 
 ## Comprobaciones
+
+### Tiempo de selección por rectángulo (26/11/2026)
+
+Se hicieron 13 selecciones por pieza en el editor, con rectángulos de varios tamaños y
+cambios de orientación. Se midió desde que se suelta el ratón hasta completar el
+siguiente fotograma en la GPU, con el CAD abierto en Edge, Intel Iris Xe y un visor
+de 1142 × 610 píxeles. La última columna corresponde a una prueba adicional por pieza
+en la que se impidió al visor preparar la selección durante el tiempo de inactividad.
+
+| Pieza | Caras CAD | Triángulos | Mediana | Máximo | Primera sin preparación |
+|---|---:|---:|---:|---:|---:|
+| 3205 | 760 | 35.752 | 21,6 ms | 44,1 ms | 78,7 ms |
+| 3212 | 2.670 | 83.132 | 20,1 ms | 28,4 ms | 51,7 ms |
+| 3167 | 10.968 | 305.525 | 33,4 ms | 47,5 ms | 97,8 ms |
+
+Para repetir la medición, indicar en `CAD_BOX_BENCH_DIR` una carpeta local con los
+GLB preparados por el lector de portadas y en `CAD_BOX_BENCH_CHANNEL` el navegador
+(por ejemplo, `msedge`). Desde `frontend/`, ejecutar
+`node --test --test-name-pattern="CAD box timing" tests/components/cover-ui.test.cjs`.
+`CAD_BOX_BENCH_COLD=1` mide la primera selección con la preparación anticipada desactivada.
+
+### Cobertura de las portadas
 
 Cobertura leída el 26/10/2026: componentes enumerados en Implementación, `PartCover.tsx`,
 `capturePartCad.ts`, `api/routes/catalog.py`, `api/routes/features.py` y los esquemas de portada.

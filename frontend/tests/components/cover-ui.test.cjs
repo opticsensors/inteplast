@@ -122,7 +122,10 @@ before(async () => {
   })
   await server.listen()
   origin = `http://127.0.0.1:${server.httpServer.address().port}`
-  browser = await chromium.launch({ headless: true })
+  browser = await chromium.launch({
+    headless: true,
+    channel: process.env.CAD_BOX_BENCH_CHANNEL,
+  })
   await warmUp(browser, `${origin}/cover-test`)
 })
 
@@ -752,6 +755,75 @@ test("left clicks accumulate CAD faces and a repeated click removes only that fa
   await expect(apply).toBeDisabled()
 })
 
+test("box selection includes only complete visible cube faces and preserves clicks", async (t) => {
+  const page = await mount(t)
+  const patches = await page.evaluate(async () => {
+    const { overlappingPatches } = await import(
+      "/tests/components/fixtures/face-box.js"
+    )
+    return overlappingPatches()
+  })
+  assert.deepEqual(patches, ["0:2", "0:4", "0:5"])
+  await page
+    .getByRole("button", { name: "Editar portada", exact: true })
+    .click()
+  await ready(page)
+  await finishDialogEntrance(page)
+  const clear = page.getByRole("button", { name: "Limpiar selección" })
+  const count = page.getByLabel("Caras seleccionadas")
+  const canvas = surface(page).locator("canvas")
+  const b = await canvas.boundingBox()
+  async function drag(x1, y1, x2, y2) {
+    await page.mouse.move(b.x + b.width * x1, b.y + b.height * y1)
+    await page.mouse.down()
+    await page.mouse.move(b.x + b.width * x2, b.y + b.height * y2)
+    await page.mouse.up()
+  }
+  await clear.click()
+  await drag(0.46, 0.46, 0.54, 0.54)
+  await expect(count).toHaveText("0")
+  await page.mouse.move(b.x + b.width * 0.05, b.y + b.height * 0.05)
+  await page.mouse.down()
+  await page.mouse.move(b.x + b.width * 0.95, b.y + b.height * 0.95)
+  await page.keyboard.press("Escape")
+  await page.mouse.up()
+  await expect(page.getByRole("dialog")).toBeVisible()
+  await expect(count).toHaveText("0")
+  await drag(0.95, 0.95, 0.05, 0.05)
+  await expect(count).toHaveText("3")
+  await drag(0.05, 0.05, 0.95, 0.95)
+  await expect(count).toHaveText("3")
+  await canvas.click()
+  await expect(count).toHaveText("2")
+  await clear.click()
+  await page.evaluate(() =>
+    window.review.setViewerPreferences({
+      cad_controls: "classic",
+      cad_projection: "perspective",
+    }),
+  )
+  await page.keyboard.down("Shift")
+  await drag(0.05, 0.05, 0.95, 0.95)
+  await page.keyboard.up("Shift")
+  await expect(count).toHaveText("3")
+  await clear.click()
+  await drag(0.35, 0.4, 0.6, 0.55)
+  await expect(count).toHaveText("0")
+  await page.keyboard.down("Shift")
+  await drag(0.05, 0.05, 0.95, 0.95)
+  await page.keyboard.up("Shift")
+  const marked = Number(await count.textContent())
+  assert.ok(marked > 0)
+  await page.getByRole("button", { name: "Aplicar", exact: true }).click()
+  await page
+    .getByRole("button", { name: "Guardar cambios", exact: true })
+    .click()
+  await page.waitForFunction(
+    (n) => window.review.feature.part_covers[0].cover_3d.faces.length === n,
+    marked,
+  )
+})
+
 test("changing personal navigation keeps the editor, marks and shared covers intact", async (t) => {
   const page = await mount(t)
   await page
@@ -853,3 +925,127 @@ test("the same clear control recovers an obsolete saved selection on the current
   await expect(page.getByRole("button", { name: "Aplicar" })).toBeDisabled()
   assert.equal(await page.evaluate(() => window.workerStats.started), 1)
 })
+
+// Optional local benchmark. Each .glb is a prepared CAD from the project;
+// the files stay outside Git and all form/API writes use the test fixture.
+const benchDir = process.env.CAD_BOX_BENCH_DIR
+const coldBox = process.env.CAD_BOX_BENCH_COLD === "1"
+test(
+  "CAD box timing on local prepared models",
+  { skip: !benchDir },
+  async (t) => {
+    for (const name of fs
+      .readdirSync(benchDir)
+      .filter((file) => file.endsWith(".glb"))) {
+      const page = await mount(t)
+      if (coldBox)
+        await page.evaluate(() => {
+          window.requestIdleCallback = undefined
+        })
+      await page.route("https://files.invalid/bench.glb", (route) =>
+        route.fulfill({
+          path: path.join(benchDir, name),
+          contentType: "model/gltf-binary",
+        }),
+      )
+      await page.evaluate(async () => {
+        const { FilesService } = await import(
+          "/tests/components/fixtures/api.js"
+        )
+        FilesService.preparePreview = async () => ({
+          state: "ready",
+          url: "/bench.glb",
+        })
+        window.review.feature.part_covers = []
+        await window.review.refetch()
+      })
+      await page.getByRole("button", { name: "Cambiar imagen" }).click()
+      await page.getByRole("tab", { name: "CAD pieza", exact: true }).click()
+      await ready(page)
+      await finishDialogEntrance(page)
+      const canvas = surface(page).locator("canvas")
+      const b = await canvas.boundingBox()
+      const gpu = await canvas.evaluate((el) => {
+        const gl = el.getContext("webgl2")
+        const info = gl.getExtension("WEBGL_debug_renderer_info")
+        window.boxSamples = []
+        el.addEventListener(
+          "pointerup",
+          (event) => {
+            if (event.button !== 0) return
+            const start = performance.now()
+            let handler
+            window.addEventListener(
+              "pointerup",
+              () => {
+                handler = performance.now() - start
+              },
+              { once: true },
+            )
+            requestAnimationFrame(() => {
+              const fence = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0)
+              gl.flush()
+              function poll() {
+                if (gl.clientWaitSync(fence, 0, 0) === gl.TIMEOUT_EXPIRED)
+                  return setTimeout(poll, 1)
+                gl.deleteSync(fence)
+                window.boxSamples.push({
+                  handler,
+                  frame: performance.now() - start,
+                })
+              }
+              poll()
+            })
+          },
+          true,
+        )
+        return info
+          ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL)
+          : gl.getParameter(gl.RENDERER)
+      })
+      const counts = []
+      for (let i = 0; i < (coldBox ? 1 : 13); i++) {
+        if (i) {
+          const clear = page.getByRole("button", { name: "Limpiar selección" })
+          if (await clear.isEnabled()) await clear.click()
+          if (i % 2 === 0) {
+            await page.mouse.move(b.x + b.width * 0.5, b.y + b.height * 0.5)
+            await page.mouse.down({ button: "middle" })
+            await page.mouse.move(b.x + b.width * 0.53, b.y + b.height * 0.52, {
+              steps: 3,
+            })
+            await page.mouse.up({ button: "middle" })
+          }
+        }
+        const inset = [0.25, 0.35, 0.07, 0.4][i % 4]
+        await page.mouse.move(b.x + b.width * inset, b.y + b.height * inset)
+        await page.mouse.down()
+        await page.mouse.move(
+          b.x + b.width * (1 - inset),
+          b.y + b.height * (1 - inset),
+          { steps: 3 },
+        )
+        await page.mouse.up()
+        await page.waitForFunction((n) => window.boxSamples.length === n, i + 1)
+        const count = Number(
+          await page.getByLabel("Caras seleccionadas").textContent(),
+        )
+        if (!count)
+          await expect(page.getByText(/El máximo es de 5.000/)).toBeVisible()
+        counts.push(count)
+      }
+      const samples = await page.evaluate(() => window.boxSamples)
+      t.diagnostic(
+        JSON.stringify({
+          name,
+          gpu,
+          width: b.width,
+          height: b.height,
+          counts,
+          samples,
+        }),
+      )
+      await page.close()
+    }
+  },
+)

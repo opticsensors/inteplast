@@ -1,4 +1,12 @@
+import { useContext } from "react"
+import type { CorrectionText } from "@/client"
 import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  CorrectionEditor,
+  sameCorrection,
+  sameInterval,
+} from "./correctionTextDrafts"
 import {
   type CorrectionInterval,
   intervalValues,
@@ -10,6 +18,8 @@ import type { Evaluation } from "./measurementSelection"
 export function CorrectionDetails({
   interval,
   cota,
+  revision,
+  correctionTexts,
   evaluation,
   cavities,
   visible,
@@ -19,6 +29,8 @@ export function CorrectionDetails({
 }: {
   interval: CorrectionInterval
   cota: string
+  revision: string
+  correctionTexts: CorrectionText[]
   evaluation: Evaluation
   cavities: string[]
   visible: string[]
@@ -26,8 +38,32 @@ export function CorrectionDetails({
   actionId?: string
   onAction: (id: string) => void
 }) {
-  const action =
-    interval.actions.find((item) => item.id === actionId) ?? interval.actions[0]
+  const editor = useContext(CorrectionEditor)
+  const scope = {
+    cota,
+    revision,
+    before: interval.before,
+    after: interval.after,
+  }
+  const stored = correctionTexts.filter((item) => sameInterval(item, scope))
+  // A later import may add or retire a proposal after someone wrote about this interval.
+  const proposals = [
+    ...new Set([
+      ...interval.actions.map((item) => item.id),
+      ...stored.filter((item) => item.text).map((item) => item.action),
+    ]),
+  ]
+  const defaultProposal = proposals.includes("") ? "" : (proposals[0] ?? "")
+  const selected =
+    actionId && proposals.includes(actionId) ? actionId : defaultProposal
+  const action = interval.actions.find((item) => item.id === selected)
+  const target = { ...scope, action: selected }
+  const saved = stored.find((item) => item.action === selected)
+  const imported = action
+    ? interval.description || proposalParagraphs(action).join("\n\n")
+    : ""
+  const text = saved?.text ?? imported
+  const draft = editor?.drafts.find((item) => sameCorrection(item, target))
   const values = cavities.map((cavity) => ({
     cavity,
     ...intervalValues(interval, evaluation, cavity),
@@ -115,19 +151,30 @@ export function CorrectionDetails({
         </p>
       )}
       <div className="space-y-2 border-t pt-4 text-sm">
-        {action ? (
+        {editor || action || text ? (
           <>
             <h4 className="font-medium">Cambio propuesto en el molde</h4>
-            {interval.description ? (
-              <p>{interval.description}</p>
+            {editor ? (
+              <Textarea
+                aria-label="Cambio propuesto en el molde"
+                value={draft?.text ?? text}
+                onChange={(event) =>
+                  editor.change({ ...target, text: event.target.value }, text)
+                }
+                disabled={editor.disabled}
+              />
+            ) : text ? (
+              <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">
+                {text}
+              </p>
             ) : (
-              proposalParagraphs(action).map((paragraph, index) => (
-                <p key={`${index}-${paragraph}`}>{paragraph}</p>
-              ))
+              <p className="text-muted-foreground">Sin texto de corrección.</p>
             )}
-            <p className="text-xs text-muted-foreground">
-              Ejecución no confirmada en los documentos.
-            </p>
+            {action && (
+              <p className="text-xs text-muted-foreground">
+                Ejecución no confirmada en los documentos.
+              </p>
+            )}
           </>
         ) : (
           <p className="text-muted-foreground">
@@ -135,21 +182,21 @@ export function CorrectionDetails({
           </p>
         )}
       </div>
-      {interval.actions.length > 1 && (
+      {proposals.length > 1 && (
         <fieldset className="flex flex-wrap gap-2">
           <legend className="mb-2 text-xs text-muted-foreground">
             Propuestas del tramo
           </legend>
-          {interval.actions.map((item) => (
+          {proposals.map((id) => (
             <Button
-              key={item.id}
+              key={id}
               type="button"
               size="sm"
-              variant={action?.id === item.id ? "secondary" : "outline"}
-              aria-pressed={action?.id === item.id}
-              onClick={() => onAction(item.id)}
+              variant={selected === id ? "secondary" : "outline"}
+              aria-pressed={selected === id}
+              onClick={() => onAction(id)}
             >
-              Acción {item.id}
+              {id ? `Acción ${id}` : "Texto del tramo"}
             </Button>
           ))}
         </fieldset>

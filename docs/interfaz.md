@@ -265,6 +265,10 @@ gráfica del tramo con las cavidades visibles y la propuesta del molde. Distingu
 con línea continua y punto lleno de predicciones con línea discontinua y punto vacío;
 no muestra fotografías/capturas ni «Documentos y valores de origen».
 
+En **Editar pieza**, «Cambio propuesto en el molde» se edita en la propia tarjeta del
+tramo, también cuando está vacío. Se puede cambiar de tramo o de propuesta
+y guardar los textos juntos con **Guardar cambios**. **Cancelar** descarta los borradores.
+
 Ofrecer todas las acciones ya vinculadas a la cota y a cada plan, también las que no tienen
 una previsión cuantitativa validada. Distinguir «sin acción vinculada» de «sin actuación
 documentada». Una diferencia entre mediciones nunca basta para inventar una intervención.

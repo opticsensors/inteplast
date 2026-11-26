@@ -37,6 +37,7 @@ from app.models import (
     FeaturePartLink,
     Message,
     Part,
+    PartCorrectionText,
     PartPublic,
     StoredFile,
     get_datetime_utc,
@@ -100,6 +101,17 @@ def read_part_evidence(
     study, revisions = measurement_imports.study(
         session, part, revision, snapshot_id, cota
     )
+    texts = select(PartCorrectionText).where(
+        PartCorrectionText.part_id == part_id,
+        PartCorrectionText.revision == study.payload.get("measurement_revision"),
+    )
+    if cota is not None:
+        entry_ids = [
+            entry["id"]
+            for entry in study.payload.get("catalog", {}).get("entries", [])
+            if cota == entry["id"] or cota in entry["numbers"]
+        ]
+        texts = texts.where(col(PartCorrectionText.cota).in_(entry_ids))
     ids = (
         select(FeatureAsset.file_id)
         .where(FeatureAsset.part_id == part_id)
@@ -115,6 +127,7 @@ def read_part_evidence(
         .order_by(StoredFile.filename)
     ).all()
     return PartEvidencePublic(
+        correction_texts=list(session.exec(texts).all()) if cota != "" else [],
         components=[ComponentDefinition.model_validate(c) for c in part.components],
         part=PartPublic.model_validate(part),
         features=part_features(session, [part_id])[part_id],

@@ -18,6 +18,7 @@ from app.models import (
     FeaturePartLink,
     Part,
     PartCatalogPublic,
+    PartCorrectionText,
     PartCreate,
     PartFromFolder,
     PartPublic,
@@ -52,8 +53,10 @@ def folder_name(path: str) -> str:
     return (PurePosixPath(path).name if path else settings.ASSETS_SOURCE_NAME)[:255]
 
 
-def get_part_or_404(session: SessionDep, part_id: uuid.UUID) -> Part:
-    part = session.get(Part, part_id)
+def get_part_or_404(
+    session: SessionDep, part_id: uuid.UUID, *, for_update: bool = False
+) -> Part:
+    part = session.get(Part, part_id, with_for_update=for_update)
     if not part:
         raise HTTPException(status_code=404, detail="Part not found")
     return part
@@ -185,14 +188,16 @@ def update_part(
     """
     Editar el codigo, el nombre, la familia o el cliente de una pieza.
     """
-    part = get_part_or_404(session, part_id)
+    part = get_part_or_404(session, part_id, for_update=bool(part_in.correction_texts))
     if part_in.code and part_in.code != part.code:
         clash = crud.get_part_by_code(session=session, code=part_in.code)
         if clash:
             raise HTTPException(
                 status_code=409, detail="Ya existe una pieza con ese codigo"
             )
-    changes = part_in.model_dump(exclude_unset=True, exclude={"references", "files"})
+    changes = part_in.model_dump(
+        exclude_unset=True, exclude={"references", "files", "correction_texts"}
+    )
     check_names(
         session,
         changes.get("family_id"),
@@ -243,6 +248,8 @@ def update_part(
         ):
             changes["name"] = name
     part.sqlmodel_update(changes)
+    for correction in part_in.correction_texts:
+        session.merge(PartCorrectionText(part_id=part.id, **correction.model_dump()))
     session.add(part)
     if part_in.files is not None or part_in.references is not None:
         from app.previews import queue_part_previews
@@ -295,6 +302,7 @@ def delete_part(
         current = part_deletion.scope(session, part)
         if (
             current.characteristics
+            or current.correction_texts
             or current.measurement_imports
             or has_evidence(session, part_id)
         ):

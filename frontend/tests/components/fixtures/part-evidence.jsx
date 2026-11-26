@@ -308,6 +308,7 @@ window.review = {
   requests: [],
   study,
   imports: [],
+  correctionTexts: [],
 }
 EvidenceService.importPartEvidence = async ({ partId }) => {
   window.review.imports.push(partId)
@@ -496,6 +497,7 @@ EvidenceService.readPartEvidence = async ({
   window.review.evidenceRequests.push({ partId, revision, snapshotId, cota })
   return {
     part: catalog.find((item) => item.part.id === partId).part,
+    correction_texts: window.review.correctionTexts,
     features: catalog.find((item) => item.part.id === partId).features,
     characteristics:
       partId === part.id
@@ -561,6 +563,19 @@ EvidenceService.readPartEvidence = async ({
   }
 }
 PartsService.readParts = async () => ({ data: [part, secondPart], count: 2 })
+PartsService.updatePart = async ({ requestBody }) => {
+  window.review.requests.push(requestBody)
+  if (window.review.failSave) throw new Error("No se pudo guardar la pieza")
+  for (const change of requestBody.correction_texts) {
+    const { text, ...scope } = change
+    const stored = window.review.correctionTexts.find((item) =>
+      Object.entries(scope).every(([key, value]) => item[key] === value),
+    )
+    if (stored) stored.text = text
+    else window.review.correctionTexts.push({ ...change })
+  }
+  return part
+}
 FeaturesService.readFeatureFilters = async () => ({
   ...(await EvidenceService.readMetrologyFilters()),
   categories: ["hole", "rib"],

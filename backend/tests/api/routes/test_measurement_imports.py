@@ -394,6 +394,69 @@ def test_existing_pilot_is_preserved_before_first_csv_replacement(
     )
 
 
+def test_correction_texts_survive_reimport_and_stay_with_their_scope(
+    client: TestClient, normal_user_token_headers, piece
+):
+    part, _, folder = piece
+    headers = normal_user_token_headers
+    evidence = f"{API}/{part.id}"
+    update = f"{settings.API_V1_STR}/parts/{part.id}"
+
+    def import_files():
+        url = f"{evidence}/measurements"
+        preview = client.post(f"{url}/preview", headers=headers, json={}).json()
+        response = client.post(
+            f"{url}/import",
+            headers=headers,
+            json={
+                "context_key": preview["context_key"],
+                "files": [
+                    request_file(f, replace_existing=f["status"] == "replacement")
+                    for f in preview["files"]
+                    if f["status"] != "imported"
+                ],
+            },
+        )
+        assert response.status_code == 200, response.text
+
+    def read(revision="A", cota="N170"):
+        response = client.get(
+            evidence, headers=headers, params={"cota": cota, "revision": revision}
+        )
+        assert response.status_code == 200, response.text
+        return response.json()["correction_texts"]
+
+    for revision in ("A", "B"):
+        for sample in ("01", "03", "05"):
+            write(folder, f"rev.{revision}/intern.{sample}/c1/report.csv")
+    import_files()
+    first = {
+        "revision": "A",
+        "cota": "N170",
+        "before": "01",
+        "after": "03",
+        "action": "",
+        "text": "Primera línea\nSegunda línea",
+    }
+    second = {**first, "before": "03", "after": "05", "text": "Segundo tramo"}
+    body = {"correction_texts": [first, second]}
+    assert client.put(update, json=body).status_code == 401
+    assert client.put(update, headers=headers, json=body).status_code == 200
+    assert read("B") == []
+    assert read(cota="N161") == []
+    write(folder, "rev.A/intern.01/c1/report.csv", csv_text("3.970"))
+    import_files()
+    assert sorted(read(), key=lambda note: note["before"]) == [first, second]
+    first["text"] = ""
+    assert (
+        client.put(
+            update, headers=headers, json={"correction_texts": [first]}
+        ).status_code
+        == 200
+    )
+    assert sorted(read(), key=lambda note: note["before"]) == [first, second]
+
+
 def test_cmm_reader_keeps_elements_separate_and_reports_unidentified_rows():
     first, _ = parse(csv_text(code="N161"))
     changed, _ = parse(csv_text(code="N161").replace(b"11;", b"12;"))

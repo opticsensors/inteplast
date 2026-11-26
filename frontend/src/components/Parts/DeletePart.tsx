@@ -36,6 +36,14 @@ export function deletionLines(scope: PartDeletionScope): string[] {
   const lines: string[] = []
   if (scope.characteristics)
     lines.push(plural(scope.characteristics, "cota", "cotas"))
+  if (scope.correction_texts)
+    lines.push(
+      plural(
+        scope.correction_texts,
+        "texto de corrección",
+        "textos de corrección",
+      ),
+    )
   if (scope.measurement_imports)
     lines.push(
       plural(

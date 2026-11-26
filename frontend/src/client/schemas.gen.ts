@@ -631,6 +631,47 @@ export const ComponentSourceSchema = {
     title: 'ComponentSource'
 } as const;
 
+export const CorrectionTextSchema = {
+    properties: {
+        revision: {
+            type: 'string',
+            maxLength: 64,
+            minLength: 1,
+            title: 'Revision'
+        },
+        cota: {
+            type: 'string',
+            maxLength: 512,
+            minLength: 1,
+            title: 'Cota'
+        },
+        before: {
+            type: 'string',
+            maxLength: 64,
+            minLength: 1,
+            title: 'Before'
+        },
+        after: {
+            type: 'string',
+            maxLength: 64,
+            minLength: 1,
+            title: 'After'
+        },
+        action: {
+            type: 'string',
+            maxLength: 64,
+            title: 'Action'
+        },
+        text: {
+            type: 'string',
+            title: 'Text'
+        }
+    },
+    type: 'object',
+    required: ['revision', 'cota', 'before', 'after', 'action', 'text'],
+    title: 'CorrectionText'
+} as const;
+
 export const CotaSearchResultSchema = {
     properties: {
         id: {
@@ -3893,6 +3934,11 @@ export const PartDeletionScopeSchema = {
             title: 'Measurement Imports',
             default: 0
         },
+        correction_texts: {
+            type: 'integer',
+            title: 'Correction Texts',
+            default: 0
+        },
         feature_assets: {
             type: 'integer',
             title: 'Feature Assets',
@@ -3974,6 +4020,14 @@ export const PartDetailPublicSchema = {
 
 export const PartEvidencePublicSchema = {
     properties: {
+        correction_texts: {
+            items: {
+                '$ref': '#/components/schemas/CorrectionText'
+            },
+            type: 'array',
+            title: 'Correction Texts',
+            default: []
+        },
         components: {
             items: {
                 '$ref': '#/components/schemas/ComponentDefinition'
@@ -4656,6 +4710,13 @@ export const PartUpdateSchema = {
                 }
             ],
             title: 'Files'
+        },
+        correction_texts: {
+            items: {
+                '$ref': '#/components/schemas/CorrectionText'
+            },
+            type: 'array',
+            title: 'Correction Texts'
         }
     },
     type: 'object',

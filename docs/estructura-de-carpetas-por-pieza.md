@@ -1,6 +1,9 @@
 # Preparación de las carpetas de pieza para INTEPLAST
 
-**Documento de trabajo · 24/11/2026.** Sirve para preparar los cambios en las carpetas de las 21 piezas de `Exemples` y revisar el resultado con INTEPLAST. Los archivos citados son los que se han localizado. La decisión sobre cuál está aprobado corresponde al responsable de la pieza. Este inventario no es una lista de planos principales para cargar en la aplicación. **Es una propuesta abierta:** se ajustará con Eduard y con INTEPLAST antes de pedir ningún cambio. **La reorganización de Metrología la haremos nosotros**, sobre una copia de `Exemples` y para las 21 piezas, como prueba de concepto. Después se la enseñaremos a INTEPLAST; no se les pide que la hagan ([próximos pasos](proximos-pasos.md#-reorganizar-metrología-de-las-21-piezas-prueba-de-concepto-24112026)).
+**Documento de trabajo · actualizado el 26/11/2026.** El plan abarca las carpetas de los features y de las 21 piezas de `Exemples`. El inventario recoge los archivos localizados. El responsable de la pieza confirma la aprobación de los documentos dudosos.
+
+1. **Primero, la estructura de carpetas.** Acordar con Eduard las reglas de ubicación y documentar los movimientos por pieza. La prueba posterior se hará en una carpeta hermana de `Exemples`. El nombre propuesto es `Exemples reestructurados`. En esta fase los Excel se conservan tal como se recibieron. Su ubicación distingue informes de muestreo, copias de cliente y soportes.
+2. **Después, el contenido de los Excel.** Revisar por separado qué convenciones necesitan las hojas, cabeceras e identificadores para poder leer las mediciones de forma consistente. El inventario y los casos del método 3 servirán de punto de partida. [Próximos pasos de Metrología](proximos-pasos.md#-reorganizar-metrología-de-las-21-piezas-prueba-de-concepto-24112026)
 
 ## Decisiones de Eduard
 
@@ -12,7 +15,20 @@
 
 ## Estructura propuesta
 
-La **3212 Pump Housing**, de Bolt Eye, es la referencia por algo concreto: se distingue el plano de pieza, el STEP de producto y el STEP de molde. Su escaneo 07 funciona sin `.icp` y sus Excel identifican cavidades 13–16. Conviene conservar esa claridad. Para los nombres de carpeta propongo el esquema de las entregas más recientes. En Bolt Eye el Moldflow útil puede estar en la carpeta **7** y el STL en la **8**. Al preparar cada pieza se identifica el contenido por su función. [Comparación de los dos esquemas](../conocimiento/comparativa.md#esqueleto-del-3212-frente-al-nuevo)
+### De la raíz a la pieza
+
+Cada carpeta de primer nivel identifica **un feature** y contiene directamente las carpetas de sus piezas. Si dos tipos distinguen dos features, cada tipo se incorpora al nombre de su feature. Así se trasladarán los grupos actuales de Clips a la copia. [Inventario de Clips](../conocimiento/1-clips/README.md)
+
+| Carpeta en `Exemples` | Feature en `Exemples reestructurados` | Carpetas de pieza directamente debajo |
+|---|---|---|
+| `1- Clips en Piezas/Tipo A/` | `Clips en pieza A/` | `3174/`, `3186/`, `3218/` |
+| `1- Clips en Piezas/Tipo B/` | `Clips en pieza B/` | `3195/`, `3226/`, `3309/` |
+
+**Piezas compartidas.** Se conserva la convención que ya usa INTEPLAST. Una carpeta contiene los datos y, bajo cada otro feature, una carpeta con el mismo código contiene un `Readme.txt` que indica dónde encontrarlos. En los originales, los README de Planitudes para **3205 y 3206** remiten a Nervios de Soldadura. Los de Tetones remiten a Pockets para **3167** y a Nervios de Soldadura para **3214**. Al preparar la copia, comprobar que desde cada remisión se llega a la carpeta del mismo código. La nota de Anclajes sigue pendiente de identificación. [Inventario por feature](../conocimiento/comparativa.md#pieza-por-pieza)
+
+### Dentro de la pieza
+
+**La función de la carpeta determina cómo debe interpretarla el lector.** El prefijo numérico es opcional y el orden es libre. La numeración del esquema solo facilita la lectura. En el original de Bolt Eye, Moldflow puede llevar el **7** y el STL el **8**. La futura validación deberá comprobar que cambiar u omitir el prefijo da el mismo resultado. La **3212 Pump Housing** sirve de referencia para distinguir el plano vigente, el STEP de producto y el CAD de molde. [Comparación de los dos esquemas](../conocimiento/comparativa.md#esqueleto-del-3212-frente-al-nuevo)
 
 ```text
 <código de pieza>/
@@ -28,7 +44,7 @@ La **3212 Pump Housing**, de Bolt Eye, es la referencia por algo concreto: se di
   3- Molde/
     <ficheros del molde tal como los organiza INTEPLAST>
   4- Metrologia/
-    Interns/                                 solo informes: un Excel por muestreo, <código>-<variante>_intern.NN,
+    Interns/                                 un Excel de referencia por variante y muestreo, <código>-<variante>_intern.NN,
                                              y, si existen, los CSV de máquina de ese muestreo (solo para comprobar)
     <cualquier otra carpeta>/                el resto: copias de cliente, Cpk, comparativas, MSA, volcados
                                              y PPAP (p. ej. Customer/ y Soportes/; el nombre da igual)
@@ -37,9 +53,18 @@ La **3212 Pump Housing**, de Bolt Eye, es la referencia por algo concreto: se di
   7- Pieza real STL/
 ```
 
-**Variantes que admite la propuesta.** Para varios componentes con plano propio, abrir una subcarpeta directamente bajo `1- 2D y 3D pieza` por ámbito, por ejemplo `Base`, `Tapa` y `Conjunto`. Cada PDF queda junto a su propio ICP. El CAD va en el ámbito que represente. Un PDF multipágina que ya constituye el documento aprobado se conserva entero. Si cubre varios componentes, identificar qué página corresponde a cada uno y resolver qué se va a publicar antes de duplicar archivos. En el histórico, el número de plano distingue los componentes. En Metrología, los informes que hoy están en la raíz (3051, 3197, 3212) o bajo `Version 00/Interns` (3174) pasan a `4- Metrologia/Interns/`, para que la regla sea la misma en todas las piezas.
+**Reglas fijas y variantes admitidas**
 
-**Dónde abrir cada carpeta.** Proponemos `1- 2D y 3D pieza/Revisiones anteriores/` como destino común del botón de carpeta con reloj. La carpeta del plano abre la ubicación del PDF vigente, que puede ser la raíz de Diseño o la carpeta de su componente. Al seleccionar planos vigentes y sus ICP, la app deberá excluir `Revisiones anteriores/` y todo su contenido, también cuando falte el PDF vigente. Acordar el nombre con INTEPLAST y probar ambos enlaces con una cuenta que tenga acceso. [Consulta A26](preguntas-abiertas.md#a26-revisiones-plano)
+| Zona | Regla | Flexibilidad |
+|---|---|---|
+| Diseño (`2D y 3D pieza`) | Un solo PDF vigente por pieza o por componente con plano propio. Su ICP, cuando exista y corresponda a esa edición, va junto al PDF. El STEP vigente se guarda con el producto o componente que representa. | La pieza simple usa la raíz. Una pieza compuesta admite subcarpetas como `Base/`, `Tapa/` y `Conjunto/`. Un PDF multipágina se conserva entero. Si abarca varios componentes, hay que identificar las hojas que corresponden a cada uno. |
+| Histórico de planos | Guardar las ediciones anteriores aparte, bajo Diseño. Excluir todo el histórico al buscar el vigente, incluso cuando falte el PDF actual. | La propuesta para la copia es `Revisiones anteriores/`, con `OLD/` como nombre equivalente. Dentro se puede ordenar por número de plano, revisión y cambio. |
+| Metrología | Reservar `Metrologia/Interns/` para el Excel de referencia de cada variante y muestreo y sus CSV opcionales de comprobación. Conservar las copias de cliente, comparativas, Cpk y PPAP fuera de `Interns/`. Las copias de referencia dudosas quedan pendientes según el método 3. | Bajo `Interns/` caben subcarpetas de variante. Para el resto sirven `Customer/`, `Soportes/` u otros nombres. En la copia, los informes que hoy están sueltos en la raíz de Metrología (3051, 3197, 3212) o bajo `Version 00/Interns` (3174) se reunirán bajo `Metrologia/Interns/`. |
+| Molde, Moldflow, Retoques, Método y STL | Conservar los archivos en la carpeta de su función. Los documentos auxiliares de un retoque o un método conservan su contexto. | Se admite la organización interna de cada entrega, incluidos lados del molde, electrodos y lazos de retoque. |
+
+**Carpetas opcionales vacías o ausentes.** Cuando falte documentación de una categoría, la copia conservará la situación de cada pieza en el original. Si la carpeta existía vacía, se conservará vacía. Si faltaba, se omitirá. Al preparar la copia habrá que consultar también los directorios, porque el inventario de archivos por sí solo pierde esa distinción. En la prueba del lector se comprobará que, para la misma pieza, una carpeta opcional vacía y una ausente dan el mismo resultado para esa categoría (ningún archivo detectado) y permiten cargar el resto de la pieza. [Ejemplos de carpetas vacías comprobadas en disco](../conocimiento/comparativa.md#esqueleto-del-3212-frente-al-nuevo)
+
+**Acceso desde la app.** La carpeta del plano abrirá la ubicación del PDF vigente y la carpeta con reloj abrirá el histórico de la pieza. Acordar el nombre del histórico en SharePoint con INTEPLAST y probar ambos enlaces con una cuenta que tenga acceso. [Consulta A26](preguntas-abiertas.md#a26-revisiones-plano)
 
 ## Método 1. Preparar el plano de consulta
 
@@ -272,7 +297,7 @@ Los ejemplos son localizadores relativos a `4- Metrologia` salvo indicación exp
 2. **Resolver las decisiones que afectan al destino.** Concretar con INTEPLAST el nombre de la carpeta histórica, los documentos liberados en los casos dudosos y las copias de Excel de referencia. Un dato ausente puede seguir ausente. Evitar deducir una aprobación o completar una ficha para que la prueba pase.
 3. **Preparar las carpetas y revisar la selección desde cero.** En una copia de trabajo, aplicar primero las operaciones documentadas. Revisar con el comportamiento previsto qué devolvería cada carpeta de Diseño, incluidas las páginas de cada PDF. Si el plan localiza una edición mejor en Método o Retoques, el cambio consiste en preparar allí la fuente y colocar el archivo acordado en Diseño. El visor no buscará excepciones fuera de esa carpeta.
 4. **Comprobar cada pieza antes de darla por preparada.** Al abrir Diseño debe quedar inequívoco el PDF de cada ámbito. Su ICP, si existe, debe situar las marcas en el dibujo y la hoja correctos. Los antiguos se deben poder encontrar por número y cambio en el histórico de SharePoint. Si falta el viejo PDF, el Excel histórico sigue siendo consultable con la revisión que declara.
-5. **Repetir la comprobación con los Excel como única entrada de medidas.** Elegir una cota con datos en cada pieza que los permita y remontar un punto de la gráfica a libro, hoja, celda, revisión, cavidad y muestra. Verificar también un caso sin informe (2820), otro sin identificadores suficientes (3226), uno con copias discrepantes (3233) y otro con numeración repetida por componente (3288). En 3237, cambiar de 05 a 04 debe cambiar la gráfica, mantener el PDF 05 y dejar el acceso al antiguo en SharePoint.
+5. **En la segunda fase, comprobar la lectura de los Excel.** Elegir una cota con datos en cada pieza que los permita y remontar un punto de la gráfica a libro, hoja, celda, revisión, cavidad y muestra. Verificar también un caso sin informe (2820), otro sin identificadores suficientes (3226), uno con copias discrepantes (3233) y otro con numeración repetida por componente (3288). En 3237, cambiar de 05 a 04 debe cambiar la gráfica, mantener el PDF 05 y dejar el acceso al antiguo en SharePoint.
 
 ### Ejemplos de operaciones para el futuro plan
 

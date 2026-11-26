@@ -106,6 +106,90 @@ async function mount(
 }
 const state = (page) => page.evaluate(() => window.review.location().search)
 
+test("correction text uses the piece editor and keeps drafts for each sample pair", async (t) => {
+  const page = await mount(t)
+  const button = (name) => page.getByRole("button", { name, exact: true })
+  const field = page.getByRole("textbox", {
+    name: "Cambio propuesto en el molde",
+  })
+  const detail = page.getByRole("region", { name: "Detalle del tramo" })
+  const first = button("Tramo intern.01 a intern.03")
+  const second = button("Tramo intern.03 a intern.05")
+
+  await second.click()
+  await expect(
+    detail.getByText("No hay una acción vinculada a N170."),
+  ).toBeVisible()
+  await button("Editar pieza").click()
+  await expect(field).toHaveValue("")
+  await field.fill("Texto del segundo tramo")
+  await first.click()
+  await expect(field).toHaveValue(/expulsores/)
+  await field.fill("Texto del primer tramo\nSegunda línea")
+  await second.click()
+  await expect(field).toHaveValue("Texto del segundo tramo")
+  await page.evaluate(() => {
+    window.review.failSave = true
+  })
+  await button("Guardar cambios").click()
+  await expect(
+    page.getByRole("alert").filter({ hasText: "No se pudo guardar" }),
+  ).toBeVisible()
+  await expect(field).toHaveValue("Texto del segundo tramo")
+  await page.evaluate(() => {
+    window.review.failSave = false
+  })
+  await button("Guardar cambios").click()
+  await expect(detail.getByText("Texto del segundo tramo")).toBeVisible()
+  await expect(field).toHaveCount(0)
+  await button("Correcciones").click()
+  await button("Correcciones").click()
+  await first.click()
+  await expect(
+    detail.getByText("Texto del primer tramo Segunda línea"),
+  ).toBeVisible()
+  await button("Editar pieza").click()
+  await field.fill("")
+  await button("Cancelar").click()
+  await expect(
+    detail.getByText("Texto del primer tramo Segunda línea"),
+  ).toBeVisible()
+  assert.deepEqual(
+    Object.keys(await page.evaluate(() => window.review.requests.at(-1))),
+    ["correction_texts"],
+  )
+})
+
+test("a manual interval text remains editable beside an imported proposal on mobile", async (t) => {
+  const page = await mount(t, "/parts/part-one?cota=N170", true)
+  await page.evaluate(async () => {
+    window.review.correctionTexts.push({
+      revision: "06",
+      cota: "N170",
+      before: "01",
+      after: "03",
+      action: "",
+      text: "Texto anterior a la propuesta",
+    })
+    await window.review.refetchEvidence()
+  })
+  const button = (name) => page.getByRole("button", { name, exact: true })
+  const field = page.getByRole("textbox", {
+    name: "Cambio propuesto en el molde",
+  })
+  await button("Correcciones").tap()
+  await expect(page.getByText("Texto anterior a la propuesta")).toBeVisible()
+  await button("Editar pieza").tap()
+  await field.fill("Texto revisado del tramo")
+  await button("Acción 1.33").tap()
+  await expect(field).toHaveValue(/expulsores/)
+  await field.fill("Texto revisado de la propuesta")
+  await button("Guardar cambios").tap()
+  await expect(page.getByText("Texto revisado de la propuesta")).toBeVisible()
+  await button("Texto del tramo").tap()
+  await expect(page.getByText("Texto revisado del tramo")).toBeVisible()
+})
+
 test("revision and historical import survive revision changes and browser navigation", async (t) => {
   const page = await mount(
     t,

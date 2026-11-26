@@ -1,5 +1,9 @@
 import type { ReactNode } from "react"
-import type { CharacteristicPublic, MetrologyFeature } from "@/client"
+import type {
+  CharacteristicPublic,
+  CorrectionText,
+  MetrologyFeature,
+} from "@/client"
 import { FilterSelect } from "@/components/Common/FilterSelect"
 import { SearchToolbar } from "@/components/Common/SearchToolbar"
 import { Button } from "@/components/ui/button"
@@ -33,6 +37,7 @@ export function Measurements({
   onDrawing,
   onSource,
   characteristics = [],
+  correctionTexts = [],
   features = [],
   status,
   filters,
@@ -40,6 +45,7 @@ export function Measurements({
 }: {
   study?: Study
   characteristics?: CharacteristicPublic[]
+  correctionTexts?: CorrectionText[]
   features?: MetrologyFeature[]
   status?: string | null
   filters?: ReactNode
@@ -257,10 +263,13 @@ export function Measurements({
               unit={selected.series.unit}
               visible={visible}
               onSource={onSource}
-              intervals={correctionMode ? intervals : undefined}
+              intervals={intervals}
               selectedInterval={correctionMode ? interval?.id : undefined}
               onInterval={(id) =>
-                onChange({ interval: id, action: undefined }, true)
+                onChange(
+                  { view: "correcciones", interval: id, action: undefined },
+                  correctionMode,
+                )
               }
               onVisible={(names) =>
                 onChange({ cota: code, cavities: names.join(",") }, true)
@@ -270,7 +279,9 @@ export function Measurements({
           {correctionMode && interval && (
             <CorrectionDetails
               interval={interval}
-              cota={code}
+              cota={entry.id}
+              revision={study!.measurement_revision}
+              correctionTexts={correctionTexts}
               evaluation={selected}
               cavities={study?.cavities ?? []}
               visible={visible}

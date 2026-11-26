@@ -151,6 +151,15 @@ export type ComponentSource = {
     kind: string;
 };
 
+export type CorrectionText = {
+    revision: string;
+    cota: string;
+    before: string;
+    after: string;
+    action: string;
+    text: string;
+};
+
 export type CotaSearchResult = {
     id: string;
     code: string;
@@ -788,6 +797,7 @@ export type PartDeletionScope = {
     characteristics?: number;
     feature_characteristic_links?: number;
     measurement_imports?: number;
+    correction_texts?: number;
     feature_assets?: number;
     covers_reset?: number;
     files_removed?: number;
@@ -806,6 +816,7 @@ export type PartDetailPublic = {
 };
 
 export type PartEvidencePublic = {
+    correction_texts?: Array<CorrectionText>;
     components?: Array<ComponentDefinition>;
     part: PartPublic;
     documents: Array<EvidenceDocument>;
@@ -914,6 +925,7 @@ export type PartUpdate = {
     folder_path?: (string | null);
     references?: (Array<ReferenceChoice> | null);
     files?: (Array<PartFileInput> | null);
+    correction_texts?: Array<CorrectionText>;
 };
 
 export type PrivateUserCreate = {

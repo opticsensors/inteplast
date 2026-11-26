@@ -181,6 +181,9 @@ export function createModelControls(
   return {
     controls,
     target,
+    get classic() {
+      return classic
+    },
     get viewCamera() {
       return viewCamera()
     },

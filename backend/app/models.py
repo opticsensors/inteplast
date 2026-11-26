@@ -12,7 +12,7 @@ from pydantic import (
     model_validator,
 )
 from pydantic import Field as PydanticField
-from sqlalchemy import JSON, Column, DateTime, Integer, text
+from sqlalchemy import JSON, Column, DateTime, Integer, PrimaryKeyConstraint, text
 from sqlmodel import AutoString, Field, Relationship, SQLModel
 
 
@@ -359,6 +359,26 @@ class PartFileInput(BaseModel):
     primary: bool = False
 
 
+class CorrectionText(SQLModel):
+    revision: str = Field(min_length=1, max_length=64)
+    cota: str = Field(min_length=1, max_length=512)
+    before: str = Field(min_length=1, max_length=64)
+    after: str = Field(min_length=1, max_length=64)
+    action: str = Field(max_length=64)
+    text: str
+
+
+class PartCorrectionText(CorrectionText, table=True):
+    """User text stays with the sample pair across measurement imports."""
+
+    __table_args__ = (
+        PrimaryKeyConstraint(
+            "part_id", "revision", "cota", "before", "after", "action"
+        ),
+    )
+    part_id: uuid.UUID = Field(foreign_key="part.id", ondelete="CASCADE")
+
+
 class PartUpdate(SQLModel):
     code: str = Field(default=None, min_length=1, max_length=64)
     name: str | None = Field(default=None, max_length=255)
@@ -371,6 +391,7 @@ class PartUpdate(SQLModel):
     folder_path: str | None = Field(default=None, max_length=2048)
     references: list[ReferenceChoice] | None = Field(default=None, max_length=4)
     files: list[PartFileInput] | None = Field(default=None, max_length=200)
+    correction_texts: list[CorrectionText] = Field(default_factory=list)
 
 
 class FeaturePartOrder(SQLModel):

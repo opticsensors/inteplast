@@ -10,7 +10,7 @@ from sqlalchemy import JSON, Column, DateTime, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 from app.component_models import ComponentDefinition, qualified
-from app.models import FilePublic, PartPublic, get_datetime_utc
+from app.models import CorrectionText, FilePublic, PartPublic, get_datetime_utc
 
 
 class PartCharacteristic(SQLModel, table=True):
@@ -192,6 +192,7 @@ class MetrologyCatalog(BaseModel):
 
 
 class PartEvidencePublic(BaseModel):
+    correction_texts: list[CorrectionText] = []
     components: list[ComponentDefinition] = []
     part: PartPublic
     documents: list[EvidenceDocument]

@@ -36,6 +36,7 @@ from app.models import (
     FeatureNote,
     FeaturePartLink,
     Part,
+    PartCorrectionText,
     StoredFile,
 )
 
@@ -56,6 +57,7 @@ class PartDeletionScope(BaseModel):
     characteristics: int = 0
     feature_characteristic_links: int = 0
     measurement_imports: int = 0
+    correction_texts: int = 0
     feature_assets: int = 0
     covers_reset: int = 0
     files_removed: int = 0
@@ -241,7 +243,11 @@ def scope(session: Session, part: Part) -> PartDeletionScope:
             col(EvidenceJob.file_id).in_(removed),
         )
     )
+    texts = _rows(
+        session, select(PartCorrectionText).where(PartCorrectionText.part_id == part_id)
+    )
     result = PartDeletionScope(
+        correction_texts=len(texts),
         part_id=part_id,
         code=part.code,
         name=part.name,
@@ -276,6 +282,7 @@ def scope(session: Session, part: Part) -> PartDeletionScope:
     # Rows that are deleted enter with their whole content, so that editing one of them
     # (a dimension, an import, a reviewed location) also asks for a new review.
     identity = {
+        "correction_texts": texts,
         "scope": result.model_dump(mode="json", exclude={"key"}),
         "assets": _rows(
             session, select(FeatureAsset).where(FeatureAsset.part_id == part_id)

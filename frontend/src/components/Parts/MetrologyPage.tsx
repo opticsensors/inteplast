@@ -234,6 +234,7 @@ export function MetrologyPage({
       {error && <p role="alert">{fileErrorMessage(error)}</p>}
       <Measurements
         study={study}
+        correctionTexts={data?.correction_texts}
         characteristics={data?.characteristics ?? []}
         features={data?.features ?? []}
         status={status}

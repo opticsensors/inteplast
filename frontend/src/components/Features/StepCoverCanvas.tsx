@@ -16,12 +16,14 @@ import {
 } from "./cadCover"
 import { addCadEdges } from "./cadEdges"
 import { coverFaceRanges } from "./coverFaceRanges"
+import { createFaceBoxPicker } from "./faceBoxPicker"
 import {
   coloredFaces,
   compatibleLayers,
   paintFaceGroups,
   SHARED_COLOR,
 } from "./faceColors"
+import { bindFaceSelection } from "./faceSelectionGesture"
 import {
   captureCamera,
   createModelCamera,
@@ -32,6 +34,9 @@ import { modelPivot } from "./modelPivot"
 import { readCoverGeometry } from "./preparedCover"
 
 const EMPTY_LAYERS: FaceLayer[] = []
+const MAX_SELECTED_FACES = 5000
+const selectionLimit =
+  "El máximo es de 5.000 caras. Selecciona un área más pequeña."
 
 type Surface = {
   meshIndex: number
@@ -79,6 +84,7 @@ export default function StepCoverCanvas({
   const [shared, setShared] = useState(false)
   const toggleLayers = useRef<(ids: Set<string>) => void>(() => {})
   const [selectedCount, setSelectedCount] = useState(0)
+  const [selectionNotice, setSelectionNotice] = useState("")
   const [restartable, setRestartable] = useState(false)
   const [status, setStatus] = useState("Cargando CAD…")
   const [error, setError] = useState("")
@@ -94,6 +100,7 @@ export default function StepCoverCanvas({
     }
     callbacks.current.onReady?.(null)
     setSelectedCount(0)
+    setSelectionNotice("")
     setLegend([])
     setHidden(new Set())
     setShared(false)
@@ -339,75 +346,74 @@ export default function StepCoverCanvas({
         )
         return range ? `${meshIndex}:${range.faceIndex}` : null
       }
-      let down: { id: number; x: number; y: number; moved: boolean } | null =
-        null
-      const pointerDown = (event: PointerEvent) => {
-        // A second touch cancels selection; pinch/drag are navigation only.
-        if (down) {
-          down = null
-          return
-        }
-        if (event.button === 0)
-          down = {
-            id: event.pointerId,
-            x: event.clientX,
-            y: event.clientY,
-            moved: false,
-          }
-      }
-      const pointerMove = (event: PointerEvent) => {
-        if (down) {
-          if (Math.hypot(event.clientX - down.x, event.clientY - down.y) > 4)
-            down.moved = true
-          return
-        }
-        const next = pick(event)
-        if (next !== hovered) {
-          hovered = next
-          paint()
-        }
-      }
-      const pointerUp = (event: PointerEvent) => {
-        if (
-          down?.id === event.pointerId &&
-          !down.moved &&
-          Math.hypot(event.clientX - down.x, event.clientY - down.y) <= 4
-        ) {
-          const key = pick(event)
-          if (key) {
-            if (selected.has(key)) selected.delete(key)
-            else if (selected.size < 5000) selected.add(key)
-            changed()
-          }
-        }
-        down = null
-      }
-      const cancel = () => {
-        down = null
-        hovered = null
-        paint()
-      }
-      const leave = () => {
-        hovered = null
-        paint()
-      }
       if (editable) {
-        canvas.addEventListener("pointerdown", pointerDown)
-        canvas.addEventListener("pointermove", pointerMove)
-        canvas.addEventListener("pointerup", pointerUp)
-        canvas.addEventListener("pointercancel", cancel)
-        canvas.addEventListener("lostpointercapture", cancel)
-        canvas.addEventListener("pointerleave", leave)
-        cleanup.push(() => {
-          canvas.removeEventListener("pointerdown", pointerDown)
-          canvas.removeEventListener("pointermove", pointerMove)
-          canvas.removeEventListener("pointerup", pointerUp)
-          canvas.removeEventListener("pointercancel", cancel)
-          canvas.removeEventListener("lostpointercapture", cancel)
-          canvas.removeEventListener("pointerleave", leave)
+        let picker: ReturnType<typeof createFaceBoxPicker> | undefined
+        const boxPicker = () =>
+          (picker ??= createFaceBoxPicker(renderer, meshes, ranges))
+        // Warm the ID pass after the first frame; selection still works if the
+        // user drags immediately or the browser doesn't schedule idle work.
+        let idle: number | undefined
+        const firstFrame = requestAnimationFrame(() => {
+          idle = window.requestIdleCallback?.(() => {
+            if (stopped || !canvas.clientWidth) return
+            try {
+              boxPicker().prepareView(controller.viewCamera)
+            } catch {
+              // An optional warm-up must not interrupt point selection. Retry
+              // on the first rectangle, where a failure has visible feedback.
+            }
+          })
         })
+        cleanup.push(() => {
+          cancelAnimationFrame(firstFrame)
+          if (idle !== undefined) window.cancelIdleCallback(idle)
+          picker?.dispose()
+        })
+        cleanup.push(
+          bindFaceSelection(
+            canvas,
+            () => controller.classic,
+            (event) => {
+              setSelectionNotice("")
+              const key = pick(event)
+              if (!key) return
+              if (selected.has(key)) selected.delete(key)
+              else if (selected.size < MAX_SELECTED_FACES) selected.add(key)
+              else return setSelectionNotice(selectionLimit)
+              changed()
+            },
+            (event) => {
+              const next = event ? pick(event) : null
+              if (next !== hovered) {
+                hovered = next
+                paint()
+              }
+            },
+            (box) => {
+              if (box.left >= box.right || box.top >= box.bottom) return
+              try {
+                const added = boxPicker()
+                  .select(controller.viewCamera, box)
+                  .filter((key) => !selected.has(key))
+                if (added.length + selected.size > MAX_SELECTED_FACES) {
+                  setSelectionNotice(selectionLimit)
+                  return
+                }
+                setSelectionNotice("")
+                if (!added.length) return
+                for (const key of added) selected.add(key)
+                changed()
+              } catch {
+                setSelectionNotice(
+                  "No se ha podido seleccionar por área. Puedes marcar las caras con clics.",
+                )
+              }
+            },
+          ),
+        )
       }
       clearSelection.current = () => {
+        setSelectionNotice("")
         selected.clear()
         hovered = null
         changed()
@@ -501,6 +507,11 @@ export default function StepCoverCanvas({
       style={{ backgroundColor: CAD_COVER_BACKGROUND }}
     >
       <div ref={host} className="size-full" />
+      {editable && (
+        <output aria-label="Caras seleccionadas" className="sr-only">
+          {selectedCount}
+        </output>
+      )}
       {editable && !status && !error && (
         <div
           aria-hidden="true"
@@ -511,6 +522,11 @@ export default function StepCoverCanvas({
         <div className="absolute inset-0">{fallback}</div>
       )}
       {status && !error && <CoverLoading />}
+      {selectionNotice && (
+        <output className="absolute inset-x-2 bottom-2 rounded bg-background/95 p-2 text-center text-sm">
+          {selectionNotice}
+        </output>
+      )}
       {!status && !error && legend.length > 0 && (
         <fieldset
           aria-label="Features visibles"
