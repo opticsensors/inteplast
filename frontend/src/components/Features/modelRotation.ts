@@ -28,7 +28,6 @@ export function bindModelRotation(
 ) {
   let classic = false
   let pickCenter = true
-  let picked = false
   let drag:
     | {
         id: number
@@ -46,26 +45,8 @@ export function bindModelRotation(
   model?.traverseVisible((child) => {
     if ((child as Mesh).isMesh) surfaces.push(child as Mesh)
   })
-  const marker = document.createElement("span")
-  marker.setAttribute("aria-hidden", "true")
-  marker.dataset.cadPivot = ""
-  marker.className =
-    "pointer-events-none absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-blue-600 shadow-[0_0_0_1px_#1e3a8a]"
-  marker.hidden = true
-  canvas.after(marker)
-  const projection = new Vector3()
-  function updateMarker() {
-    marker.hidden = !picked
-    if (!picked) return
-    projection.copy(pivot).project(view())
-    marker.hidden = Math.abs(projection.z) > 1
-    marker.style.left = `${(projection.x + 1) * 50}%`
-    marker.style.top = `${(1 - projection.y) * 50}%`
-  }
   function resetPivot() {
-    picked = false
     pivot.copy(defaultPivot)
-    updateMarker()
   }
   function pick(event: PointerEvent) {
     const box = canvas.getBoundingClientRect()
@@ -77,11 +58,7 @@ export function bindModelRotation(
     const ray = new Raycaster()
     ray.setFromCamera(cursor, view())
     const hit = ray.intersectObjects(surfaces, false)[0]
-    if (hit) {
-      pivot.copy(hit.point)
-      picked = true
-      updateMarker()
-    }
+    if (hit) pivot.copy(hit.point)
   }
 
   function down(event: PointerEvent) {
@@ -163,7 +140,6 @@ export function bindModelRotation(
       pickCenter = nextPick
       if (!pickCenter) resetPivot()
     },
-    updateMarker,
     resetPivot,
     dispose() {
       canvas.removeEventListener("pointerdown", down)
@@ -171,7 +147,6 @@ export function bindModelRotation(
       window.removeEventListener("pointerup", up)
       window.removeEventListener("pointercancel", cancel)
       window.removeEventListener("blur", cancel)
-      marker.remove()
     },
   }
 }

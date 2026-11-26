@@ -86,7 +86,7 @@ cinco minutos. La comprobación de estado se repite al volver a abrir el adjunto
 **Trackball**, el control predeterminado, gira al arrastrar con la rueda pulsada. El
 centro inicial es el centroide de volumen de la pieza. En mallas abiertas o inconsistentes
 se usa el centro de la caja que la envuelve. Un clic breve con la rueda sobre la superficie
-elige otro centro y lo señala con un punto azul. Ajustes de usuario guarda en cada cuenta
+elige otro centro de giro. Ajustes de usuario guarda en cada cuenta
 esta opción, la proyección (ortográfica por defecto o perspectiva de 45°), los controles
 y el sentido de la rueda. **Clásico** usa `ArcballControls` de Three.js. En este perfil, el
 arrastre izquierdo gira y el central o derecho desplaza. Estas preferencias se

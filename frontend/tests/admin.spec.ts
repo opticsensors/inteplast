@@ -157,34 +157,36 @@ test.describe("Admin user management", () => {
     await expect(userRow.getByText("Admin")).toBeVisible()
   })
 
-  test("Edit a user successfully", async ({ page }) => {
-    await page.goto("/admin")
-
+  test("Edit only a user's role and status", async ({ page }) => {
     const email = randomEmail()
-    const password = randomPassword()
-    const originalName = "Original Name"
-    const updatedName = "Updated Name"
-
-    await page.getByRole("button", { name: "Añadir usuario" }).click()
-    await page.getByPlaceholder("Correo").fill(email)
-    await page.getByPlaceholder("Nombre").fill(originalName)
-    await page.getByPlaceholder("Contraseña").first().fill(password)
-    await page.getByPlaceholder("Contraseña").last().fill(password)
-    await page.getByRole("button", { name: "Guardar" }).click()
-
-    await expect(page.getByText("Usuario creado")).toBeVisible()
-    await expect(page.getByRole("dialog")).not.toBeVisible()
-
+    const user = await createUser({ email, password: randomPassword() })
+    await page.goto("/admin")
     const userRow = page.getByRole("row").filter({ hasText: email })
     await userRow.getByRole("button").click()
-
     await page.getByRole("menuitem", { name: "Editar usuario" }).click()
-
-    await page.getByPlaceholder("Nombre").fill(updatedName)
-    await page.getByRole("button", { name: "Guardar" }).click()
-
+    const dialog = page.getByRole("dialog", { name: "Editar usuario" })
+    await expect(dialog.getByText(email, { exact: true })).toBeVisible()
+    await expect(dialog.locator("input")).toHaveCount(0)
+    const role = dialog.getByRole("combobox", { name: "Rol" })
+    const status = dialog.getByRole("combobox", { name: "Estado" })
+    await expect(role).toHaveText("Usuario")
+    await expect(status).toHaveText("Activo")
+    await role.click()
+    await page.getByRole("option", { name: "Admin" }).click()
+    await status.click()
+    await page.getByRole("option", { name: "Inactivo" }).click()
+    const update = page.waitForRequest(
+      (req) =>
+        req.method() === "PATCH" && req.url().endsWith(`/users/${user.id}`),
+    )
+    await dialog.getByRole("button", { name: "Guardar" }).click()
+    expect((await update).postDataJSON()).toEqual({
+      is_superuser: true,
+      is_active: false,
+    })
     await expect(page.getByText("Usuario actualizado")).toBeVisible()
-    await expect(page.getByText(updatedName)).toBeVisible()
+    await expect(userRow.getByText("Admin", { exact: true })).toBeVisible()
+    await expect(userRow.getByText("Inactivo", { exact: true })).toBeVisible()
   })
 
   test("Delete a user successfully", async ({ page }) => {

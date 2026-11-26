@@ -411,33 +411,27 @@ def test_register_user_already_exists_error(
 def test_update_user(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
-    username = random_email()
-    password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
-    user = crud.create_user(session=db, user_create=user_in)
+    user = create_random_user(db)
+    url = f"{settings.API_V1_STR}/users/{user.id}"
+    email, name, password_hash = user.email, user.full_name, user.hashed_password
+    for changes in ({"is_superuser": True}, {"is_active": False}):
+        r = client.patch(url, headers=superuser_token_headers, json=changes)
+        assert r.status_code == 200
+        assert r.json()["is_superuser"] is True
 
-    data = {"full_name": "Updated_full_name"}
-    r = client.patch(
-        f"{settings.API_V1_STR}/users/{user.id}",
-        headers=superuser_token_headers,
-        json=data,
+    db.refresh(user)
+    assert user.is_superuser and not user.is_active
+    assert (user.email, user.full_name, user.hashed_password) == (
+        email,
+        name,
+        password_hash,
     )
-    assert r.status_code == 200
-    updated_user = r.json()
-
-    assert updated_user["full_name"] == "Updated_full_name"
-
-    user_query = select(User).where(User.email == username)
-    user_db = db.exec(user_query).first()
-    db.refresh(user_db)
-    assert user_db
-    assert user_db.full_name == "Updated_full_name"
 
 
 def test_update_user_not_exists(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
-    data = {"full_name": "Updated_full_name"}
+    data = {"is_active": False}
     r = client.patch(
         f"{settings.API_V1_STR}/users/{uuid.uuid4()}",
         headers=superuser_token_headers,
@@ -447,27 +441,30 @@ def test_update_user_not_exists(
     assert r.json()["detail"] == "The user with this id does not exist in the system"
 
 
-def test_update_user_email_exists(
-    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("email", "other@example.com"),
+        ("full_name", "Other"),
+        ("password", "other-password"),
+    ],
+)
+def test_update_user_rejects_identity_and_credentials(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    db: Session,
+    field: str,
+    value: str,
 ) -> None:
-    username = random_email()
-    password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
-    user = crud.create_user(session=db, user_create=user_in)
-
-    username2 = random_email()
-    password2 = random_lower_string()
-    user_in2 = UserCreate(email=username2, password=password2)
-    user2 = crud.create_user(session=db, user_create=user_in2)
-
-    data = {"email": user2.email}
+    user = create_random_user(db)
     r = client.patch(
         f"{settings.API_V1_STR}/users/{user.id}",
         headers=superuser_token_headers,
-        json=data,
+        json={field: value, "is_active": False},
     )
-    assert r.status_code == 409
-    assert r.json()["detail"] == "User with this email already exists"
+    assert r.status_code == 422
+    db.refresh(user)
+    assert user.is_active
 
 
 def test_delete_user_me(client: TestClient, db: Session) -> None:

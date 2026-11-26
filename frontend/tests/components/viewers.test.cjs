@@ -358,15 +358,15 @@ test("Trackball responds equally at the edges and switching control presets keep
   }
 })
 
-test("a middle click picks a stationary surface pivot in each rotation and projection", async (t) => {
+test("a middle click picks a stationary surface pivot without drawing a dot", async (t) => {
   const page = await mount(t, "model")
-  const marker = page.locator("[data-cad-pivot]")
-  const point = () =>
-    marker.evaluate((el) => [
-      parseFloat(el.style.left),
-      parseFloat(el.style.top),
-    ])
   const click = (x, y) => page.mouse.click(x, y, { button: "middle" })
+  const rotate = async (button) => {
+    await page.mouse.move(385, 340)
+    await page.mouse.down({ button })
+    await page.mouse.move(475, 390, { steps: 8 })
+    await page.mouse.up({ button })
+  }
   for (const projection of ["orthographic", "perspective"]) {
     for (const mode of ["solidworks", "classic"]) {
       await page.evaluate(
@@ -389,35 +389,35 @@ test("a middle click picks a stationary surface pivot in each rotation and proje
       await page.mouse.up({ button: "middle" })
       await page.keyboard.up("Control")
       const position = await page.evaluate(() => window.viewer.position())
+      const picked = await page.evaluate(() => {
+        window.projectPicked = window.viewer.trackSurfacePoint(443, 290)
+        return window.projectPicked()
+      })
       await click(443, 290)
-      assert.equal(await marker.evaluate((el) => el.hidden), false)
-      const picked = await point()
-      assert.ok(
-        Math.abs(picked[0] * 8 - 443) < 0.01 &&
-          Math.abs(picked[1] * 6 - 290) < 0.01,
-        `${mode} / ${projection}: picked at ${picked}`,
-      )
+      assert.equal(await page.locator("[data-cad-pivot]").count(), 0)
       assert.deepEqual(
         await page.evaluate(() => window.viewer.position()),
         position,
       )
       const button = mode === "classic" ? "left" : "middle"
-      await page.mouse.move(385, 340)
-      await page.mouse.down({ button })
-      await page.mouse.move(475, 390, { steps: 8 })
-      await page.mouse.up({ button })
+      await rotate(button)
       assert.notDeepEqual(
         await page.evaluate(() => window.viewer.position()),
         position,
       )
       await click(12, 10)
-      const rotated = await point()
+      const rotated = await page.evaluate(() => window.projectPicked())
       assert.ok(
-        Math.hypot(...picked.map((v, i) => v - rotated[i])) < 0.001,
+        Math.hypot(...picked.map((v, i) => v - rotated[i])) < 1e-7,
         `${mode} / ${projection}: ${picked} moved to ${rotated}`,
       )
       await page.evaluate(() => window.viewer.reset())
-      assert.equal(await marker.evaluate((el) => el.hidden), true)
+      const center = await page.evaluate(() => window.viewer.projectedPivot())
+      await rotate(button)
+      const resetCenter = await page.evaluate(() =>
+        window.viewer.projectedPivot(),
+      )
+      assert.ok(Math.hypot(...center.map((v, i) => v - resetCenter[i])) < 1e-7)
     }
   }
 })

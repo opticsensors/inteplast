@@ -160,7 +160,6 @@ export function createModelControls(
     camera.updateProjectionMatrix()
     camera.updateMatrixWorld()
     syncPerspective()
-    gestures.updateMarker()
   }
   const viewCamera = () => (usePerspective ? perspective : camera)
   const gestures = bindModelRotation(
@@ -209,7 +208,6 @@ export function createModelControls(
       }
       controls.update()
       syncPerspective()
-      gestures.updateMarker()
     },
     reset() {
       gestures.resetPivot()

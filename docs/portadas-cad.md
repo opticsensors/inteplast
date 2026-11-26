@@ -108,7 +108,7 @@ en el plano de enfoque.
 En **Ajustes de usuario → Visor CAD**, **Trackball** usa los gestos tipo SolidWorks y
 es el control predeterminado. **Clásico** gira con el botón izquierdo. Con Trackball,
 arrastrar con la rueda pulsada gira la pieza. Un clic breve con la rueda sobre una
-superficie fija allí el centro de giro. Un punto azul señala el centro elegido.
+superficie fija allí el centro de giro.
 Esta opción viene activada. Con **Invertir zoom con la ruedilla** marcado, rodar
 hacia la pantalla acerca la pieza.
 Ctrl más arrastre con la rueda pulsada desplaza la vista. **Encuadrar**

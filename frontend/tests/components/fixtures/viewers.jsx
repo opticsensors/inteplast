@@ -5,6 +5,8 @@ import {
   BufferGeometry,
   Float32BufferAttribute,
   Mesh,
+  Raycaster,
+  Vector2,
   Vector3,
 } from "three"
 import {
@@ -45,6 +47,20 @@ if (location.hash === "#model") {
     zoom: () => camera.zoom,
     target: () => controller.target.toArray(),
     projectedPivot: () => center.clone().project(camera).toArray(),
+    trackSurfacePoint: (x, y) => {
+      const box = canvas.getBoundingClientRect()
+      const cursor = new Vector2(
+        (2 * (x - box.left)) / box.width - 1,
+        1 - (2 * (y - box.top)) / box.height,
+      )
+      const ray = new Raycaster()
+      ray.setFromCamera(cursor, controller.viewCamera)
+      const [{ point }] = ray.intersectObject(solid)
+      return () => {
+        const p = point.clone().project(controller.viewCamera)
+        return [p.x, p.y]
+      }
+    },
     height: () => captureCamera(camera, controller.target).ortho_height,
     parallel: () => {
       const lens = controller.viewCamera

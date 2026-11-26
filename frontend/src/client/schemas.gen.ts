@@ -5126,6 +5126,24 @@ export const UpdatePasswordSchema = {
     title: 'UpdatePassword'
 } as const;
 
+export const UserAccessUpdateSchema = {
+    properties: {
+        is_superuser: {
+            type: 'boolean',
+            title: 'Is Superuser',
+            default: false
+        },
+        is_active: {
+            type: 'boolean',
+            title: 'Is Active',
+            default: true
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    title: 'UserAccessUpdate'
+} as const;
+
 export const UserCreateSchema = {
     properties: {
         email: {
@@ -5251,47 +5269,6 @@ export const UserRegisterSchema = {
     type: 'object',
     required: ['email', 'password'],
     title: 'UserRegister'
-} as const;
-
-export const UserUpdateSchema = {
-    properties: {
-        email: {
-            type: 'string',
-            maxLength: 255,
-            format: 'email',
-            title: 'Email'
-        },
-        is_active: {
-            type: 'boolean',
-            title: 'Is Active',
-            default: true
-        },
-        is_superuser: {
-            type: 'boolean',
-            title: 'Is Superuser',
-            default: false
-        },
-        full_name: {
-            anyOf: [
-                {
-                    type: 'string',
-                    maxLength: 255
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Full Name'
-        },
-        password: {
-            type: 'string',
-            maxLength: 128,
-            minLength: 8,
-            title: 'Password'
-        }
-    },
-    type: 'object',
-    title: 'UserUpdate'
 } as const;
 
 export const UserUpdateMeSchema = {

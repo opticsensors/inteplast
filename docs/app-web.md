@@ -271,7 +271,9 @@ el administrador. Las rutas privadas para crear usuarios de prueba requieren
 - **Borrar notas, adjuntos y ficheros**: cualquier usuario autenticado, conforme al modelo
   colaborativo. También son acciones permanentes; quitar un adjunto no borra sus bytes.
 - **Borrar piezas**: solo superusuario, comprobado en el backend. Con sus datos solo tras revisar el alcance en la ficha de pieza y escribir su código (ver [borrado de una pieza](#borrado-de-una-pieza-17112026)).
-- **Gestión de usuarios**: superusuario, como en la plantilla.
+- **Gestión de usuarios**: solo el superusuario. «Editar usuario» muestra el correo como
+  referencia y permite cambiar el rol (Usuario o Admin) y el estado (Activo o Inactivo).
+  La API de edición administrativa solo admite esos dos campos.
 
 ### Borrado de una pieza (17/11/2026)
 

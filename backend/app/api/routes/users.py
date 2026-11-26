@@ -22,11 +22,11 @@ from app.models import (
     MicrosoftUserCreate,
     UpdatePassword,
     User,
+    UserAccessUpdate,
     UserCreate,
     UserPublic,
     UserRegister,
     UsersPublic,
-    UserUpdate,
     UserUpdateMe,
 )
 from app.utils import generate_new_account_email, send_email
@@ -224,10 +224,10 @@ def update_user(
     *,
     session: SessionDep,
     user_id: uuid.UUID,
-    user_in: UserUpdate,
+    user_in: UserAccessUpdate,
 ) -> Any:
     """
-    Update a user.
+    Update a user's role or active status.
     """
 
     db_user = session.get(User, user_id)
@@ -236,13 +236,6 @@ def update_user(
             status_code=404,
             detail="The user with this id does not exist in the system",
         )
-    if user_in.email:
-        existing_user = crud.get_user_by_email(session=session, email=user_in.email)
-        if existing_user and existing_user.id != user_id:
-            raise HTTPException(
-                status_code=409, detail="User with this email already exists"
-            )
-
     db_user = crud.update_user(session=session, db_user=db_user, user_in=user_in)
     return db_user
 

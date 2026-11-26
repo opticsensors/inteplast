@@ -44,10 +44,16 @@ class UserRegister(SQLModel):
     full_name: str | None = Field(default=None, max_length=255)
 
 
-# Properties to receive via API on update, all are optional
+# Internal account updates, including local password resets.
 class UserUpdate(UserBase):
     email: EmailStr = Field(default=None, max_length=255)
     password: str = Field(default=None, min_length=8, max_length=128)
+
+
+class UserAccessUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    is_superuser: bool = False
+    is_active: bool = True
 
 
 class UserUpdateMe(SQLModel):

@@ -2291,7 +2291,7 @@ export class UsersService {
     
     /**
      * Update User
-     * Update a user.
+     * Update a user's role or active status.
      * @param data The data for the request.
      * @param data.userId
      * @param data.requestBody

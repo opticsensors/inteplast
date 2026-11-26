@@ -1014,6 +1014,11 @@ export type UpdatePassword = {
     new_password: string;
 };
 
+export type UserAccessUpdate = {
+    is_superuser?: boolean;
+    is_active?: boolean;
+};
+
 export type UserCreate = {
     email: string;
     is_active?: boolean;
@@ -1040,14 +1045,6 @@ export type UserRegister = {
 export type UsersPublic = {
     data: Array<UserPublic>;
     count: number;
-};
-
-export type UserUpdate = {
-    email?: string;
-    is_active?: boolean;
-    is_superuser?: boolean;
-    full_name?: (string | null);
-    password?: string;
 };
 
 export type UserUpdateMe = {
@@ -1724,7 +1721,7 @@ export type UsersReadUserByIdData = {
 export type UsersReadUserByIdResponse = (UserPublic);
 
 export type UsersUpdateUserData = {
-    requestBody: UserUpdate;
+    requestBody: UserAccessUpdate;
     userId: string;
 };
 
