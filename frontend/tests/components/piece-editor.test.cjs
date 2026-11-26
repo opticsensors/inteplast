@@ -488,10 +488,14 @@ test("new piece is an empty labelled page; folder proposals, arbitrary named fil
   await expect(page.getByLabel("Código de la pieza")).toHaveValue("")
   await expect(page.getByLabel("Descripción (opcional)")).toBeVisible()
   await page.getByLabel("Nombre de la pieza").fill("N".repeat(60))
-  await expect(page.getByLabel("Nombre de la pieza")).toHaveValue("N".repeat(45))
+  await expect(page.getByLabel("Nombre de la pieza")).toHaveValue(
+    "N".repeat(45),
+  )
   await page.getByLabel("Nombre de la pieza").fill("")
   await page.getByLabel("Descripción (opcional)").fill("D".repeat(210))
-  await expect(page.getByLabel("Descripción (opcional)")).toHaveValue("D".repeat(200))
+  await expect(page.getByLabel("Descripción (opcional)")).toHaveValue(
+    "D".repeat(200),
+  )
   await page.getByLabel("Descripción (opcional)").fill("")
   await expect(
     page.getByRole("button", { name: "Crear pieza", exact: true }),
