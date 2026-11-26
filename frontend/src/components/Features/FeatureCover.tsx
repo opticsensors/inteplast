@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils"
 import { COVER_SIZE, CoverButton, RetryCoverButton } from "./CoverButton"
 import { CoverDialog } from "./CoverDialog"
 import { CoverLoading } from "./CoverLoading"
-import { coverAsset } from "./cadCover"
+import { CAD_COVER_BACKGROUND, coverAsset } from "./cadCover"
 import { coverPieceLabel, coverSlides, step } from "./coverSlides"
 import { FeatureThumbnail } from "./FeatureCard"
 import { preloadStepViewer, StepCoverCanvas } from "./lazyStepCoverCanvas"
@@ -279,7 +279,8 @@ function CoverViewer({
     <FeatureThumbnail
       feature={{ image: view.image, name: feature.name }}
       fit="contain"
-      className="size-full"
+      className="size-full bg-white"
+      style={cover ? { backgroundColor: CAD_COVER_BACKGROUND } : undefined}
     />
   )
   let content: ReactNode = image
@@ -327,7 +328,7 @@ function CoverViewer({
       </DialogHeader>
       <div
         data-slot="cover-surface"
-        className="relative size-[var(--cover-size)]"
+        className="relative min-h-0 w-full"
         {...swipe}
       >
         <div key={view.code ?? "feature"} className="size-full">

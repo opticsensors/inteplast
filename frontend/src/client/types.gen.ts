@@ -36,12 +36,23 @@ export type CadCamera = {
         number,
         number
     ];
+    ortho_height?: (number | null);
 };
 
 export type CadFaceSelection = {
     mesh: number;
     face: number;
 };
+
+export type CadPreferences = {
+    cad_projection?: 'orthographic' | 'perspective';
+    cad_controls?: 'solidworks' | 'classic';
+    invert_zoom?: boolean;
+};
+
+export type cad_projection = 'orthographic' | 'perspective';
+
+export type cad_controls = 'solidworks' | 'classic';
 
 export type CatalogGraph = {
     nodes: Array<GraphNode>;
@@ -145,6 +156,18 @@ export type CotaSearchResult = {
     title: string;
     revision: string;
     part: PartPublic;
+};
+
+export type CurrentUserPublic = {
+    cad_projection?: 'orthographic' | 'perspective';
+    cad_controls?: 'solidworks' | 'classic';
+    invert_zoom?: boolean;
+    email: string;
+    is_active?: boolean;
+    is_superuser?: boolean;
+    full_name?: (string | null);
+    id: string;
+    created_at?: (string | null);
 };
 
 export type DeletionFeature = {
@@ -1647,7 +1670,7 @@ export type UsersCreateUserData = {
 
 export type UsersCreateUserResponse = (UserPublic);
 
-export type UsersReadUserMeResponse = (UserPublic);
+export type UsersReadUserMeResponse = (CurrentUserPublic);
 
 export type UsersDeleteUserMeResponse = (Message);
 
@@ -1662,6 +1685,12 @@ export type UsersUpdatePasswordMeData = {
 };
 
 export type UsersUpdatePasswordMeResponse = (Message);
+
+export type UsersUpdateCadPreferencesData = {
+    requestBody: CadPreferences;
+};
+
+export type UsersUpdateCadPreferencesResponse = (CurrentUserPublic);
 
 export type UsersRegisterUserData = {
     requestBody: UserRegister;

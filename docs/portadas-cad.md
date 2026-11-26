@@ -93,7 +93,15 @@ ficha los descarta todos. La pestaña **Imagen** admite:
 
 El editor CAD permite marcar varias superficies con clics, quitar una marca
 con otro clic y limpiar la selección con el icono de borrador junto a **Encuadrar**.
-Arrastrar gira; la rueda amplía; el botón de encuadre
+Las miniaturas automáticas nuevas usan siempre proyección ortográfica. Se reutilizan
+las miniaturas anteriores en perspectiva mientras correspondan al mismo CAD y, en las
+coloreadas, a la misma selección y colores. Cambiar las preferencias del visor solo
+actualiza la cuenta. El editor usa la proyección elegida en Ajustes de usuario. Los
+encuadres nuevos guardan la altura visible. Al abrir uno antiguo se recupera su escala
+en el plano de enfoque.
+Arrastrar con la rueda pulsada gira alrededor del centro de la pieza, incluso en una
+vista de detalle. Rodar hacia la pantalla acerca la zona bajo el cursor y rodar hacia
+el usuario la aleja. Ctrl más arrastre con la rueda pulsada desplaza la vista. **Encuadrar**
 recupera la vista inicial. **Aplicar** genera una imagen y la coloca en el borrador
 de cabecera. Las imágenes elegidas, pegadas o arrastradas también requieren **Aplicar**.
 **Cancelar**, la X o Esc en la modal descartan solo los cambios de esa apertura;
@@ -131,9 +139,10 @@ Si falla la conversión, sigue disponible el lector STEP en el navegador para lo
 admitidos por la portada.
 Una ficha sin portada no abre una ampliación vacía.
 
-Todas las modales de portada ajustan su ancho al cuadrado, con 16 px de margen interior.
-El editor usa el mismo ancho y cuadrado que la ampliación; solo añade altura para los controles.
-Si no cabe en altura, el diálogo completo se desplaza sin reducir el cuadrado.
+La ampliación de piezas y features y el editor de portada comparten un diálogo de
+92 % de ancho (hasta 1400 px en escritorio) y 90 % de alto. El visor ocupa el espacio
+disponible entre la cabecera y las acciones. En el editor CAD, un marco delimita la
+zona cuadrada que se captura al aplicar.
 Los botones quedan a 12 px de la imagen, sin reservar una fila vacía para avisos.
 El editor mantiene exactamente el mismo tamaño de modal y visor al alternar **Imagen/CAD**,
 incluso mientras carga o si falta el STEP. No muestra los párrafos de instrucciones de la

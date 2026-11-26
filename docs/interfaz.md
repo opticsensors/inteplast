@@ -179,7 +179,9 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
   «Ver pieza» en el color principal. En Archivos se pulsa el tipo para abrir el fichero y
   ver su nombre. El tamaño queda centrado verticalmente junto al icono de descarga.
 - La portada de pieza muestra el STEP completo con las caras compatibles de sus features.
-  La leyenda identifica los colores. Las casillas del visor permiten aislar un feature y
+  La leyenda de colores aparece solo al ampliar el CAD. Mientras se carga el modelo,
+  la captura permanece centrada. Los laterales y el visor 3D comparten el gris claro
+  de la captura (`#f4f5f7`). Las casillas del visor permiten aislar un feature y
   vuelven a aparecer marcadas al abrirlo. Una cara compartida adopta el color oscuro
   de «Varios features» mientras se ven varias selecciones sobre ella.
   En la ficha de feature, cada pieza usa su captura propia o la vista gris de la pieza.
@@ -187,6 +189,8 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
   Las fichas de pieza y de feature comparten un cuadrado de 300 × 300 px a partir
   de 640 px de ancho y 192 × 192 px en pantallas menores. Consulta, edición y alta
   mantienen esa medida, incluso con el carrusel o con la portada vacía.
+  Los campos de nombre y descripción de pieza y feature admiten 45 y 200 caracteres al
+  escribir. En consulta, el título ocupa una línea y muestra el nombre completo al pasar el puntero.
   Al pulsarla abre el visor interactivo reutilizado de Features, sin edición de caras.
 - **Identidad de la pieza (17/11/2026):** el código es el título; el nombre, opcional, va a
   su lado en tono secundario, sin repetir el código («3212 Pump Housing»). Debajo, una línea

@@ -490,15 +490,8 @@ def test_delete_user_me(client: TestClient, db: Session) -> None:
         f"{settings.API_V1_STR}/users/me",
         headers=headers,
     )
-    assert r.status_code == 200
-    deleted_user = r.json()
-    assert deleted_user["message"] == "User deleted successfully"
-    result = db.exec(select(User).where(User.id == user_id)).first()
-    assert result is None
-
-    user_query = select(User).where(User.id == user_id)
-    user_db = db.execute(user_query).first()
-    assert user_db is None
+    assert r.status_code == 403
+    assert db.get(User, user_id) is not None
 
 
 def test_delete_user_me_as_superuser(
@@ -509,8 +502,55 @@ def test_delete_user_me_as_superuser(
         headers=superuser_token_headers,
     )
     assert r.status_code == 403
-    response = r.json()
-    assert response["detail"] == "Super users are not allowed to delete themselves"
+
+
+def test_cad_preferences_are_independent_and_private_to_each_account(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    superuser_token_headers: dict[str, str],
+) -> None:
+    url = f"{settings.API_V1_STR}/users/me"
+    prefs = f"{url}/cad-preferences"
+    headers = normal_user_token_headers
+    defaults = {
+        "cad_projection": "orthographic",
+        "cad_controls": "solidworks",
+        "invert_zoom": False,
+    }
+    assert client.get(url, headers=headers).json().items() >= defaults.items()
+    try:
+        for patch in (
+            {"cad_projection": "perspective"},
+            {"cad_controls": "classic"},
+            {"invert_zoom": True},
+        ):
+            assert client.patch(prefs, headers=headers, json=patch).status_code == 200
+        assert (
+            client.get(url, headers=headers).json().items()
+            >= {
+                "cad_projection": "perspective",
+                "cad_controls": "classic",
+                "invert_zoom": True,
+            }.items()
+        )
+        assert (
+            client.get(url, headers=superuser_token_headers).json().items()
+            >= defaults.items()
+        )
+        assert (
+            client.patch(
+                prefs, headers=headers, json={"cad_projection": "unknown"}
+            ).status_code
+            == 422
+        )
+        assert (
+            client.patch(
+                prefs, headers=headers, json={"is_superuser": True}
+            ).status_code
+            == 422
+        )
+    finally:
+        assert client.patch(prefs, headers=headers, json=defaults).status_code == 200
 
 
 def test_delete_user_super_user(

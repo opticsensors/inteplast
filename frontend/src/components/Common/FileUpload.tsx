@@ -135,7 +135,7 @@ export function FileUpload({
         className={cn(
           "relative",
           coverLayout &&
-            "row-span-2 grid grid-rows-[2.25rem_var(--cover-size)] gap-3",
+            "row-span-2 grid min-h-0 grid-rows-[2.25rem_minmax(0,1fr)] gap-3",
           className,
         )}
       >

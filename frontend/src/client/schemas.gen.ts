@@ -151,6 +151,18 @@ export const CadCameraSchema = {
             maxItems: 3,
             minItems: 3,
             title: 'Up'
+        },
+        ortho_height: {
+            anyOf: [
+                {
+                    type: 'number',
+                    exclusiveMinimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Ortho Height'
         }
     },
     additionalProperties: false,
@@ -178,6 +190,31 @@ export const CadFaceSelectionSchema = {
     type: 'object',
     required: ['mesh', 'face'],
     title: 'CadFaceSelection'
+} as const;
+
+export const CadPreferencesSchema = {
+    properties: {
+        cad_projection: {
+            type: 'string',
+            enum: ['orthographic', 'perspective'],
+            title: 'Cad Projection',
+            default: 'orthographic'
+        },
+        cad_controls: {
+            type: 'string',
+            enum: ['solidworks', 'classic'],
+            title: 'Cad Controls',
+            default: 'solidworks'
+        },
+        invert_zoom: {
+            type: 'boolean',
+            title: 'Invert Zoom',
+            default: false
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    title: 'CadPreferences'
 } as const;
 
 export const CatalogGraphSchema = {
@@ -615,6 +652,77 @@ export const CotaSearchResultSchema = {
     type: 'object',
     required: ['id', 'code', 'title', 'revision', 'part'],
     title: 'CotaSearchResult'
+} as const;
+
+export const CurrentUserPublicSchema = {
+    properties: {
+        cad_projection: {
+            type: 'string',
+            enum: ['orthographic', 'perspective'],
+            title: 'Cad Projection',
+            default: 'orthographic'
+        },
+        cad_controls: {
+            type: 'string',
+            enum: ['solidworks', 'classic'],
+            title: 'Cad Controls',
+            default: 'solidworks'
+        },
+        invert_zoom: {
+            type: 'boolean',
+            title: 'Invert Zoom',
+            default: false
+        },
+        email: {
+            type: 'string',
+            maxLength: 255,
+            format: 'email',
+            title: 'Email'
+        },
+        is_active: {
+            type: 'boolean',
+            title: 'Is Active',
+            default: true
+        },
+        is_superuser: {
+            type: 'boolean',
+            title: 'Is Superuser',
+            default: false
+        },
+        full_name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Full Name'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        created_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Created At'
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    required: ['email', 'id'],
+    title: 'CurrentUserPublic'
 } as const;
 
 export const DeletionFeatureSchema = {

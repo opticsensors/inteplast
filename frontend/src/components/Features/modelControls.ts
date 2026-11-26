@@ -1,61 +1,189 @@
-import { MOUSE, type PerspectiveCamera, Vector3 } from "three"
-import { TrackballControls } from "three/examples/jsm/controls/TrackballControls.js"
+import {
+  OrthographicCamera,
+  PerspectiveCamera,
+  Quaternion,
+  Vector3,
+} from "three"
+import { ArcballControls } from "three/examples/jsm/controls/ArcballControls.js"
 import type { CadCamera } from "@/client"
+import type { ViewerPreferences } from "@/hooks/useCadPreferences"
 
-/** Keep the whole piece framed, facing the side from which its only feature was marked. */
-export function framePiece(camera: PerspectiveCamera, view?: CadCamera) {
-  const distance = camera.position.length() * 0.72
-  if (view) {
-    camera.position
-      .fromArray(view.position)
-      .sub(new Vector3().fromArray(view.target))
-    camera.up.fromArray(view.up)
-  }
-  camera.position.setLength(distance)
+export function createModelCamera(size: number) {
+  const half = size * 0.53
+  const camera = new OrthographicCamera(
+    -half,
+    half,
+    half,
+    -half,
+    size / 1000,
+    size * 20,
+  )
+  camera.up.set(0, 0, 1)
+  camera.position.set(1, -1, 0.8).setLength(size * 2)
+  camera.lookAt(0, 0, 0)
+  return camera
 }
 
-/** Grab the model in screen space, with no fixed-up pole or residual inertia. */
-export function createModelControls(
-  camera: PerspectiveCamera,
-  element: HTMLElement,
-  size: number,
+/** Read older perspective captures at the scale they had on their focal plane. */
+export function frameCover(
+  camera: OrthographicCamera,
+  saved?: CadCamera,
+  facing?: CadCamera,
 ) {
-  // Set the CAD's vertical axis before the controller saves the initial camera.
-  camera.up.set(0, 0, 1)
-  camera.position.set(size, -size, size * 0.8)
-  const controls = new TrackballControls(camera, element)
-  controls.staticMoving = true
-  controls.rotateSpeed = 1.5
-  controls.zoomSpeed = 0.8
-  controls.panSpeed = 0.5
-  controls.minDistance = size * 0.08
-  controls.maxDistance = size * 8
-  controls.mouseButtons = {
-    LEFT: MOUSE.ROTATE,
-    MIDDLE: MOUSE.PAN,
-    RIGHT: MOUSE.PAN,
+  const target = new Vector3()
+  const view = saved ?? facing
+  if (view) {
+    const distance = camera.position.length()
+    const direction = new Vector3()
+      .fromArray(view.position)
+      .sub(new Vector3().fromArray(view.target))
+    if (saved) {
+      target.fromArray(saved.target)
+      const height =
+        saved.ortho_height ?? 2 * Math.tan(Math.PI / 8) * direction.length()
+      camera.zoom = (camera.top - camera.bottom) / height
+    }
+    camera.position.copy(direction.setLength(distance)).add(target)
+    camera.up.fromArray(view.up)
   }
-  // Typing in another control must not leave the viewer in a keyboard mode.
-  controls.keys = ["", "", ""]
-  element.style.cursor = "grab"
-  const start = () => {
-    element.style.cursor = "grabbing"
+  camera.lookAt(target)
+  camera.updateProjectionMatrix()
+  return target
+}
+
+export function captureCamera(
+  camera: OrthographicCamera,
+  target: Vector3,
+): CadCamera {
+  return {
+    position: camera.position.toArray(),
+    up: camera.up.toArray(),
+    target: target.toArray(),
+    ortho_height:
+      Math.min(camera.top - camera.bottom, camera.right - camera.left) /
+      camera.zoom,
   }
-  const end = () => {
-    element.style.cursor = "grab"
+}
+
+export function createModelControls(
+  camera: OrthographicCamera,
+  canvas: HTMLCanvasElement,
+  pivot: Vector3,
+  initialTarget = new Vector3(),
+) {
+  let classic = false
+  let usePerspective = false
+  const perspective = new PerspectiveCamera(45, 1, camera.near, camera.far)
+  const routePointer = (event: PointerEvent) => {
+    if (event.pointerType === "touch") return
+    if (event.button === 0 && !classic) event.stopPropagation()
+    if (event.button === 1) event.preventDefault()
   }
-  controls.addEventListener("start", start)
-  controls.addEventListener("end", end)
-  // Update screen coordinates on scroll as well as resize, before a new drag.
-  const measure = () => controls.handleResize()
-  element.addEventListener("pointerdown", measure, { capture: true })
+  canvas.addEventListener("pointerdown", routePointer)
+
+  // Arcball handles the gestures on a second camera. Its own focus moves on
+  // pan and cursor zoom. Apply those translations to the framing, while every
+  // change of orientation carries the view rigidly around the part's fixed pivot.
+  const navigation = camera.clone()
+  navigation.position.sub(initialTarget)
+  navigation.up.set(0, 1, 0) // Arcball expects camera-local up when rotating.
+  const focusDistance = navigation.position.length()
+  const controls = new ArcballControls(navigation, canvas.parentElement!)
+  navigation.up.copy(camera.up)
+  controls.enableAnimations = false
+  controls.enableFocus = false
+  controls.cursorZoom = true
+  controls.scaleFactor = 1.2
+  controls.minZoom = Math.min(0.1, camera.zoom)
+  controls.maxZoom = Math.max(64, camera.zoom)
+  controls.unsetMouseAction(0)
+  controls.unsetMouseAction(0, "CTRL")
+  controls.unsetMouseAction("WHEEL", "SHIFT")
+  controls.setMouseAction("ROTATE", 1)
+  controls.setMouseAction("PAN", 1, "CTRL")
+  controls.setMouseAction("ZOOM", 1, "SHIFT")
   controls.update()
+  controls.saveState()
+
+  const focus = new Vector3()
+  const previousFocus = new Vector3()
+  const previousRotation = navigation.quaternion.clone()
+  const rotation = new Quaternion()
+  const target = initialTarget.clone()
+  function syncPerspective() {
+    if (!usePerspective) return
+    const height = (camera.top - camera.bottom) / camera.zoom
+    perspective.aspect = camera.right / camera.top
+    perspective.zoom = Math.min(1, perspective.aspect)
+    const distance = (height * perspective.zoom) / (2 * Math.tan(Math.PI / 8))
+    perspective.position
+      .set(0, 0, distance)
+      .applyQuaternion(camera.quaternion)
+      .add(target)
+    perspective.quaternion.copy(camera.quaternion)
+    perspective.up.copy(camera.up)
+    perspective.near = Math.min(camera.near, distance / 100)
+    perspective.far = distance + camera.far
+    perspective.updateProjectionMatrix()
+    perspective.updateMatrixWorld()
+  }
+  function syncView() {
+    // Orthographic zoom changes magnification and leaves focal distance constant.
+    navigation
+      .getWorldDirection(focus)
+      .multiplyScalar(focusDistance)
+      .add(navigation.position)
+    rotation.copy(previousRotation).invert().premultiply(navigation.quaternion)
+    target.sub(pivot).applyQuaternion(rotation).add(pivot)
+    target.add(focus).sub(previousFocus)
+    previousFocus.copy(focus)
+    previousRotation.copy(navigation.quaternion)
+    camera.position.copy(navigation.position).sub(focus).add(target)
+    camera.quaternion.copy(navigation.quaternion)
+    camera.up.set(0, 1, 0).applyQuaternion(camera.quaternion)
+    camera.zoom = navigation.zoom
+    camera.updateProjectionMatrix()
+    camera.updateMatrixWorld()
+    syncPerspective()
+  }
+  controls.addEventListener("change", syncView)
+  syncView()
+  const half = camera.top
   return {
     controls,
-    dispose: () => {
-      element.removeEventListener("pointerdown", measure, { capture: true })
-      controls.removeEventListener("start", start)
-      controls.removeEventListener("end", end)
+    target,
+    get viewCamera() {
+      return usePerspective ? perspective : camera
+    },
+    setPreferences(preferences: ViewerPreferences) {
+      classic = preferences.cad_controls === "classic"
+      usePerspective = preferences.cad_projection === "perspective"
+      controls.scaleFactor = preferences.invert_zoom ? 1 / 1.2 : 1.2
+      controls.cursorZoom = !classic
+      if (classic) controls.setMouseAction("ROTATE", 0)
+      else controls.unsetMouseAction(0)
+      controls.setMouseAction(classic ? "PAN" : "ROTATE", 1)
+      controls.dispatchEvent({ type: "change" })
+    },
+    resize(aspect: number) {
+      for (const lens of [camera, navigation]) {
+        lens.top = half / Math.min(1, aspect)
+        lens.bottom = -lens.top
+        lens.right = lens.top * aspect
+        lens.left = -lens.right
+        lens.updateProjectionMatrix()
+      }
+      controls.update()
+      syncPerspective()
+    },
+    reset() {
+      controls.reset()
+      target.copy(initialTarget)
+      syncView()
+    },
+    dispose() {
+      canvas.removeEventListener("pointerdown", routePointer)
+      controls.removeEventListener("change", syncView)
       controls.dispose()
     },
   }

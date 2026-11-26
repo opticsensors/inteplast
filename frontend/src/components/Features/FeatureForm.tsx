@@ -34,6 +34,10 @@ import { LoadingButton } from "@/components/ui/loading-button"
 import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
+import {
+  MAX_HEADER_DESCRIPTION_LENGTH,
+  MAX_HEADER_NAME_LENGTH,
+} from "./constants"
 import { type CoverDraft, withDrafts } from "./coverSlides"
 import {
   EditingSessionContext,
@@ -391,7 +395,7 @@ function FeatureFormContent({
                 }
               />
 
-              <div className="min-w-0 flex-1 space-y-3">
+              <div className="flex min-w-0 flex-1 flex-col gap-3">
                 <FormField
                   control={form.control}
                   name="name"
@@ -401,6 +405,7 @@ function FeatureFormContent({
                       <FormControl>
                         <Input
                           placeholder="Nombre del feature"
+                          maxLength={MAX_HEADER_NAME_LENGTH}
                           className="text-lg md:text-lg"
                           {...field}
                         />
@@ -413,12 +418,13 @@ function FeatureFormContent({
                   control={form.control}
                   name="description"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-1 flex-col">
                       <FormLabel>Descripción</FormLabel>
                       <FormControl>
                         <Textarea
                           placeholder="Que es y que agrupa"
-                          className="min-h-16"
+                          maxLength={MAX_HEADER_DESCRIPTION_LENGTH}
+                          className="min-h-16 flex-1 sm:field-sizing-fixed sm:resize-none"
                           {...field}
                         />
                       </FormControl>

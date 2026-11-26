@@ -1,10 +1,10 @@
-import type { ComponentProps, CSSProperties } from "react"
+import type { ComponentProps } from "react"
 
 import { DialogContent } from "@/components/ui/dialog"
 
-// Both editor tabs share the same toolbar, square and action rows.
+// Each editor tab gives the viewport all space between its toolbar and footer.
 export const COVER_EDITOR_ROWS =
-  "grid grid-rows-[2.25rem_var(--cover-size)_auto] gap-3"
+  "grid h-full min-h-0 grid-rows-[2.25rem_minmax(0,1fr)_auto] gap-3 data-[state=inactive]:hidden"
 
 export function CoverDialog({
   ...props
@@ -13,12 +13,7 @@ export function CoverDialog({
     <DialogContent
       {...props}
       scrollable
-      className="w-[calc(var(--cover-size)+2rem+2px)] max-w-none gap-3 p-4 sm:max-w-none"
-      style={
-        {
-          "--cover-size": "min(720px, 75dvh, calc(100vw - 4rem - 2px))",
-        } as CSSProperties
-      }
+      className="h-[90dvh] min-h-0 w-[92vw] max-w-full grid-rows-[auto_minmax(0,1fr)] gap-3 overflow-hidden p-4 sm:max-w-[1400px]"
     />
   )
 }

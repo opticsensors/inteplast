@@ -5,6 +5,7 @@ import type {
 } from "@/client"
 
 export const COVER_RECIPE = "occt-import-js@0.0.23/cover-v1" as const
+export const CAD_COVER_BACKGROUND = "#f4f5f7"
 export const MAX_COVER_STEP_SIZE = 50 * 1024 * 1024
 
 export const isPartStep = (asset: FeatureAssetPublic) =>

@@ -4,10 +4,12 @@ import * as THREE from "three"
 
 import type { FaceLayer, FeatureCover3D, FilePublic } from "@/client"
 import { Button } from "@/components/ui/button"
+import { useConfigureCadViewer } from "@/hooks/useCadPreferences"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
 import { cn } from "@/lib/utils"
 import { CoverLoading } from "./CoverLoading"
 import {
+  CAD_COVER_BACKGROUND,
   COVER_RECIPE,
   type CoverControls,
   MAX_COVER_STEP_SIZE,
@@ -20,7 +22,13 @@ import {
   paintFaceGroups,
   SHARED_COLOR,
 } from "./faceColors"
-import { createModelControls, framePiece } from "./modelControls"
+import {
+  captureCamera,
+  createModelCamera,
+  createModelControls,
+  frameCover,
+} from "./modelControls"
+import { modelPivot } from "./modelPivot"
 import { readCoverGeometry } from "./preparedCover"
 
 const EMPTY_LAYERS: FaceLayer[] = []
@@ -61,6 +69,7 @@ export default function StepCoverCanvas({
   allowWholeComponent?: boolean
 }) {
   const host = useRef<HTMLDivElement>(null)
+  const configureViewer = useConfigureCadViewer()
   const callbacks = useRef({ onReady, onSelectionChange })
   callbacks.current = { onReady, onSelectionChange }
   const reset = useRef<() => void>(() => {})
@@ -245,11 +254,16 @@ export default function StepCoverCanvas({
       const size = bounds.getSize(new THREE.Vector3()).length() || 1
       object.position.sub(bounds.getCenter(new THREE.Vector3()))
       const scene = new THREE.Scene()
-      scene.background = new THREE.Color(0xf4f5f7)
+      scene.background = new THREE.Color(CAD_COVER_BACKGROUND)
       scene.add(object, new THREE.HemisphereLight(0xffffff, 0x555566, 2.2))
       const light = new THREE.DirectionalLight(0xffffff, 1.6)
       scene.add(light)
-      const camera = new THREE.PerspectiveCamera(45, 1, size / 1000, size * 20)
+      const camera = createModelCamera(size)
+      const target = frameCover(
+        camera,
+        initial?.camera,
+        wholePart && valid.length === 1 ? valid[0].selection.camera : undefined,
+      )
       const renderer = new THREE.WebGLRenderer({ antialias: true })
       cleanup.push(() => {
         renderer.setAnimationLoop(null)
@@ -269,36 +283,23 @@ export default function StepCoverCanvas({
       )
       canvas.setAttribute("role", "img")
       container.appendChild(canvas)
-      const controller = createModelControls(camera, canvas, size)
+      const controller = createModelControls(
+        camera,
+        canvas,
+        modelPivot(object),
+        target,
+      )
       cleanup.push(controller.dispose)
+      configureViewer(controller)
+      cleanup.push(() => configureViewer(null))
       const controls = controller.controls
-      const restore = () => {
-        if (initial) {
-          camera.position.fromArray(initial.camera.position)
-          camera.up.fromArray(initial.camera.up)
-          controls.target.fromArray(initial.camera.target)
-          controls.update()
-        } else {
-          controls.reset()
-          framePiece(
-            camera,
-            wholePart && valid.length === 1
-              ? valid[0].selection.camera
-              : undefined,
-          )
-          controls.update()
-        }
-      }
-      restore()
-      reset.current = restore
+      reset.current = controller.reset
       const resize = () => {
         const width = container.clientWidth,
           height = container.clientHeight
         if (!width || !height) return
         renderer.setSize(width, height)
-        camera.aspect = width / height
-        camera.updateProjectionMatrix()
-        controls.handleResize()
+        controller.resize(width / height)
         needsDraw = true
       }
       const observer = new ResizeObserver(resize)
@@ -306,8 +307,8 @@ export default function StepCoverCanvas({
       cleanup.push(() => observer.disconnect())
       resize()
       const draw = () => {
-        light.position.copy(camera.position)
-        renderer.render(scene, camera)
+        light.position.copy(controller.viewCamera.position)
+        renderer.render(scene, controller.viewCamera)
         needsDraw = false
       }
       const invalidate = () => {
@@ -316,7 +317,6 @@ export default function StepCoverCanvas({
       controls.addEventListener("change", invalidate)
       cleanup.push(() => controls.removeEventListener("change", invalidate))
       renderer.setAnimationLoop(() => {
-        controls.update()
         if (needsDraw) draw()
       })
 
@@ -328,7 +328,7 @@ export default function StepCoverCanvas({
             ((event.clientX - box.left) / box.width) * 2 - 1,
             (-(event.clientY - box.top) / box.height) * 2 + 1,
           ),
-          camera,
+          controller.viewCamera,
         )
         const hit = ray.intersectObjects(meshes, false)[0]
         if (!hit || hit.faceIndex == null) return null
@@ -420,15 +420,26 @@ export default function StepCoverCanvas({
             )
           hovered = null
           paint()
-          controls.update()
           draw()
-          const cameraView = {
-            position: camera.position.toArray(),
-            target: controls.target.toArray(),
-            up: camera.up.toArray(),
-          }
+          const cameraView = captureCamera(camera, controller.target)
+          const crop = document.createElement("canvas")
+          const side = Math.min(canvas.width, canvas.height)
+          crop.width = crop.height = side
+          const ctx = crop.getContext("2d")
+          if (!ctx) throw new Error("No se ha podido crear la imagen.")
+          ctx.drawImage(
+            canvas,
+            (canvas.width - side) / 2,
+            (canvas.height - side) / 2,
+            side,
+            side,
+            0,
+            0,
+            side,
+            side,
+          )
           const image = await new Promise<Blob>((resolve, reject) =>
-            canvas.toBlob(
+            crop.toBlob(
               (blob) =>
                 blob
                   ? resolve(blob)
@@ -468,6 +479,7 @@ export default function StepCoverCanvas({
       release()
     }
   }, [
+    configureViewer,
     file.id,
     file.version,
     file.size,
@@ -482,11 +494,17 @@ export default function StepCoverCanvas({
   return (
     <div
       className={cn(
-        "relative aspect-square w-full overflow-hidden rounded-lg border",
+        "relative size-full min-h-0 overflow-hidden rounded-lg border [container-type:size]",
         className,
       )}
     >
       <div ref={host} className="size-full" />
+      {editable && !status && !error && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute top-1/2 left-1/2 size-[min(100cqw,100cqh)] -translate-x-1/2 -translate-y-1/2 border border-dashed border-foreground/25"
+        />
+      )}
       {(status || error) && fallback && (
         <div className="absolute inset-0">{fallback}</div>
       )}

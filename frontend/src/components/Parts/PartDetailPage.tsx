@@ -23,6 +23,10 @@ import {
 } from "@/client"
 import { CollapsibleSection } from "@/components/Common/CollapsibleSection"
 import { COVER_SIZE } from "@/components/Features/CoverButton"
+import {
+  MAX_HEADER_DESCRIPTION_LENGTH,
+  MAX_HEADER_NAME_LENGTH,
+} from "@/components/Features/constants"
 import { FeatureThumbnail } from "@/components/Features/FeatureCard"
 import {
   FEATURE_COLUMNS,
@@ -385,7 +389,7 @@ function PartPage({
       )}
       <fieldset
         disabled={busy}
-        className="flex min-w-0 flex-col gap-4 rounded-lg border bg-card p-4 sm:gap-6 sm:p-5 lg:flex-row"
+        className="grid min-w-0 grid-cols-1 gap-4 rounded-lg border bg-card p-4 sm:gap-6 sm:p-5 lg:grid-cols-[auto_minmax(0,1fr)]"
       >
         {part ? (
           <PartCover part={part} />
@@ -430,7 +434,7 @@ function PartPage({
                     aria-label="Nombre de la pieza"
                     value={name}
                     onChange={(event) => setName(event.target.value)}
-                    maxLength={255}
+                    maxLength={MAX_HEADER_NAME_LENGTH}
                     placeholder="Nombre de la pieza"
                     className="h-11 text-lg md:text-lg"
                   />
@@ -489,7 +493,7 @@ function PartPage({
                   id="piece-description"
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
-                  maxLength={2000}
+                  maxLength={MAX_HEADER_DESCRIPTION_LENGTH}
                   placeholder="Descripción de la pieza"
                   className="min-h-16 flex-1 lg:field-sizing-fixed lg:resize-none"
                 />
@@ -497,7 +501,10 @@ function PartPage({
             </>
           ) : (
             <>
-              <h1 className="break-words text-2xl font-bold tracking-tight sm:text-3xl">
+              <h1
+                className="truncate text-2xl font-bold tracking-tight sm:text-3xl"
+                title={part && partLabel(part)}
+              >
                 {part?.code}
                 {part && partName(part) && (
                   <>

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import useCustomToast from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
+import { MAX_HEADER_NAME_LENGTH } from "./constants"
 import { SaveStatus } from "./SaveStatus"
 import { useAutosave } from "./useAutosave"
 
@@ -77,7 +78,7 @@ export function PartIdentityEditor({
             onChange={(event) => autosave.change({ name: event.target.value })}
             aria-label="Nombre de la pieza"
             placeholder="Nombre de la pieza"
-            maxLength={255}
+            maxLength={MAX_HEADER_NAME_LENGTH}
             className="h-8 min-w-0 flex-1 border-0 px-0 font-sans text-sm font-medium text-muted-foreground shadow-none focus-visible:ring-1"
           />
         </div>

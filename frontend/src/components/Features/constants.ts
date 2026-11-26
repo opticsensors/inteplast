@@ -2,6 +2,9 @@ import { Box, FileText, Package, ScanLine, Waves } from "lucide-react"
 
 import type { AssetKind, NoteKind } from "@/client"
 
+export const MAX_HEADER_NAME_LENGTH = 45
+export const MAX_HEADER_DESCRIPTION_LENGTH = 200
+
 /**
  * Los cinco ficheros que puede aportar una pieza. El orden es el de las filas
  * dentro de cada pieza: primero el molde y la pieza, luego los documentos.

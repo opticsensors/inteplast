@@ -5,8 +5,8 @@ import { FaceReviewList } from "@/components/Catalog/CatalogWarnings"
 import { COVER_SIZE, CoverButton } from "@/components/Features/CoverButton"
 import { CoverDialog } from "@/components/Features/CoverDialog"
 import { CoverLoading } from "@/components/Features/CoverLoading"
+import { CAD_COVER_BACKGROUND } from "@/components/Features/cadCover"
 import { FeatureThumbnail } from "@/components/Features/FeatureCard"
-import { coloredFaces, SHARED_COLOR } from "@/components/Features/faceColors"
 import {
   preloadStepViewer,
   StepCoverCanvas,
@@ -85,59 +85,33 @@ export function PartCover({ part }: { part: PartCardPublic }) {
       feature={{ name, image }}
       fit="contain"
       className="size-full"
+      style={{ backgroundColor: CAD_COVER_BACKGROUND }}
     />
   )
   return (
     <Dialog open={expanded} onOpenChange={setExpanded}>
-      <div className="flex w-fit shrink-0 flex-col">
-        <div className={cn("relative shrink-0", COVER_SIZE)}>
-          {cad || image ? (
-            <DialogTrigger asChild>
-              <CoverButton
-                image={image}
-                onPointerEnter={cad ? preloadStepViewer : undefined}
-                onFocus={cad ? preloadStepViewer : undefined}
-                name={name}
-                className="size-full sm:size-full"
-              />
-            </DialogTrigger>
-          ) : (
-            fallback
-          )}
-          {loading && (
-            <Loader2
-              aria-label="Preparando portada"
-              className="absolute bottom-2 left-2 size-4 animate-spin text-muted-foreground"
+      <div className={cn("relative shrink-0", COVER_SIZE)}>
+        {cad || image ? (
+          <DialogTrigger asChild>
+            <CoverButton
+              image={image}
+              onPointerEnter={cad ? preloadStepViewer : undefined}
+              onFocus={cad ? preloadStepViewer : undefined}
+              name={name}
+              className="size-full sm:size-full"
             />
-          )}
-        </div>
-        {colored.image && colors?.layers.length ? (
-          <ul
-            aria-label="Colores de los features"
-            className="mt-1.5 flex max-w-48 flex-wrap gap-x-3 gap-y-1 text-xs sm:max-w-[300px]"
-          >
-            {colors.layers.map((layer) => (
-              <li key={layer.feature_id} className="flex items-center gap-1">
-                <span
-                  aria-hidden
-                  className="size-2.5 rounded-sm"
-                  style={{ backgroundColor: layer.color }}
-                />
-                {layer.name}
-              </li>
-            ))}
-            {coloredFaces(colors.layers).shared && (
-              <li className="flex items-center gap-1">
-                <span
-                  aria-hidden
-                  className="size-2.5 rounded-sm"
-                  style={{ backgroundColor: SHARED_COLOR }}
-                />
-                Varios features
-              </li>
-            )}
-          </ul>
-        ) : null}
+          </DialogTrigger>
+        ) : (
+          <FeatureThumbnail feature={{ name, image }} className="size-full" />
+        )}
+        {loading && (
+          <Loader2
+            aria-label="Preparando portada"
+            className="absolute bottom-2 left-2 size-4 animate-spin text-muted-foreground"
+          />
+        )}
+      </div>
+      <div className="order-last empty:hidden lg:col-span-2">
         <FaceReviewList review={colors?.review} />
       </div>
       {expanded && (
@@ -145,10 +119,7 @@ export function PartCover({ part }: { part: PartCardPublic }) {
           <DialogHeader>
             <DialogTitle className="pr-6">{name}</DialogTitle>
           </DialogHeader>
-          <div
-            data-slot="cover-surface"
-            className="relative size-[var(--cover-size)]"
-          >
+          <div data-slot="cover-surface" className="relative min-h-0 w-full">
             {cad ? (
               <Suspense
                 fallback={

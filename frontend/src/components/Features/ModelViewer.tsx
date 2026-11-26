@@ -3,10 +3,12 @@ import { useEffect, useRef, useState } from "react"
 import type * as THREE_NS from "three"
 
 import { type FilePublic, FilesService } from "@/client"
+import { useConfigureCadViewer } from "@/hooks/useCadPreferences"
 import { absoluteFileUrl } from "@/hooks/useFileAccess"
 import { addCadEdges, cadLineColor, offsetCadSurface } from "./cadEdges"
 import { cadBoundaryIndices } from "./coverFaceRanges"
-import { createModelControls } from "./modelControls"
+import { createModelCamera, createModelControls } from "./modelControls"
+import { modelPivot } from "./modelPivot"
 
 type Three = typeof THREE_NS
 
@@ -148,6 +150,7 @@ export default function ModelViewer({
   showCadEdges?: boolean
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const configureViewer = useConfigureCadViewer()
   const resetRef = useRef<() => void>(() => undefined)
   const [status, setStatus] = useState<Status>({
     phase: "loading",
@@ -249,12 +252,7 @@ export default function ModelViewer({
         const keyLight = new three.DirectionalLight(0xffffff, 1.6)
         scene.add(keyLight)
 
-        const camera = new three.PerspectiveCamera(
-          45,
-          1,
-          size / 1000,
-          size * 20,
-        )
+        const camera = createModelCamera(size)
         const renderer = new three.WebGLRenderer({
           antialias: true,
           alpha: true,
@@ -265,27 +263,24 @@ export default function ModelViewer({
         const controller = createModelControls(
           camera,
           renderer.domElement,
-          size,
+          modelPivot(object),
         )
-        const { controls } = controller
-        resetRef.current = () => controls.reset()
+        resetRef.current = controller.reset
+        configureViewer(controller)
 
         const resize = () => {
           const { clientWidth, clientHeight } = container
           if (!clientWidth || !clientHeight) return
           renderer.setSize(clientWidth, clientHeight)
-          camera.aspect = clientWidth / clientHeight
-          camera.updateProjectionMatrix()
-          controls.handleResize()
+          controller.resize(clientWidth / clientHeight)
         }
         resize()
         const observer = new ResizeObserver(resize)
         observer.observe(container)
 
         renderer.setAnimationLoop(() => {
-          controls.update()
-          keyLight.position.copy(camera.position)
-          renderer.render(scene, camera)
+          keyLight.position.copy(controller.viewCamera.position)
+          renderer.render(scene, controller.viewCamera)
         })
 
         setStatus({ phase: "ready" })
@@ -293,6 +288,7 @@ export default function ModelViewer({
         dispose = () => {
           renderer.setAnimationLoop(null)
           observer.disconnect()
+          configureViewer(null)
           controller.dispose()
           object.traverse((child) => {
             const mesh = child as THREE_NS.Mesh
@@ -323,7 +319,7 @@ export default function ModelViewer({
       abort.abort()
       dispose()
     }
-  }, [file.id, file.filename, previewUrl, showCadEdges])
+  }, [file.id, file.filename, previewUrl, showCadEdges, configureViewer])
 
   return (
     <div className="relative h-[70vh] w-full overflow-hidden rounded-lg border bg-muted/30">

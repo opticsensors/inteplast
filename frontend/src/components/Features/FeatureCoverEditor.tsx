@@ -258,7 +258,7 @@ function CoverEditorDraft({
 
   return (
     <Tabs
-      className="gap-3"
+      className="min-h-0 gap-3"
       value={tab}
       onValueChange={(next) => {
         if (busy) return
@@ -313,7 +313,12 @@ function CoverEditorDraft({
         </DialogFooter>
       </TabsContent>
       {cadVisited && (
-        <TabsContent value="cad" forceMount hidden={tab !== "cad"}>
+        <TabsContent
+          value="cad"
+          forceMount
+          hidden={tab !== "cad"}
+          className="min-h-0"
+        >
           <CadCoverEditor
             feature={feature}
             partId={partId}

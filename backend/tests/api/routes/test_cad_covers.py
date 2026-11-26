@@ -187,6 +187,76 @@ def test_colored_capture_is_versioned_separately_from_the_original_and_gray(
     assert client.get(url, headers=headers).json()["face_colors"] is None
 
 
+def test_perspective_thumbnails_survive_the_viewer_upgrade(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    from app.evidence import digest, job_id
+    from app.knowledge_models import EvidenceJob
+
+    headers = superuser_token_headers
+    feature, part, body = cover_example(client, headers, db)
+    url = f"{API}/parts/{part}"
+    assert (
+        save(client, headers, feature, [{"part_id": part, **body}]).status_code == 200
+    )
+    cover = client.get(f"{url}/cover", headers=headers).json()
+    selection = body["cover_3d"]
+    payload = {k: selection[k] for k in ("file_id", "file_version", "source_sha256")}
+    payload["image_id"] = body["image_id"]
+    assert (
+        client.put(
+            f"{url}/cover",
+            headers=headers,
+            json={**payload, "cad_cache_key": cover["cad_cache_key"]},
+        ).status_code
+        == 200
+    )
+    assert (
+        client.put(
+            f"{url}/face-image",
+            headers=headers,
+            json={
+                **payload,
+                "render_key": cover["face_colors"]["key"],
+                "geometry_key": selection["geometry_key"],
+            },
+        ).status_code
+        == 200
+    )
+
+    gray = db.get(EvidenceJob, job_id("part-cover", uuid.UUID(part)))
+    colors = db.get(EvidenceJob, job_id("face-colors", uuid.UUID(part)))
+    assert gray and colors
+    source = gray.payload["source_key"]
+    gray.cache_key = hashlib.sha256(f"shaded-edges-v1:{source}".encode()).hexdigest()
+    layer = cover["face_colors"]["layers"][0]
+    colors.cache_key = digest(
+        ["face-colors-v2", source, [[feature, layer["color"], layer["selection"]]]]
+    )
+    db.add_all([gray, colors])
+    db.commit()
+    restored = client.get(f"{url}/cover", headers=headers).json()
+    assert restored["image"]["id"] == body["image_id"]
+    assert restored["cover_needs_refresh"] is False
+    assert restored["face_colors"]["images"]["part"]["id"] == body["image_id"]
+    assert (
+        client.put(
+            f"{url}/face-image",
+            headers=headers,
+            json={
+                **payload,
+                "render_key": restored["face_colors"]["key"],
+                "feature_id": feature,
+                "geometry_key": selection["geometry_key"],
+            },
+        ).status_code
+        == 200
+    )
+    assert set(
+        client.get(f"{url}/cover", headers=headers).json()["face_colors"]["images"]
+    ) == {"part", feature}
+
+
 def test_face_review_follows_the_marked_piece_even_when_it_is_not_first(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
@@ -306,6 +376,7 @@ def test_cover_persists_per_piece_and_can_be_removed(
 ) -> None:
     headers = superuser_token_headers
     feature_id, part_id, body = cover_example(client, headers, db)
+    body["cover_3d"]["camera"]["ortho_height"] = 14.75
     change = {"part_id": part_id, **body}
     assert save(client, {}, feature_id, [change]).status_code == 401
     result = save(client, headers, feature_id, [change])
@@ -479,6 +550,7 @@ def test_cover_requires_valid_selection_and_camera(
         {"faces": [{"mesh": -1, "face": 0}]},
         {"faces": [{"mesh": 0, "face": 1}] * 2},
         {"camera": {"position": [0, 0, 0], "target": [0, 0, 0], "up": [0, 0, 1]}},
+        {"camera": {**annotation["camera"], "ortho_height": 0}},
         {"recipe": "unknown renderer"},
     ]:
         result = save(

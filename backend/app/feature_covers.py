@@ -50,7 +50,7 @@ COVER_IMAGE_TYPES = {
 
 
 def part_cover_key(source_key: str) -> str:
-    return hashlib.sha256(f"shaded-edges-v1:{source_key}".encode()).hexdigest()
+    return hashlib.sha256(f"ortho-shaded-edges-v2:{source_key}".encode()).hexdigest()
 
 
 def part_cad_cover(
@@ -79,7 +79,10 @@ def verified_gray_cover(
     cad_key = part_cover_key(source_key)
     if not cover or cover.file_id != cad.id:
         return cad, cad_key, None, False
-    refresh = cover.cache_key != cad_key
+    perspective_key = hashlib.sha256(
+        f"shaded-edges-v1:{source_key}".encode()
+    ).hexdigest()
+    refresh = cover.cache_key not in (cad_key, perspective_key)
     # Before shaded edges the job key was the source key itself. New jobs also
     # retain that identity so a later display change can reuse a verified PNG.
     if refresh and source_key not in (cover.cache_key, cover.payload.get("source_key")):

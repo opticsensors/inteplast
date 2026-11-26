@@ -86,6 +86,8 @@ window.review.refetchEvidence = () =>
   client.invalidateQueries({ queryKey: ["feature-evidence"] })
 window.review.refetchUser = () =>
   client.invalidateQueries({ queryKey: ["currentUser"] })
+window.review.setViewerPreferences = (prefs) =>
+  client.setQueryData(["currentUser"], (user) => ({ ...user, ...prefs }))
 const root = createRootRoute({ component: () => <Outlet /> })
 const editor = createRoute({
   getParentRoute: () => root,

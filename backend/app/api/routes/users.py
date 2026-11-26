@@ -15,6 +15,8 @@ from app.api.deps import (
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password
 from app.models import (
+    CadPreferences,
+    CurrentUserPublic,
     Item,
     Message,
     MicrosoftUserCreate,
@@ -146,7 +148,18 @@ def update_password_me(
     return Message(message="Password updated successfully")
 
 
-@router.get("/me", response_model=UserPublic)
+@router.patch("/me/cad-preferences", response_model=CurrentUserPublic)
+def update_cad_preferences(
+    *, session: SessionDep, current_user: CurrentUser, body: CadPreferences
+) -> Any:
+    current_user.sqlmodel_update(body.model_dump(exclude_unset=True))
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
+    return current_user
+
+
+@router.get("/me", response_model=CurrentUserPublic)
 def read_user_me(current_user: CurrentUser) -> Any:
     """
     Get current user.
@@ -155,17 +168,10 @@ def read_user_me(current_user: CurrentUser) -> Any:
 
 
 @router.delete("/me", response_model=Message)
-def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
-    """
-    Delete own user.
-    """
-    if current_user.is_superuser:
-        raise HTTPException(
-            status_code=403, detail="Super users are not allowed to delete themselves"
-        )
-    session.delete(current_user)
-    session.commit()
-    return Message(message="User deleted successfully")
+def delete_user_me(_current_user: CurrentUser) -> Any:
+    raise HTTPException(
+        status_code=403, detail="Las bajas se gestionan desde Administración."
+    )
 
 
 @router.post("/signup", response_model=UserPublic)

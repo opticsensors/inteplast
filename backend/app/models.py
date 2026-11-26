@@ -11,6 +11,7 @@ from pydantic import (
     StringConstraints,
     model_validator,
 )
+from pydantic import Field as PydanticField
 from sqlalchemy import JSON, Column, DateTime, Integer, text
 from sqlmodel import AutoString, Field, Relationship, SQLModel
 
@@ -59,10 +60,20 @@ class UpdatePassword(SQLModel):
     new_password: str = Field(min_length=8, max_length=128)
 
 
+class CadPreferences(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    cad_projection: Literal["orthographic", "perspective"] = "orthographic"
+    cad_controls: Literal["solidworks", "classic"] = "solidworks"
+    invert_zoom: bool = False
+
+
 # Database model, database table inferred from class name
 class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
+    cad_projection: str = "orthographic"
+    cad_controls: str = "solidworks"
+    invert_zoom: bool = False
     created_at: datetime | None = Field(
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),  # type: ignore
@@ -79,6 +90,10 @@ class UserPublic(UserBase):
 class UsersPublic(SQLModel):
     data: list[UserPublic]
     count: int
+
+
+class CurrentUserPublic(UserPublic, CadPreferences):
+    pass
 
 
 # Shared properties
@@ -455,6 +470,10 @@ class CadCamera(BaseModel):
     position: tuple[FiniteFloat, FiniteFloat, FiniteFloat]
     target: tuple[FiniteFloat, FiniteFloat, FiniteFloat]
     up: tuple[FiniteFloat, FiniteFloat, FiniteFloat]
+    # World units visible vertically in the square cover. Older captures used a 45° lens.
+    ortho_height: FiniteFloat | None = PydanticField(
+        default=None, gt=0, exclude_if=lambda height: height is None
+    )
 
     @model_validator(mode="after")
     def valid_view(self) -> "CadCamera":

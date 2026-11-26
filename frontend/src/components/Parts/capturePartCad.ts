@@ -1,6 +1,9 @@
 import * as THREE from "three"
 import type { FaceLayer, FilePublic } from "@/client"
-import { MAX_COVER_STEP_SIZE } from "@/components/Features/cadCover"
+import {
+  CAD_COVER_BACKGROUND,
+  MAX_COVER_STEP_SIZE,
+} from "@/components/Features/cadCover"
 import { addCadEdges } from "@/components/Features/cadEdges"
 import { coverFaceRanges } from "@/components/Features/coverFaceRanges"
 import {
@@ -10,8 +13,8 @@ import {
   SHARED_COLOR,
 } from "@/components/Features/faceColors"
 import {
-  createModelControls,
-  framePiece,
+  createModelCamera,
+  frameCover,
 } from "@/components/Features/modelControls"
 import { readCoverGeometry } from "@/components/Features/preparedCover"
 
@@ -51,7 +54,6 @@ export async function capturePartCad(
   const geometries: THREE.BufferGeometry[] = []
   const lineMaterials: THREE.LineBasicMaterial[] = []
   let renderer: THREE.WebGLRenderer | undefined
-  let controller: ReturnType<typeof createModelControls> | undefined
   try {
     for (const [meshIndex, mesh] of meshes.entries()) {
       const geometry = new THREE.BufferGeometry()
@@ -87,24 +89,17 @@ export async function capturePartCad(
     const size = bounds.getSize(new THREE.Vector3()).length() || 1
     object.position.sub(bounds.getCenter(new THREE.Vector3()))
     const scene = new THREE.Scene()
-    scene.background = new THREE.Color(0xf4f5f7)
+    scene.background = new THREE.Color(CAD_COVER_BACKGROUND)
     const light = new THREE.DirectionalLight(0xffffff, 1.6)
     scene.add(object, new THREE.HemisphereLight(0xffffff, 0x555566, 2.2), light)
-    const camera = new THREE.PerspectiveCamera(45, 1, size / 1000, size * 20)
+    const camera = createModelCamera(size)
     renderer = new THREE.WebGLRenderer({ antialias: true })
     renderer.setSize(512, 512)
-    controller = createModelControls(camera, renderer.domElement, size)
-    if (specific) {
-      const view = specific.selection.camera
-      camera.position.fromArray(view.position)
-      camera.up.fromArray(view.up)
-      controller.controls.target.fromArray(view.target)
-    } else
-      framePiece(
-        camera,
-        valid.length === 1 ? valid[0].selection.camera : undefined,
-      )
-    controller.controls.update()
+    frameCover(
+      camera,
+      specific?.selection.camera,
+      valid.length === 1 ? valid[0].selection.camera : undefined,
+    )
     light.position.copy(camera.position)
     renderer.render(scene, camera)
     const image = await new Promise<Blob>((resolve, reject) =>
@@ -119,7 +114,6 @@ export async function capturePartCad(
     signal.throwIfAborted()
     return { image, sourceHash, geometryKey, featureId: specific?.feature_id }
   } finally {
-    controller?.dispose()
     for (const geometry of geometries) geometry.dispose()
     for (const lineMaterial of lineMaterials) lineMaterial.dispose()
     for (const material of materials) material.dispose()

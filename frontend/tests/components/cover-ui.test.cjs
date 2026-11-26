@@ -84,7 +84,7 @@ before(async () => {
       include: [
         "occt-import-js",
         "three",
-        "three/examples/jsm/controls/TrackballControls.js",
+        "three/examples/jsm/controls/ArcballControls.js",
       ],
     },
     logLevel: "error",
@@ -398,7 +398,7 @@ test("a missing coloured PNG is rendered once for each view and keeps the gray f
 })
 
 test("piece legend filters shared CAD faces without rebuilding the viewer", async (t) => {
-  const page = await mount(t)
+  const page = await mount(t, { busyWorker: true })
   await page.evaluate(async () => {
     const feature = window.review.feature
     const { image, cover_3d: selection } = feature.part_covers[0]
@@ -434,12 +434,24 @@ test("piece legend filters shared CAD faces without rebuilding the viewer", asyn
     await window.review.navigate("/colored-part")
   })
   const open = page.getByRole("button", { name: "Ampliar portada" })
+  await expect(open.locator("img")).toBeVisible()
+  await expect(page.getByText("Nervios", { exact: true })).toHaveCount(0)
+  await expect(page.getByText("Planitudes", { exact: true })).toHaveCount(0)
   await open.click()
+  const preview = surface(page).locator("img")
+  await expect(preview).toBeVisible()
+  await expect(preview).toHaveCSS("object-fit", "contain")
+  await expect(preview.locator("..")).toHaveCSS(
+    "background-color",
+    "rgb(244, 245, 247)",
+  )
+  await screenshot(page, "piece-loading-cad.png")
   await ready(page)
   const dialog = page.getByRole("dialog")
   const shared = dialog.getByText("Varios features", { exact: true })
   const planes = dialog.getByRole("checkbox", { name: "Planitudes" })
   await expect(shared).toBeVisible()
+  await screenshot(page, "piece-ready-cad.png")
   const canvas = dialog.locator("canvas")
   await canvas.evaluate((el) => {
     el.dataset.original = "true"
@@ -456,7 +468,7 @@ test("piece legend filters shared CAD faces without rebuilding the viewer", asyn
   await expect(planes).toBeChecked()
 })
 
-test("real STEP worker preserves existing cover-v1 surfaces and modal fits its square", async (t) => {
+test("real STEP worker preserves existing cover-v1 surfaces in the wide viewer", async (t) => {
   const page = await mount(t)
   await page.evaluate(() => window.review.navigate("/cover"))
   await page.getByRole("button", { name: "Ampliar portada" }).click()
@@ -472,7 +484,9 @@ test("real STEP worker preserves existing cover-v1 surfaces and modal fits its s
   )
   const box = await surface(page).boundingBox(),
     modal = await page.getByRole("dialog").boundingBox()
-  assert.ok(Math.abs(box.width - box.height) < 1)
+  assert.ok(
+    box.width > box.height && modal.width > page.viewportSize().width * 0.9,
+  )
   assert.ok(
     Math.abs(modal.width - box.width - 34) < 1,
     "only border and 16px padding on each side",
@@ -630,7 +644,7 @@ for (const method of ["Escape", "Close"]) {
 }
 
 for (const mobile of [false, true]) {
-  test(`editor matches viewer width and square, with stable tabs and compact actions (${mobile ? "touch" : "desktop"})`, async (t) => {
+  test(`editor matches viewer dimensions, with stable tabs and visible actions (${mobile ? "touch" : "desktop"})`, async (t) => {
     const page = await mount(t, { mobile })
     await page.evaluate(() => window.review.navigate("/cover"))
     await page.getByRole("button", { name: "Ampliar portada" }).click()
@@ -650,7 +664,8 @@ for (const mobile of [false, true]) {
       cadSquare = await surface(page).boundingBox()
     assert.ok(Math.abs(cadBounds.width - viewerBounds.width) < 1)
     assert.ok(Math.abs(cadSquare.width - viewerSquare.width) < 1)
-    assert.ok(Math.abs(cadSquare.height - viewerSquare.height) < 1)
+    assert.ok(Math.abs(cadBounds.height - viewerBounds.height) < 1)
+    assert.ok(cadSquare.height > page.viewportSize().height / 2)
     const cancelBounds = await modal
       .getByRole("button", { name: "Cancelar" })
       .boundingBox()
@@ -671,12 +686,9 @@ for (const mobile of [false, true]) {
         `square ${field}`,
       )
     }
-    assert.ok(Math.abs(imageSquare.width - imageSquare.height) < 1)
+    assert.ok(imageBounds.height >= page.viewportSize().height * 0.89)
     assert.ok(Math.abs(imageBounds.width - imageSquare.width - 34) < 1)
     assert.ok(imageBounds.y >= 0)
-    await modal
-      .getByRole("button", { name: "Cancelar" })
-      .scrollIntoViewIfNeeded()
     await expect(
       modal.getByRole("button", { name: "Cancelar" }),
     ).toBeInViewport()
@@ -712,6 +724,80 @@ for (const mobile of [false, true]) {
     )
   })
 }
+
+test("left clicks accumulate CAD faces and a repeated click removes only that face", async (t) => {
+  const page = await mount(t)
+  await page
+    .getByRole("button", { name: "Editar portada", exact: true })
+    .click()
+  await ready(page)
+  await finishDialogEntrance(page)
+  await page.getByRole("button", { name: "Limpiar selección" }).click()
+  const apply = page.getByRole("button", { name: "Aplicar", exact: true })
+  const { x, y, width, height } = await surface(page)
+    .locator("canvas")
+    .boundingBox()
+  const top = () => page.mouse.click(x + width * 0.5, y + height * 0.4)
+  const side = () => page.mouse.click(x + width * 0.43, y + height * 0.55)
+  await top()
+  await expect(apply).toBeEnabled()
+  await side()
+  await top()
+  await expect(apply).toBeEnabled()
+  await side()
+  await expect(apply).toBeDisabled()
+})
+
+test("changing personal navigation keeps the editor, marks and shared covers intact", async (t) => {
+  const page = await mount(t)
+  await page
+    .getByRole("button", { name: "Editar portada", exact: true })
+    .click()
+  await ready(page)
+  await finishDialogEntrance(page)
+  const canvas = surface(page).locator("canvas")
+  await canvas.evaluate((el) => {
+    el.dataset.original = "yes"
+  })
+  const fetched = []
+  page.on("request", (request) => {
+    if (request.url().includes("/files/")) fetched.push(request.url())
+  })
+  await page.evaluate(async () => {
+    const { FilesService } = await import("/tests/components/fixtures/api.js")
+    const upload = FilesService.uploadFile
+    FilesService.uploadFile = async (args) => {
+      const bitmap = await createImageBitmap(args.formData.file)
+      window.review.captureSize = [bitmap.width, bitmap.height]
+      bitmap.close()
+      return upload(args)
+    }
+    window.review.setViewerPreferences({
+      cad_projection: "perspective",
+      cad_controls: "classic",
+      invert_zoom: true,
+    })
+    await new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(resolve)),
+    )
+  })
+  await expect(canvas).toHaveAttribute("data-original", "yes")
+  await expect(page.getByRole("radio")).toHaveCount(0)
+  assert.equal(await page.evaluate(() => window.workerStats.started), 1)
+  assert.equal(await page.evaluate(() => window.review.captureSize), undefined)
+  assert.deepEqual(fetched, [])
+  const clear = page.getByRole("button", { name: "Limpiar selección" })
+  await clear.click()
+  const apply = page.getByRole("button", { name: "Aplicar", exact: true })
+  await expect(apply).toBeDisabled()
+  const { x, y, width, height } = await canvas.boundingBox()
+  await page.mouse.click(x + width / 2, y + height / 2)
+  await expect(apply).toBeEnabled()
+  await apply.click()
+  await page.waitForFunction(() => window.review.captureSize)
+  const [w, h] = await page.evaluate(() => window.review.captureSize)
+  assert.ok(w > 100 && w === h)
+})
 
 test("the same clear control recovers an obsolete saved selection on the current geometry", async (t) => {
   const page = await mount(t)

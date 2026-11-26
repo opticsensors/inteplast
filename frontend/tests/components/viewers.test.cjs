@@ -206,6 +206,14 @@ test("the correction rotates the sheet and its dimension marker together on each
       { number, box },
     )
     await page.getByText(`${number} / 2`, { exact: true }).waitFor()
+    // The page indicator can change before PDF.js swaps the previous bitmap.
+    await page.waitForFunction((portrait) => {
+      const canvas = document.querySelector("canvas")
+      return (
+        canvas.style.visibility === "visible" &&
+        canvas.height > canvas.width === portrait
+      )
+    }, number === 1)
     const result = await page.locator("canvas").evaluate((canvas) => {
       const marker = canvas.nextElementSibling.firstElementChild.style
       const centerX = parseFloat(marker.left) + parseFloat(marker.width) / 2
@@ -229,11 +237,11 @@ test("the correction rotates the sheet and its dimension marker together on each
 test("3D follows screen-space drag, crosses the poles, and stops when released", async (t) => {
   const page = await mount(t, "model")
   const initial = await page.evaluate(() => window.viewer.position())
-  const drag = async (dx, dy) => {
+  const drag = async (dx, dy, button = "middle") => {
     await page.mouse.move(400, 300)
-    await page.mouse.down()
+    await page.mouse.down({ button })
     await page.mouse.move(400 + dx, 300 + dy, { steps: 20 })
-    await page.mouse.up()
+    await page.mouse.up({ button })
     await page.evaluate(
       () =>
         new Promise((resolve) =>
@@ -241,6 +249,8 @@ test("3D follows screen-space drag, crosses the poles, and stops when released",
         ),
     )
   }
+  await drag(90, 0, "left")
+  assert.deepEqual(await page.evaluate(() => window.viewer.position()), initial)
   await drag(90, 0)
   assert.ok(
     (await page.evaluate(() => window.viewer.front()))[0] > 0,
@@ -268,11 +278,128 @@ test("3D follows screen-space drag, crosses the poles, and stops when released",
     previous,
   )
   await page.evaluate(() => window.viewer.reset())
-  assert.deepEqual(await page.evaluate(() => window.viewer.position()), initial)
-  await page.mouse.move(400, 300)
+  const reset = await page.evaluate(() => window.viewer.position())
+  assert.ok(Math.hypot(...reset.map((n, i) => n - initial[i])) < 1e-8)
+  await page.mouse.move(600, 300)
+  await page.evaluate(() => {
+    window.readAnchor = window.viewer.pointAtCursor()
+  })
   await page.mouse.wheel(0, -180)
-  await page.waitForFunction(
-    (distance) => window.viewer.distance() < distance,
-    Math.hypot(...initial),
+  await page.waitForFunction(() => window.viewer.zoom() > 1)
+  assert.ok(
+    Math.abs((await page.evaluate(() => window.readAnchor())) - 0.5) < 0.005,
+    "wheel zoom anchors the point under the cursor",
   )
+  const beforePan = await page.evaluate(() => window.viewer.target())
+  const zoom = await page.evaluate(() => window.viewer.zoom())
+  await page.keyboard.down("Control")
+  await drag(65, 35)
+  await page.keyboard.up("Control")
+  assert.notDeepEqual(
+    await page.evaluate(() => window.viewer.target()),
+    beforePan,
+  )
+  assert.equal(await page.evaluate(() => window.viewer.zoom()), zoom)
+  const center = await page.evaluate(() => window.viewer.projectedPivot())
+  await drag(-45, 55)
+  const rotated = await page.evaluate(() => window.viewer.projectedPivot())
+  assert.ok(Math.hypot(...center.map((n, i) => n - rotated[i])) < 1e-7)
+  const [live, restored] = await page.evaluate(() => [
+    window.viewer.front(),
+    window.viewer.restoredView(),
+  ])
+  assert.ok(
+    Math.hypot(...live.map((n, i) => n - restored[i])) < 1e-6,
+    "saved framing restores a rotated, panned and zoomed CAD",
+  )
+  await page.mouse.wheel(0, 180)
+  await page.waitForFunction((zoom) => window.viewer.zoom() < zoom, zoom)
+})
+
+test("classic drag, perspective and inverted wheel are independent", async (t) => {
+  const page = await mount(t, "model")
+  await page.evaluate(() =>
+    window.viewer.configure({
+      cad_projection: "perspective",
+      cad_controls: "classic",
+      invert_zoom: true,
+    }),
+  )
+  const [near, far] = await page.evaluate(() => window.viewer.parallel())
+  assert.ok(Math.abs(near / far - 3) < 1e-8)
+  const initial = await page.evaluate(() => window.viewer.position())
+  await page.mouse.move(400, 300)
+  await page.mouse.down()
+  await page.mouse.move(465, 325, { steps: 10 })
+  await page.mouse.up()
+  const after = await page.evaluate(() => window.viewer.position())
+  assert.ok(Math.hypot(...initial.map((n, i) => n - after[i])) > 1)
+  await page.mouse.wheel(0, 180)
+  await page.waitForFunction(() => window.viewer.zoom() > 1)
+  await page.evaluate(() =>
+    window.viewer.configure({
+      cad_projection: "orthographic",
+      cad_controls: "classic",
+      invert_zoom: true,
+    }),
+  )
+  const [a, b] = await page.evaluate(() => window.viewer.parallel())
+  assert.ok(Math.abs(a - b) < 1e-8)
+})
+
+test("off-center legacy views keep their scale and orbit the solid in place", async (t) => {
+  const page = await mount(t, "model")
+  const results = await page.evaluate(() => [
+    window.viewer.meshCenter(true),
+    window.viewer.meshCenter(false),
+    window.viewer.parallel(),
+  ])
+  assert.deepEqual(results[0], [2.75, 0.5, 5.25])
+  assert.deepEqual(results[1], [3.5, 2, 7.5])
+  assert.ok(Math.abs(results[2][0] - results[2][1]) < 1e-8)
+  // Pockets on 3056 and 3167: the saved detail and the whole-piece pivot differ.
+  for (const { size, pivot, ...saved } of [
+    {
+      size: 90.678,
+      pivot: [1.765, 0.451, -2.521],
+      position: [30.08, -28.24, 23.88],
+      target: [-0.9, -10.08, -30.77],
+      up: [-0.266, 0.406, 0.875],
+    },
+    {
+      size: 123.294,
+      pivot: [0, 0, 0],
+      position: [-22.66, -42.23, 31.51],
+      target: [-3.8, -34.65, -10.84],
+      up: [0.227, 0.613, 0.757],
+    },
+  ]) {
+    await page.evaluate(
+      ({ size, pivot, saved }) => window.viewer.open(size, pivot, saved),
+      { size, pivot, saved },
+    )
+    const height = await page.evaluate(() => window.viewer.height())
+    const distance = Math.hypot(
+      ...saved.position.map((x, i) => x - saved.target[i]),
+    )
+    assert.ok(Math.abs(height - 2 * Math.tan(Math.PI / 8) * distance) < 1e-7)
+    const initial = await page.evaluate(() => window.viewer.projectedPivot())
+    const initialCamera = await page.evaluate(() => window.viewer.position())
+    await page.mouse.move(410, 320)
+    await page.mouse.down({ button: "middle" })
+    for (const [x, y] of [
+      [410, 320],
+      [445, 365],
+      [480, 350],
+    ]) {
+      await page.mouse.move(x, y, { steps: 6 })
+      const current = await page.evaluate(() => window.viewer.projectedPivot())
+      assert.ok(Math.hypot(...current.map((n, i) => n - initial[i])) < 1e-7)
+    }
+    await page.mouse.up({ button: "middle" })
+    const finalCamera = await page.evaluate(() => window.viewer.position())
+    assert.ok(
+      Math.hypot(...initialCamera.map((n, i) => n - finalCamera[i])) > 1,
+    )
+  }
 })

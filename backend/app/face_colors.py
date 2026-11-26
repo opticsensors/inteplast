@@ -56,30 +56,34 @@ def face_colors(
     ]
     if not marked:
         return None
-    key = digest(
+    selections = [
         [
-            "face-colors-v2",
-            source_key,
-            [
-                [
-                    str(feature.id),
-                    feature.color,
-                    {
-                        k: v
-                        for k, v in (link.cover_3d or {}).items()
-                        if k not in {"source_key", "primary_at_selection"}
-                    },
-                ]
-                for link, feature in marked
-            ],
+            str(feature.id),
+            feature.color,
+            {
+                k: v
+                for k, v in (link.cover_3d or {}).items()
+                if k not in {"source_key", "primary_at_selection"}
+            },
         ]
-    )
+        for link, feature in marked
+    ]
+    key = digest(["ortho-face-colors-v3", source_key, selections])
     job = session.get(EvidenceJob, job_id("face-colors", part_id))
     current = (
         job.payload
         if job and job.file_id == cad.id and job.payload.get("source_key") == source_key
         else {}
     )
+    # Keep valid shared PNGs from before orthographic rendering, including
+    # sibling variants when a missing image is generated for this same job.
+    if (
+        current
+        and job
+        and job.cache_key != key
+        and job.cache_key == digest(["face-colors-v2", source_key, selections])
+    ):
+        key = job.cache_key
     sha = current.get("source_sha256")
     if (
         not sha
