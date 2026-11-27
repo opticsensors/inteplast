@@ -96,9 +96,6 @@ No guardar la carpeta en Admin hasta que IT resuelva lo de Fortinet. Al cambiar 
 identificador cambia la clave de versión (`sharepoint.py:201-202`), y la web volvería a descargar
 los originales. Con el bloqueo actual también dejarían de abrirse los de Eduard. Admin no
 permite quitar la selección: para deshacerla hace falta acceso por SSH.
-El bloqueo se ha comunicado a Ángel. La solución corresponde a IT: excluir el servidor
-de la inspección SSL hacia `*.sharepoint.com` o facilitar el certificado raíz de Fortinet
-para instalarlo en el servidor y en el contenedor.
 
 **Actualización de Planos del 23/11.** Se desplegó el código `8dbadfb`. Desde el PC se verificaron
 por HTTPS la salud de la API, el parámetro de página y el campo de giro de las miniaturas,
@@ -129,6 +126,23 @@ Las comprobaciones siguientes corresponden a la preparación previa a la instala
 **Actualizaciones posteriores.** Desarrollar y probar los cambios en el PC, subir la versión
 validada a GitHub y desplegar esa versión por SSH con Compose. Aplicar las migraciones sobre
 la base de datos del servidor y conservar sus volúmenes para mantener las fichas que edite el equipo.
+
+## Error 503 al descargar planos de SharePoint
+
+**Incidencia abierta a 26/11/2026.** Eduard ya envió la solicitud a IT de Eurecat y está a la espera de respuesta.
+
+Se reprodujo el 503 de la pieza 3214 con el plano `R-2718, R-2971_C11692_rev.B.pdf`. Desde el
+contenedor de producción, Microsoft Graph localizó el archivo y devolvió su enlace de descarga.
+Al conectar con `eurecatcloud-my.sharepoint.com`, el backend recibió un certificado emitido por
+Fortinet (`FG6H1ETB19903076`) y rechazó la conexión con el error TLS
+`20: unable to get local issuer certificate`. La cadena de confianza de la inspección TLS
+de Fortinet es la causa confirmada del 503 en este plano.
+
+El bloqueo se ha comunicado a Ángel (IT). IT puede excluir ese tráfico de la inspección
+o facilitar el certificado raíz corporativo para que el servidor y el contenedor puedan
+validar la cadena. Cuando IT aplique el cambio, repetir la descarga
+directa del mismo PDF desde el contenedor con la verificación TLS activa y comprobar que
+el plano abre desde la ficha 3214 en la web de producción antes de cerrar la incidencia.
 
 ## Desplegar desde el PC
 

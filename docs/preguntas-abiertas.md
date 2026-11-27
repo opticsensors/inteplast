@@ -15,6 +15,16 @@
 > el molde y el escaneo](#a29-archivo-principal), se amplían [A15](#a15-versiones-cad-gui) y
 > [A19](#a19-planos) con casos concretos y se propone una convención de carpetas.
 
+## Primera pregunta para la próxima conversación sobre retoques · 27/11/2026
+
+**Cuando rellenáis el intern después de medir, ¿sabéis qué plan de retoques o qué acción concreta estáis comprobando?** Si Metrología dispone de esa información, proponemos que escriba «Verifica plan 10» o «Verifica acción 10.1» en `HISTORY`, columna F (`Remarks`). Si solo la conoce quien gestiona el plan, ¿puede esa persona identificar en el PowerPoint el intern que lo comprobó? [Planes y ejemplos en A20](#a20-planes-correccion) · [Propuesta para la carpeta](estructura-de-carpetas-por-pieza.md#retoques-del-molde)
+
+<a id="consulta-metodo-medicion"></a>
+
+## Consulta sobre el método de medición · 27/11/2026
+
+**¿Queréis poder consultar el método de medición desde la ficha de la pieza en la web?** Según Eduard, esta necesidad no se planteó en las reuniones. La carpeta queda fuera de la web por ahora.
+
 <a id="extraccion-sin-ia"></a>
 ## Para validar la extracción sin IA · 13/11/2026
 
@@ -74,6 +84,8 @@ sus plantillas o un índice sencillo, sin exigir rehacer los documentos antiguos
   electrodos y semimoldes en subcarpetas; en `7- Pieza real STL`, un escaneo con el
   código de la pieza en el nombre; borradores y versiones anteriores, fuera de la
   carpeta 1 o marcados. Casos que lo motivan en [A29](#a29-archivo-principal).
+  Para la copia de trabajo, el acuerdo del 26/11 precisa que el adjunto de plano abre el único PDF del primer nivel.
+  Los planos de las subcarpetas quedan para consulta en SharePoint. En Molde, un único STEP de conjunto en la raíz es una recomendación de orden. [Estructura acordada](estructura-de-carpetas-por-pieza.md#decisiones-de-eduard)
 - **Validación:** elegir un responsable y un ejemplo de cada formato para
   contrastar el resultado de la app. Las lagunas quedan visibles; no se rellenan
   por analogía con otras piezas.
@@ -582,8 +594,7 @@ las cabeceras de los informes citan `6494730`: la respuesta debe decir también 
 <a id="a20-planes-correccion"></a>
 ### A20 · Planes de corrección: cuáles faltan y cuál se ejecutó
 
-**Recordatorio.** Los planes de corrección (PPTX) son la «lesson learned» de cada pieza; los
-leemos por carpeta y fecha.
+**Primera pregunta de A20.** ¿Sabe Metrología, cuando rellena el intern, qué plan o acción comprueba? La respuesta decide dónde registrar una sola vez qué muestreo verificó el retoque. La opción preferida es `HISTORY` del intern. Si se usa esa opción, repetir el dato en el PowerPoint es voluntario. [Propuesta y organización de los PowerPoint por plan](estructura-de-carpetas-por-pieza.md#retoques-del-molde)
 
 **Qué no nos cuadra.**
 
@@ -774,8 +785,8 @@ Level*). Los planos que nos pasasteis están en `1- 2D y 3D pieza` y en `6- Mét
    anterior?**
 5. **3288: el nivel de la cabecera, ¿se refiere al conjunto o a la base y la tapa? ¿Qué nivel correspondía a
    `intern.04`?**
-6. **¿Qué nombre y qué ubicación tendrá la carpeta de planos históricos de cada pieza en SharePoint?**
-   Con la ruta de la 3237 como ejemplo podremos comprobar qué carpeta debe abrir el icono de histórico del visor.
+6. **¿Podéis indicarnos dónde consultáis en SharePoint las revisiones anteriores del plano de la 3237?**
+   Esa ruta nos permitirá comprobar que el acceso al histórico lleva a los documentos que utilizáis. Cada pieza puede conservar su nombre de carpeta.
 
 <details><summary>Contexto interno (no enviar)</summary>
 
@@ -846,7 +857,7 @@ La app deja la hoja como pendiente con ese motivo. Decidir si se envía correspo
 
 *Añadida el 19/11/2026, después de cargar las 21 piezas con «Usar carpeta de la pieza».*
 
-**Recordatorio.** Al dar de alta una pieza, la aplicación toma de su carpeta el CAD de la
+**Contexto de la carga del 19/11.** Al dar de alta una pieza, la aplicación toma de su carpeta el CAD de la
 pieza (`1- 2D y 3D pieza`), el molde (`3- Molde`) y el escaneo (`7- Pieza real STL`). Cuando
 hay un solo archivo de cada tipo, lo elige sin ayuda. Así ocurre, por ejemplo, en el molde
 del 3174, 3186, 3214 o 3218.
@@ -862,20 +873,19 @@ del 3174, 3186, 3214 o 3218.
 | 3168 | Dos STEP, `5506170ECO11A0-10.stp` y `5506170ESY11A0-10.stp`, sin indicar qué es cada uno |
 | 3288 | Molde: solo `000591368_00-B_Aufbau_Top.stp`. Escaneo: `3288-00_Base.stl` y `3288-00 Nou.stl` |
 | 3309 | El único escaneo se llama `3218-00 316919 C1.stl`, con el código del 3218 |
-| 3226 | No hay carpeta de molde ni de método de medición |
+| 3226 | En la entrega faltan el CAD de molde y los documentos de método de medición. La carpeta de Método existe y está vacía. |
 
 El 3205 sí trae un conjunto reconocible, `RP-3083_Mold_Rev0.stp`, junto a electrodos y lados.
 
 **Preguntas:**
 
-1. **¿Existe un STEP del molde completo de cada pieza? Si no, ¿cuál de los archivos de
-   `3- Molde` queréis ver como molde de la pieza?**
+1. **Para entregas futuras que incluyan el STEP del molde completo, ¿os resulta práctico dejarlo en la raíz y guardar el despiece en subcarpetas?** Es una recomendación de orden. La página de Molde enlazará con la carpeta completa de SharePoint.
 2. **3168: ¿qué son `ECO` y `ESY`?**
 3. **3288: ¿el molde `Aufbau_Top` es el completo o una mitad? ¿Qué es el escaneo `Nou` y
    cuál queréis ver de la pieza?**
 4. **3309: ¿el escaneo `3218-00 316919 C1.stl` es del 3309 con otro nombre?**
 5. **3226: ¿hay CAD del molde y método de medición?**
-6. **Para entregas futuras, ¿os va bien la convención de carpetas propuesta arriba?**
+6. **Para las demás carpetas, ¿os va bien la convención de entrega propuesta arriba?**
 
 <details><summary>Contexto interno (no enviar)</summary>
 

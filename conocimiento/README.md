@@ -46,6 +46,7 @@ segunda explicación en prosa.
 | Correspondencia IGES/DXF/TXT y fechas de adquisición | [Metrología: soportes geométricos](0-bolt-eye/3212/4-metrologia.md#rectificación-dxf-equivalente-con-redondeo-iges-con-z-aplanada) |
 | Columnas CSV y reglas de parsing | [Formatos y parsing](formatos-parsing.md) |
 | Variantes PPTX y contenido de acciones del 3212 | [Retoques: qué fichero usar](0-bolt-eye/3212/5-retoques-molde.md#qué-fichero-usar) |
+| Qué retoque consta en cada muestreo | [Retoques de molde por pieza y muestreo](retoques-por-muestreo.md), con las referencias al taller y a los informes de Metrología de las 21 piezas |
 | Cronología y comparación antes/después | [Historial del molde](0-bolt-eye/3212/historial-molde.md) (3212, a mano); otras piezas: tabla `cadena_correccion` (`rag.py exacto cadena`) |
 | Varios valores para una cota, muestreo y cavidad | [Valores por punto](valores-por-punto.md): causas y censo de todas las piezas (I-008) |
 | Cliente, plano, nº de cliente e ITP de cada pieza | [Identidad de las piezas](identidad-piezas.md) (generada); cliente poco fiable: [I-005](incongruencias.md) |

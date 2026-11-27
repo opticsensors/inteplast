@@ -41,21 +41,25 @@ La primera revisión visual se hará con 3205 y 3167. Plan completo en
    falta evaluar la prueba local con preguntas representativas y acordar con IT la integración
    de Copilot, sus permisos, usuarios simultáneos y límites.
 
+## Revisión de las carpetas de pieza · 27/11/2026
+
+Quedan definidas **2D y 3D pieza, Moldflow, Molde y Metrología**. Para **Retoques molde**, Eduard ha aprobado proponer un PowerPoint vigente por plan, con las versiones anteriores en `Old/` u otra carpeta de histórico. **Primera pregunta para INTEPLAST:** cuando Metrología rellena el intern, ¿sabe qué retoque está comprobando? Si lo sabe, anotará el plan, la acción o el nombre del PowerPoint en `HISTORY`, columna `Remarks`. Repetirlo en el PowerPoint es opcional. Si solo lo sabe quien gestiona el plan, se propondrá registrar allí el intern de comprobación. Eduard deja **Método de medición** fuera de la web. Queda recogida la [pregunta para INTEPLAST](preguntas-abiertas.md#consulta-metodo-medicion). La última carpeta por concretar es **Pieza real STL**. La preparación de la copia de `Exemples` sigue pendiente. [Plan de carpetas](estructura-de-carpetas-por-pieza.md#retoques-del-molde) · [Pregunta para INTEPLAST](preguntas-abiertas.md#a20-planes-correccion)
+
 ## 🔴 Reorganizar Metrología de las 21 piezas (prueba de concepto, 24/11/2026)
 
 **Decisión de Eduard: es un cambio importante y se hará en breve.** La reorganización la hacemos nosotros, no INTEPLAST. Se aplica en una copia de `Exemples` a las 21 piezas, para ver cómo quedaría y cómo de bien funciona la app. Después se enseña el resultado a INTEPLAST. La app es la misma; deben mejorar sus resultados. El código del backend queda así como versión definitiva, preparada para la estructura que habrá de verdad.
 
-**Regla:** en `4- Metrologia/Interns/`, solo informes de muestreo, un Excel por muestreo. Si existen, los CSV de máquina pueden ir junto al Excel de su muestreo, pero solo sirven de comprobación. Todo lo demás va en cualquier otra carpeta: copias de cliente, Cpk, comparativas, MSA, volcados y PPAP. Detalle en [Método 3](estructura-de-carpetas-por-pieza.md#método-3-organizar-la-metrología-solo-con-excel).
+**Estructura de Metrología acordada el 26/11/2026.** Cada pieza tiene una sola ubicación de referencia. Si existe `4- Metrologia/Interns/`, todos los informes internos van allí, incluidas sus subcarpetas. Si falta `Interns/`, los informes van directamente en la raíz de `4- Metrologia/`. Se espera un Excel de referencia por variante y muestreo. `Customer/`, `Customers/` y las carpetas auxiliares pueden conservarse en ambos casos. Sus Excel quedan fuera del historial interno, incluso si falta el informe correspondiente. Los CSV de máquina son opcionales y pueden seguir en el soporte de su muestreo para comprobar el Excel. [Método 3 y ejemplos](estructura-de-carpetas-por-pieza.md#método-3-organizar-la-metrología-solo-con-excel)
 
 1. **Relación de operaciones por pieza**, de ruta actual a destino:
-   - informes de la raíz (3051, 3197, 3212) y de `Version 00/Interns` (3174) a `Interns/`;
-   - comparativas fuera de `Interns/`;
+   - conservar en la raíz los informes de 3051, 3197 y 3212. Para la 3174, el traslado previsto en la copia es de `Version 00/Interns/` a `Metrologia/Interns/`;
+   - conservar las copias de cliente y situar las comparativas auxiliares fuera de la ubicación de los informes internos;
    - copias dudosas, en su sitio;
-   - CSV de máquina junto al Excel de su muestreo.
+   - conservar los CSV asociados a su muestreo y cavidad. En la 3212 se mantienen los nueve Excel en la raíz y los CSV en sus carpetas de soporte.
 2. **Aplicarla en la copia de trabajo,** sin tocar los originales.
 3. **Cambiar el backend:**
-   - leer medidas solo de `Interns/`;
-   - leer la variante (`-00`, `-10`, `-20`) y separar sus historiales;
+   - aplicar la ubicación de referencia acordada para cada pieza;
+   - leer la variante (`-00`, `-01`, `-10`, `-20`) y separar sus historiales;
    - avisar de los Excel sin muestreo reconocible y de los muestreos con varios Excel;
    - usar el CSV solo para comprobar (decisión 3): las medidas salen siempre del Excel; si el CSV da otro valor para la misma cota, muestreo y cavidad, la app avisa sin cambiar nada. Antes, contar en 3167, 3197, 3212 y 3233 cuántas cotas del Excel se identifican en el CSV ([límite](estructura-de-carpetas-por-pieza.md#método-3-organizar-la-metrología-solo-con-excel)).
 4. **Recargar las 21 piezas y comparar con la carga actual:** muestreos, series duplicadas, avisos y gráficas.
@@ -67,12 +71,16 @@ La primera revisión visual se hará con 3205 y 3167. Plan completo en
 
 ## Siguientes pasos acordados para Planos y Cotas (23/11/2026)
 
-1. **Mostrar solo el plano vigente en la ficha y en Planos.** Tomar el PDF definitivo de `1- 2D y 3D pieza`. Usar su `.icp` únicamente si corresponde a ese plano y está en esa misma carpeta. Si falta, mostrar el PDF solo. Excluir los PDF y `.icp` de método de medición, retoques y `OLD` de la selección del vigente. Mostrar una tarjeta por pieza o por componente con plano propio y conservar todas las hojas del PDF. Si hay varios candidatos indistinguibles, dejar la elección al usuario. Aplicar también el criterio de vigencia al CAD de pieza y al molde en sus carpetas correspondientes.
+1. **Abrir desde la ficha el único PDF del primer nivel de `1- 2D y 3D pieza/`.** Mantener todas sus páginas y usar su ICP cuando esté junto al PDF en ese nivel. Si falta el PDF, el adjunto queda sin plano. Si hay varios en la raíz, corresponde al responsable indicar cuál debe quedar. Los planos de las subcarpetas quedan para consulta directa en SharePoint. [Regla del adjunto y del histórico](estructura-de-carpetas-por-pieza.md#método-2-ordenar-las-revisiones-en-sharepoint-pieza-por-pieza)
 2. **Conservar las revisiones de las mediciones en Cotas.** Mantener el selector «Revisión de mediciones» cuando haya varias. Cada muestreo conserva el informe de origen, la revisión declarada y sus nominales y tolerancias. Cambiar la revisión consultada cambia la gráfica y mantiene el plano vigente en el visor. Si ese plano aún carece de mediciones, las anteriores siguen disponibles con su revisión. Mantener separadas las series cuya equivalencia no esté acreditada y señalar una cota histórica en el plano vigente solo si se ha comprobado la correspondencia.
 
-3. **Conectar los iconos con SharePoint.** La carpeta del plano abrirá el directorio que contiene el PDF vigente. La carpeta con reloj abrirá el histórico de planos. Acordar con INTEPLAST el nombre y la ubicación del histórico antes de conectar ese botón. Moldflow tendrá un único destino, la carpeta que contiene su archivo. Abrir cada destino en otra pestaña con los permisos del usuario.
+3. **Enlazar el histórico de planos en SharePoint desde la ficha de pieza.** El destino es la subcarpeta real de esa pieza, de nombre libre. Queda por decidir cómo presentar el enlace. Comprobar la ruta con la 3237.
 
-**Molde y Moldflow (24/11/2026).** En local, ambos adjuntos tienen la descarga del original junto a la carpeta de SharePoint. El recuadro de consulta tiene el tamaño del visor CAD y muestra la captura o el icono de imagen del catálogo. El lápiz permite pegar, arrastrar o elegir una captura opcional y guardarla. Si hay únicamente una carpeta identificada, la ficha de pieza da acceso directo a ella. Quedan pendientes la comprobación de los enlaces con una sesión real de Microsoft y el despliegue posterior en el servidor. Los dos iconos del plano siguen pendientes de conectar.
+**Moldflow (acuerdo del 26/11/2026).** El icono de la ficha abre la página de Moldflow. Esa página enlaza con la carpeta de SharePoint, aunque esté vacía, y admite una captura opcional de la simulación. El usuario consulta o descarga los archivos en SharePoint.
+
+**Molde (acuerdo del 26/11/2026).** El icono del adjunto abre la página de Molde, con una captura opcional y un enlace a la carpeta del molde en SharePoint. El usuario elige allí qué archivo abrir. Un único STEP del conjunto en la raíz es una recomendación de orden. El acceso es el mismo con varios STEP o con el despiece en subcarpetas. [Regla de la carpeta](estructura-de-carpetas-por-pieza.md#método-4-preparar-los-demás-archivos-de-la-pieza)
+
+**Molde y Moldflow (24/11/2026).** En local, ambos adjuntos tienen la descarga del original junto a la carpeta de SharePoint. El recuadro de consulta tiene el tamaño del visor CAD y muestra la captura o el icono de imagen del catálogo. El lápiz permite pegar, arrastrar o elegir una captura opcional y guardarla. Si hay únicamente una carpeta identificada, la ficha de pieza da acceso directo a ella. Quedan pendientes la comprobación de los enlaces con una sesión real de Microsoft y el despliegue posterior en el servidor.
 
 **Caso para validar la selección y las mediciones.** En la 3237, Planos debe abrir el PDF 05 de `2D y 3D pieza`. El plano 03 con globos de `Método de medición/OLD` pertenece al histórico. Cotas debe conservar las mediciones que citan el 04. [Casos de revisiones de plano e informes](preguntas-abiertas.md#a26-revisiones-plano).
 
@@ -91,7 +99,8 @@ Acuerdos de la reunión del viernes 20 recogidos para el lunes 23. El piloto sig
 | Carpeta de fotos | Acordar dónde se guardan las fotos y cómo se identifica la carpeta de cada pieza. Añadir un adjunto de tipo carpeta y comprobar que permite abrir todas sus fotos. |
 | Material y cavidades | Pedir a INTEPLAST la plantilla Excel de datos de pieza y un ejemplo rellenado. Identificar los campos, leer automáticamente el material y el número de cavidades y mostrarlos junto a Cliente y Familia. Acordar si interesan otros campos. |
 | Varios features sobre un CAD | Decidido el 25/11/2026 y es el siguiente paso: [plan de colores por feature](plan-colores-por-feature-2026-11-25.md). |
-| Piloto en el servidor de Eurecat | Ángel concedió `Files.Read.All` el 25/11 y se verificó en el token de Eduard. Pablo ya abre modelos 3D en la web. En sus capturas, 7 de 10 tarjetas carecían de miniatura. Tras desplegar `7fe7ca0`, Pablo confirmó que ya ve bien las miniaturas. Fortinet sigue pendiente para descargas nuevas. [Diagnóstico](despliegue-servidor.md#estado-del-servidor-de-eurecat-y-punto-de-reanudación-23112026). |
+| Piloto en el servidor de Eurecat | Ángel concedió `Files.Read.All` el 25/11 y se verificó en el token de Eduard. Pablo ya abre modelos 3D en la web. En sus capturas, 7 de 10 tarjetas carecían de miniatura. Tras desplegar `7fe7ca0`, Pablo confirmó que ya ve bien las miniaturas. |
+| Error 503 al descargar planos de SharePoint | **Abierto, a la espera de IT (26/11/2026).** Fortinet es la causa confirmada en el plano de la pieza 3214. Eduard ya envió la solicitud. Cuando IT aplique el cambio, repetir la descarga y abrir el plano en producción. [Diagnóstico y criterio de cierre](despliegue-servidor.md#error-503-al-descargar-planos-de-sharepoint). |
 | Excel de cotas y plano correspondiente | Pedir a INTEPLAST un informe rellenado y el plano numerado de la misma revisión, con el CSV de máquina cuando exista. Acordar cómo identificar pieza, componente, plano, revisión y muestreo. Contrastar el mismo número de cota en Excel y plano, con nominal, tolerancias, unidad, cavidad y valor medido. Pedir que se distingan las mediciones nuevas de las copiadas. |
 
 ## Portadas y carga del catálogo (19/11/2026)
