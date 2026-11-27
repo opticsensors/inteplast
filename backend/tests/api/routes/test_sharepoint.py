@@ -124,7 +124,15 @@ def test_attachment_folder_urls_use_delegated_folder_metadata(
     piece = f"test-{uuid.uuid4()}"
     folder = f"{piece}/3- Molde"
     path = f"{folder}/Tool/lado.step"
-    for name in (path, f"{piece}/7- Moldflow/estudio.mfr"):
+    for name in (
+        path,
+        f"{piece}/7- Moldflow/estudio.mfr",
+        f"{piece}/8- STL peça real/scan.stl",
+        f"{piece}/1-2D y 3D Pieza/plano.pdf",
+        f"{piece}/1-2D y 3D Pieza/Entregas/01/old.pdf",
+        f"{piece}/1-2D y 3D Pieza/Otra entrega/old.step",
+        f"{piece}/1-2D y 3D Pieza/Soporte/nota.txt",
+    ):
         graph.files[name] = b"model"
         graph.versions[name] = 1
     part = Part(code=piece, folder_path=piece)
@@ -147,6 +155,36 @@ def test_attachment_folder_urls_use_delegated_folder_metadata(
             headers=superuser_token_headers,
         ).json()
         == graph.meta(f"{piece}/7- Moldflow")["webUrl"]
+    )
+    assert (
+        client.get(
+            url,
+            params={"part_id": str(part.id), "kind": "scan"},
+            headers=superuser_token_headers,
+        ).json()
+        == graph.meta(f"{piece}/8- STL peça real")["webUrl"]
+    )
+    design = f"{piece}/1-2D y 3D Pieza"
+    for kind, archive in (("drawing", "Entregas"), ("part", "Otra entrega")):
+        params = {"kind": kind, "part_id": str(part.id)}
+        assert (
+            client.get(url, params=params, headers=superuser_token_headers).json()
+            == graph.meta(design)["webUrl"]
+        )
+        assert client.get(
+            f"{API}/files/attachment-history",
+            params=params,
+            headers=superuser_token_headers,
+        ).json() == [
+            {"name": archive, "url": graph.meta(f"{design}/{archive}")["webUrl"]}
+        ]
+    assert (
+        client.get(
+            f"{API}/files/attachment-history",
+            params={"kind": "mold", "part_id": str(part.id)},
+            headers=superuser_token_headers,
+        ).json()
+        == []
     )
     assert graph.downloads == 0
 

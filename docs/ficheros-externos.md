@@ -30,7 +30,7 @@ Desde el 22/09/2026 los archivos pertenecen a la **pieza** y se gestionan en su 
    extensión: PDF → plano; STEP/STP/IGES → molde si la ruta contiene «molde», «mold» o
    «mould», y CAD en otro caso; STL/OBJ/PLY/GLB/GLTF → escaneo; MFR/MPI → Moldflow; el
    resto → documento. Se puede cambiar antes de guardar.
-3. **Guardar cambios** guarda cabecera y archivos en una sola operación (`PUT /parts/{id}`);
+3. **Guardar** guarda cabecera y archivos en una sola operación (`PUT /parts/{id}`);
    **Cancelar** los descarta. Cabecera y archivos no tienen autoguardado; los vínculos con
    features de una pieza existente sí se guardan al modificarlos. Si cambió la carpeta,
    la interfaz inicia una lectura después de guardar. **Crear pieza** registra primero

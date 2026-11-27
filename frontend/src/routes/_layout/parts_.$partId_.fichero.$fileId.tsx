@@ -1,20 +1,19 @@
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { ExternalLink } from "lucide-react"
 import { lazy, Suspense } from "react"
 import { CatalogService, EvidenceService } from "@/client"
-import { FileLink } from "@/components/Common/FileLink"
 import { partLabel } from "@/components/Features/parts"
 import { fileAction, usesWebPreview } from "@/components/Features/viewers"
 import {
-  AttachmentDetail,
+  AttachmentHeader,
+  EditAttachmentLink,
   isFolderAttachment,
-  SharePointFolders,
 } from "@/components/Parts/AttachmentActions"
+import { AttachmentDetail } from "@/components/Parts/AttachmentGallery"
 import { consultationScope } from "@/components/Parts/consultationEntries"
 import { validatePartSearch } from "@/components/Parts/measurementSelection"
+import { PartCadViewer } from "@/components/Parts/PartCadViewer"
 import { guessFileKind, savedFiles } from "@/components/Parts/pieceFileDrafts"
-import { Button } from "@/components/ui/button"
 import { fileErrorMessage, useFileAccess } from "@/hooks/useFileAccess"
 
 const ModelViewer = lazy(() => import("@/components/Features/ModelViewer"))
@@ -45,7 +44,10 @@ function PartFile() {
   )
   const result = useQuery({
     queryKey: ["part-evidence", partId, search.revision, search.snapshot, ""],
-    enabled: detail.isSuccess && !isFolderAttachment(attachment?.kind),
+    enabled:
+      detail.isSuccess &&
+      !isFolderAttachment(attachment?.kind) &&
+      attachment?.kind !== "part",
     queryFn: () =>
       EvidenceService.readPartEvidence({
         partId,
@@ -57,7 +59,11 @@ function PartFile() {
   const file =
     attachment?.file ?? result.data?.documents.find((f) => f.id === fileId)
   const kind = attachment?.kind ?? guessFileKind(file?.filename ?? "")
-  const access = useFileAccess(isFolderAttachment(kind) ? undefined : file?.id)
+  const access = useFileAccess(
+    file && !isFolderAttachment(kind) && fileAction(file).viewer === "image"
+      ? file.id
+      : undefined,
+  )
   if (detail.isPending) return <p>Cargando documento…</p>
   if (detail.error) return <p role="alert">{fileErrorMessage(detail.error)}</p>
   if (file && isFolderAttachment(kind)) {
@@ -67,13 +73,14 @@ function PartFile() {
         kind={kind}
         file={file}
         partId={partId}
-        name={attachment?.name || file.filename}
         context={partLabel(detail.data.part)}
       />
     )
   }
-  if (result.isPending) return <p>Cargando documento…</p>
-  if (result.error) return <p role="alert">{fileErrorMessage(result.error)}</p>
+  if (attachment?.kind !== "part" && result.isPending)
+    return <p>Cargando documento…</p>
+  if (attachment?.kind !== "part" && result.error)
+    return <p role="alert">{fileErrorMessage(result.error)}</p>
   if (!file) return <p>Documento no encontrado en esta pieza.</p>
   const { viewer, action } = fileAction(file)
   const table = /\.(csv|xlsx?)$/i.test(file.filename)
@@ -81,43 +88,16 @@ function PartFile() {
   const scope = consultationScope(result.data?.features ?? [], search)
   return (
     <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">
-        {result.data ? partLabel(result.data.part) : ""}
-      </p>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="break-words text-2xl font-bold tracking-tight">
-            {displayName}
-          </h1>
-          {displayName !== file.filename && (
-            <p className="break-words text-sm text-muted-foreground">
-              {file.filename}
-            </p>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {kind === "drawing" ? (
-            <SharePointFolders kind={kind} />
-          ) : (
-            viewer === "pdf" &&
-            access.url && (
-              <Button asChild size="sm" variant="outline">
-                <a href={access.url} target="_blank" rel="noreferrer">
-                  <ExternalLink className="mr-2" />
-                  Abrir en pestaña
-                </a>
-              </Button>
-            )
-          )}
-          {viewer !== "pdf" && (
-            <Button asChild size="sm" variant="outline">
-              <FileLink fileId={file.id} downloadFile>
-                Descargar original
-              </FileLink>
-            </Button>
-          )}
-        </div>
-      </div>
+      <AttachmentHeader
+        kind={kind}
+        file={file}
+        partId={partId}
+        context={partLabel(detail.data.part)}
+        title={displayName}
+        subtitle={displayName !== file.filename ? file.filename : undefined}
+      >
+        <EditAttachmentLink partId={partId} />
+      </AttachmentHeader>
       <Suspense
         fallback={
           <p className="text-sm text-muted-foreground">Cargando visor…</p>
@@ -170,6 +150,8 @@ function PartFile() {
               alt={displayName}
               className="max-h-[75vh] object-contain"
             />
+          ) : kind === "part" && /\.(step|stp)$/i.test(file.filename) ? (
+            <PartCadViewer file={file} part={detail.data.part} />
           ) : usesWebPreview(file) ? (
             <WebModelViewer file={file} showCadEdges={kind === "part"} />
           ) : (
@@ -177,7 +159,7 @@ function PartFile() {
           )
         ) : (
           <div className="rounded-lg border p-12 text-center text-sm text-muted-foreground">
-            Descarga el original para abrirlo en su aplicación.
+            Este formato se consulta en su aplicación de origen.
           </div>
         )}
       </Suspense>

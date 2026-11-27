@@ -43,7 +43,7 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
 
 - Consulta y edición comparten cabecera con portada a la izquierda y datos a la derecha.
   La ruta Catálogo / Features / nombre queda arriba, junto a Editar feature y el menú
-  de acciones, o Cancelar / Guardar cambios. Eliminar permanece en el menú y pide confirmación.
+  de acciones, o Cancelar / Guardar. Eliminar permanece en el menú y pide confirmación.
 - En escritorio, Advertencias y Lecciones aprendidas ocupan la columna izquierda;
   Piezas ejemplo, la derecha. En móvil se apilan. Los tres paneles muestran contadores
   y títulos `text-lg`, con el mismo fondo y estilo sobrio en ambas clases de notas.
@@ -180,7 +180,7 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
   enlazado y sus cotas de esta pieza. Pulsar una cota la consulta en la columna izquierda.
 - Los listados de features y piezas usan subtarjetas compactas y enlaces «Ver feature» /
   «Ver pieza» en el color principal. En Archivos se pulsa el tipo para abrir el fichero y
-  ver su nombre. El tamaño queda centrado verticalmente junto al icono de descarga.
+  ver su nombre. El tamaño queda alineado a la derecha de la fila.
 - En Archivos, los tipos de geometría se llaman «CAD pieza» y «CAD molde».
 - La portada de pieza muestra el STEP completo con las caras compatibles de sus features.
   La leyenda de colores aparece solo al ampliar el CAD. Mientras se carga el modelo,
@@ -195,7 +195,7 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
   mantienen esa medida, incluso con el carrusel o con la portada vacía.
   Los campos de nombre y descripción de pieza y feature admiten 45 y 200 caracteres al
   escribir. En consulta, el título ocupa una línea y muestra el nombre completo al pasar el puntero.
-  Al pulsarla abre el visor interactivo reutilizado de Features, sin edición de caras.
+  Al pulsarla se abre el mismo visor de STEP que en el adjunto CAD de la pieza.
 - **Identidad de la pieza (17/11/2026):** el código es el título; el nombre, opcional, va a
   su lado en tono secundario, sin repetir el código («3212 Pump Housing»). Debajo, una línea
   «Familia · Cliente» con lo que tenga. La tarjeta del catálogo sigue el mismo orden, y los
@@ -218,7 +218,7 @@ Esta ficha concentra composición, interacción y navegación. El contrato de ar
   con features se guardan en línea, como en el editor de Features.
 - En edición, Archivos muestra CAD, Escaneo, Molde y Plano 2D, incluso si están vacíos.
   La carpeta selecciona otro archivo y la papelera quita el vínculo, sin borrar el original
-  ni su historial. No aparece Descargar hasta volver a consulta. Los cambios se guardan
+  ni su historial. Los cambios se guardan
   junto a la cabecera; cambiar solo archivos no importa mediciones. Si se cambia la carpeta,
   la interfaz inicia una lectura después de guardar. Un error conserva el borrador.
 - Las subtarjetas de piezas dentro de Features conservan la papelera de desvincular,
@@ -267,7 +267,7 @@ no muestra fotografías/capturas ni «Documentos y valores de origen».
 
 En **Editar pieza**, «Cambio propuesto en el molde» se edita en la propia tarjeta del
 tramo, también cuando está vacío. Se puede cambiar de tramo o de propuesta
-y guardar los textos juntos con **Guardar cambios**. **Cancelar** descarta los borradores.
+y guardar los textos juntos con **Guardar**. **Cancelar** descarta los borradores.
 
 Ofrecer todas las acciones ya vinculadas a la cota y a cada plan, también las que no tienen
 una previsión cuantitativa validada. Distinguir «sin acción vinculada» de «sin actuación
@@ -286,15 +286,22 @@ componentes (24/11/2026). Contrato de selección, archivos y guardado en
 [Uso en la ficha de pieza](ficheros-externos.md#uso-en-la-ficha-de-pieza).
 
 «Añadir fichero» usa el botón con Plus, borde y tamaño de «Añadir feature». En edición el
-nombre editable aparece bajo el tipo. En consulta la fila muestra el tipo, el tamaño y la descarga.
-Al abrir un plano aparecen dos iconos de carpeta, para el plano y para el histórico.
-Molde y Moldflow tienen la carpeta de SharePoint y la descarga del original juntas en la
-cabecera. El lápiz abre el editor de captura con pegar, arrastrar o elegir imagen,
-Cancelar y Guardar captura. El recuadro ocupa todo el ancho y el 70 % de la altura de la
-ventana, como el visor CAD. En consulta se ve la captura o el icono de imagen del catálogo.
-Al editar, el recuadro vacío muestra el icono de subida y admite arrastrar, Ctrl+V y clic
-para elegir una imagen del ordenador. El lápiz requiere acceso al original con sesión activa.
-Una carpeta identificada sin fichero vinculado se abre desde Archivos de la pieza.
+nombre editable aparece bajo el tipo. En consulta la fila muestra el tipo y el tamaño.
+Las páginas de adjuntos reúnen sus acciones a la derecha del título. La carpeta abre el
+original en SharePoint y la carpeta con reloj abre su histórico cuando está disponible.
+Si hay varios directorios de histórico, el icono permite elegir por nombre. El lápiz queda
+el último y abre la edición de la galería o de los archivos de la pieza. Cada icono tiene
+un nombre accesible y una descripción al pasar el puntero.
+Molde, Moldflow y Pieza real abren la misma galería. Cuando está vacía, un único recuadro
+muestra el icono de imagen del catálogo y «Sin fotos». La foto seleccionada ocupa el
+recuadro principal y se amplía al pulsarla. A partir de dos fotos, una tira de miniaturas
+debajo permite elegir cuál ver. En edición se puede pulsar todo el recuadro vacío para
+seleccionar fotos. Si ya hay fotos, «+ Añadir fotos» muestra debajo el mismo recuadro.
+Al pulsar el recuadro se abre el selector de archivos. Al incorporar las fotos, el recuadro
+se cierra. También se pueden arrastrar o pegar imágenes en edición, hasta ocho en total.
+Guardar aplica el borrador y Cancelar lo descarta. La edición requiere sesión activa y acceso
+a las fuentes de la pieza. Archivos permite abrir la galería de una pieza
+incluso antes de vincular un STL, un fichero de molde o un estudio de Moldflow.
 En consulta, código y cliente aparecen juntos bajo la descripción, alineados a la izquierda.
 La tarjeta del catálogo muestra la descripción opcional bajo el nombre, hasta dos líneas
 como en Features. En la fila siguiente, «código · cliente» acompaña a la etiqueta azul
@@ -392,7 +399,7 @@ manual; su presencia no indica detección automática. Las piezas simples no nec
 Al crear una pieza, «Varios componentes» la guarda sin leerla y abre «Componentes».
 Al cerrar el diálogo, guardado o cancelado, se leen sus datos: **sin componentes, como una
 pieza normal** (17/11/2026). El diálogo reutiliza campos, selector y buscador de archivos de
-la aplicación, con Cancelar / Guardar cambios y una sola frase de ayuda. Cada componente es
+la aplicación, con Cancelar / Guardar y una sola frase de ayuda. Cada componente es
 un campo de nombre compacto («Añadir componente» lo crea vacío y enfocado). Debajo, una fila
 por **hoja de Excel** (con el número de libros que la contienen) y otra por **archivo**, cada
 una con su desplegable; cada plano lleva su revisión. Lo que coincide con el nombre de un

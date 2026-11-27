@@ -23,7 +23,7 @@ before(async () => {
       {
         name: "isolated-api",
         setup(build) {
-          build.onResolve({ filter: /\/StepCoverCanvas$/ }, () => ({
+          build.onResolve({ filter: /\/(StepCoverCanvas|WebModelViewer)$/ }, () => ({
             path: path.join(__dirname, "fixtures/cad-canvas.jsx"),
           }))
           build.onResolve({ filter: /^\/assets\// }, ({ path: asset }) => ({
@@ -144,7 +144,7 @@ test("new feature accepts notes and existing pieces before the first Save", asyn
   await page.getByRole("button", { name: "Añadir pieza", exact: true }).click()
   await pickParts(page, ["3212 - Pump Housing"])
   await page
-    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   const result = await page.evaluate(() => ({
@@ -178,7 +178,7 @@ test("concurrent first additions share one feature and retain header edits durin
     .getByPlaceholder("Nombre del feature")
     .fill("Written while creating")
   await page
-    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   assert.equal(
     await page.getByRole("heading", { name: "Otra pagina abierta" }).count(),
@@ -477,7 +477,7 @@ test("part edits survive folding and failed saves, and Save flushes the correcte
     window.review.requests.some((item) => item.kind === "part"),
   )
   await page
-    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   assert.equal(
     await page.getByRole("heading", { name: "Otra pagina abierta" }).count(),
@@ -493,7 +493,7 @@ test("part edits survive folding and failed saves, and Save flushes the correcte
   })
   await name.fill("Saved part draft")
   await page
-    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   assert.equal(
@@ -785,7 +785,7 @@ const sentCovers = (page) =>
 
 const save = (page) =>
   page
-    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
 
 test("series editing keeps one draft per piece, saves them all at once and Cancel drops them", async (t) => {
@@ -1152,7 +1152,7 @@ test("closing an image draft leaves the previous cover and unsaved header intact
   )
   await page.keyboard.press("Escape")
   await page
-    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   const feature = await page.evaluate(() => window.review.feature)
@@ -1190,7 +1190,7 @@ test("removing a CAD cover is a draft until the feature is saved", async (t) => 
   await page.getByRole("button", { name: "Añadir portada" }).waitFor()
   assert.equal((await partCover(page)).image.id, "saved-image")
   await page
-    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   const cover = await partCover(page)
@@ -1275,7 +1275,7 @@ test("Save waits for pending autosave, then leaves", async (t) => {
   })
   await page.getByPlaceholder("Titulo de la nota").fill("Saved before leaving")
   await page
-    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   assert.equal(
@@ -1324,7 +1324,7 @@ test("cover waits for the upload, applies a draft and saves its reference with t
   await applyCover(page)
   assert.equal(await partCover(page), null)
   await page
-    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   assert.equal((await partCover(page)).image.id, "uploaded-image")
@@ -1350,7 +1350,7 @@ test("failed save retains draft and blocks leaving until retry succeeds", async 
   })
   await page.getByPlaceholder("Titulo de la nota").fill("Retain failed draft")
   await page
-    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   await page.getByRole("alert").waitFor()
   assert.equal(
@@ -1365,7 +1365,7 @@ test("failed save retains draft and blocks leaving until retry succeeds", async 
     window.review.failNotes = false
   })
   await page
-    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   assert.equal(
@@ -1490,7 +1490,7 @@ test("CAD cover uploads its image but waits for Save to persist the annotation a
     await window.review.refetch()
   })
   await page
-    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   const feature = await page.evaluate(() => window.review.feature)
@@ -1531,7 +1531,7 @@ test("pasting a local image replaces a CAD cover and leaves text fields alone", 
   await page.waitForFunction(() => window.review.uploadRequests.length === 1)
   await applyCover(page)
   await page
-    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   const cover = await partCover(page)
@@ -1558,7 +1558,7 @@ test("dropping an image updates the cover through the same upload flow", async (
   await page.waitForFunction(() => window.review.uploadRequests.length === 1)
   await applyCover(page)
   await page
-    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   assert.equal((await partCover(page)).image.id, "uploaded-image")
@@ -1633,7 +1633,7 @@ test("note images survive folding during upload and Save waits for their referen
   await page.waitForFunction(() => Boolean(window.review.releaseUpload))
   await expand.click()
   await page
-    .getByRole("button", { name: "Guardar cambios", exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   assert.equal(
     await page.getByRole("heading", { name: "Otra pagina abierta" }).count(),
@@ -1651,7 +1651,7 @@ test("note images survive folding during upload and Save waits for their referen
     .getByRole("button", { name: "Quitar imagen detail.png", exact: true })
     .click()
   await page
-    .getByRole("button", { name: "Guardar cambios", exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   await page.getByRole("heading", { name: "Otra pagina abierta" }).waitFor()
   assert.equal(

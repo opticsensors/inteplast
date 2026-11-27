@@ -7,6 +7,11 @@ export type AssistantStatus = {
     model?: (string | null);
 };
 
+export type AttachmentHistoryFolder = {
+    name: string;
+    url: string;
+};
+
 export type Body_files_upload_file = {
     file: (Blob | File);
 };
@@ -497,6 +502,11 @@ export type FolderInfo = {
 
 export type FolderLink = {
     url: string;
+};
+
+export type GalleryChange = {
+    previous_ids: Array<(string)>;
+    image_ids: Array<(string)>;
 };
 
 export type GraphLink = {
@@ -1372,13 +1382,38 @@ export type FeaturesDeleteFeatureAssetData = {
 
 export type FeaturesDeleteFeatureAssetResponse = (Message);
 
+export type FilesReadAttachmentGalleryData = {
+    fileId?: (string | null);
+    kind: 'mold' | 'moldflow' | 'scan';
+    partId?: (string | null);
+};
+
+export type FilesReadAttachmentGalleryResponse = (Array<FilePublic>);
+
+export type FilesUpdateAttachmentGalleryData = {
+    fileId?: (string | null);
+    kind: 'mold' | 'moldflow' | 'scan';
+    partId?: (string | null);
+    requestBody: GalleryChange;
+};
+
+export type FilesUpdateAttachmentGalleryResponse = (Array<FilePublic>);
+
 export type FilesReadAttachmentFolderData = {
     fileId?: (string | null);
-    kind: 'mold' | 'moldflow';
+    kind: 'mold' | 'moldflow' | 'scan' | 'drawing' | 'part' | 'document';
     partId?: (string | null);
 };
 
 export type FilesReadAttachmentFolderResponse = ((string | null));
+
+export type FilesReadAttachmentHistoryData = {
+    fileId?: (string | null);
+    kind: 'mold' | 'moldflow' | 'scan' | 'drawing' | 'part' | 'document';
+    partId?: (string | null);
+};
+
+export type FilesReadAttachmentHistoryResponse = (Array<AttachmentHistoryFolder>);
 
 export type FilesReadAttachmentScreenshotData = {
     fileId: string;

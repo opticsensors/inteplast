@@ -356,7 +356,7 @@ varias, y consultar una versión anterior desde el historial de importaciones de
 | `/features/{id}/fichero/{assetId}` | `routes/_layout/features_.$featureId_.fichero.$assetId.tsx` | Página antigua de un adjunto del feature. Se conserva para enlaces guardados; la interfaz ya no enlaza a ella |
 | `/parts/{id}` | `routes/_layout/parts_.$partId.tsx` | 🔑 **La ficha de pieza**: identidad, carpeta, Cotas (mediciones, correcciones y plano), Features y Archivos. Se edita aquí mismo con `?editar=true` |
 | `/parts/nueva` | `routes/_layout/parts_.nueva.tsx` | Alta de pieza desde su carpeta, con la misma composición que la ficha |
-| `/parts/{id}/fichero/{fileId}` | `routes/_layout/parts_.$partId_.fichero.$fileId.tsx` | 🔑 **La página de un archivo de la pieza**: visor PDF con buscador de cotas, tabla CSV/XLS/XLSX, imagen o 3D; si no hay visor, descarga del original |
+| `/parts/{id}/fichero/{fileId}` | `routes/_layout/parts_.$partId_.fichero.$fileId.tsx` | 🔑 **La página de un archivo de la pieza**: visor PDF con buscador de cotas, tabla CSV/XLS/XLSX, imagen o 3D, con acceso a la carpeta del original en SharePoint |
 | `/features/nuevo` | `routes/_layout/features_.nuevo.tsx` | **Alta completa** con todas las secciones desde el principio. Añadir contenido crea el feature automáticamente; Guardar termina en su ficha de consulta |
 | `/admin` | `routes/_layout/admin.tsx` | Usuarios, permisos y selección de la [carpeta de originales](ficheros-externos.md#cambiar-la-carpeta-desde-admin) de SharePoint |
 
@@ -408,7 +408,7 @@ Se reutilizan registros existentes, sin crear carpetas ni duplicar piezas. Códi
 son únicos; un código asociado a otra carpeta produce conflicto.
 
 En la ficha de pieza, **Editar pieza** permite cambiar código, nombre, familia, cliente,
-material, número de cavidades, descripción, carpeta y archivos. **Guardar cambios** los guarda
+material, número de cavidades, descripción, carpeta y archivos. **Guardar** aplica los cambios
 juntos y **Cancelar** los descarta.
 Cambiar la carpeta propone sus archivos y conserva el título y el código ya editados. Uso
 detallado en [archivos externos](ficheros-externos.md#uso-en-la-ficha-de-pieza). Código y
@@ -452,13 +452,17 @@ sus cotas asignadas en una transacción; conserva la pieza compartida, los otros
 los originales. Al volver a la ficha se conserva el desplegado de cada pieza en la sesión del
 navegador y se restaura el scroll de la ruta.
 
-En la ficha de pieza, **Archivos** muestra el tipo, el tamaño y la descarga del original.
+En la ficha de pieza, **Archivos** muestra el tipo y el tamaño del original.
 Pulsar el tipo abre la página del archivo (`/parts/{id}/fichero/{fileId}`). Allí se ve el
 nombre del fichero y, si se ha elegido un nombre distinto en edición, se conserva como título.
-La página muestra el visor del formato o la descarga. El plano tiene dos iconos de carpeta
-de SharePoint para el vigente y el histórico, pendientes de conectar. En Molde y Moldflow
-la cabecera ofrece la carpeta de SharePoint y la descarga. Cada fichero admite una captura
-opcional que se guarda desde el lápiz y se comparte entre sus enlaces de pieza y feature.
+La cabecera reúne los iconos de la carpeta en SharePoint, el histórico disponible y la edición.
+El CAD STEP de producto utiliza el mismo visor y la misma geometría preparada que su portada.
+Molde, Moldflow y
+Pieza real abren una galería por pieza y tipo de adjunto, incluso si la pieza aún carece
+del fichero. Cada galería admite ocho imágenes. La migración incorpora hasta ocho capturas
+anteriores por galería. Los enlaces desde una pieza y sus features comparten las imágenes.
+Las descargas se hacen en SharePoint. El lápiz edita las fotos en una galería o abre
+Archivos en la edición de la pieza para gestionar un original.
 En el modo local, un original ausente o modificado se rechaza y requiere revisar el vínculo
 en **Editar pieza**. El tratamiento de cambios en Graph sigue el
 [contrato del origen](ficheros-externos.md#sharepoint-microsoft-graph).
@@ -550,7 +554,7 @@ casilla—, la foto sigue a la izquierda —ahora abre el editor de portada—, 
 siguen debajo, con sus botones de añadir y borrar. Arriba a la derecha están *Cancelar* y
 *Guardar*, y ahí es donde tienen que estar: lo único que se guarda a mano es la cabecera, porque
 las notas, las piezas vinculadas y sus cotas se guardan en línea. Los archivos no se editan
-aquí: pertenecen a la pieza y se guardan con **Guardar cambios** en su ficha. **Los dos dejan
+aquí: pertenecen a la pieza y se guardan con **Guardar** en su ficha. **Los dos dejan
 la misma ficha en lectura**.
 Cambiar de modo reemplaza la entrada del historial: *atrás* vuelve al catálogo con sus filtros
 y posición, sin recorrer modos de edición anteriores. El modo vive en la URL y no en un `useState` por
@@ -599,7 +603,7 @@ guardados pendientes. La cabecera se sigue guardando mediante su botón.
 
 - El **título vacío no se guarda** (`min_length=1` en el backend): el campo se marca en rojo y se
   queda esperando. En la ficha de pieza, un archivo sin nombre visible se marca en rojo y
-  bloquea **Guardar cambios**.
+  bloquea **Guardar**.
 - Al **añadir un archivo a la pieza**, el nombre visible es el del fichero y el tipo se propone
   por la extensión: `.pdf` → plano, `.stl`/`.obj`/`.ply`/`.glb`/`.gltf` → escaneo, `.mfr`/`.mpi` →
   Moldflow. `.step`, `.stp`, `.igs` e `.iges` se proponen como molde si la ruta contiene «molde», «mold»

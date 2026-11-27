@@ -18,6 +18,7 @@ import { Route as Catalog } from "../../../src/routes/_layout/features"
 import { Route as Parts } from "../../../src/routes/_layout/parts"
 import { Route as Detail } from "../../../src/routes/_layout/parts_.$partId"
 import { Route as File } from "../../../src/routes/_layout/parts_.$partId_.fichero.$fileId"
+import { Route as Gallery } from "../../../src/routes/_layout/parts_.$partId_.galeria.$kind"
 
 const part = {
   id: "part-one",
@@ -586,6 +587,7 @@ CatalogService.readPartDetail = async ({ partId }) => {
   return {
     part: {
       ...item.part,
+      cad: window.review.attachments?.find((f) => f.kind === "part" && f.primary)?.file,
       characteristic_count:
         item.part.id === part.id ? characteristics.length : 1,
       feature_count: item.features.length,
@@ -634,6 +636,7 @@ const routes = [
   [Parts, "/parts", "/parts"],
   [Detail, "/parts_/$partId", "/parts/$partId"],
   [File, "/parts_/$partId_/fichero/$fileId", "/parts/$partId/fichero/$fileId"],
+  [Gallery, "/parts_/$partId_/galeria/$kind", "/parts/$partId/galeria/$kind"],
 ].map(([route, id, path]) =>
   route.update({ id, path, getParentRoute: () => layout }),
 )

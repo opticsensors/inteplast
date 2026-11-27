@@ -3,7 +3,7 @@
 El servidor genera un GLB para el visor de STL y de STEP/STP de más de 50 MiB.
 Las portadas 3D de piezas y features con STEP/STP de hasta 50 MiB también usan un GLB
 preparado, que conserva las aristas y la numeración de caras del editor.
-**Descargar** sigue entregando el original íntegro.
+La carpeta del adjunto en SharePoint da acceso al original íntegro.
 Por petición del usuario se elimina el pie informativo permanente «Vista simplificada…».
 El aviso específico de **Vista parcial** sigue apareciendo cuando faltan superficies.
 
@@ -109,6 +109,8 @@ Los errores no se reintentan en bucle: el usuario dispone de **Reintentar** y de
 | `PREVIEW_WORKER_ENABLED` | `true`; `false` en el stack aislado de pruebas |
 | `PREVIEW_TIMEOUT_SECONDS` | `900` (15 minutos) |
 | `PREVIEW_MEMORY_MB` | `8192` (memoria virtual, Linux) |
+
+La portada de la pieza y el adjunto CAD abren el mismo visor STEP y consultan la misma geometría. Al abrir un STEP ya preparado, la pestaña solicita el GLB en su URL estable con la sesión actual. El servidor comprueba los permisos y la versión, y responde con HTTP 304 si el navegador ya tiene esa geometría.
 
 La precarga de una portada 3D usa `previews.preview_key(document)` con el mismo origen
 que utilizará la ficha. La clave de la miniatura PNG incluye además su estilo y pertenece

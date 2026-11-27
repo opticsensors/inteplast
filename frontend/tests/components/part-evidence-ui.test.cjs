@@ -13,7 +13,7 @@ const artifacts = path.join(
   "scratch",
   "inteplast-cotas-ui",
 )
-let server, browser, origin
+let server, browser, origin, serveCad
 before(async () => {
   const [{ createServer }, { default: tailwindcss }] = await Promise.all([
     import("vite"),
@@ -26,6 +26,7 @@ before(async () => {
     cacheDir: path.join(artifacts, "vite", String(process.pid)),
     optimizeDeps: {
       entries: [path.join(__dirname, "fixtures/part-evidence.jsx")],
+      include: ["occt-import-js", "three", "three/examples/jsm/controls/ArcballControls.js"],
     },
     esbuild: { jsx: "automatic" },
     resolve: {
@@ -47,6 +48,9 @@ before(async () => {
       {
         name: "evidence-page",
         configureServer(vite) {
+          vite.middlewares.use("/api/v1/files/test-step/preview", (req, res, next) =>
+            serveCad ? serveCad(req, res) : next(),
+          )
           vite.middlewares.use("/evidence-test", async (_req, res, next) => {
             try {
               const html = await vite.transformIndexHtml(
@@ -106,6 +110,17 @@ async function mount(
 }
 const state = (page) => page.evaluate(() => window.review.location().search)
 
+function galleryPhoto(name) {
+  return {
+    name,
+    mimeType: "image/png",
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/r8sAAAAASUVORK5CYII=",
+      "base64",
+    ),
+  }
+}
+
 test("correction text uses the piece editor and keeps drafts for each sample pair", async (t) => {
   const page = await mount(t)
   const button = (name) => page.getByRole("button", { name, exact: true })
@@ -131,7 +146,7 @@ test("correction text uses the piece editor and keeps drafts for each sample pai
   await page.evaluate(() => {
     window.review.failSave = true
   })
-  await button("Guardar cambios").click()
+  await button("Guardar").click()
   await expect(
     page.getByRole("alert").filter({ hasText: "No se pudo guardar" }),
   ).toBeVisible()
@@ -139,7 +154,7 @@ test("correction text uses the piece editor and keeps drafts for each sample pai
   await page.evaluate(() => {
     window.review.failSave = false
   })
-  await button("Guardar cambios").click()
+  await button("Guardar").click()
   await expect(detail.getByText("Texto del segundo tramo")).toBeVisible()
   await expect(field).toHaveCount(0)
   await button("Correcciones").click()
@@ -184,7 +199,7 @@ test("a manual interval text remains editable beside an imported proposal on mob
   await button("Acción 1.33").tap()
   await expect(field).toHaveValue(/expulsores/)
   await field.fill("Texto revisado de la propuesta")
-  await button("Guardar cambios").tap()
+  await button("Guardar").tap()
   await expect(page.getByText("Texto revisado de la propuesta")).toBeVisible()
   await button("Texto del tramo").tap()
   await expect(page.getByText("Texto revisado del tramo")).toBeVisible()
@@ -472,19 +487,20 @@ test("the piece's drawing file opens its own page and Back restores the piece", 
   )
   const previous = await state(page)
   await expect(page.getByText("DRW_3212.pdf", { exact: true })).toHaveCount(0)
+  await page.evaluate(() => {
+    window.review.attachmentFolders = { drawing: "https://example.invalid/design" }
+    window.review.attachmentHistory = { drawing: [{ name: "Revisiones", url: "https://example.invalid/design/old" }] }
+  })
   await page.getByRole("link", { name: "Plano 2D", exact: true }).click()
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "DRW_3212.pdf",
   )
-  for (const name of [
-    "Carpeta del plano en SharePoint",
-    "Histórico de planos en SharePoint",
-  ]) {
-    const folder = page.getByRole("button", { name })
-    await expect(folder).toBeVisible()
-    await expect(folder).toBeDisabled()
-    await expect(folder).toHaveText("")
-  }
+  const actions = page.getByRole("group", { name: "Acciones del adjunto" })
+  const folder = actions.getByRole("link", { name: "Abrir carpeta en SharePoint" })
+  await expect(folder).toHaveAttribute("href", "https://example.invalid/design")
+  await expect(folder).toHaveText("")
+  await expect(actions.getByRole("link", { name: "Abrir histórico en SharePoint" })).toHaveAttribute("href", "https://example.invalid/design/old")
+  await expect(actions.getByRole("link").last()).toHaveAccessibleName("Editar archivos de la pieza")
   await expect(
     page.getByRole("link", { name: "Abrir en pestaña" }),
   ).toHaveCount(0)
@@ -508,7 +524,58 @@ test("the piece's drawing file opens its own page and Back restores the piece", 
   assert.deepEqual(await state(page), previous)
 })
 
-test("Moldflow opens its folder and downloads the original beside it", async (t) => {
+test("the cover and the CAD attachment in another tab reuse the prepared STEP", async (t) => {
+  const cube = require("./prepared-cube.cjs")(path.join(artifacts, String(process.pid), "cad"))
+  const glb = fs.readFileSync(cube)
+  const responses = []
+  serveCad = (req, res) => {
+    assert.equal(req.headers.authorization, "Bearer gallery-test")
+    const cached = req.headers["if-none-match"] === '"cube-v1"'
+    responses.push(cached ? 304 : 200)
+    res.writeHead(cached ? 304 : 200, {
+      ETag: '"cube-v1"',
+      Vary: "Authorization",
+      "Cache-Control": "private, no-cache",
+      "Content-Type": "model/gltf-binary",
+    })
+    res.end(cached ? undefined : glb)
+  }
+  const context = await browser.newContext()
+  t.after(async () => {
+    serveCad = undefined
+    await context.close()
+  })
+  await context.addInitScript(() => { window.evidenceInitialPath = "/features" })
+  for (const entry of ["cover", "attachment"]) {
+    const page = await context.newPage()
+    await page.goto(origin + "/evidence-test")
+    await page.waitForFunction(() => window.review?.navigate)
+    await page.evaluate(async (entry) => {
+      const { OpenAPI } = await import("/tests/components/fixtures/api.js")
+      OpenAPI.BASE = location.origin
+      localStorage.setItem("access_token", "gallery-test")
+      window.review.attachments = [{
+        kind: "part", name: "CAD prueba", primary: true,
+        file: {
+          id: "test-step", filename: "cube.stp", version: "v1",
+          source: "upload", content_type: "model/step", size: 1000,
+        },
+      }]
+      const route = entry === "cover"
+        ? {to: "/parts/$partId", params: {partId: "part-one"}}
+        : {to: "/parts/$partId/fichero/$fileId", params: {partId: "part-one", fileId: "test-step"}}
+      return window.review.navigate(route)
+    }, entry)
+    if (entry === "cover")
+      await page.getByRole("button", {name: "Ampliar portada"}).click()
+    await expect(page.locator("canvas"), entry).toBeVisible({timeout: 20000})
+    if (entry === "attachment")
+      assert.deepEqual(await page.evaluate(() => window.review.evidenceRequests ?? []), [])
+  }
+  assert.deepEqual(responses, [200, 304])
+})
+
+test("Moldflow opens its folder and puts the edit pencil last in the header", async (t) => {
   const page = await mount(t, "/features")
   await page.evaluate(() => {
     window.review.attachments = [
@@ -536,62 +603,75 @@ test("Moldflow opens its folder and downloads the original beside it", async (t)
     })
   })
   const link = page.getByRole("link", { name: "Moldflow", exact: true })
-  await expect(
-    page.getByRole("link", { name: "Carpeta de CAD molde en SharePoint" }),
-  ).toHaveAttribute("href", "https://example.invalid/tools")
-  await expect(link).toHaveAttribute("href", "/parts/part-one/fichero/moldflow")
-  for (const name of ["simulacion.mfr", "Simulación de llenado"])
-    await expect(page.getByText(name, { exact: true })).toHaveCount(0)
+  await expect(link).toHaveAttribute("href", "/parts/part-one/galeria/moldflow")
   await link.click()
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "Simulación de llenado",
-  )
-  await expect(page.getByText("simulacion.mfr", { exact: true })).toBeVisible()
-  const folder = page.getByRole("link", {
-    name: "Carpeta de Moldflow en SharePoint",
-  })
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Moldflow")
+  const folder = page.getByRole("link", { name: "Abrir carpeta en SharePoint" })
   await expect(folder).toHaveAttribute(
     "href",
     "https://example.invalid/studies",
   )
   await expect(folder).toHaveAttribute("target", "_blank")
+  await expect(
+    page.getByRole("button", { name: "Añadir fotos" }),
+  ).toHaveCount(0)
+  const actions = page.getByRole("group", { name: "Acciones del adjunto" })
+  const pencil = actions.getByRole("button", { name: "Editar galería" })
   await expect(folder).toHaveText("")
-  await expect(
-    page.getByText("Descarga el original para abrirlo en su aplicación."),
-  ).toHaveCount(0)
-  const download = page.getByRole("link", {
-    name: "Descargar original de Moldflow",
-  })
-  await expect(
-    folder
-      .locator("..")
-      .getByRole("link", { name: "Descargar original de Moldflow" }),
-  ).toBeVisible()
-  await expect(
-    page.getByRole("button", { name: "Seleccionar imagen" }),
-  ).toHaveCount(0)
-  await expect(download).toHaveText("")
-  const bytes = Buffer.from("original de prueba")
-  await page.route(
-    "https://files.invalid/api/v1/files/moldflow?token=review-only&download=true",
-    (route) =>
-      route.fulfill({
-        headers: {
-          "Content-Disposition": 'attachment; filename="simulacion.mfr"',
-        },
-        contentType: "application/octet-stream",
-        body: bytes,
-      }),
-  )
-  const [original] = await Promise.all([
-    page.waitForEvent("download"),
-    download.click(),
-  ])
-  assert.equal(original.suggestedFilename(), "simulacion.mfr")
-  assert.deepEqual(await fs.promises.readFile(await original.path()), bytes)
+  await expect(folder).toHaveAttribute("title", "Abrir carpeta en SharePoint")
+  await expect(pencil).toHaveText("")
+  await expect(actions.locator(":scope > :last-child")).toHaveAccessibleName("Editar galería")
+  await expect(actions.locator("[download]")).toHaveCount(0)
+  await expect(actions.getByRole("link", {name: /histórico/i})).toHaveCount(0)
 })
 
-test("Molde edits, saves and removes a screenshot without loading the STEP viewer", async (t) => {
+test("Pieza real links to the shared scan folder in the mobile gallery", async (t) => {
+  const page = await mount(t, "/features", true)
+  await page.evaluate(() => {
+    window.review.attachments = ["base", "tapa"].map((component) => ({
+      kind: "scan",
+      name: component,
+      primary: false,
+      file: {
+        id: component,
+        filename: component + ".stl",
+        source: "upload",
+        content_type: "model/stl",
+        size: 10,
+      },
+    }))
+    window.review.attachmentFolders = { scan: "https://example.invalid/scans" }
+    return window.review.navigate({
+      to: "/parts/$partId",
+      params: { partId: "part-one" },
+    })
+  })
+  await page.getByRole("link", { name: "Pieza real", exact: true }).click()
+  const gallery = page.getByRole("group", { name: "Galería de imágenes" })
+  await expect(gallery.getByText("Sin fotos", { exact: true })).toBeVisible()
+  await expect(gallery.getByRole("button")).toHaveCount(0)
+  await expect(
+    page.getByRole("link", { name: "Abrir carpeta en SharePoint" }),
+  ).toHaveAttribute("href", "https://example.invalid/scans")
+  const actions = page.getByRole("group", { name: "Acciones del adjunto" })
+  await expect(actions.getByRole("button", { name: "Editar galería" })).toBeVisible()
+  await expect(actions.getByText("Descargar original")).toHaveCount(0)
+  await actions.getByRole("button", { name: "Editar galería" }).click()
+  await expect(gallery.getByRole("button", { name: "Seleccionar fotos" })).toBeVisible()
+  await expect(gallery.getByRole("button", { name: "Añadir fotos" })).toHaveCount(0)
+  await expect(gallery.getByText(/arrastra|ctrl\+/i)).toHaveCount(0)
+  await gallery.locator("input").setInputFiles(
+    Array.from({ length: 8 }, (_, i) => galleryPhoto(`pieza-${i}.png`)),
+  )
+  const strip = gallery.getByRole("group", { name: "Miniaturas" })
+  await expect(strip.getByRole("button")).toHaveCount(8)
+  await strip.getByRole("button").last().click()
+  await expect(gallery.getByRole("button", { name: "Ampliar pieza-7.png" })).toBeVisible()
+  assert.ok(await strip.evaluate((el) => el.scrollWidth > el.clientWidth))
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+})
+
+test("Molde edits and saves its gallery without loading the STEP viewer", async (t) => {
   const page = await mount(t, "/features")
   await page.evaluate(() => {
     window.review.uploadRequests = []
@@ -615,74 +695,94 @@ test("Molde edits, saves and removes a screenshot without loading the STEP viewe
     })
   })
   await expect(
-    page.getByRole("heading", { name: "Molde completo" }),
+    page.getByRole("heading", { name: "Molde", exact: true }),
   ).toBeVisible()
   await expect(page.locator("canvas")).toHaveCount(0)
-  const placeholder = page.getByRole("img", {
-    name: "Vista previa de CAD molde",
-    exact: true,
-  })
-  await expect(placeholder).toBeVisible()
-  await expect(placeholder).toHaveClass(/lucide-image/)
-  await expect(placeholder.locator("..")).toHaveClass(/h-\[70vh\]/)
-  await page.getByRole("button", { name: "Editar captura" }).click()
-  const target = page.getByRole("button", { name: "Seleccionar imagen" })
-  await expect(target.locator("svg")).toHaveClass(/lucide-upload/)
-  await expect(target).toHaveClass(/h-\[70vh\]/)
+  const gallery = page.getByRole("group", { name: "Galería de imágenes" })
+  const thumbs = gallery.getByRole("group", { name: "Miniaturas" })
+  const plus = gallery.getByRole("button", { name: "Añadir fotos" })
+  const select = gallery.getByRole("button", { name: "Seleccionar fotos" })
+  const save = page.getByRole("button", { name: "Guardar", exact: true })
+  let chooserCount = 0
+  page.on("filechooser", () => { chooserCount++ })
+  await expect(gallery.getByText("Sin fotos", { exact: true })).toBeVisible()
+  await expect(thumbs).toHaveCount(0)
+  await expect(plus).toHaveCount(0)
+  await page.getByRole("button", { name: "Editar galería" }).click()
+  await expect(select).toBeVisible()
+  await expect(plus).toHaveCount(0)
   const [chooser] = await Promise.all([
     page.waitForEvent("filechooser"),
-    target.click(),
+    select.click(),
   ])
-  await chooser.setFiles({
-    name: "molde.png",
-    mimeType: "image/png",
-    buffer: Buffer.from(
-      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/r8sAAAAASUVORK5CYII=",
-      "base64",
-    ),
-  })
-  await expect(
-    page.getByRole("button", { name: "Quitar imagen" }),
-  ).toBeVisible()
-  await page.getByRole("button", { name: "Guardar captura" }).click()
-  await expect(
-    page.getByRole("img", { name: "Captura de Molde completo" }),
-  ).toHaveAttribute("src", /uploaded-image/)
-  await page.getByRole("button", { name: "Editar captura" }).click()
-  await page.getByRole("button", { name: "Quitar imagen" }).click()
-  await page.getByRole("button", { name: "Cancelar" }).click()
-  await expect(
-    page.getByRole("img", { name: "Captura de Molde completo" }),
-  ).toBeVisible()
-  await page.getByRole("button", { name: "Editar captura" }).click()
-  await page.getByRole("button", { name: "Quitar imagen" }).click()
-  await page.getByRole("button", { name: "Guardar captura" }).click()
-  await expect(
-    page.getByRole("img", { name: "Captura de Molde completo" }),
-  ).toHaveCount(0)
-  await expect(
-    page.getByRole("link", { name: "Descargar original de CAD molde" }),
-  ).toBeVisible()
+  await chooser.setFiles(galleryPhoto("molde.png"))
+  await expect(gallery.getByRole("button", { name: "Ampliar molde.png" })).toBeVisible()
+  await expect(thumbs).toHaveCount(0)
+  await expect(select).toHaveCount(0)
+  await expect(plus).toBeVisible()
+  await save.click()
+  await expect(plus).toHaveCount(0)
+  await expect(thumbs).toHaveCount(0)
+  await expect(gallery.getByRole("button")).toHaveCount(1)
+  await page.getByRole("button", { name: "Editar galería" }).click()
+  await expect(select).toHaveCount(0)
+  await plus.click()
+  await expect(select).toBeFocused()
+  await expect(plus).toHaveCount(0)
+  assert.equal(chooserCount, 1)
+  const [another] = await Promise.all([page.waitForEvent("filechooser"), select.click()])
+  await another.setFiles(galleryPhoto("cavidades.png"))
+  await expect(thumbs.getByRole("button")).toHaveCount(2)
+  await expect(thumbs.getByRole("button", { name: /cavidades.png/ })).toHaveAttribute("aria-pressed", "true")
   for (const gesture of ["paste", "drop"]) {
-    await page.getByRole("button", { name: "Editar captura" }).click()
-    const surface = page.getByRole("button", { name: "Seleccionar imagen" })
-    await expect(surface).toContainText("Ctrl+V")
-    await surface.evaluate((element, action) => {
+    await plus.click()
+    await expect(select).toBeVisible()
+    await gallery.evaluate((element, action) => {
       const data = new DataTransfer()
       data.items.add(
-        new File(["captura"], "captura.png", { type: "image/png" }),
+        new File(["capture"], action + ".png", { type: "image/png" }),
       )
-      element.dispatchEvent(
+      const target = action === "paste" ? document.body : element
+      target.dispatchEvent(
         action === "paste"
           ? new ClipboardEvent("paste", { clipboardData: data, bubbles: true })
           : new DragEvent("drop", { dataTransfer: data, bubbles: true }),
       )
     }, gesture)
-    await expect(
-      page.getByRole("button", { name: "Quitar imagen" }),
-    ).toBeVisible()
-    await page.getByRole("button", { name: "Cancelar" }).click()
+    await expect(select).toHaveCount(0)
+    await expect(plus).toBeVisible()
   }
+  await gallery
+    .locator("input")
+    .setInputFiles([1, 2, 3, 4, 5].map((i) => galleryPhoto(i + ".png")))
+  await expect(page.getByRole("alert")).toContainText("hasta 8 fotos")
+  await gallery
+    .locator("input")
+    .setInputFiles([1, 2, 3, 4].map((i) => galleryPhoto(i + ".png")))
+  await expect(plus).toHaveCount(0)
+  await expect(select).toHaveCount(0)
+  await save.click()
+  await expect(thumbs.getByRole("button")).toHaveCount(8)
+  await thumbs.getByRole("button", { name: /molde.png/ }).click()
+  await gallery.getByRole("button", { name: "Ampliar molde.png" }).click()
+  await expect(page.getByRole("dialog")).toBeVisible()
+  await page.keyboard.press("Escape")
+  await page.getByRole("button", { name: "Editar galería" }).click()
+  await thumbs.getByRole("button", { name: /cavidades.png/ }).click()
+  await page.getByRole("button", { name: "Quitar cavidades.png" }).click()
+  await expect(thumbs.getByRole("button")).toHaveCount(7)
+  await expect(plus).toBeVisible()
+  await page.getByRole("button", { name: "Cancelar" }).click()
+  await expect(thumbs.getByRole("button")).toHaveCount(8)
+  await expect(gallery.getByRole("button", { name: "Ampliar molde.png" })).toBeVisible()
+  await page.evaluate(() =>
+    window.review.navigate({
+      to: "/parts/$partId/galeria/$kind",
+      params: { partId: "part-one", kind: "scan" },
+    }),
+  )
+  await expect(page.getByRole("heading", { name: "Pieza real" })).toBeVisible()
+  await expect(gallery.getByText("Sin fotos", { exact: true })).toBeVisible()
 })
 
 test("a denied original keeps the screenshot frame in consultation mode", async (t) => {
@@ -710,10 +810,10 @@ test("a denied original keeps the screenshot frame in consultation mode", async 
   })
   await expect(page.getByRole("alert")).toContainText("Sin acceso")
   await expect(
-    page.getByRole("img", { name: "Vista previa de Moldflow" }),
+    page.getByRole("group", { name: "Galería de imágenes" }),
   ).toBeVisible()
   await expect(
-    page.getByRole("button", { name: "Editar captura" }),
+    page.getByRole("button", { name: "Editar galería" }),
   ).toHaveCount(0)
   await expect(page.locator('input[type="file"]')).toHaveCount(0)
 })

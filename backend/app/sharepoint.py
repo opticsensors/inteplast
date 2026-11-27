@@ -241,28 +241,47 @@ def children(relative: str) -> list[SourceItem]:
     return entries
 
 
-def attachment_folder_url(
-    kind: Literal["mold", "moldflow"], part_folder: str | None, file_path: str | None
-) -> str | None:
-    """Use Graph's own folder URL, with the permissions of the current user."""
-    pattern = (
-        r"(?:\d+[\s_-]*)?(?:3d[\s_-]*)?(?:molde|mold|mould)"
-        if kind == "mold"
-        else r"(?:\d+[\s_-]*)?moldflow"
-    )
+AttachmentFolderKind = Literal[
+    "mold", "moldflow", "scan", "drawing", "part", "document"
+]
+_DESIGN_FOLDER = r"2d[\s_-]*(?:y|i|and|&)?[\s_-]*3d(?:[\s_-]*(?:pieza|pe[çc]a|part))?"
+
+
+def attachment_folder(
+    kind: AttachmentFolderKind,
+    part_folder: str | None,
+    file_path: str | None,
+) -> SourceItem | None:
+    """Resolve the actual original folder using the current user’s Graph permissions."""
+    category = {
+        "mold": r"(?:3d[\s_-]*)?(?:molde|mold|mould)",
+        "moldflow": "moldflow",
+        "part": _DESIGN_FOLDER,
+        "drawing": _DESIGN_FOLDER,
+        "document": None,
+        "scan": r"(?:pieza real stl|stl pe[çc]a real|stl pieza real|escaneos?)",
+    }[kind]
+    pattern = rf"(?:\d+[\s_-]*)?{category}"
 
     def matches(name: str) -> bool:
-        return re.fullmatch(pattern, name.strip(), re.IGNORECASE) is not None
+        return (
+            category is not None
+            and re.fullmatch(pattern, name.strip(), re.IGNORECASE) is not None
+        )
 
     found: SourceItem | None = None
     if file_path:
         parent = PurePosixPath(file_path).parent
-        if kind == "mold" and part_folder and parent.is_relative_to(part_folder):
+        if (
+            kind in ("mold", "scan")
+            and part_folder
+            and parent.is_relative_to(part_folder)
+        ):
             segments = parent.relative_to(part_folder).parts
             if segments and matches(segments[0]):
                 parent = PurePosixPath(part_folder, segments[0])
         found = item("" if str(parent) == "." else str(parent), directory=True)
-    elif part_folder:
+    elif part_folder and category:
         candidates = [
             f for f in children(part_folder) if f.directory and matches(f.name)
         ]
@@ -275,8 +294,56 @@ def attachment_folder_url(
             ]
         if len(candidates) == 1:
             found = candidates[0]
+    return found
+
+
+def folder_web_url(found: SourceItem | None) -> str | None:
     url = (found.remote or {}).get("webUrl") if found else None
     return url if isinstance(url, str) and url.startswith("https://") else None
+
+
+def attachment_history(
+    kind: AttachmentFolderKind, folder: SourceItem
+) -> list[dict[str, str]]:
+    """Design archives may use any name. Only list folders that hold the requested format."""
+    design = kind in ("part", "drawing") and re.fullmatch(
+        rf"(?:\d+[\s_-]*)?{_DESIGN_FOLDER}", folder.name.strip(), re.IGNORECASE
+    )
+    suffixes = (
+        {".pdf"} if kind == "drawing" else {".stp", ".step", ".iges", ".igs", ".brep"}
+    )
+
+    def contains_history(root: SourceItem) -> bool:
+        pending = [root]
+        while pending:
+            current = pending.pop()
+            try:
+                entries = children(current.path)
+            except SourceError as exc:
+                if exc.status_code in (403, 404):
+                    continue
+                raise
+            if any(not e.directory and e.suffix in suffixes for e in entries):
+                return True
+            pending.extend(e for e in entries if e.directory)
+        return False
+
+    links = []
+    for child in children(folder.path):
+        url = folder_web_url(child) if child.directory else None
+        if not url:
+            continue
+        if design:
+            if not contains_history(child):
+                continue
+        elif not re.fullmatch(
+            r"old|obsolet[oa]s?|hist[oó]ric[oa]s?|revisiones anteriores",
+            child.name,
+            re.IGNORECASE,
+        ):
+            continue
+        links.append({"name": child.name, "url": url})
+    return sorted(links, key=lambda link: link["name"].casefold())
 
 
 def walk(folder: str, *, too_wide: str, limit: int = 20000) -> list[SourceItem]:

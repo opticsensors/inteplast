@@ -1,15 +1,11 @@
 import { Loader2 } from "lucide-react"
-import { Suspense, useState } from "react"
+import { useState } from "react"
 import type { PartCardPublic } from "@/client"
 import { FaceReviewList } from "@/components/Catalog/CatalogWarnings"
 import { COVER_SIZE, CoverButton } from "@/components/Features/CoverButton"
 import { CoverDialog } from "@/components/Features/CoverDialog"
-import { CoverLoading } from "@/components/Features/CoverLoading"
 import { FeatureThumbnail } from "@/components/Features/FeatureCard"
-import {
-  preloadStepViewer,
-  StepCoverCanvas,
-} from "@/components/Features/lazyStepCoverCanvas"
+import { preloadStepViewer } from "@/components/Features/lazyStepCoverCanvas"
 import { partLabel } from "@/components/Features/parts"
 import {
   Dialog,
@@ -23,6 +19,8 @@ import { fileErrorMessage } from "@/hooks/useFileAccess"
 import { useGrayImage } from "@/hooks/useGrayImage"
 import { usePrepareCover } from "@/hooks/usePrepareCover"
 import { cn } from "@/lib/utils"
+
+import { PartCadViewer } from "./PartCadViewer"
 
 export function PartThumbnail({
   part,
@@ -120,22 +118,12 @@ export function PartCover({ part }: { part: PartCardPublic }) {
           </DialogHeader>
           <div data-slot="cover-surface" className="relative min-h-0 w-full">
             {cad ? (
-              <Suspense
-                fallback={
-                  <>
-                    {fallback}
-                    <CoverLoading />
-                  </>
-                }
-              >
-                <StepCoverCanvas
-                  file={cad}
-                  fallback={fallback}
-                  className="size-full"
-                  wholePart
-                  layers={colors?.layers}
-                />
-              </Suspense>
+              <PartCadViewer
+                file={cad}
+                part={part}
+                fallback={fallback}
+                className="h-full"
+              />
             ) : (
               fallback
             )}

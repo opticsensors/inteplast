@@ -4,7 +4,7 @@ import type * as THREE_NS from "three"
 
 import { type FilePublic, FilesService } from "@/client"
 import { useConfigureCadViewer } from "@/hooks/useCadPreferences"
-import { absoluteFileUrl } from "@/hooks/useFileAccess"
+import { absoluteFileUrl, fetchPreparedPreview } from "@/hooks/useFileAccess"
 import { addCadEdges, cadLineColor, offsetCadSurface } from "./cadEdges"
 import { cadBoundaryIndices } from "./coverFaceRanges"
 import { createModelCamera, createModelControls } from "./modelControls"
@@ -171,14 +171,19 @@ export default function ModelViewer({
         if (disposed) return
 
         setStatus({ phase: "loading", step: "Descargando el fichero..." })
-        const url =
-          previewUrl ??
-          (await FilesService.createFileAccessUrl({ fileId: file.id })).url
-        const response = await fetch(absoluteFileUrl(url), {
-          signal: abort.signal,
-        })
-        if (!response.ok) {
-          throw new Error(`no se ha podido descargar (HTTP ${response.status})`)
+        const response = previewUrl
+          ? await fetchPreparedPreview(file.id, abort.signal, previewUrl)
+          : await fetch(
+              absoluteFileUrl(
+                (await FilesService.createFileAccessUrl({ fileId: file.id }))
+                  .url,
+              ),
+              { signal: abort.signal },
+            )
+        if (!response?.ok) {
+          throw new Error(
+            `no se ha podido descargar (HTTP ${response?.status ?? "sin respuesta"})`,
+          )
         }
         const buffer = await response.arrayBuffer()
         if (disposed) return

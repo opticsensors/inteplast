@@ -21,6 +21,7 @@ from sqlalchemy import String, cast, func, or_
 from sqlmodel import Session, col, select
 
 from app.knowledge_models import (
+    AttachmentPhoto,
     DrawingLocation,
     EvidenceJob,
     FeatureCharacteristicLink,
@@ -92,6 +93,7 @@ def _feature_ids(session: Session, part_id: uuid.UUID) -> set[uuid.UUID]:
 def _own_file_ids(session: Session, part_id: uuid.UUID) -> set[uuid.UUID]:
     """Every document the piece points at, from its file lists and feature copies."""
     statements = [
+        select(AttachmentPhoto.image_id).where(AttachmentPhoto.part_id == part_id),
         select(PartDocument.file_id).where(PartDocument.part_id == part_id),
         select(PartFile.file_id).where(PartFile.part_id == part_id),
         select(PartReference.file_id).where(PartReference.part_id == part_id),
@@ -108,7 +110,16 @@ def _own_file_ids(session: Session, part_id: uuid.UUID) -> set[uuid.UUID]:
     screenshots = session.exec(
         select(StoredFile.screenshot_id).where(col(StoredFile.id).in_(originals))
     ).all()
-    return originals | {image for image in screenshots if image is not None}
+    gallery_images = session.exec(
+        select(AttachmentPhoto.image_id).where(
+            col(AttachmentPhoto.file_id).in_(originals)
+        )
+    ).all()
+    return (
+        originals
+        | set(gallery_images)
+        | {image for image in screenshots if image is not None}
+    )
 
 
 def _shared_file_ids(
@@ -119,6 +130,9 @@ def _shared_file_ids(
         return set()
     ids = list(file_ids)
     statements = [
+        select(AttachmentPhoto.image_id).where(
+            col(AttachmentPhoto.image_id).in_(ids), AttachmentPhoto.part_id != part_id
+        ),
         select(PartDocument.file_id).where(
             col(PartDocument.file_id).in_(ids), col(PartDocument.part_id) != part_id
         ),
@@ -153,11 +167,17 @@ def _shared_file_ids(
             col(StoredFile.screenshot_id).in_(ids)
         )
     ).all()
+    gallery_references = session.exec(
+        select(AttachmentPhoto.file_id, AttachmentPhoto.image_id).where(
+            col(AttachmentPhoto.file_id).is_not(None),
+            col(AttachmentPhoto.image_id).in_(ids),
+        )
+    ).all()
     # Preserve every capture reachable from an attachment that survives the deletion.
     while True:
         images = {
             image
-            for original, image in references
+            for original, image in [*references, *gallery_references]
             if image is not None and (original not in file_ids or original in shared)
         }
         if images <= shared:
@@ -282,6 +302,9 @@ def scope(session: Session, part: Part) -> PartDeletionScope:
     # Rows that are deleted enter with their whole content, so that editing one of them
     # (a dimension, an import, a reviewed location) also asks for a new review.
     identity = {
+        "gallery": _rows(
+            session, select(AttachmentPhoto).where(AttachmentPhoto.part_id == part_id)
+        ),
         "correction_texts": texts,
         "scope": result.model_dump(mode="json", exclude={"key"}),
         "assets": _rows(

@@ -4,7 +4,15 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    UploadFile,
+)
 from fastapi.responses import FileResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt.exceptions import InvalidTokenError
@@ -14,6 +22,7 @@ from sqlmodel import col, select
 
 from app import sharepoint
 from app.api.deps import CurrentUser, SessionDep, get_current_user
+from app.api.routes import attachment_photos
 from app.core.config import settings
 from app.core.security import ALGORITHM
 from app.file_sources import (
@@ -46,6 +55,7 @@ from app.models import (
 )
 from app.previews import delete_preview, preview_key, preview_path, queue_preview
 from app.source_tables import SourceTable, read_table
+from app.source_types import SourceItem
 from app.thumbnails import (
     delete_thumbnails,
     thumbnail_key,
@@ -55,6 +65,7 @@ from app.thumbnails import (
 from app.thumbnails import prepare as prepare_thumbnail_file
 
 router = APIRouter(prefix="/files", tags=["files"])
+router.include_router(attachment_photos.router)
 
 CHUNK_SIZE = 1024 * 1024
 optional_bearer = HTTPBearer(auto_error=False)
@@ -80,14 +91,12 @@ def storage_path(file_id: uuid.UUID) -> Path:
     return settings.uploads_path / str(file_id)
 
 
-@router.get("/attachment-folder")
-def read_attachment_folder(
+def _attachment_folder(
     session: SessionDep,
-    _current_user: CurrentUser,
-    kind: Literal["mold", "moldflow"],
+    kind: sharepoint.AttachmentFolderKind,
     part_id: uuid.UUID | None = None,
     file_id: uuid.UUID | None = None,
-) -> str | None:
+) -> SourceItem | None:
     if not sharepoint.enabled():
         return None
     part = session.get(Part, part_id) if part_id else None
@@ -100,9 +109,47 @@ def read_attachment_folder(
     ):
         path = document.source_path
     try:
-        return sharepoint.attachment_folder_url(
+        return sharepoint.attachment_folder(
             kind, part.folder_path if part else None, path
         )
+    except SourceError as error:
+        raise HTTPException(error.status_code, error.message) from error
+
+
+@router.get("/attachment-folder")
+def read_attachment_folder(
+    session: SessionDep,
+    _current_user: CurrentUser,
+    kind: sharepoint.AttachmentFolderKind,
+    part_id: uuid.UUID | None = None,
+    file_id: uuid.UUID | None = None,
+) -> str | None:
+    return sharepoint.folder_web_url(
+        _attachment_folder(session, kind, part_id, file_id)
+    )
+
+
+class AttachmentHistoryFolder(BaseModel):
+    name: str
+    url: str
+
+
+@router.get("/attachment-history")
+def read_attachment_history(
+    session: SessionDep,
+    _current_user: CurrentUser,
+    kind: sharepoint.AttachmentFolderKind,
+    part_id: uuid.UUID | None = None,
+    file_id: uuid.UUID | None = None,
+) -> list[AttachmentHistoryFolder]:
+    folder = _attachment_folder(session, kind, part_id, file_id)
+    if not folder:
+        return []
+    try:
+        return [
+            AttachmentHistoryFolder(**entry)
+            for entry in sharepoint.attachment_history(kind, folder)
+        ]
     except SourceError as error:
         raise HTTPException(error.status_code, error.message) from error
 
@@ -497,13 +544,14 @@ def prepare_preview(
 
 @router.get("/{file_id}/preview")
 def read_preview(
+    request: Request,
     session: SessionDep,
     file_id: uuid.UUID,
     credentials: Annotated[
         HTTPAuthorizationCredentials | None, Depends(optional_bearer)
     ],
     token: str | None = None,
-) -> FileResponse:
+) -> Response:
     # Authenticate before exposing document state, just like original downloads.
     if credentials:
         user_id = get_current_user(session, credentials.credentials).id
@@ -530,17 +578,29 @@ def read_preview(
         raise HTTPException(
             status_code=409, detail="Vuelve a abrir la vista para prepararla."
         )
+    headers = {
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "no-referrer",
+        "Content-Security-Policy": "sandbox",
+        "Cache-Control": "private, no-store",
+    }
+    if credentials:
+        # Revalidate access and the source version above, even on a browser cache hit.
+        headers.update(
+            {
+                "Cache-Control": "private, no-cache",
+                "Vary": "Authorization",
+                "ETag": f'"{key}"',
+            }
+        )
+        if request.headers.get("if-none-match") == headers["ETag"]:
+            return Response(status_code=304, headers=headers)
     return FileResponse(
         preview_path(preview),
         media_type="model/gltf-binary",
         filename="vista-3d.glb",
         content_disposition_type="inline",
-        headers={
-            "X-Content-Type-Options": "nosniff",
-            "Cache-Control": "private, no-store",
-            "Referrer-Policy": "no-referrer",
-            "Content-Security-Policy": "sandbox",
-        },
+        headers=headers,
     )
 
 

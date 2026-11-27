@@ -36,6 +36,23 @@ export const fileAccessQueryOptions = (fileId: string) => ({
 export const absoluteFileUrl = (relative: string) =>
   `${OpenAPI.BASE ?? ""}${relative}`
 
+/** The stable authenticated URL lets two views revalidate the same cached GLB. */
+export function fetchPreparedPreview(
+  fileId: string,
+  signal: AbortSignal,
+  signedUrl?: string,
+) {
+  const path = `/api/v1/files/${encodeURIComponent(fileId)}/preview`
+  const token = localStorage.getItem("access_token")
+  if (token && (!signedUrl || signedUrl.split("?")[0] === path)) {
+    return fetch(absoluteFileUrl(path), {
+      headers: { Authorization: `Bearer ${token}` },
+      signal,
+    })
+  }
+  return signedUrl ? fetch(absoluteFileUrl(signedUrl), { signal }) : undefined
+}
+
 export function useFileAccess(fileId: string | undefined) {
   const query = useQuery({
     ...fileAccessQueryOptions(fileId ?? ""),

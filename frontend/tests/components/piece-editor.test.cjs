@@ -303,7 +303,7 @@ test("components propose files and sheets by name; ambiguous or edited ones stay
     path: path.join(artifacts, "component-proposals.png"),
     fullPage: true,
   })
-  await dialog.getByRole("button", { name: "Guardar cambios" }).click()
+  await dialog.getByRole("button", { name: "Guardar", exact: true }).click()
   await expect(dialog).toHaveCount(0)
   const saved = await page.evaluate(() =>
     Object.values(window.review.organizations).at(-1),
@@ -344,7 +344,7 @@ test("components propose files and sheets by name; ambiguous or edited ones stay
   )
   await expect(dialog.getByText("· Propuesta")).toHaveCount(0)
   await expect(
-    dialog.getByRole("button", { name: "Guardar cambios" }),
+    dialog.getByRole("button", { name: "Guardar", exact: true }),
   ).toBeDisabled()
   // Renaming Tapón to Tapa would resolve the ambiguous drawing and match DR(tapa):
   // both were saved unassigned, so they are not proposed.
@@ -408,7 +408,7 @@ test("component organization is optional and remembers sheet and drawing choices
     .click()
   await page.getByRole("option", { name: "TAPA", exact: true }).click()
   await dialog.getByLabel("Revisión de cover.pdf").fill("02")
-  await dialog.getByRole("button", { name: "Guardar cambios" }).click()
+  await dialog.getByRole("button", { name: "Guardar", exact: true }).click()
   await expect(dialog).toHaveCount(0)
   await organize.click()
   await expect(
@@ -787,7 +787,7 @@ test("changing an existing piece's folder keeps its edited name and code", async
   )
   await expect(page.getByLabel("Código de la pieza")).toHaveValue("9001")
   await page
-    .getByRole("button", { name: "Guardar cambios", exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   await expect(
     page.getByRole("heading", { name: "9001 Custom part name", exact: true }),
@@ -988,7 +988,7 @@ test("a family added from the dropdown is shared with other pieces, which show t
   await search.press("Enter")
   await expect(family).toHaveText("Tapa roscada")
   await page
-    .getByRole("button", { name: "Guardar cambios", exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   await expect(
     page.getByRole("heading", { name: "3212 Pump Housing", exact: true }),

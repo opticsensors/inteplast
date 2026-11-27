@@ -56,6 +56,7 @@ import useAuth from "@/hooks/useAuth"
 import { fileErrorMessage } from "@/hooks/useFileAccess"
 import { pickSourcePath } from "@/lib/sourcePicker"
 import { AddFeatureButton } from "./AddFeatureButton"
+import { galleryLabels, isFolderAttachment } from "./AttachmentActions"
 import { CatalogNameSelect } from "./CatalogNameSelect"
 import {
   CorrectionEditor,
@@ -365,7 +366,7 @@ function PartPage({
                 {save.isPending
                   ? "Guardando…"
                   : part
-                    ? "Guardar cambios"
+                    ? "Guardar"
                     : "Crear pieza"}
               </Button>
             </>
@@ -844,7 +845,12 @@ function PartPage({
           </FeatureSection>
           <FeatureSection
             title="Archivos"
-            count={shownFiles.length}
+            count={
+              editing
+                ? shownFiles.length
+                : shownFiles.filter((file) => !isFolderAttachment(file.kind))
+                    .length + Object.keys(galleryLabels).length
+            }
             icon={<Files className="size-5 shrink-0 text-muted-foreground" />}
           >
             <PartFiles

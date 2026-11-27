@@ -368,7 +368,7 @@ function FeatureFormContent({
               form="feature-form"
               loading={mutation.isPending}
             >
-              {initialFeatureId ? "Guardar cambios" : "Guardar"}
+              Guardar
             </LoadingButton>
           </div>
         </div>

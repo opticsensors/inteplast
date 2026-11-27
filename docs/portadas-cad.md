@@ -118,7 +118,7 @@ de cabecera. Las imágenes elegidas, pegadas o arrastradas también requieren **
 durante una subida se espera a que termine antes de aplicar o cerrar. **Guardar** en la ficha
 persiste conjuntamente imagen y selección; **Cancelar** en la ficha descarta su borrador de
 cabecera. Las notas, las piezas vinculadas y sus cotas mantienen su guardado en línea; los
-archivos se editan en la ficha de pieza, con su propio **Guardar cambios**.
+archivos se editan en la ficha de pieza, con su propio **Guardar**.
 
 Si no hay ninguno, el editor indica «Vincula el CAD desde la ficha de la pieza» (o «Añade
 una pieza que tenga un CAD vinculado» si el feature aún no se ha creado). Solo se ofrecen

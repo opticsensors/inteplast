@@ -19,10 +19,10 @@ test("a remote revision regenerates the thumbnail despite unchanged CAD IDs; una
       {
         name: "test-boundaries",
         setup(builder) {
-          builder.onResolve({ filter: /^\.\/capturePartCad$/ }, () => ({
+          builder.onResolve({ filter: /(?:^|\/)capturePartCad$/ }, () => ({
             path: path.join(__dirname, "fixtures/part-capture.js"),
           }))
-          builder.onResolve({ filter: /(?:^|\/)StepCoverCanvas$/ }, () => ({
+          builder.onResolve({ filter: /(?:^|\/)(StepCoverCanvas|WebModelViewer)$/ }, () => ({
             path: path.join(__dirname, "fixtures/cad-canvas.jsx"),
           }))
           builder.onResolve({ filter: /^@\/client$/ }, () => ({

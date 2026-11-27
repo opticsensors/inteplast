@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query"
-import { Link2, Loader2 } from "lucide-react"
+import { Link2, Loader2, Pencil } from "lucide-react"
 import { useState } from "react"
 import { type FilePublic, FilesService } from "@/client"
 import { Button } from "@/components/ui/button"
@@ -17,10 +17,12 @@ export function SourceFilePicker({
   onLinked,
   disabled = false,
   compact = false,
+  editIcon = false,
 }: {
   document?: FilePublic
   onLinked: (file: FilePublic) => Promise<void>
   disabled?: boolean
+  editIcon?: boolean
   compact?: boolean
   initialPath?: string
 }) {
@@ -52,18 +54,26 @@ export function SourceFilePicker({
           <Button
             type="button"
             variant={compact ? "ghost" : "outline"}
-            size={compact ? "icon" : "sm"}
-            className={compact ? "size-7" : undefined}
+            size={editIcon || compact ? "icon" : "sm"}
+            className={
+              editIcon
+                ? "border-primary text-primary hover:text-primary"
+                : compact
+                  ? "size-7"
+                  : undefined
+            }
             aria-label={label}
             disabled={disabled || linking.pending}
             onClick={() => void linking.run(undefined)}
           >
             {linking.pending ? (
               <Loader2 className="size-3.5 animate-spin" />
+            ) : editIcon ? (
+              <Pencil />
             ) : (
               <Link2 className="size-3.5" />
             )}
-            {!compact && label}
+            {!editIcon && !compact && label}
           </Button>
         </TooltipTrigger>
         <TooltipContent>{label}</TooltipContent>

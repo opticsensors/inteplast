@@ -24,6 +24,7 @@ import { Route as LayoutPartsNuevaRouteImport } from './routes/_layout/parts_.nu
 import { Route as LayoutPartsPartIdRouteImport } from './routes/_layout/parts_.$partId'
 import { Route as LayoutFeaturesNuevoRouteImport } from './routes/_layout/features_.nuevo'
 import { Route as LayoutFeaturesFeatureIdRouteImport } from './routes/_layout/features_.$featureId'
+import { Route as LayoutPartsPartIdGaleriaKindRouteImport } from './routes/_layout/parts_.$partId_.galeria.$kind'
 import { Route as LayoutPartsPartIdFicheroFileIdRouteImport } from './routes/_layout/parts_.$partId_.fichero.$fileId'
 import { Route as LayoutFeaturesFeatureIdFicheroAssetIdRouteImport } from './routes/_layout/features_.$featureId_.fichero.$assetId'
 
@@ -101,6 +102,12 @@ const LayoutFeaturesFeatureIdRoute = LayoutFeaturesFeatureIdRouteImport.update({
   path: '/features/$featureId',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutPartsPartIdGaleriaKindRoute =
+  LayoutPartsPartIdGaleriaKindRouteImport.update({
+    id: '/parts_/$partId_/galeria/$kind',
+    path: '/parts/$partId/galeria/$kind',
+    getParentRoute: () => LayoutRoute,
+  } as any)
 const LayoutPartsPartIdFicheroFileIdRoute =
   LayoutPartsPartIdFicheroFileIdRouteImport.update({
     id: '/parts_/$partId_/fichero/$fileId',
@@ -131,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/parts/nueva': typeof LayoutPartsNuevaRoute
   '/features/$featureId/fichero/$assetId': typeof LayoutFeaturesFeatureIdFicheroAssetIdRoute
   '/parts/$partId/fichero/$fileId': typeof LayoutPartsPartIdFicheroFileIdRoute
+  '/parts/$partId/galeria/$kind': typeof LayoutPartsPartIdGaleriaKindRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -149,6 +157,7 @@ export interface FileRoutesByTo {
   '/parts/nueva': typeof LayoutPartsNuevaRoute
   '/features/$featureId/fichero/$assetId': typeof LayoutFeaturesFeatureIdFicheroAssetIdRoute
   '/parts/$partId/fichero/$fileId': typeof LayoutPartsPartIdFicheroFileIdRoute
+  '/parts/$partId/galeria/$kind': typeof LayoutPartsPartIdGaleriaKindRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -169,6 +178,7 @@ export interface FileRoutesById {
   '/_layout/parts_/nueva': typeof LayoutPartsNuevaRoute
   '/_layout/features_/$featureId_/fichero/$assetId': typeof LayoutFeaturesFeatureIdFicheroAssetIdRoute
   '/_layout/parts_/$partId_/fichero/$fileId': typeof LayoutPartsPartIdFicheroFileIdRoute
+  '/_layout/parts_/$partId_/galeria/$kind': typeof LayoutPartsPartIdGaleriaKindRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -189,6 +199,7 @@ export interface FileRouteTypes {
     | '/parts/nueva'
     | '/features/$featureId/fichero/$assetId'
     | '/parts/$partId/fichero/$fileId'
+    | '/parts/$partId/galeria/$kind'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -207,6 +218,7 @@ export interface FileRouteTypes {
     | '/parts/nueva'
     | '/features/$featureId/fichero/$assetId'
     | '/parts/$partId/fichero/$fileId'
+    | '/parts/$partId/galeria/$kind'
   id:
     | '__root__'
     | '/_layout'
@@ -226,6 +238,7 @@ export interface FileRouteTypes {
     | '/_layout/parts_/nueva'
     | '/_layout/features_/$featureId_/fichero/$assetId'
     | '/_layout/parts_/$partId_/fichero/$fileId'
+    | '/_layout/parts_/$partId_/galeria/$kind'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -343,6 +356,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutFeaturesFeatureIdRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/parts_/$partId_/galeria/$kind': {
+      id: '/_layout/parts_/$partId_/galeria/$kind'
+      path: '/parts/$partId/galeria/$kind'
+      fullPath: '/parts/$partId/galeria/$kind'
+      preLoaderRoute: typeof LayoutPartsPartIdGaleriaKindRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/parts_/$partId_/fichero/$fileId': {
       id: '/_layout/parts_/$partId_/fichero/$fileId'
       path: '/parts/$partId/fichero/$fileId'
@@ -373,6 +393,7 @@ interface LayoutRouteChildren {
   LayoutPartsNuevaRoute: typeof LayoutPartsNuevaRoute
   LayoutFeaturesFeatureIdFicheroAssetIdRoute: typeof LayoutFeaturesFeatureIdFicheroAssetIdRoute
   LayoutPartsPartIdFicheroFileIdRoute: typeof LayoutPartsPartIdFicheroFileIdRoute
+  LayoutPartsPartIdGaleriaKindRoute: typeof LayoutPartsPartIdGaleriaKindRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
@@ -389,6 +410,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutFeaturesFeatureIdFicheroAssetIdRoute:
     LayoutFeaturesFeatureIdFicheroAssetIdRoute,
   LayoutPartsPartIdFicheroFileIdRoute: LayoutPartsPartIdFicheroFileIdRoute,
+  LayoutPartsPartIdGaleriaKindRoute: LayoutPartsPartIdGaleriaKindRoute,
 }
 
 const LayoutRouteWithChildren =

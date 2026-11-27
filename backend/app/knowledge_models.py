@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, model_validator
 from pydantic import Field as PydanticField
-from sqlalchemy import JSON, Column, DateTime, UniqueConstraint
+from sqlalchemy import JSON, CheckConstraint, Column, DateTime, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 from app.component_models import ComponentDefinition, qualified
@@ -38,6 +38,26 @@ class PendingCharacteristic(SQLModel, table=True):
         foreign_key="feature.id", ondelete="CASCADE", primary_key=True
     )
     code: str = Field(primary_key=True, max_length=64)
+
+
+class AttachmentPhoto(SQLModel, table=True):
+    __table_args__ = (
+        CheckConstraint("(part_id IS NULL) <> (file_id IS NULL)"),
+        UniqueConstraint("part_id", "kind", "position"),
+        UniqueConstraint("file_id", "kind", "position"),
+    )
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    part_id: uuid.UUID | None = Field(
+        default=None, foreign_key="part.id", ondelete="CASCADE"
+    )
+    file_id: uuid.UUID | None = Field(
+        default=None, foreign_key="storedfile.id", ondelete="CASCADE"
+    )
+    kind: str = Field(max_length=16)
+    position: int
+    image_id: uuid.UUID = Field(
+        foreign_key="storedfile.id", ondelete="CASCADE", index=True
+    )
 
 
 class PartDocument(SQLModel, table=True):

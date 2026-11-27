@@ -1,5 +1,5 @@
 import { FilesService } from "@/client"
-import { absoluteFileUrl } from "@/hooks/useFileAccess"
+import { absoluteFileUrl, fetchPreparedPreview } from "@/hooks/useFileAccess"
 import { COVER_RECIPE, sha256 } from "./cadCover"
 import { type CoverMesh, loadCoverGeometry } from "./coverGeometry"
 
@@ -103,30 +103,39 @@ function waitForWorker(signal: AbortSignal) {
   })
 }
 
+async function prepareGlb(fileId: string, signal: AbortSignal) {
+  const deadline = performance.now() + 60000
+  do {
+    signal.throwIfAborted()
+    const status = await FilesService.preparePreview({ fileId })
+    signal.throwIfAborted()
+    if (status.state === "ready" && status.url)
+      return fetchPreparedPreview(fileId, signal, status.url)
+    if (status.state !== "queued" && status.state !== "processing") break
+    await waitForWorker(signal)
+  } while (performance.now() < deadline)
+}
+
 export async function readCoverGeometry(
   fileId: string,
   signal: AbortSignal,
   checkSource?: (hash: string) => void,
 ) {
-  const deadline = performance.now() + 60000
-  // The link and the binary endpoint each validate the current source and access.
-  do {
+  // A prepared file needs only one authorized revalidation. A 409 queues a new version.
+  let glb = await fetchPreparedPreview(fileId, signal)
+  if (!glb || glb.status === 409) glb = await prepareGlb(fileId, signal)
+  if (glb) {
+    if (!glb.ok)
+      throw new Error(
+        "El CAD no está disponible. Comprueba el acceso al original.",
+      )
+    const geometry = decodeCoverGlb(await glb.arrayBuffer())
     signal.throwIfAborted()
-    const status = await FilesService.preparePreview({ fileId })
-    signal.throwIfAborted()
-    if (status.state === "ready" && status.url) {
-      const response = await fetch(absoluteFileUrl(status.url), { signal })
-      if (!response.ok)
-        throw new Error("El CAD no está disponible. Vuelve a abrir la portada.")
-      const geometry = decodeCoverGlb(await response.arrayBuffer())
-      signal.throwIfAborted()
-      if (!geometry) break
+    if (geometry) {
       checkSource?.(geometry.sourceHash)
       return geometry
     }
-    if (status.state !== "queued" && status.state !== "processing") break
-    await waitForWorker(signal)
-  } while (performance.now() < deadline)
+  }
 
   // Keep the exact local importer for a failed conversion or an unavailable worker.
   const access = await FilesService.createFileAccessUrl({ fileId })

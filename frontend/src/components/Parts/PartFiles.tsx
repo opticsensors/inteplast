@@ -2,7 +2,6 @@ import { Link } from "@tanstack/react-router"
 import {
   Check,
   ChevronDown,
-  Download,
   FolderOpen,
   Loader2,
   Plus,
@@ -10,7 +9,7 @@ import {
   Trash2,
 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
-import { FileLink } from "@/components/Common/FileLink"
+import { preloadStepViewer } from "@/components/Features/lazyStepCoverCanvas"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -23,7 +22,7 @@ import { fileErrorMessage } from "@/hooks/useFileAccess"
 import { pickSourcePath } from "@/lib/sourcePicker"
 import { cn } from "@/lib/utils"
 import { formatFileSize } from "@/utils"
-import { AttachmentFolder } from "./AttachmentActions"
+import { galleryLabels, isFolderAttachment } from "./AttachmentActions"
 import {
   canBePrimary,
   FILE_ICONS,
@@ -125,8 +124,9 @@ export function PartFiles({
   }
   const locked = disabled || busy !== null
   return (
-    <div className="space-y-2">
+    <div id="archivos" className="scroll-mt-4 space-y-2">
       {files.map((file) => {
+        if (!editing && partId && isFolderAttachment(file.kind)) return null
         const Icon = FILE_ICONS[file.kind]
         const label = FILE_LABELS[file.kind]
         const multiple =
@@ -234,6 +234,10 @@ export function PartFiles({
                 <Link
                   to="/parts/$partId/fichero/$fileId"
                   params={{ partId, fileId: file.file.id }}
+                  onPointerEnter={
+                    file.kind === "part" ? preloadStepViewer : undefined
+                  }
+                  onFocus={file.kind === "part" ? preloadStepViewer : undefined}
                   aria-description={file.name}
                   className="block rounded-sm hover:underline focus-visible:outline-2 focus-visible:outline-ring"
                 >
@@ -316,25 +320,7 @@ export function PartFiles({
                   <Trash2 className="size-3.5" />
                 </Button>
               </>
-            ) : (
-              file.file && (
-                <Button
-                  asChild
-                  variant="outline"
-                  size="icon"
-                  className="size-7 shrink-0"
-                >
-                  <FileLink
-                    fileId={file.file.id}
-                    downloadFile
-                    title={`Descargar · ${label}`}
-                  >
-                    <Download className="size-3.5" />
-                    <span className="sr-only">Descargar {file.name}</span>
-                  </FileLink>
-                </Button>
-              )
-            )}
+            ) : null}
           </fieldset>
         )
       })}
@@ -371,18 +357,21 @@ export function PartFiles({
         })}
       {!editing &&
         partId &&
-        folder &&
-        (["mold", "moldflow"] as const)
-          .filter((kind) => !files.some((file) => file.kind === kind))
-          .map((kind) => (
-            <AttachmentFolder
+        (["mold", "moldflow", "scan"] as const).map((kind) => {
+          const Icon = FILE_ICONS[kind]
+          return (
+            <Link
               key={kind}
-              kind={kind}
-              partId={partId}
-              folderOnly
-            />
-          ))}
-      {!files.length && !editing && (
+              to="/parts/$partId/galeria/$kind"
+              params={{ partId, kind }}
+              className="flex min-h-11 items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm font-medium hover:bg-muted/40"
+            >
+              <Icon className="size-5 shrink-0 text-muted-foreground" />
+              {galleryLabels[kind]}
+            </Link>
+          )
+        })}
+      {!files.length && !editing && !partId && (
         <p className="text-sm text-muted-foreground">Sin archivos añadidos.</p>
       )}
       {editing && (

@@ -184,6 +184,8 @@ async function mount(t, { mobile = false, busyWorker = false } = {}) {
       return route.continue()
     }
     if (url.origin === "https://files.invalid") {
+      if (url.pathname.endsWith("/preview"))
+        return route.fulfill({ status: 409 })
       if (url.pathname.endsWith("/part-step"))
         return route.fulfill({
           contentType: "application/octet-stream",
@@ -527,26 +529,7 @@ test("a server GLB restores the saved STEP faces without importing the original"
     String(process.pid),
     "glb",
   )
-  fs.mkdirSync(dir, { recursive: true })
-  const script = path.join(dir, "cover.cjs")
-  const glb = path.join(dir, "cube.glb")
-  require("esbuild").buildSync({
-    entryPoints: [path.resolve(frontend, "../backend/scripts/cover-glb.mjs")],
-    outfile: script,
-    bundle: true,
-    platform: "node",
-    format: "cjs",
-    external: ["occt-import-js"],
-  })
-  require("node:child_process").execFileSync(
-    process.execPath,
-    [
-      script,
-      path.join(occtRoot, "test/testfiles/simple-basic-cube/cube.stp"),
-      glb,
-    ],
-    { env: { ...process.env, NODE_PATH: path.dirname(occtRoot) } },
-  )
+  const glb = require("./prepared-cube.cjs")(dir)
   const page = await mount(t)
   let originals = 0
   await page.route("**/files/part-step?*", (route) => {
@@ -816,7 +799,7 @@ test("box selection includes only complete visible cube faces and preserves clic
   assert.ok(marked > 0)
   await page.getByRole("button", { name: "Aplicar", exact: true }).click()
   await page
-    .getByRole("button", { name: "Guardar cambios", exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   await page.waitForFunction(
     (n) => window.review.feature.part_covers[0].cover_3d.faces.length === n,

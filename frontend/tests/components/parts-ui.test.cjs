@@ -315,7 +315,7 @@ test("cota drafts survive failures, can be cancelled and participate in the feat
     window.review.holdCharacteristics = true
   })
   await page
-    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   await expect(
     page.getByRole("heading", { name: "Otra pagina abierta" }),

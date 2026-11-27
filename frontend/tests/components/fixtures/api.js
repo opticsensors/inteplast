@@ -301,6 +301,18 @@ export const FilesService = {
   preparePreview: async () => ({ state: "error" }),
   readAttachmentFolder: async ({ kind }) =>
     state().attachmentFolders?.[kind] ?? null,
+  readAttachmentHistory: async ({ kind }) => state().attachmentHistory?.[kind] ?? [],
+  readAttachmentGallery: async ({ partId, kind, fileId }) => {
+    if (fileId && state().deniedCapture === fileId)
+      throw new Error("Sin acceso al original.")
+    return state().galleries?.[`${partId ?? fileId}/${kind}`] ?? []
+  },
+  updateAttachmentGallery: async ({ partId, kind, fileId, requestBody }) => {
+    state().galleries ??= {}
+    const images = requestBody.image_ids.map((id) => state().documents[id])
+    state().galleries[`${partId ?? fileId}/${kind}`] = images
+    return images
+  },
   readAttachmentScreenshot: async ({ fileId }) => {
     if (state().deniedCapture === fileId)
       throw new Error("Sin acceso al original.")
@@ -441,7 +453,10 @@ export const FilesService = {
       await new Promise((resolve) => setTimeout(resolve, state().delay))
     if (state().failUploads) throw new Error("Upload unavailable")
     const uploaded = {
-      id: "uploaded-image",
+      id:
+        state().uploadRequests.length === 1
+          ? "uploaded-image"
+          : `uploaded-image-${state().uploadRequests.length}`,
       filename: formData.file.name,
       size: formData.file.size,
       content_type: formData.file.type,

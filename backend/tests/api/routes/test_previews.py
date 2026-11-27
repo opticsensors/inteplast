@@ -184,6 +184,13 @@ def test_preview_queue_cache_auth_and_original(
     response = client.get(ready["url"])
     assert response.status_code == 200
     assert response.content[:4] == b"glTF"
+    first = client.get(endpoint, headers=headers)
+    cached = {"If-None-Match": first.headers["etag"]}
+    assert first.headers["vary"] == "Authorization"
+    assert first.headers["cache-control"] == "private, no-cache"
+    second = client.get(endpoint, headers={**headers, **cached})
+    assert second.status_code == 304 and not second.content
+    assert client.get(endpoint, headers=cached).status_code == 401
     scene = trimesh.load(io.BytesIO(response.content), file_type="glb")
     assert np.allclose(scene.bounds, [[-1, -1, -1], [1, 1, 1]], atol=0.01)
     assert client.get(ready["url"], headers={"Range": "bytes=0-3"}).content == b"glTF"

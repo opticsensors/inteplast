@@ -10,8 +10,9 @@ from app.core.config import settings
 BASE = f"{settings.API_V1_STR}/files"
 
 
+@pytest.mark.usefixtures("source")
 def test_attachment_screenshot_lifecycle(
-    client: TestClient, superuser_token_headers: dict[str, str], source: Path
+    client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
     headers = superuser_token_headers
     document = client.post(
@@ -50,6 +51,48 @@ def test_attachment_screenshot_lifecycle(
         is None
     )
     assert client.get(url, headers=headers).json() is None
+
+
+def test_gallery_without_original_is_scoped_and_conflict_safe(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+) -> None:
+    headers = superuser_token_headers
+    part = client.post(
+        f"{settings.API_V1_STR}/parts/",
+        headers=headers,
+        json={"code": f"gallery-{uuid.uuid4().hex[:8]}"},
+    ).json()
+    url = f"{BASE}/attachment-gallery"
+    params = {"kind": "scan", "part_id": part["id"]}
+    assert client.get(url, params=params).status_code == 401
+    assert client.get(url, params=params, headers=headers).json() == []
+    photos = [
+        client.post(
+            f"{BASE}/",
+            headers=headers,
+            files={"file": (f"{i}.png", b"capture", "image/png")},
+        ).json()["id"]
+        for i in range(8)
+    ]
+
+    def save(previous, images):
+        return client.put(
+            url,
+            params=params,
+            headers=headers,
+            json={"previous_ids": previous, "image_ids": images},
+        )
+
+    assert save([], photos + [str(uuid.uuid4())]).status_code == 422
+    assert save([], photos[:1] * 2).status_code == 422
+    assert [f["id"] for f in save([], photos).json()] == photos
+    assert save([], photos).status_code == 200
+    assert save([], photos[:1]).status_code == 409
+    assert (
+        client.get(url, headers=headers, params={**params, "kind": "mold"}).json() == []
+    )
+    assert save(photos, []).json() == []
 
 
 @pytest.fixture

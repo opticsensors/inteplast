@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { Download, ExternalLink, FileQuestion } from "lucide-react"
+import { FileQuestion } from "lucide-react"
 import { lazy, Suspense } from "react"
 
 import { ApiError, FeaturesService } from "@/client"
@@ -10,11 +10,12 @@ import { featureQueryOptions } from "@/components/Features/queries"
 import { SourceFilePicker } from "@/components/Features/SourceFilePicker"
 import { fileAction, usesWebPreview } from "@/components/Features/viewers"
 import {
-  AttachmentDetail,
-  AttachmentFolder,
+  AttachmentHeader,
+  EditAttachmentLink,
   isFolderAttachment,
-  SharePointFolders,
 } from "@/components/Parts/AttachmentActions"
+import { AttachmentDetail } from "@/components/Parts/AttachmentGallery"
+import { PartCadViewer } from "@/components/Parts/PartCadViewer"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -68,19 +69,6 @@ function EmptyState({
   )
 }
 
-/**
- * La pagina de un fichero. Un solo destino para las tres cosas que se pueden
- * querer hacer con un adjunto:
- *
- * - **Verlo**: el plano PDF y las imagenes se pintan aqui; el 3D (STL, GLB,
- *   STEP, IGES) se abre en el visor; STL/STEP grandes usan un GLB del servidor.
- * - **Bajarlo**: para los formatos distintos del plano PDF.
- * - **Saber que necesita**: cuando no hay visor posible —Moldflow, SolidWorks,
- *   CATIA— la pagina ofrece la descarga del original.
- *
- * La aplicacion no integra el Explorador de Windows ni lanzadores de programas
- * locales; el usuario abre la descarga con la aplicacion que tenga asociada.
- */
 function AssetDetail() {
   const { featureId, assetId } = Route.useParams()
   const { cota } = Route.useSearch()
@@ -96,8 +84,14 @@ function AssetDetail() {
   })
   const asset = (feature?.assets ?? []).find((item) => item.id === assetId)
   const folderAttachment = isFolderAttachment(asset?.kind)
-  const access = useFileAccess(folderAttachment ? undefined : asset?.file?.id)
-  const status = useDocumentStatus(folderAttachment ? null : asset?.file)
+  const step =
+    asset?.kind === "part" && /\.(stp|step)$/i.test(asset.file?.filename ?? "")
+  const access = useFileAccess(
+    folderAttachment || step ? undefined : asset?.file?.id,
+  )
+  const status = useDocumentStatus(
+    folderAttachment || step ? null : asset?.file,
+  )
 
   if (isPending) {
     return (
@@ -123,6 +117,7 @@ function AssetDetail() {
   const sourcePicker = file?.source === "local" && (
     <SourceFilePicker
       document={file}
+      editIcon
       initialPath={asset.part?.folder_path ?? ""}
       onLinked={async (linked) => {
         await FeaturesService.updateFeatureAsset({
@@ -133,7 +128,7 @@ function AssetDetail() {
       }}
     />
   )
-  if (file && isFolderAttachment(asset.kind)) {
+  if ((file || asset.part) && isFolderAttachment(asset.kind)) {
     const context = [
       feature.name,
       asset.part?.code,
@@ -143,11 +138,10 @@ function AssetDetail() {
       .join(" · ")
     return (
       <AttachmentDetail
-        key={`${file.id}:${file.version}`}
+        key={`${asset.part?.id ?? file?.id}:${asset.kind}`}
         kind={asset.kind}
         file={file}
         partId={asset.part?.id}
-        name={name}
         context={context}
         sourcePicker={sourcePicker}
       />
@@ -160,68 +154,29 @@ function AssetDetail() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          {/* Contexto del documento; el retorno corresponde al navegador. */}
-          <p className="text-sm text-muted-foreground">
-            <span>{feature.name}</span>
-            {asset.part && (
-              <>
-                {" · "}
-                <span className="font-mono">{asset.part.code}</span>
-                {partName(asset.part) && ` ${partName(asset.part)}`}
-              </>
-            )}
-          </p>
-          <h1 className="break-words text-2xl font-bold tracking-tight">
-            {name}
-          </h1>
-        </div>
-
-        {file && (
-          <div className="flex shrink-0 items-center gap-2">
-            {sourcePicker}
-            {asset.kind === "drawing" ? (
-              <SharePointFolders kind={asset.kind} />
-            ) : (
-              viewer === "pdf" &&
-              access.url &&
-              !unavailable && (
-                <Button variant="outline" size="sm" asChild>
-                  <a
-                    href={access.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    title="Abrir el PDF en una pestana nueva"
-                  >
-                    <ExternalLink className="mr-2" />
-                    Abrir en pestana
-                  </a>
-                </Button>
-              )
-            )}
-            {viewer !== "pdf" && access.downloadUrl && !unavailable && (
-              <Button size="sm" asChild>
-                <a href={access.downloadUrl} download={file.filename}>
-                  <Download className="mr-2" />
-                  Descargar
-                </a>
-              </Button>
-            )}
-          </div>
+      <AttachmentHeader
+        kind={asset.kind}
+        file={file}
+        partId={asset.part?.id}
+        context={[
+          feature.name,
+          asset.part?.code,
+          asset.part && partName(asset.part),
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+        title={name}
+      >
+        {asset.part ? (
+          <EditAttachmentLink partId={asset.part.id} />
+        ) : (
+          sourcePicker
         )}
-      </div>
+      </AttachmentHeader>
 
       {!file ? (
         <EmptyState title="Sin archivo vinculado">
           <p>Los archivos se gestionan en la ficha de la pieza.</p>
-          {asset.part && isFolderAttachment(asset.kind) && (
-            <AttachmentFolder
-              partId={asset.part.id}
-              kind={asset.kind}
-              folderOnly
-            />
-          )}
           {asset.part && (
             <Button variant="link" asChild>
               <Link to="/parts/$partId" params={{ partId: asset.part.id }}>
@@ -261,10 +216,11 @@ function AssetDetail() {
         <EmptyState title="Este formato no se puede ver en el navegador">
           <p>
             {reason ? `${reason[0].toUpperCase()}${reason.slice(1)}. ` : ""}
-            Descargalo y abrelo desde la barra de descargas: Windows lo abrira
-            con el programa que tenga asociado.
+            Consulta el original en su aplicación de origen.
           </p>
         </EmptyState>
+      ) : step ? (
+        <PartCadViewer file={file} />
       ) : !access.url ? (
         <Skeleton className="h-[70vh] w-full rounded-lg" />
       ) : viewer === "pdf" ? (

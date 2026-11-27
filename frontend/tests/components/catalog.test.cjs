@@ -452,7 +452,7 @@ test("direct Edit saves into read mode and Back restores the search", async (t) 
     .click()
   await page.getByPlaceholder("Nombre del feature").fill("Bolt Eye revisado")
   await page
-    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   await readHeading(page, "Bolt Eye revisado")
   assert.equal(
@@ -540,7 +540,7 @@ test("saving a new feature opens its completed detail and replaces the creation 
   await page.getByRole("button", { name: "Nuevo feature", exact: true }).click()
   await page.getByPlaceholder("Nombre del feature").fill("Nuevo nervio")
   await page
-    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   await readHeading(page, "Nuevo nervio")
   await page.evaluate(() => window.review.back())
@@ -776,8 +776,8 @@ test("a feature file checks availability on each opening and stays idle while re
       }),
     )
   await open()
-  const download = page.getByRole("link", { name: "Descargar" })
-  await expect(download).toBeVisible()
+  await expect(page.getByRole("link", { name: "Editar archivos de la pieza" })).toBeVisible()
+  await expect(page.getByRole("link", { name: "Descargar" })).toHaveCount(0)
   await page.clock.fastForward(65_000)
   assert.deepEqual(await page.evaluate(() => window.review.statusRequests), [
     "file-one",
@@ -829,7 +829,7 @@ test("piece editing saves and cancels header changes, and feature membership wor
     .getByRole("textbox", { name: "Nombre de la pieza" })
     .fill("Pump Housing revisada")
   await page
-    .getByRole("button", { name: /^Guardar(?: cambios)?$/, exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   await readHeading(page, "3212 Pump Housing revisada")
   await page.getByRole("link", { name: "Abrir Bolt Eye" }).click()
@@ -870,7 +870,7 @@ async function referencePiece(t) {
   await page.getByRole("button", { name: "Abrir 3212 Pump Housing" }).click()
   await readHeading(page, "3212 Pump Housing")
   await expect(
-    page.getByRole("link", { name: "Descargar original.step", exact: true }),
+    page.getByRole("link", { name: "CAD pieza", exact: true }),
   ).toBeVisible()
   await page.getByRole("button", { name: "Editar pieza", exact: true }).click()
   return page
@@ -933,10 +933,10 @@ test("reference changes stay in the draft, survive membership updates and cancel
   await page.getByRole("button", { name: "Cancelar", exact: true }).click()
   await readHeading(page, "3212 Pump Housing")
   await expect(
-    page.getByRole("link", { name: "Descargar original.step", exact: true }),
+    page.getByRole("link", { name: "CAD pieza", exact: true }),
   ).toBeVisible()
   await expect(
-    page.getByRole("link", { name: "Descargar DRW.pdf", exact: true }),
+    page.getByRole("link", { name: "Plano 2D", exact: true }),
   ).toBeVisible()
   await page.getByRole("button", { name: "Editar pieza", exact: true }).click()
   await expect(
@@ -979,7 +979,7 @@ test("reference save failure keeps the draft and retry saves header and files wi
     window.review.failParts = true
   })
   await page
-    .getByRole("button", { name: "Guardar cambios", exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   await expect(page.getByRole("alert")).toHaveText(
     "No se pudo guardar la pieza",
@@ -1001,7 +1001,7 @@ test("reference save failure keeps the draft and retry saves header and files wi
     window.review.holdPartSave = true
   })
   await page
-    .getByRole("button", { name: "Guardar cambios", exact: true })
+    .getByRole("button", { name: "Guardar", exact: true })
     .click()
   await page.waitForFunction(() => Boolean(window.review.releasePartSave))
   await expect(
@@ -1013,13 +1013,13 @@ test("reference save failure keeps the draft and retry saves header and files wi
   await page.evaluate(() => window.review.releasePartSave())
   await readHeading(page, "3212 Updated piece")
   await expect(
-    page.getByRole("link", { name: "Descargar replacement.step", exact: true }),
+    page.getByRole("link", { name: "CAD pieza", exact: true }),
   ).toBeVisible()
   await expect(
-    page.getByRole("link", { name: "Descargar scan.stl", exact: true }),
+    page.getByRole("link", { name: "Pieza real", exact: true }),
   ).toBeVisible()
   await expect(
-    page.getByRole("link", { name: "Descargar DRW.pdf", exact: true }),
+    page.getByRole("link", { name: "Plano 2D", exact: true }),
   ).toHaveCount(0)
   assert.deepEqual(
     await page.evaluate(() => window.review.refreshRequests ?? []),

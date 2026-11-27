@@ -507,7 +507,7 @@ export function PartComponents({
               onClick={() => save.mutate()}
             >
               {save.isPending && <Loader2 className="size-4 animate-spin" />}
-              Guardar cambios
+              Guardar
             </Button>
           </DialogFooter>
         </DialogContent>

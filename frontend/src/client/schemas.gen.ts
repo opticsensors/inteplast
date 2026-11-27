@@ -29,6 +29,22 @@ export const AssistantStatusSchema = {
     title: 'AssistantStatus'
 } as const;
 
+export const AttachmentHistoryFolderSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        url: {
+            type: 'string',
+            title: 'Url'
+        }
+    },
+    type: 'object',
+    required: ['name', 'url'],
+    title: 'AttachmentHistoryFolder'
+} as const;
+
 export const Body_files_upload_fileSchema = {
     properties: {
         file: {
@@ -2384,6 +2400,31 @@ export const FolderLinkSchema = {
     type: 'object',
     required: ['url'],
     title: 'FolderLink'
+} as const;
+
+export const GalleryChangeSchema = {
+    properties: {
+        previous_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Previous Ids'
+        },
+        image_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            maxItems: 8,
+            title: 'Image Ids'
+        }
+    },
+    type: 'object',
+    required: ['previous_ids', 'image_ids'],
+    title: 'GalleryChange'
 } as const;
 
 export const GraphLinkSchema = {
